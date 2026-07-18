@@ -3,20 +3,26 @@ name: Build two Android APKs
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "android-license-suite" ]
-  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository quietly
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin "${GITHUB_SHA}"
+          git checkout -q FETCH_HEAD
 
       - name: Restore project payload
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import base64, hashlib
