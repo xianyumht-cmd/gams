@@ -13,27 +13,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.11.1"
-
       - name: Restore project payload
         shell: bash
         run: |
           set -euxo pipefail
-          sha256sum payload_xz/part*
           python3 - <<'PY'
           from pathlib import Path
           import base64, hashlib
 
+          expected = {
+              "part03a": "55daa0b004d668fac704fcdafd4ed95e1f4972c8b21e4d9cdcbd4e45760f3a06",
+              "part03b": "c15f08e8eed02a7def56ffadaab03263a14fe081802851987cffad3d64e1f7c4",
+              "part03c": "832e962722e94114bba427ee0bb9c013d09514d91b7d786713399795e2c00937",
+              "part03d": "3f1870c7564e9ae856945a14a724c02692708d2e209ffa0696ee621585a31256",
+          }
           parts = sorted(Path("payload_xz").glob("part*"))
+          print("parts:", [p.name for p in parts])
           if len(parts) != 12:
               raise SystemExit(f"Expected 12 payload parts, found {len(parts)}")
+          for p in parts:
+              cleaned = "".join(p.read_text(encoding="utf-8").split()).encode()
+              digest = hashlib.sha256(cleaned).hexdigest()
+              print(p.name, len(cleaned), digest)
+              if p.name in expected and digest != expected[p.name]:
+                  raise SystemExit(f"Checksum mismatch in {p.name}")
           text = "".join("".join(p.read_text(encoding="utf-8").split()) for p in parts)
           raw = base64.b64decode(text, validate=True)
           digest = hashlib.sha256(raw).hexdigest()
@@ -44,10 +47,19 @@ jobs:
               raise SystemExit("Payload checksum mismatch")
           Path("project_payload.tar.xz").write_bytes(raw)
           PY
-          tar -xJvf project_payload.tar.xz
+          tar -xJf project_payload.tar.xz
           test -s client/src/main/assets/noname.js
           test -s client/src/main/java/com/jinli/quickweb/MainActivity.java
           test -s keygen/src/main/java/com/jinli/keygen/MainActivity.java
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
 
       - name: Build release APKs
         run: gradle :client:assembleRelease :keygen:assembleRelease --stacktrace
