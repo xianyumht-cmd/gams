@@ -70,9 +70,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode client_patch/RemoteScriptManager.java.gz.b64 \
-            | gzip --decompress \
-            > client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          cp client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java \
+            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
           python3 client_patch/patch_client.py
 
           grep -q 'versionCode = 2' client/build.gradle.kts
