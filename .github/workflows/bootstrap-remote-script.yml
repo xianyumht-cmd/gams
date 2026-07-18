@@ -1,0 +1,149 @@
+name: Bootstrap remote script release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - online-license-backend
+    paths:
+      - .github/workflows/bootstrap-remote-script.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KEY_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Validate signing password
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${KEY_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
+
+      - name: Restore bundled script
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+
+          names = [
+              "part00", "part01", "part02",
+              "part03a", "part03b", "part03c", "part03d",
+              "part04",
+              "part05a", "part05b", "part05c", "part05d",
+              "part06", "part07", "part08",
+          ]
+          text = "".join(
+              "".join((Path("payload_xz") / name).read_text(encoding="utf-8").split())
+              for name in names
+          )
+          Path("/tmp/project_payload.tar.xz").write_bytes(base64.b64decode(text, validate=True))
+          PY
+          rm -rf /tmp/project_payload
+          mkdir -p /tmp/project_payload
+          tar -xJf /tmp/project_payload.tar.xz -C /tmp/project_payload
+          test -s /tmp/project_payload/client/src/main/assets/noname.js
+          mkdir -p remote-script/src remote-script/release remote-script/keys
+          cp /tmp/project_payload/client/src/main/assets/noname.js remote-script/src/noname.js
+
+      - name: Create or unlock signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -s remote-script/keys/private.pem.enc && -s remote-script/keys/public.pem ]]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 \
+              -in remote-script/keys/private.pem.enc \
+              -out /tmp/script-private.pem \
+              -pass env:KEY_PASSWORD
+          else
+            openssl ecparam -name prime256v1 -genkey -noout -out /tmp/script-private.pem
+            openssl ec -in /tmp/script-private.pem -pubout -out remote-script/keys/public.pem
+            openssl pkey -pubin -in remote-script/keys/public.pem -outform DER \
+              -out remote-script/keys/public.der
+            openssl enc -aes-256-cbc -salt -pbkdf2 \
+              -in /tmp/script-private.pem \
+              -out remote-script/keys/private.pem.enc \
+              -pass env:KEY_PASSWORD
+          fi
+          chmod 600 /tmp/script-private.pem
+
+      - name: Build and sign release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, re
+          from datetime import datetime, timezone
+
+          source = Path("remote-script/src/noname.js")
+          text = source.read_text(encoding="utf-8")
+          match = re.search(r"^//\s*@version\s+([^\s]+)", text, re.MULTILINE)
+          version_name = match.group(1) if match else "1.0.0"
+          nums = [int(x) for x in re.findall(r"\d+", version_name)[:3]]
+          while len(nums) < 3:
+              nums.append(0)
+          version = nums[0] * 10000 + nums[1] * 100 + nums[2]
+          filename = f"noname-{version_name}.js"
+          release_file = Path("remote-script/release") / filename
+          release_file.write_bytes(source.read_bytes())
+          sha256 = hashlib.sha256(release_file.read_bytes()).hexdigest()
+          published_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+          manifest = {
+              "schemaVersion": 1,
+              "channel": "stable",
+              "version": version,
+              "versionName": version_name,
+              "file": filename,
+              "sha256": sha256,
+              "size": release_file.stat().st_size,
+              "minAppVersion": 1,
+              "publishedAt": published_at,
+          }
+          canonical = "".join(f"{key}={manifest[key]}\n" for key in (
+              "schemaVersion", "channel", "version", "versionName", "file",
+              "sha256", "size", "minAppVersion", "publishedAt"
+          ))
+          Path("/tmp/script-manifest-canonical.txt").write_text(canonical, encoding="utf-8", newline="\n")
+          Path("/tmp/script-manifest-unsigned.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+          openssl dgst -sha256 -sign /tmp/script-private.pem \
+            -out /tmp/script-manifest.sig /tmp/script-manifest-canonical.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, json
+          manifest = json.loads(Path("/tmp/script-manifest-unsigned.json").read_text(encoding="utf-8"))
+          manifest["signatureAlgorithm"] = "SHA256withECDSA"
+          manifest["signature"] = base64.b64encode(Path("/tmp/script-manifest.sig").read_bytes()).decode("ascii")
+          Path("remote-script/release/manifest.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+          rm -f /tmp/script-private.pem /tmp/script-manifest.sig /tmp/script-manifest-canonical.txt /tmp/script-manifest-unsigned.json
+
+      - name: Commit remote script release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add remote-script
+          if git diff --cached --quiet; then
+            echo "Remote script release is already current"
+            exit 0
+          fi
+          git commit -m "Bootstrap signed remote script release"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
