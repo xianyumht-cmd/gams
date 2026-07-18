@@ -79,7 +79,7 @@ jobs:
         working-directory: license-api
         run: npx --yes wrangler@4 d1 migrations apply gams-license-db --remote --config wrangler.generated.jsonc
 
-      - name: Deploy Worker
+      - name: Deploy Worker and custom domain
         working-directory: license-api
         shell: bash
         run: |
@@ -98,7 +98,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
-      - name: Wait for API propagation
+      - name: Wait for Worker endpoint
         shell: bash
         run: |
           set -euo pipefail
@@ -119,7 +119,7 @@ jobs:
           cat /tmp/license-health.json 2>/dev/null || true
           exit 1
 
-      - name: Run online license smoke test
+      - name: Run online license lifecycle smoke test
         shell: bash
         run: |
           set -euo pipefail
@@ -134,20 +134,20 @@ jobs:
           create_response="$(curl -fsS -X POST \
             -H "$json_header" \
             -H "Authorization: Bearer $admin_token" \
-            --data '{"count":1,"durationDays":1,"maxDevices":1,"note":"ci-smoke-test"}' \
+            --data '{"count":1,"durationDays":1,"maxDevices":1,"note":"resilient-ci-test"}' \
             "$endpoint/v1/admin/licenses/create")"
           license_key="$(printf '%s' "$create_response" | jq -er '.licenses[0].key')"
-          device_hash="$(printf 'a%.0s' $(seq 1 64))"
+          device_hash="$(printf 'c%.0s' $(seq 1 64))"
 
           activate_payload="$(jq -n --arg key "$license_key" --arg device "$device_hash" \
-            '{licenseKey:$key,deviceId:$device,deviceLabel:"GitHub Actions",appVersion:3}')"
+            '{licenseKey:$key,deviceId:$device,deviceLabel:"GitHub Actions",appVersion:5}')"
           activate_response="$(curl -fsS -X POST -H "$json_header" \
             --data "$activate_payload" "$endpoint/v1/activate")"
           session_token="$(printf '%s' "$activate_response" | jq -er '.token')"
           printf '%s' "$activate_response" | jq -e '.ok == true and .offlineGraceSeconds == 86400' >/dev/null
 
           check_payload="$(jq -n --arg token "$session_token" --arg device "$device_hash" \
-            '{token:$token,deviceId:$device,appVersion:3}')"
+            '{token:$token,deviceId:$device,appVersion:5}')"
           check_response="$(curl -fsS -X POST -H "$json_header" \
             --data "$check_payload" "$endpoint/v1/check")"
           printf '%s' "$check_response" | jq -e '.ok == true' >/dev/null
@@ -166,4 +166,23 @@ jobs:
             "$endpoint/v1/check")"
           test "$disabled_status" = "403"
           jq -e '.ok == false and .code == "license_disabled"' /tmp/disabled-check.json >/dev/null
-          echo "Online license smoke test passed"
+          echo "Online license lifecycle smoke test passed"
+
+      - name: Inspect optional custom-domain route
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://license.xn--8pv109c.top"
+          status="$(curl --silent --show-error \
+            --dump-header /tmp/custom-domain-headers.txt \
+            --output /tmp/custom-domain-body.txt \
+            --write-out '%{http_code}' \
+            "$endpoint/health" || true)"
+          if [[ "$status" == "200" ]] \
+            && jq -e '.ok == true and .service == "gams-license-api"' /tmp/custom-domain-body.txt >/dev/null 2>&1; then
+            echo "Custom-domain API is directly usable"
+          elif [[ "$status" == "403" ]] && grep -qi '^cf-mitigated: challenge' /tmp/custom-domain-headers.txt; then
+            echo "Custom domain currently uses a Cloudflare browser challenge; Android clients will automatically fall back to the Worker channel."
+          else
+            echo "Custom domain returned HTTP ${status:-network-error}; Android clients will automatically fall back to the Worker channel."
+          fi

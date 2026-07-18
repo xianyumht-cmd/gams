@@ -6,6 +6,12 @@
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": true },
+  "routes": [
+    {
+      "pattern": "license.xn--8pv109c.top",
+      "custom_domain": true
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

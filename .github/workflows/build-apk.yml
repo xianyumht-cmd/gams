@@ -82,27 +82,40 @@ jobs:
             client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
           grep -q 'refreshAsync' client/src/main/java/com/jinli/quickweb/MainActivity.java
 
-      - name: Apply online license patches
+      - name: Apply resilient online license patches
         shell: bash
         run: |
           set -euo pipefail
           cp client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java \
             client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          cp client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java \
+            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
           python3 client_online_patch/patch_client_online.py
 
           cp keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java \
             keygen/src/main/java/com/jinli/keygen/MainActivity.java
           cp keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java \
             keygen/src/main/java/com/jinli/keygen/AdminApiManager.java
+          sed 's/package com.jinli.quickweb;/package com.jinli.keygen;/' \
+            client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java \
+            > keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
           python3 keygen_online_patch/patch_keygen_online.py
+          python3 license_endpoint_hotfix/patch_endpoints.py
 
-          grep -q 'versionCode = 3' client/build.gradle.kts
-          grep -q 'versionName = "1.2.0"' client/build.gradle.kts
-          grep -q 'gams-license-api.2320006072.workers.dev' \
-            client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          grep -q 'versionCode = 5' client/build.gradle.kts
+          grep -q 'versionName = "1.2.2"' client/build.gradle.kts
+          grep -q 'CUSTOM_HOST = "license.xn--8pv109c.top"' \
+            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+          grep -q 'WORKER_HOST = "gams-license-api.2320006072.workers.dev"' \
+            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+          grep -q 'DNS_RESOLVERS' \
+            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
           ! grep -q 'class LicenseCodec' client/src/main/java/com/jinli/quickweb/MainActivity.java
           grep -q 'android.permission.INTERNET' keygen/src/main/AndroidManifest.xml
-          grep -q 'versionName = "1.1.0"' keygen/build.gradle.kts
+          grep -q 'versionCode = 4' keygen/build.gradle.kts
+          grep -q 'versionName = "1.1.2"' keygen/build.gradle.kts
+          grep -q 'package com.jinli.keygen;' \
+            keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
 
       - uses: actions/setup-java@v4
         with:
@@ -119,13 +132,13 @@ jobs:
       - name: Rename APKs
         run: |
           mkdir -p dist
-          cp client/build/outputs/apk/release/client-release.apk "dist/快捷工具-客户端-联网授权.apk"
-          cp keygen/build/outputs/apk/release/keygen-release.apk "dist/在线卡密管理器-管理员.apk"
+          cp client/build/outputs/apk/release/client-release.apk "dist/快捷工具-客户端-联网授权-v1.2.2.apk"
+          cp keygen/build/outputs/apk/release/keygen-release.apk "dist/在线卡密管理器-v1.1.2.apk"
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Android-联网授权双APK
+          name: Android-联网授权-多通道修复版
           path: dist/*
           if-no-files-found: error
           retention-days: 30
