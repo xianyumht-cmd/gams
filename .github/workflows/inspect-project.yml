@@ -18,10 +18,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare repository snapshot
         run: |
-          tar --exclude=.git --exclude=repository-snapshot.tar.gz -czf repository-snapshot.tar.gz .
+          tar --exclude=.git -czf /tmp/repository-snapshot.tar.gz .
       - name: Upload repository snapshot
         uses: actions/upload-artifact@v4
         with:
           name: repository-source-inspection
-          path: repository-snapshot.tar.gz
+          path: /tmp/repository-snapshot.tar.gz
           retention-days: 1
