@@ -1,0 +1,42 @@
+name: Fix license device count once
+
+on:
+  push:
+    branches:
+      - online-license-v1
+    paths:
+      - .github/workflows/fix-license-list-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: online-license-v1
+          fetch-depth: 0
+          token: ${{ github.token }}
+      - name: Apply source correction and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('license-api/src/index.js')
+          text = path.read_text(encoding='utf-8')
+          old = 'SUM(CASE WHEN d.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices'
+          new = 'SUM(CASE WHEN d.id IS NOT NULL AND d.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices'
+          if old not in text and new not in text:
+              raise SystemExit('Expected device-count query was not found')
+          if old in text:
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          Path('.github/workflows/fix-license-list-once.yml').unlink()
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add license-api/src/index.js .github/workflows/fix-license-list-once.yml
+          git commit -m "Fix active device count in license list"
+          git push origin HEAD:online-license-v1
