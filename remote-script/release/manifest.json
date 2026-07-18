@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "version": 10002,
+  "versionName": "1.0.2",
+  "file": "noname-1.0.2.js",
+  "sha256": "4356b87211c8516a00cfe4c9d58f3fff95f940aa113c18c77e9ac0324d77a025",
+  "size": 318230,
+  "minAppVersion": 1,
+  "publishedAt": "2026-07-18T18:17:06Z",
+  "signatureAlgorithm": "SHA256withECDSA",
+  "signature": "MEUCIEWfbdKK2rAHUWa3YEjJ7WLc6Uw0lkQqCB5qbGuz0z2lAiEAw1KOQFGrOHl4D37J3R6uWzCE4c1XTMidmh+4GY8iShM="
+}
