@@ -23,9 +23,28 @@ jobs:
           gradle-version: "8.11.1"
 
       - name: Restore project payload
+        shell: bash
         run: |
-          cat payload_xz/part* | base64 --decode > project_payload.tar.xz
-          tar -xJf project_payload.tar.xz
+          set -euxo pipefail
+          sha256sum payload_xz/part*
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+
+          parts = sorted(Path("payload_xz").glob("part*"))
+          if len(parts) != 9:
+              raise SystemExit(f"Expected 9 payload parts, found {len(parts)}")
+          text = "".join("".join(p.read_text(encoding="utf-8").split()) for p in parts)
+          raw = base64.b64decode(text, validate=True)
+          digest = hashlib.sha256(raw).hexdigest()
+          print("payload base64 chars:", len(text))
+          print("payload bytes:", len(raw))
+          print("payload sha256:", digest)
+          if digest != "aab22ffe5e49fbcb6ba9efa8f960aa90057644ae5a94511d2334704dbb92ea9d":
+              raise SystemExit("Payload checksum mismatch")
+          Path("project_payload.tar.xz").write_bytes(raw)
+          PY
+          tar -xJvf project_payload.tar.xz
           test -s client/src/main/assets/noname.js
           test -s client/src/main/java/com/jinli/quickweb/MainActivity.java
           test -s keygen/src/main/java/com/jinli/keygen/MainActivity.java
