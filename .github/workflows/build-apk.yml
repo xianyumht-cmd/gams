@@ -46,22 +46,17 @@ jobs:
               "part05d": "ab252aed7f91fedeb9d6a6db184daae017d0fbed7248e464474ef837a7f45c65",
           }
           parts = [Path("payload_xz") / name for name in names]
-          for p in parts:
-              if not p.is_file():
-                  raise SystemExit(f"Missing payload segment: {p.name}")
-          print("parts:", [p.name for p in parts])
-          for p in parts:
-              cleaned = "".join(p.read_text(encoding="utf-8").split()).encode()
+          for part in parts:
+              if not part.is_file():
+                  raise SystemExit(f"Missing payload segment: {part.name}")
+          for part in parts:
+              cleaned = "".join(part.read_text(encoding="utf-8").split()).encode()
               digest = hashlib.sha256(cleaned).hexdigest()
-              print(p.name, len(cleaned), digest)
-              if p.name in expected and digest != expected[p.name]:
-                  raise SystemExit(f"Checksum mismatch in {p.name}")
-          text = "".join("".join(p.read_text(encoding="utf-8").split()) for p in parts)
+              if part.name in expected and digest != expected[part.name]:
+                  raise SystemExit(f"Checksum mismatch in {part.name}")
+          text = "".join("".join(part.read_text(encoding="utf-8").split()) for part in parts)
           raw = base64.b64decode(text, validate=True)
           digest = hashlib.sha256(raw).hexdigest()
-          print("payload base64 chars:", len(text))
-          print("payload bytes:", len(raw))
-          print("payload sha256:", digest)
           if digest != "aab22ffe5e49fbcb6ba9efa8f960aa90057644ae5a94511d2334704dbb92ea9d":
               raise SystemExit("Payload checksum mismatch")
           Path("project_payload.tar.xz").write_bytes(raw)
@@ -70,6 +65,23 @@ jobs:
           test -s client/src/main/assets/noname.js
           test -s client/src/main/java/com/jinli/quickweb/MainActivity.java
           test -s keygen/src/main/java/com/jinli/keygen/MainActivity.java
+
+      - name: Apply signed remote script client patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode client_patch/RemoteScriptManager.java.gz.b64 \
+            | gzip --decompress \
+            > client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          python3 client_patch/patch_client.py
+
+          grep -q 'versionCode = 2' client/build.gradle.kts
+          grep -q 'versionName = "1.1.0"' client/build.gradle.kts
+          grep -q 'gams-script-edge.2320006072.workers.dev' \
+            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          grep -q 'SHA256withECDSA' \
+            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          grep -q 'refreshAsync' client/src/main/java/com/jinli/quickweb/MainActivity.java
 
       - uses: actions/setup-java@v4
         with:
