@@ -1,0 +1,59 @@
+name: Deploy signed script edge
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - script-edge/**
+      - .github/workflows/deploy-script-edge.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - script-edge/**
+      - .github/workflows/deploy-script-edge.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN is missing"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID is missing"; exit 1; }
+      - name: Deploy Worker
+        working-directory: script-edge
+        run: npx --yes wrangler@4 deploy --config wrangler.jsonc
+      - name: Verify deployed endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://gams-script-edge.2320006072.workers.dev"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            "${endpoint}/health" | grep -q '"ok":true'
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            "${endpoint}/release/manifest.json" > /tmp/manifest.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/manifest.json').read_text(encoding='utf-8'))
+          assert data['schemaVersion'] == 1
+          assert data['signatureAlgorithm'] == 'SHA256withECDSA'
+          assert len(data['sha256']) == 64
+          print('verified remote manifest:', data['versionName'])
+          PY
