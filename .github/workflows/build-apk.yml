@@ -82,6 +82,28 @@ jobs:
             client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
           grep -q 'refreshAsync' client/src/main/java/com/jinli/quickweb/MainActivity.java
 
+      - name: Apply online license patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java \
+            client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          python3 client_online_patch/patch_client_online.py
+
+          cp keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java \
+            keygen/src/main/java/com/jinli/keygen/MainActivity.java
+          cp keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java \
+            keygen/src/main/java/com/jinli/keygen/AdminApiManager.java
+          python3 keygen_online_patch/patch_keygen_online.py
+
+          grep -q 'versionCode = 3' client/build.gradle.kts
+          grep -q 'versionName = "1.2.0"' client/build.gradle.kts
+          grep -q 'gams-license-api.2320006072.workers.dev' \
+            client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          ! grep -q 'class LicenseCodec' client/src/main/java/com/jinli/quickweb/MainActivity.java
+          grep -q 'android.permission.INTERNET' keygen/src/main/AndroidManifest.xml
+          grep -q 'versionName = "1.1.0"' keygen/build.gradle.kts
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -97,13 +119,13 @@ jobs:
       - name: Rename APKs
         run: |
           mkdir -p dist
-          cp client/build/outputs/apk/release/client-release.apk "dist/快捷工具-客户端.apk"
-          cp keygen/build/outputs/apk/release/keygen-release.apk "dist/卡密生成器-管理员.apk"
+          cp client/build/outputs/apk/release/client-release.apk "dist/快捷工具-客户端-联网授权.apk"
+          cp keygen/build/outputs/apk/release/keygen-release.apk "dist/在线卡密管理器-管理员.apk"
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Android-双APK安装包
+          name: Android-联网授权双APK
           path: dist/*
           if-no-files-found: error
           retention-days: 30
