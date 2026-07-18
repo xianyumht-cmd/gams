@@ -96,7 +96,7 @@ async function adminListLicenses(request, env) {
   const rows = await env.DB.prepare(
     `SELECT l.id,l.key_preview,l.status,l.created_at,l.activated_at,l.expires_at,
             l.max_devices,l.note,l.last_seen_at,
-            SUM(CASE WHEN d.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices
+            SUM(CASE WHEN d.id IS NOT NULL AND d.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices
        FROM licenses l
        LEFT JOIN devices d ON d.license_id=l.id
       GROUP BY l.id
