@@ -1,0 +1,21 @@
+name: Inspect project tree
+
+on:
+  push:
+    branches:
+      - online-license-backend
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: List project files
+        run: |
+          echo '=== FILE TREE ==='
+          find . -path './.git' -prune -o -type f -print | sort
+          echo '=== JS REFERENCES ==='
+          grep -RIn --exclude-dir=.git -E 'noname|evaluateJavascript|loadUrl|WebView|assets' client || true
