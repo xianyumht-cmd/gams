@@ -1,0 +1,48 @@
+name: Build two Android APKs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "android-license-suite" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Restore project payload
+        run: |
+          cat payload_xz/part* | base64 --decode > project_payload.tar.xz
+          tar -xJf project_payload.tar.xz
+          test -s client/src/main/assets/noname.js
+          test -s client/src/main/java/com/jinli/quickweb/MainActivity.java
+          test -s keygen/src/main/java/com/jinli/keygen/MainActivity.java
+
+      - name: Build release APKs
+        run: gradle :client:assembleRelease :keygen:assembleRelease --stacktrace
+
+      - name: Rename APKs
+        run: |
+          mkdir -p dist
+          cp client/build/outputs/apk/release/client-release.apk "dist/快捷工具-客户端.apk"
+          cp keygen/build/outputs/apk/release/keygen-release.apk "dist/卡密生成器-管理员.apk"
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Android-双APK安装包
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
