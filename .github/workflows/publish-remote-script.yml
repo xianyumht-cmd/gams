@@ -1,0 +1,134 @@
+name: Publish signed remote script
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - remote-script/src/noname.js
+      - .github/workflows/publish-remote-script.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KEY_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout main with write authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin main
+          git checkout -q FETCH_HEAD
+
+      - name: Validate release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${KEY_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
+          test -s remote-script/src/noname.js
+          test -s remote-script/release/manifest.json
+          test -s remote-script/keys/private.pem.enc
+          test -s remote-script/keys/public.pem
+
+      - name: Unlock existing signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/script-private.pem \
+            -pass env:KEY_PASSWORD
+          chmod 600 /tmp/script-private.pem
+
+      - name: Build unsigned release data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, re
+          from datetime import datetime, timezone
+
+          source = Path("remote-script/src/noname.js")
+          text = source.read_text(encoding="utf-8")
+          match = re.search(r"^//\s*@version\s+([^\s]+)", text, re.MULTILINE)
+          if not match:
+              raise SystemExit("noname.js must contain a // @version line")
+
+          version_name = match.group(1)
+          nums = [int(x) for x in re.findall(r"\d+", version_name)[:3]]
+          while len(nums) < 3:
+              nums.append(0)
+          version = nums[0] * 10000 + nums[1] * 100 + nums[2]
+
+          old = json.loads(Path("remote-script/release/manifest.json").read_text(encoding="utf-8"))
+          if version <= int(old["version"]):
+              raise SystemExit(
+                  f"New script version {version_name} must be higher than {old['versionName']}"
+              )
+
+          filename = f"noname-{version_name}.js"
+          release_file = Path("remote-script/release") / filename
+          release_file.write_bytes(source.read_bytes())
+          manifest = {
+              "schemaVersion": 1,
+              "channel": "stable",
+              "version": version,
+              "versionName": version_name,
+              "file": filename,
+              "sha256": hashlib.sha256(release_file.read_bytes()).hexdigest(),
+              "size": release_file.stat().st_size,
+              "minAppVersion": 1,
+              "publishedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+          }
+          keys = (
+              "schemaVersion", "channel", "version", "versionName", "file",
+              "sha256", "size", "minAppVersion", "publishedAt"
+          )
+          canonical = "".join(f"{key}={manifest[key]}\n" for key in keys)
+          Path("/tmp/manifest-canonical.txt").write_text(canonical, encoding="utf-8", newline="\n")
+          Path("/tmp/manifest-unsigned.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Sign and verify release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl dgst -sha256 -sign /tmp/script-private.pem \
+            -out /tmp/manifest.sig /tmp/manifest-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/manifest.sig /tmp/manifest-canonical.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, json
+          manifest = json.loads(Path("/tmp/manifest-unsigned.json").read_text(encoding="utf-8"))
+          manifest["signatureAlgorithm"] = "SHA256withECDSA"
+          manifest["signature"] = base64.b64encode(Path("/tmp/manifest.sig").read_bytes()).decode("ascii")
+          Path("remote-script/release/manifest.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Commit signed release
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f /tmp/script-private.pem /tmp/manifest.sig /tmp/manifest-canonical.txt /tmp/manifest-unsigned.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add remote-script/release
+          git commit -m "Publish signed remote script $(python3 -c 'import json; print(json.load(open("remote-script/release/manifest.json"))["versionName"])')"
+          git push origin HEAD:main
