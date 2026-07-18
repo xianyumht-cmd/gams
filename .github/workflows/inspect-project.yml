@@ -16,9 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate WebView and script files
+      - name: Prepare source snapshot
         run: |
-          echo '=== CLIENT FILES ==='
-          find client/src/main -type f -print | sort
-          echo '=== MATCHES ==='
-          grep -RIn --exclude='*.bin' -E 'noname|evaluateJavascript|loadUrl|WebView|openRawResource|assets' client/src/main || true
+          mkdir -p inspection
+          cp -R client/src/main inspection/client-main
+          cp client/build.gradle.kts inspection/client-build.gradle.kts
+          cp settings.gradle.kts inspection/settings.gradle.kts
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-source-inspection
+          path: inspection
+          retention-days: 1
