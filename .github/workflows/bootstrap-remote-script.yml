@@ -7,6 +7,11 @@ on:
       - online-license-backend
     paths:
       - .github/workflows/bootstrap-remote-script.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bootstrap-remote-script.yml
 
 permissions:
   contents: write
@@ -20,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - name: Validate signing password
@@ -134,7 +139,15 @@ jobs:
           PY
           rm -f /tmp/script-private.pem /tmp/script-manifest.sig /tmp/script-manifest-canonical.txt /tmp/script-manifest-unsigned.json
 
-      - name: Commit remote script release
+      - name: Upload signed remote script snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-remote-script-bootstrap
+          path: remote-script
+          retention-days: 1
+
+      - name: Commit remote script release on branch push
+        if: github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
