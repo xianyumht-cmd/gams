@@ -1,0 +1,60 @@
+name: Diagnose license custom domain
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - license-custom-domain-hotfix
+    paths:
+      - .github/workflows/diagnose-license-domain.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/diagnose-license-domain.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Inspect Cloudflare custom domain and public DNS
+        shell: bash
+        run: |
+          set +e
+          exec > >(tee /tmp/license-domain-diagnostic.txt) 2>&1
+          echo '=== UTC TIME ==='
+          date -u
+          echo '=== WORKERS CUSTOM DOMAINS API ==='
+          curl -sS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/domains" | jq .
+          echo '=== ZONE LOOKUP ==='
+          zone_response="$(curl -sS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            'https://api.cloudflare.com/client/v4/zones?name=xn--8pv109c.top')"
+          printf '%s\n' "$zone_response" | jq .
+          zone_id="$(printf '%s' "$zone_response" | jq -r '.result[0].id // empty')"
+          if [[ -n "$zone_id" ]]; then
+            echo '=== DNS RECORD LOOKUP ==='
+            curl -sS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?name=license.xn--8pv109c.top" | jq .
+          fi
+          echo '=== CLOUDFLARE DOH A ==='
+          curl -sS -H 'accept: application/dns-json' \
+            'https://cloudflare-dns.com/dns-query?name=license.xn--8pv109c.top&type=A' | jq .
+          echo '=== GOOGLE DOH A ==='
+          curl -sS 'https://dns.google/resolve?name=license.xn--8pv109c.top&type=A' | jq .
+          echo '=== HTTPS HEALTH ==='
+          curl -v --connect-timeout 10 --max-time 20 \
+            'https://license.xn--8pv109c.top/health'
+          true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: license-domain-diagnostic
+          path: /tmp/license-domain-diagnostic.txt
+          retention-days: 1
