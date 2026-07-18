@@ -3,7 +3,7 @@ name: Build two Android APKs
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "android-license-suite" ]
+    branches: [ "main", "android-license-suite", "online-license-backend" ]
   pull_request:
 
 jobs:
@@ -22,13 +22,25 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Restore project payload
+      - name: Restore and patch project payload
+        shell: bash
         run: |
+          set -euo pipefail
           cat payload_xz/part* | base64 --decode > project_payload.tar.xz
           tar -xJf project_payload.tar.xz
           test -s client/src/main/assets/noname.js
           test -s client/src/main/java/com/jinli/quickweb/MainActivity.java
           test -s keygen/src/main/java/com/jinli/keygen/MainActivity.java
+
+          cp client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java \
+            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          python3 client_patch/patch_client.py
+
+          grep -q 'versionCode = 2' client/build.gradle.kts
+          grep -q 'versionName = "1.1.0"' client/build.gradle.kts
+          grep -q 'gams-script-edge.2320006072.workers.dev' \
+            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          grep -q 'refreshAsync' client/src/main/java/com/jinli/quickweb/MainActivity.java
 
       - name: Build release APKs
         run: gradle :client:assembleRelease :keygen:assembleRelease --stacktrace
