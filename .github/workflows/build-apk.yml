@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
+  pull_request:
 
 jobs:
   build:
@@ -16,7 +17,7 @@ jobs:
           set -euo pipefail
           git init -q .
           git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
-          git fetch -q --depth 1 origin "${GITHUB_SHA}"
+          git fetch -q --depth 1 origin "${GITHUB_REF}"
           git checkout -q FETCH_HEAD
 
       - name: Restore project payload
