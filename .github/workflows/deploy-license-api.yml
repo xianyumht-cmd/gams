@@ -1,0 +1,92 @@
+name: Deploy online license API
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - license-api/**
+      - .github/workflows/deploy-license-api.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - license-api/**
+      - .github/workflows/deploy-license-api.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN is missing"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID is missing"; exit 1; }
+          test -n "${LICENSE_ADMIN_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
+
+      - name: Find or create D1 database
+        id: d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          list="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$list" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          if [[ -z "$database_id" || "$database_id" == "null" ]]; then
+            created="$(curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data '{"name":"gams-license-db"}' \
+              "$api")"
+            database_id="$(printf '%s' "$created" | jq -r '.result.uuid // .result.id')"
+          fi
+          test -n "$database_id" && test "$database_id" != "null"
+          echo "database_id=$database_id" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Wrangler configuration
+        working-directory: license-api
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed "s/__D1_DATABASE_ID__/${{ steps.d1.outputs.database_id }}/g" \
+            wrangler.template.jsonc > wrangler.generated.jsonc
+
+      - name: Configure Worker secret
+        working-directory: license-api
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$LICENSE_ADMIN_PASSWORD" \
+            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+
+      - name: Apply D1 migrations
+        working-directory: license-api
+        run: npx --yes wrangler@4 d1 migrations apply gams-license-db --remote --config wrangler.generated.jsonc
+
+      - name: Deploy Worker
+        working-directory: license-api
+        run: npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
+
+      - name: Verify API health
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://gams-license-api.2320006072.workers.dev"
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            "$endpoint/health" | jq -e '.ok == true and .service == "gams-license-api"'
