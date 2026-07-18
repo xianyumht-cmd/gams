@@ -81,7 +81,22 @@ jobs:
 
       - name: Deploy Worker
         working-directory: license-api
-        run: npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
+        shell: bash
+        run: |
+          set +e
+          npx --yes wrangler@4 deploy --config wrangler.generated.jsonc > /tmp/wrangler-deploy.log 2>&1
+          code=$?
+          tail -n 160 /tmp/wrangler-deploy.log
+          exit $code
+
+      - name: Upload Wrangler deploy log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-api-deploy-log
+          path: /tmp/wrangler-deploy.log
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Verify API health
         shell: bash
