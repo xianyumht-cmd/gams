@@ -32,8 +32,8 @@ jobs:
           import base64, hashlib
 
           parts = sorted(Path("payload_xz").glob("part*"))
-          if len(parts) != 9:
-              raise SystemExit(f"Expected 9 payload parts, found {len(parts)}")
+          if len(parts) != 12:
+              raise SystemExit(f"Expected 12 payload parts, found {len(parts)}")
           text = "".join("".join(p.read_text(encoding="utf-8").split()) for p in parts)
           raw = base64.b64decode(text, validate=True)
           digest = hashlib.sha256(raw).hexdigest()
