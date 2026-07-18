@@ -6,10 +6,15 @@ on:
       - main
     paths:
       - .github/workflows/bootstrap-remote-script-artifact.yml
+  push:
+    branches:
+      - online-license-backend
+    paths:
+      - .github/workflows/bootstrap-remote-script-artifact.yml
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
@@ -119,3 +124,14 @@ jobs:
           name: signed-remote-script-release
           path: remote-script
           retention-days: 1
+
+      - name: Commit signed release to branch
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add remote-script
+          git commit -m "Bootstrap signed remote script release"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
