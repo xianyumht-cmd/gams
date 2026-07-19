@@ -1,0 +1,153 @@
+            public void onPageFinished(WebView view, String url) {
+                statusText.setText("已就绪");
+                CookieManager.getInstance().flush();
+                if (!nativeDocumentStartEnabled && isScriptTarget(url)) {
+                    view.evaluateJavascript(wrappedUserScript, null);
+                }
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                String scheme = uri.getScheme();
+                if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+                    return false;
+                }
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (Exception ignored) {
+                    Toast.makeText(MainActivity.this, "无法打开此链接", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) {
+                    statusText.setText("加载失败");
+                    showNetworkError(view);
+                }
+            }
+        });
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                progressBar.setProgress(newProgress);
+                progressBar.setVisibility(newProgress >= 100 ? View.GONE : View.VISIBLE);
+            }
+
+            @Override
+            public boolean onShowFileChooser(
+                    WebView currentWebView,
+                    ValueCallback<Uri[]> filePathCallback,
+                    FileChooserParams fileChooserParams
+            ) {
+                if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
+                fileChooserCallback = filePathCallback;
+                try {
+                    startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST);
+                    return true;
+                } catch (Exception e) {
+                    fileChooserCallback = null;
+                    Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+            }
+        });
+
+        webView.setDownloadListener(createDownloadListener());
+    }
+
+    private void installDocumentStartScript() {
+        nativeDocumentStartEnabled = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
+        if (!nativeDocumentStartEnabled) return;
+        try {
+            scriptHandler = WebViewCompat.addDocumentStartJavaScript(
+                    webView,
+                    wrappedUserScript,
+                    SCRIPT_ORIGINS
+            );
+        } catch (Throwable ignored) {
+            nativeDocumentStartEnabled = false;
+        }
+    }
+
+    private DownloadListener createDownloadListener() {
+        return (url, userAgent, contentDisposition, mimeType, contentLength) -> {
+            try {
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                request.setMimeType(mimeType);
+                request.addRequestHeader("User-Agent", userAgent);
+                String cookie = CookieManager.getInstance().getCookie(url);
+                if (cookie != null) request.addRequestHeader("Cookie", cookie);
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                request.setDestinationInExternalFilesDir(
+                        MainActivity.this,
+                        Environment.DIRECTORY_DOWNLOADS,
+                        "download_" + System.currentTimeMillis());
+                DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                manager.enqueue(request);
+                Toast.makeText(MainActivity.this, "已开始下载", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "下载失败", Toast.LENGTH_SHORT).show();
+            }
+        };
+    }
+
+    private void showResetDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("重置网页数据")
+                .setMessage("将清除网页登录状态、缓存和本地设置，但不会清除激活状态。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确认重置", (dialog, which) -> {
+                    CookieManager.getInstance().removeAllCookies(value -> {
+                        CookieManager.getInstance().flush();
+                        webView.clearCache(true);
+                        webView.clearHistory();
+                        webView.clearFormData();
+                        WebStorage.getInstance().deleteAllData();
+                        WebView.clearClientCertPreferences(null);
+                        webView.evaluateJavascript(
+                                "try{localStorage.clear();sessionStorage.clear();}catch(e){}",
+                                result -> webView.loadUrl(START_URL));
+                    });
+                })
+                .show();
+    }
+
+    private void showLicenseInfoDialog() {
+        String summary = onlineLicenseManager.getStatusSummary();
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("服务信息")
+                .setMessage(summary + "\n\n自助更换设备会扣除6小时有效期；永久服务将在6小时后允许新设备激活。")
+                .setNegativeButton("关闭", null)
+                .setNeutralButton("更换设备", null)
+                .setPositiveButton("退出账号", (d, which) -> {
+                    onlineLicenseManager.clear();
+                    showLicenseScreen("");
+                })
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
+                new AlertDialog.Builder(this)
+                        .setTitle("确认更换设备")
+                        .setMessage("当前设备将立即退出。限时服务会扣除6小时，24小时内只能自助操作一次。是否继续？")
+                        .setNegativeButton("取消", null)
+                        .setPositiveButton("确认更换", (confirm, which) -> {
+                            dialog.dismiss();
+                            showLicenseLoading("正在处理…");
+                            onlineLicenseManager.selfUnbindAsync(result -> {
+                                if (isFinishing() || isDestroyed()) return;
+                                Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
+                                if (result.success) showLicenseScreen("");
+                                else initializeService(null);
+                            });
+                        })
+                        .show()));
+        dialog.show();
+    }
+
+
+    private void showNetworkError(WebView view) {
+        String html = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>" +
+                "<style>body{font-family:sans-serif;background:#f8fafc;color:#111827;display:flex;min-height:90vh;" +
