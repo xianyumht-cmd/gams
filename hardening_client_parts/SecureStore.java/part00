@@ -36,6 +36,22 @@ final class SecureStore {
         this.context = context.getApplicationContext();
         this.preferences = this.context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         this.cacheFile = new File(new File(this.context.getFilesDir(), "runtime"), "data.bin");
+        migrateLegacyState();
+    }
+
+    private void migrateLegacyState() {
+        if (!preferences.getString(PREF_BLOB, "").isEmpty()) return;
+        SharedPreferences legacy = context.getSharedPreferences("license_state", Context.MODE_PRIVATE);
+        String installId = legacy.getString("online_install_id", "");
+        String licenseKey = legacy.getString("license_key", "");
+        if (installId.isEmpty() && licenseKey.isEmpty()) return;
+        try {
+            JSONObject state = new JSONObject();
+            if (!installId.isEmpty()) state.put("installId", installId);
+            if (!licenseKey.isEmpty()) state.put("licenseKey", licenseKey);
+            saveState(state);
+            legacy.edit().clear().commit();
+        } catch (Exception ignored) { }
     }
 
     synchronized JSONObject loadState() {
