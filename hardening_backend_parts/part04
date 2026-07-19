@@ -1,0 +1,138 @@
+  if (env.GITHUB_TOKEN) headers.set("Authorization", `Bearer ${env.GITHUB_TOKEN}`);
+  return fetch(url, { headers, cf: { cacheEverything: true, cacheTtl: 60 } });
+}
+
+async function touch(env, licenseId, deviceId, now) {
+  await env.DB.batch([
+    env.DB.prepare("UPDATE devices SET last_seen_at=? WHERE id=?").bind(now, deviceId),
+    env.DB.prepare("UPDATE licenses SET last_seen_at=? WHERE id=?").bind(now, licenseId),
+  ]);
+}
+
+async function activeDeviceCount(env, licenseId) {
+  const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM devices WHERE license_id=? AND revoked_at IS NULL").bind(licenseId).first();
+  return Number(row?.count || 0);
+}
+
+async function findLicenseByKey(env, key) {
+  return env.DB.prepare("SELECT * FROM licenses WHERE key_hash=?").bind(await sha256Hex(key)).first();
+}
+
+async function licenseStateError(env, license) {
+  const now = nowSeconds();
+  if (license.status === "disabled") return reply({ ok: false, code: "license_disabled", message: "服务已暂停" }, 403);
+  if (license.status === "expired" || (license.expires_at && license.expires_at <= now)) {
+    if (license.status !== "expired") await env.DB.prepare("UPDATE licenses SET status='expired' WHERE id=?").bind(license.id).run();
+    return reply({ ok: false, code: "license_expired", message: "服务已到期" }, 403);
+  }
+  return null;
+}
+
+async function findLicenseForAdmin(env, body) {
+  const id = string(body.id, 64);
+  if (id) return env.DB.prepare("SELECT * FROM licenses WHERE id=?").bind(id).first();
+  const key = normalizeKey(body.licenseKey);
+  if (key.length !== 32) return null;
+  return findLicenseByKey(env, key);
+}
+
+async function requireAdmin(request, env) {
+  const header = request.headers.get("authorization") || "";
+  if (!header.startsWith("Bearer ")) throw new HttpError(401, "unauthorized", "请先登录管理端");
+  const payload = await verifyToken(header.slice(7), env, "admin");
+  if (!payload) throw new HttpError(401, "unauthorized", "管理登录已失效");
+  return payload;
+}
+
+async function signToken(payload, env) {
+  const encoded = base64Url(encoder.encode(JSON.stringify(payload)));
+  const signature = await hmac(encoded, env.ADMIN_PASSWORD || "");
+  return `${encoded}.${base64Url(signature)}`;
+}
+
+async function verifyToken(token, env, expectedType) {
+  try {
+    const [payloadPart, signaturePart] = token.split(".");
+    if (!payloadPart || !signaturePart) return null;
+    const expected = await hmac(payloadPart, env.ADMIN_PASSWORD || "");
+    const supplied = base64UrlDecode(signaturePart);
+    if (!constantTimeBytes(expected, supplied)) return null;
+    const payload = JSON.parse(decoder.decode(base64UrlDecode(payloadPart)));
+    if (payload.typ !== expectedType || !Number.isFinite(payload.exp) || payload.exp <= nowSeconds()) return null;
+    return payload;
+  } catch { return null; }
+}
+
+async function hmac(text, secret) {
+  const key = await crypto.subtle.importKey("raw", encoder.encode(`gams-license-v1:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(text)));
+}
+
+async function constantTimeTextEqual(a, b) {
+  const [ha, hb] = await Promise.all([crypto.subtle.digest("SHA-256", encoder.encode(String(a))), crypto.subtle.digest("SHA-256", encoder.encode(String(b)))]);
+  return constantTimeBytes(new Uint8Array(ha), new Uint8Array(hb));
+}
+
+function constantTimeBytes(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+async function readJson(request) {
+  const length = Number(request.headers.get("content-length") || 0);
+  if (length > MAX_BODY_BYTES) throw new HttpError(413, "body_too_large", "请求内容过大");
+  const text = await request.text();
+  if (text.length > MAX_BODY_BYTES) throw new HttpError(413, "body_too_large", "请求内容过大");
+  try { return text ? JSON.parse(text) : {}; } catch { throw new HttpError(400, "bad_json", "请求格式错误"); }
+}
+
+async function allowRate(env, key, limit, windowSeconds) {
+  const now = nowSeconds();
+  const row = await env.DB.prepare("SELECT window_start,count FROM rate_limits WHERE key=?").bind(key).first();
+  if (!row || now - row.window_start >= windowSeconds) {
+    await env.DB.prepare("INSERT INTO rate_limits(key,window_start,count) VALUES(?,?,1) ON CONFLICT(key) DO UPDATE SET window_start=excluded.window_start,count=1").bind(key, now).run();
+    return true;
+  }
+  if (row.count >= limit) return false;
+  await env.DB.prepare("UPDATE rate_limits SET count=count+1 WHERE key=?").bind(key).run();
+  return true;
+}
+
+async function requestRateKey(request, prefix) {
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  return `${prefix}:${await sha256Hex(ip)}`;
+}
+
+async function audit(env, event, licenseId, deviceHash, detail) {
+  try {
+    await env.DB.prepare("INSERT INTO audit_log(id,event,license_id,device_hash,detail,created_at) VALUES(?,?,?,?,?,?)")
+      .bind(crypto.randomUUID(), event, licenseId, deviceHash, detail || "", nowSeconds()).run();
+  } catch (error) { console.warn("audit failed", error); }
+}
+
+function requireSupportedVersion(appVersion) {
+  if (appVersion < MIN_APP_VERSION) throw new HttpError(426, "upgrade_required", "客户端版本过低，请更新后继续使用");
+}
+
+function appVersionOf(body) { return clampInteger(body.appVersion, 0, 1000000, 0); }
+function normalizeKey(value) { return String(value || "").replace(/[^0-9a-f]/gi, "").toUpperCase(); }
+function normalizeDevice(value) { const result = String(value || "").trim().toLowerCase(); return /^[0-9a-f]{64}$/.test(result) ? result : ""; }
+function normalizeHex64(value) { const result = String(value || "").trim().toLowerCase(); return /^[0-9a-f]{64}$/.test(result) ? result : ""; }
+function randomKey() { const bytes = crypto.getRandomValues(new Uint8Array(16)); return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase(); }
+async function sha256Hex(value) { return sha256HexBytes(encoder.encode(String(value))); }
+async function sha256HexBytes(bytes) { const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)); return [...digest].map((b) => b.toString(16).padStart(2, "0")).join(""); }
+function string(value, max) { return String(value == null ? "" : value).trim().slice(0, max); }
+function clampInteger(value, min, max, fallback) { const number = Number.parseInt(value, 10); return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback; }
+function nowSeconds() { return Math.floor(Date.now() / 1000); }
+function calculateRiskScore(flags) { return String(flags || "").split(",").map((x) => x.trim()).filter(Boolean).length; }
+
+function base64Standard(bytes) { let binary = ""; for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(binary); }
+function base64Decode(text) { const binary = atob(String(text || "")); return Uint8Array.from(binary, (c) => c.charCodeAt(0)); }
+function base64Url(bytes) { return base64Standard(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, ""); }
+function base64UrlDecode(text) { const normalized = text.replace(/-/g, "+").replace(/_/g, "/"); return base64Decode(normalized + "=".repeat((4 - normalized.length % 4) % 4)); }
+
+function cors(response) {
+  const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", "*");
