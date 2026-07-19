@@ -1,0 +1,131 @@
+            }
+            if (!permanent && licenseExpiresAt > 0 && estimatedServerTime >= licenseExpiresAt) {
+                secureStore.deleteCache();
+                return RuntimeResult.invalid("服务已到期");
+            }
+            Manifest manifest = Manifest.parse(cache.getJSONObject("manifest"));
+            verifyManifest(manifest);
+            byte[] scriptBytes = cache.getString("source").getBytes(StandardCharsets.UTF_8);
+            verifyScript(manifest, scriptBytes);
+            return RuntimeResult.valid(new String(scriptBytes, StandardCharsets.UTF_8), true,
+                    permanent, licenseExpiresAt, "网络暂时不可用，已使用安全缓存");
+        } catch (Exception error) {
+            secureStore.deleteCache();
+            return RuntimeResult.invalid("服务连接失败，请检查网络后重试");
+        }
+    }
+
+    private long estimateServerTime(JSONObject cache) {
+        long serverTime = cache.optLong("serverTime", 0L);
+        long savedWall = cache.optLong("savedWallMs", 0L);
+        long savedElapsed = cache.optLong("savedElapsedMs", 0L);
+        int savedBoot = cache.optInt("bootCount", -1);
+        long nowWall = System.currentTimeMillis();
+        if (serverTime <= 0 || savedWall <= 0 || nowWall + CLOCK_ROLLBACK_TOLERANCE_MS < savedWall) return 0L;
+        if (savedBoot >= 0 && savedBoot == bootCount() && SystemClock.elapsedRealtime() >= savedElapsed) {
+            return serverTime + (SystemClock.elapsedRealtime() - savedElapsed) / 1000L;
+        }
+        return serverTime + Math.max(0L, nowWall - savedWall) / 1000L;
+    }
+
+    private int bootCount() {
+        try { return Settings.Global.getInt(context.getContentResolver(), Settings.Global.BOOT_COUNT); }
+        catch (Exception ignored) { return -1; }
+    }
+
+    private void verifyManifest(Manifest manifest) throws Exception {
+        if (!"SHA256withECDSA".equals(manifest.signatureAlgorithm)) throw new SecurityException("运行清单无效");
+        byte[] keyBytes = Base64.decode(PUBLIC_KEY_DER_BASE64, Base64.DEFAULT);
+        PublicKey publicKey = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(keyBytes));
+        Signature verifier = Signature.getInstance("SHA256withECDSA");
+        verifier.initVerify(publicKey);
+        verifier.update(manifest.canonical().getBytes(StandardCharsets.UTF_8));
+        if (!verifier.verify(Base64.decode(manifest.signature, Base64.DEFAULT))) throw new SecurityException("运行清单校验失败");
+        if (manifest.schemaVersion != 1 || !"stable".equals(manifest.channel) || manifest.version <= 0) throw new SecurityException("运行清单无效");
+        if (manifest.minAppVersion > APP_VERSION_CODE) throw new SecurityException("请更新客户端");
+        if (manifest.size <= 0 || manifest.size > 2 * 1024 * 1024) throw new SecurityException("运行数据大小无效");
+        if (!manifest.sha256.matches("[0-9a-fA-F]{64}")) throw new SecurityException("运行摘要无效");
+    }
+
+    private void verifyScript(Manifest manifest, byte[] bytes) throws Exception {
+        if (bytes.length != manifest.size) throw new SecurityException("运行数据大小校验失败");
+        byte[] actual = MessageDigest.getInstance("SHA-256").digest(bytes);
+        if (!MessageDigest.isEqual(actual, hexBytes(manifest.sha256))) throw new SecurityException("运行数据完整性校验失败");
+    }
+
+    private static byte[] hexBytes(String text) {
+        byte[] output = new byte[text.length() / 2];
+        for (int i = 0; i < output.length; i++) {
+            int high = Character.digit(text.charAt(i * 2), 16);
+            int low = Character.digit(text.charAt(i * 2 + 1), 16);
+            if (high < 0 || low < 0) throw new IllegalArgumentException("摘要无效");
+            output[i] = (byte) ((high << 4) | low);
+        }
+        return output;
+    }
+
+    private ApiException apiError(JSONObject object, int status) {
+        return new ApiException(status, object.optString("code", "request_failed"), object.optString("message", "操作失败"));
+    }
+
+    private String userMessage(ApiException error) {
+        if ("upgrade_required".equals(error.code)) return "客户端版本过低，请更新后继续使用";
+        if ("license_expired".equals(error.code)) return "服务已到期";
+        if ("license_disabled".equals(error.code)) return "服务已暂停，请联系支持";
+        if ("device_limit".equals(error.code)) return "激活码已绑定其他设备";
+        if ("device_key_changed".equals(error.code) || "certificate_changed".equals(error.code)) return "设备安全信息发生变化，请先更换设备";
+        if ("rebind_wait".equals(error.code)) return "更换设备后需等待6小时再激活";
+        if ("unbind_cooldown".equals(error.code)) return "24小时内只能自助更换一次设备";
+        if ("unbind_limit".equals(error.code)) return "近期更换设备次数已达上限";
+        if ("insufficient_time".equals(error.code)) return "剩余时间不足6小时，无法自助更换设备";
+        if ("too_many_requests".equals(error.code)) return "操作过于频繁，请稍后再试";
+        return error.message == null || error.message.trim().isEmpty() ? "操作失败，请重试" : error.message;
+    }
+
+    private void deliver(RuntimeCallback callback, RuntimeResult result) {
+        if (callback != null) mainHandler.post(() -> callback.onResult(result));
+    }
+
+    private void deliver(SimpleCallback callback, SimpleResult result) {
+        if (callback != null) mainHandler.post(() -> callback.onResult(result));
+    }
+
+    static String normalizeKey(String input) {
+        return input == null ? "" : input.replaceAll("[^0-9A-Fa-f]", "").toUpperCase(Locale.ROOT);
+    }
+
+    private static String formatSeconds(long seconds) {
+        if (seconds <= 0) return "未知";
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+        format.setTimeZone(TimeZone.getDefault());
+        return format.format(new Date(seconds * 1000L));
+    }
+
+    interface RuntimeCallback { void onResult(RuntimeResult result); }
+    interface SimpleCallback { void onResult(SimpleResult result); }
+
+    static final class RuntimeResult {
+        final boolean valid;
+        final boolean offline;
+        final boolean permanent;
+        final long expiresAt;
+        final String source;
+        final String message;
+        private RuntimeResult(boolean valid, boolean offline, boolean permanent, long expiresAt, String source, String message) {
+            this.valid = valid;
+            this.offline = offline;
+            this.permanent = permanent;
+            this.expiresAt = expiresAt;
+            this.source = source == null ? "" : source;
+            this.message = message == null ? "" : message;
+        }
+        static RuntimeResult valid(String source, boolean offline, boolean permanent, long expiresAt, String message) {
+            return new RuntimeResult(true, offline, permanent, expiresAt, source, message);
+        }
+        static RuntimeResult invalid(String message) { return new RuntimeResult(false, false, false, 0L, "", message); }
+    }
+
+    static final class SimpleResult {
+        final boolean success;
+        final String message;
+        private SimpleResult(boolean success, String message) { this.success = success; this.message = message; }
