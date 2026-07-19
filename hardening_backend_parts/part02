@@ -1,0 +1,106 @@
+  if (count >= Number(license.max_devices)) return { error: reply({ ok: false, code: "device_limit", message: "该激活码已绑定其他设备" }, 409) };
+  if (device) {
+    const version = Number(device.session_version || 1) + 1;
+    await env.DB.prepare(
+      `UPDATE devices SET revoked_at=NULL,last_seen_at=?,label=?,public_key=?,key_fingerprint=?,certificate_digest=?,risk_flags=?,session_version=? WHERE id=?`
+    ).bind(now, label, publicKey, keyFingerprint, certDigest, riskFlags, version, device.id).run();
+    return { row: { ...device, revoked_at: null, public_key: publicKey, key_fingerprint: keyFingerprint, certificate_digest: certDigest, session_version: version } };
+  }
+  const id = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO devices(id,license_id,device_hash,label,created_at,last_seen_at,public_key,key_fingerprint,certificate_digest,risk_flags,session_version)
+     VALUES(?,?,?,?,?,?,?,?,?,?,1)`
+  ).bind(id, license.id, deviceHash, label, now, now, publicKey, keyFingerprint, certDigest, riskFlags).run();
+  return { row: { id, public_key: publicKey, key_fingerprint: keyFingerprint, certificate_digest: certDigest, risk_flags: riskFlags, session_version: 1 } };
+}
+
+async function check(request, env) {
+  const body = await readJson(request);
+  const appVersion = appVersionOf(body);
+  requireSupportedVersion(appVersion);
+  return appVersion >= SECURE_APP_VERSION ? checkSecure(request, env, body, appVersion) : checkLegacy(request, env, body, appVersion);
+}
+
+async function checkLegacy(request, env, body, appVersion) {
+  const ipKey = await requestRateKey(request, "check-legacy");
+  if (!(await allowRate(env, ipKey, 120, 60))) return reply({ ok: false, code: "too_many_requests", message: "验证过于频繁" }, 429);
+  const deviceHash = normalizeDevice(body.deviceId);
+  const payload = await verifyToken(string(body.token, 4096), env, "session");
+  if (!payload || payload.dev !== deviceHash) return reply({ ok: false, code: "bad_session", message: "服务状态已失效，请重新启动" }, 401);
+  const license = await env.DB.prepare("SELECT * FROM licenses WHERE id=?").bind(payload.lic).first();
+  if (!license) return reply({ ok: false, code: "license_not_found", message: "服务状态无效" }, 404);
+  const stateError = await licenseStateError(env, license);
+  if (stateError) return stateError;
+  const device = await env.DB.prepare("SELECT * FROM devices WHERE license_id=? AND device_hash=? AND revoked_at IS NULL").bind(license.id, deviceHash).first();
+  if (!device) return reply({ ok: false, code: "device_unbound", message: "当前设备已解除绑定" }, 401);
+  if (device.key_fingerprint) return reply({ ok: false, code: "upgrade_required", message: "请更新客户端后继续使用" }, 426);
+  const now = nowSeconds();
+  await touch(env, license.id, device.id, now);
+  return licenseSuccess(env, license, deviceHash, device, now, false, appVersion);
+}
+
+async function checkSecure(request, env, body, appVersion) {
+  const deviceHash = normalizeDevice(body.deviceId);
+  const tokenText = string(body.token, 4096);
+  const payload = await verifyToken(tokenText, env, "session");
+  if (!payload || payload.dev !== deviceHash) return reply({ ok: false, code: "bad_session", message: "服务状态已失效，请重新启动" }, 401);
+  const license = await env.DB.prepare("SELECT * FROM licenses WHERE id=?").bind(payload.lic).first();
+  if (!license) return reply({ ok: false, code: "license_not_found", message: "服务状态无效" }, 404);
+  const stateError = await licenseStateError(env, license);
+  if (stateError) return stateError;
+  const device = await env.DB.prepare("SELECT * FROM devices WHERE license_id=? AND device_hash=? AND revoked_at IS NULL").bind(license.id, deviceHash).first();
+  if (!device || !device.public_key || !device.key_fingerprint) return reply({ ok: false, code: "device_unbound", message: "当前设备已解除绑定" }, 401);
+  if (payload.kid !== device.key_fingerprint || Number(payload.sv) !== Number(device.session_version)) {
+    return reply({ ok: false, code: "bad_session", message: "服务状态已更新，请重新启动" }, 401);
+  }
+  await verifySignedRequest(env, body, "check", device.public_key, await sha256Hex(tokenText), device);
+  const now = nowSeconds();
+  await touch(env, license.id, device.id, now);
+  return licenseSuccess(env, license, deviceHash, device, now, true, appVersion);
+}
+
+async function script(request, env) {
+  const body = await readJson(request);
+  const appVersion = appVersionOf(body);
+  if (appVersion < SECURE_APP_VERSION) return reply({ ok: false, code: "upgrade_required", message: "请更新客户端后继续使用" }, 426);
+  const deviceHash = normalizeDevice(body.deviceId);
+  const tokenText = string(body.token, 4096);
+  const payload = await verifyToken(tokenText, env, "session");
+  if (!payload || payload.dev !== deviceHash) return reply({ ok: false, code: "bad_session", message: "服务状态已失效" }, 401);
+  const license = await env.DB.prepare("SELECT * FROM licenses WHERE id=?").bind(payload.lic).first();
+  if (!license) return reply({ ok: false, code: "license_not_found", message: "服务状态无效" }, 404);
+  const stateError = await licenseStateError(env, license);
+  if (stateError) return stateError;
+  const device = await env.DB.prepare("SELECT * FROM devices WHERE license_id=? AND device_hash=? AND revoked_at IS NULL").bind(license.id, deviceHash).first();
+  if (!device || payload.kid !== device.key_fingerprint || Number(payload.sv) !== Number(device.session_version)) {
+    return reply({ ok: false, code: "device_unbound", message: "当前设备状态无效" }, 401);
+  }
+  await verifySignedRequest(env, body, "script", device.public_key, await sha256Hex(`${tokenText}|script`), device);
+  const rateKey = `script:${license.id}:${device.id}`;
+  if (!(await allowRate(env, rateKey, 30, 60))) return reply({ ok: false, code: "too_many_requests", message: "初始化过于频繁" }, 429);
+  const release = await loadScriptRelease(env);
+  const now = nowSeconds();
+  await touch(env, license.id, device.id, now);
+  return reply({
+    ok: true,
+    manifest: release.manifest,
+    scriptBase64: release.scriptBase64,
+    leaseSeconds: SCRIPT_LEASE_SECONDS,
+    serverTime: now,
+  });
+}
+
+async function selfUnbind(request, env) {
+  const body = await readJson(request);
+  const appVersion = appVersionOf(body);
+  if (appVersion < SECURE_APP_VERSION) return reply({ ok: false, code: "upgrade_required", message: "请更新客户端后继续使用" }, 426);
+  const deviceHash = normalizeDevice(body.deviceId);
+  const tokenText = string(body.token, 4096);
+  const payload = await verifyToken(tokenText, env, "session");
+  if (!payload || payload.dev !== deviceHash) return reply({ ok: false, code: "bad_session", message: "服务状态已失效" }, 401);
+  const license = await env.DB.prepare("SELECT * FROM licenses WHERE id=?").bind(payload.lic).first();
+  if (!license) return reply({ ok: false, code: "license_not_found", message: "服务状态无效" }, 404);
+  const stateError = await licenseStateError(env, license);
+  if (stateError) return stateError;
+  const device = await env.DB.prepare("SELECT * FROM devices WHERE license_id=? AND device_hash=? AND revoked_at IS NULL").bind(license.id, deviceHash).first();
+  if (!device || payload.kid !== device.key_fingerprint || Number(payload.sv) !== Number(device.session_version)) {
