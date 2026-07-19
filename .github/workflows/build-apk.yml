@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Checkout repository quietly
         shell: bash
@@ -78,7 +78,7 @@ jobs:
           python3 keygen_online_patch/patch_keygen_online.py
           python3 license_endpoint_hotfix/patch_endpoints.py
 
-      - name: Apply GG secure runtime and branding
+      - name: Apply GG free source hardening
         shell: bash
         run: |
           set -euo pipefail
@@ -89,19 +89,30 @@ jobs:
           done
           python3 client_hardening_patch/apply.py
 
-          grep -q 'versionCode = 6' client/build.gradle.kts
-          grep -q 'versionName = "1.3.0"' client/build.gradle.kts
+          grep -q 'versionCode = 7' client/build.gradle.kts
+          grep -q 'versionName = "1.3.1"' client/build.gradle.kts
+          grep -q 'isMinifyEnabled = true' client/build.gradle.kts
+          grep -q 'isShrinkResources = true' client/build.gradle.kts
+          grep -q 'proguard-android-optimize.txt' client/build.gradle.kts
+          grep -q -- '-repackageclasses g' client/proguard-rules.pro
           grep -q 'android:label="GG"' client/src/main/AndroidManifest.xml
           grep -q 'android:allowBackup="false"' client/src/main/AndroidManifest.xml
+          grep -q 'android:debuggable="false"' client/src/main/AndroidManifest.xml
           grep -q 'AndroidKeyStore' client/src/main/java/com/jinli/quickweb/DeviceIdentity.java
           grep -q 'AES/GCM/NoPadding' client/src/main/java/com/jinli/quickweb/SecureStore.java
           grep -q '/v1/device/unbind' client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
           grep -q '/v1/script' client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
-          grep -q '正在初始化' client/src/main/java/com/jinli/quickweb/MainActivity.java
+          grep -q 'RuntimeNames.customHost' client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+          grep -q 'RuntimeNames.startUrl' client/src/main/java/com/jinli/quickweb/MainActivity.java
           test ! -e client/src/main/assets/noname.js
           test -s client/src/main/res/drawable/ic_launcher_foreground.xml
-          grep -q 'versionCode = 5' keygen/build.gradle.kts
-          grep -q 'versionName = "1.2.0"' keygen/build.gradle.kts
+
+          grep -q 'versionCode = 6' keygen/build.gradle.kts
+          grep -q 'versionName = "1.2.1"' keygen/build.gradle.kts
+          grep -q 'isMinifyEnabled = true' keygen/build.gradle.kts
+          grep -q 'isShrinkResources = true' keygen/build.gradle.kts
+          grep -q 'proguard-android-optimize.txt' keygen/build.gradle.kts
+          grep -q -- '-repackageclasses g' keygen/proguard-rules.pro
           grep -q 'android:label="GG 管理器"' keygen/src/main/AndroidManifest.xml
 
       - uses: actions/setup-java@v4
@@ -113,28 +124,56 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build release APKs
+      - name: Build hardened release APKs
         run: gradle :client:assembleRelease :keygen:assembleRelease --stacktrace
 
-      - name: Verify and rename APKs
+      - name: Verify free source hardening and rename APKs
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
           client_apk="client/build/outputs/apk/release/client-release.apk"
           admin_apk="keygen/build/outputs/apk/release/keygen-release.apk"
+
+          test -s client/build/outputs/mapping/release/mapping.txt
+          test -s keygen/build/outputs/mapping/release/mapping.txt
+
           unzip -l "$client_apk" > /tmp/client-files.txt
           if grep -q 'assets/noname.js' /tmp/client-files.txt; then
             echo "Embedded script must not be present"
             exit 1
           fi
-          cp "$client_apk" "dist/GG-v1.3.0.apk"
-          cp "$admin_apk" "dist/GG-管理器-v1.2.0.apk"
+
+          unzip -p "$client_apk" classes.dex > /tmp/client.dex
+          unzip -p "$admin_apk" classes.dex > /tmp/admin.dex
+          if strings /tmp/client.dex | grep -q 'Lcom/jinli/quickweb/OnlineLicenseManager;'; then
+            echo "Client support classes were not obfuscated"
+            exit 1
+          fi
+          if strings /tmp/client.dex | grep -q 'Lcom/jinli/quickweb/DeviceIdentity;'; then
+            echo "Client device identity class was not obfuscated"
+            exit 1
+          fi
+          if strings /tmp/client.dex | grep -q 'gams-license-api.2320006072.workers.dev'; then
+            echo "Worker endpoint remains visible in client DEX"
+            exit 1
+          fi
+          if strings /tmp/client.dex | grep -q 'license.xn--8pv109c.top'; then
+            echo "Custom endpoint remains visible in client DEX"
+            exit 1
+          fi
+          if strings /tmp/admin.dex | grep -q 'Lcom/jinli/keygen/AdminApiManager;'; then
+            echo "Administrator support classes were not obfuscated"
+            exit 1
+          fi
+
+          cp "$client_apk" "dist/GG-v1.3.1-免费源码加固版.apk"
+          cp "$admin_apk" "dist/GG-管理器-v1.2.1-免费源码加固版.apk"
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-v1.3.0-强化测试版
+          name: GG-v1.3.1-免费源码加固版
           path: dist/*
           if-no-files-found: error
           retention-days: 30
