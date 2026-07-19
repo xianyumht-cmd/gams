@@ -1,0 +1,181 @@
+        tip.setText("请妥善保存激活码。卸载重装后需要重新输入。更换设备请在服务信息中操作。");
+        tip.setTextSize(13);
+        tip.setTextColor(Color.rgb(107, 114, 128));
+        tip.setGravity(Gravity.CENTER);
+        tip.setPadding(0, dp(34), 0, 0);
+        root.addView(tip, matchWrap(0));
+
+        paste.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence text = clip.getItemAt(0).coerceToText(this);
+                    input.setText(text == null ? "" : text.toString());
+                    input.setSelection(input.length());
+                }
+            }
+        });
+
+        activate.setOnClickListener(v -> {
+            String normalized = OnlineLicenseManager.normalizeKey(input.getText().toString());
+            if (normalized.length() != 32) {
+                status.setText("激活码格式错误");
+                return;
+            }
+            activate.setEnabled(false);
+            paste.setEnabled(false);
+            status.setTextColor(Color.rgb(55, 65, 81));
+            status.setText("正在启动服务…");
+            onlineLicenseManager.activateAsync(normalized, result -> {
+                if (isFinishing() || isDestroyed()) return;
+                activate.setEnabled(true);
+                paste.setEnabled(true);
+                if (!result.valid) {
+                    status.setTextColor(Color.rgb(185, 28, 28));
+                    status.setText(result.message);
+                    return;
+                }
+                Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
+                showBrowser(null, result.source);
+            });
+        });
+
+        setContentView(scrollView);
+    }
+
+    private Button actionButton(String text, boolean primary) {
+        Button button = new Button(this);
+        button.setText(text);
+        button.setTextSize(15);
+        button.setAllCaps(false);
+        button.setTextColor(primary ? Color.WHITE : Color.rgb(31, 41, 55));
+        button.setBackgroundColor(primary ? Color.rgb(79, 70, 229) : Color.rgb(229, 231, 235));
+        return button;
+    }
+
+    private LinearLayout.LayoutParams matchWrap(int bottomMargin) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 0, 0, bottomMargin);
+        return params;
+    }
+
+    private void showBrowser(@Nullable Bundle savedInstanceState, String source) {
+        wrappedUserScript = wrapUserScript(source);
+        browserVisible = true;
+        createBrowserUi();
+        configureWebView();
+        if (savedInstanceState != null) webView.restoreState(savedInstanceState);
+        else webView.loadUrl(START_URL);
+    }
+
+    private void createBrowserUi() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.WHITE);
+
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setOrientation(LinearLayout.HORIZONTAL);
+        toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.setPadding(dp(4), dp(4), dp(4), dp(4));
+        toolbar.setBackgroundColor(Color.rgb(17, 24, 39));
+
+        Button back = toolbarButton("返回");
+        Button home = toolbarButton("首页");
+        Button refresh = toolbarButton("刷新");
+        Button reset = toolbarButton("重置");
+        Button license = toolbarButton("服务");
+
+        statusText = new TextView(this);
+        statusText.setText("正在加载…");
+        statusText.setTextColor(Color.WHITE);
+        statusText.setTextSize(12);
+        statusText.setSingleLine(true);
+        statusText.setGravity(Gravity.CENTER_VERTICAL);
+        statusText.setPadding(dp(6), 0, dp(2), 0);
+
+        toolbar.addView(back);
+        toolbar.addView(home);
+        toolbar.addView(refresh);
+        toolbar.addView(reset);
+        toolbar.addView(license);
+        toolbar.addView(statusText, new LinearLayout.LayoutParams(0, dp(40), 1));
+
+        progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progressBar.setMax(100);
+        progressBar.setProgress(0);
+        progressBar.setVisibility(View.VISIBLE);
+
+        webView = new WebView(this);
+        webView.setBackgroundColor(Color.WHITE);
+
+        root.addView(toolbar, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)));
+        root.addView(progressBar, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(3)));
+        root.addView(webView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        setContentView(root);
+
+        back.setOnClickListener(v -> {
+            if (webView.canGoBack()) webView.goBack();
+            else finish();
+        });
+        home.setOnClickListener(v -> webView.loadUrl(START_URL));
+        refresh.setOnClickListener(v -> webView.reload());
+        reset.setOnClickListener(v -> showResetDialog());
+        license.setOnClickListener(v -> showLicenseInfoDialog());
+    }
+
+    private Button toolbarButton(String text) {
+        Button button = new Button(this);
+        button.setText(text);
+        button.setTextSize(11);
+        button.setTextColor(Color.WHITE);
+        button.setAllCaps(false);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setPadding(dp(8), 0, dp(8), 0);
+        button.setBackgroundColor(Color.TRANSPARENT);
+        return button;
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void configureWebView() {
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        settings.setSupportZoom(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        CookieManager cookies = CookieManager.getInstance();
+        cookies.setAcceptCookie(true);
+        cookies.setAcceptThirdPartyCookies(webView, true);
+
+        installDocumentStartScript();
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                statusText.setText("正在加载…");
+                progressBar.setVisibility(View.VISIBLE);
+                if (!nativeDocumentStartEnabled && isScriptTarget(url)) {
+                    view.evaluateJavascript(wrappedUserScript, null);
+                }
+            }
+
+            @Override
