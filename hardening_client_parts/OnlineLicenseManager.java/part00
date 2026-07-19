@@ -1,0 +1,162 @@
+package com.jinli.quickweb;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
+import android.provider.Settings;
+import android.util.Base64;
+
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+final class OnlineLicenseManager {
+    private static final int APP_VERSION_CODE = 6;
+    private static final int MAX_JSON_BYTES = 128 * 1024;
+    private static final int MAX_SCRIPT_RESPONSE_BYTES = 3 * 1024 * 1024;
+    private static final long FOREGROUND_RECHECK_MS = 30L * 60L * 1000L;
+    private static final long CLOCK_ROLLBACK_TOLERANCE_MS = 5L * 60L * 1000L;
+    private static final String PUBLIC_KEY_DER_BASE64 =
+            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn1P0wJwOtd+btZuTxPslVdjaOxSE" +
+            "k8iRPNbzkPz3lHT7Cyoi6/e0K7UgQNDRTJKcD8TPcIR1PNrgLLIot34X3w==";
+
+    private final Context context;
+    private final SecureStore secureStore;
+    private final DeviceIdentity identity;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    OnlineLicenseManager(Context context) {
+        this.context = context.getApplicationContext();
+        this.secureStore = new SecureStore(this.context);
+        this.identity = new DeviceIdentity(this.context, secureStore);
+    }
+
+    boolean hasSavedKey() {
+        return normalizeKey(secureStore.loadState().optString("licenseKey", "")).length() == 32;
+    }
+
+    long foregroundRecheckMs() { return FOREGROUND_RECHECK_MS; }
+
+    void initializeSavedAsync(RuntimeCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject state = secureStore.loadState();
+                String key = normalizeKey(state.optString("licenseKey", ""));
+                if (key.length() != 32) {
+                    deliver(callback, RuntimeResult.invalid("请输入激活码"));
+                    return;
+                }
+                RuntimeResult result;
+                String token = state.optString("token", "");
+                if (token.isEmpty()) {
+                    result = activateAndLoad(key);
+                } else {
+                    try {
+                        AuthResult auth = checkOnline(token);
+                        result = loadScriptAfterAuth(key, auth);
+                    } catch (ApiException error) {
+                        if ("bad_session".equals(error.code) || "device_unbound".equals(error.code)) {
+                            result = activateAndLoad(key);
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+                deliver(callback, result);
+            } catch (java.io.IOException networkError) {
+                deliver(callback, offlineFallback());
+            } catch (ApiException error) {
+                deliver(callback, RuntimeResult.invalid(userMessage(error)));
+            } catch (Exception error) {
+                deliver(callback, RuntimeResult.invalid("服务初始化失败，请重试"));
+            }
+        });
+    }
+
+    void activateAsync(String rawKey, RuntimeCallback callback) {
+        final String key = normalizeKey(rawKey);
+        if (key.length() != 32) {
+            deliver(callback, RuntimeResult.invalid("激活码格式错误"));
+            return;
+        }
+        executor.execute(() -> {
+            try {
+                deliver(callback, activateAndLoad(key));
+            } catch (java.io.IOException error) {
+                deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"));
+            } catch (ApiException error) {
+                deliver(callback, RuntimeResult.invalid(userMessage(error)));
+            } catch (Exception error) {
+                deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
+            }
+        });
+    }
+
+    void selfUnbindAsync(SimpleCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject state = secureStore.loadState();
+                String token = state.optString("token", "");
+                if (token.isEmpty()) throw new ApiException(401, "bad_session", "服务状态已失效");
+                String deviceId = identity.deviceId();
+                JSONObject body = signedBody("unbind", DeviceIdentity.sha256Hex(token + "|unbind"), deviceId);
+                body.put("token", token);
+                JSONObject response = postJson("/v1/device/unbind", body, MAX_JSON_BYTES);
+                if (!response.optBoolean("ok", false)) throw apiError(response, 400);
+                long expiresAt = response.isNull("licenseExpiresAt") ? 0L : response.optLong("licenseExpiresAt", 0L);
+                long rebindAt = response.isNull("rebindAvailableAt") ? 0L : response.optLong("rebindAvailableAt", 0L);
+                secureStore.clearAuthorization();
+                String message = rebindAt > 0
+                        ? "更换设备成功，6小时后可在新设备重新激活"
+                        : "更换设备成功，已扣除6小时，有效期至 " + formatSeconds(expiresAt);
+                deliver(callback, SimpleResult.success(message));
+            } catch (java.io.IOException error) {
+                deliver(callback, SimpleResult.failure("服务连接失败，请检查网络后重试"));
+            } catch (ApiException error) {
+                deliver(callback, SimpleResult.failure(userMessage(error)));
+            } catch (Exception error) {
+                deliver(callback, SimpleResult.failure("更换设备失败，请重试"));
+            }
+        });
+    }
+
+    String getStatusSummary() {
+        JSONObject state = secureStore.loadState();
+        boolean permanent = state.optBoolean("permanent", false);
+        long expiresAt = state.optLong("licenseExpiresAt", 0L);
+        long lastSuccess = state.optLong("lastServerTime", 0L);
+        String validity = permanent ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
+        String last = lastSuccess > 0 ? formatSeconds(lastSuccess) : "尚未完成";
+        return "有效期：" + validity + "\n最近初始化：" + last;
+    }
+
+    void clear() { secureStore.clearAuthorization(); }
+    void shutdown() { executor.shutdownNow(); }
+
+    private RuntimeResult activateAndLoad(String key) throws Exception {
+        String deviceId = identity.deviceId();
+        String publicKey = identity.publicKeyBase64();
+        String label = identity.deviceLabel();
+        String payloadHash = DeviceIdentity.sha256Hex(key + "|" + publicKey + "|" + label);
+        JSONObject body = signedBody("activate", payloadHash, deviceId);
+        body.put("licenseKey", key);
+        body.put("publicKey", publicKey);
+        body.put("deviceLabel", label);
+        JSONObject response = postJson("/v1/activate", body, MAX_JSON_BYTES);
+        AuthResult auth = parseAuth(response);
+        return loadScriptAfterAuth(key, auth);
+    }
+
