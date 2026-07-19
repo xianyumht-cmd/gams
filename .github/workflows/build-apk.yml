@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout repository quietly
         shell: bash
@@ -56,66 +56,53 @@ jobs:
                   raise SystemExit(f"Checksum mismatch in {part.name}")
           text = "".join("".join(part.read_text(encoding="utf-8").split()) for part in parts)
           raw = base64.b64decode(text, validate=True)
-          digest = hashlib.sha256(raw).hexdigest()
-          if digest != "aab22ffe5e49fbcb6ba9efa8f960aa90057644ae5a94511d2334704dbb92ea9d":
+          if hashlib.sha256(raw).hexdigest() != "aab22ffe5e49fbcb6ba9efa8f960aa90057644ae5a94511d2334704dbb92ea9d":
               raise SystemExit("Payload checksum mismatch")
           Path("project_payload.tar.xz").write_bytes(raw)
           PY
           tar -xJf project_payload.tar.xz
-          test -s client/src/main/assets/noname.js
-          test -s client/src/main/java/com/jinli/quickweb/MainActivity.java
-          test -s keygen/src/main/java/com/jinli/keygen/MainActivity.java
 
-      - name: Apply signed remote script client patch
+      - name: Prepare existing online clients
         shell: bash
         run: |
           set -euo pipefail
-          cp client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java \
-            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          cp client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
           python3 client_patch/patch_client.py
-
-          grep -q 'versionCode = 2' client/build.gradle.kts
-          grep -q 'versionName = "1.1.0"' client/build.gradle.kts
-          grep -q 'gams-script-edge.2320006072.workers.dev' \
-            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
-          grep -q 'SHA256withECDSA' \
-            client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
-          grep -q 'refreshAsync' client/src/main/java/com/jinli/quickweb/MainActivity.java
-
-      - name: Apply resilient online license patches
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java \
-            client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
-          cp client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java \
-            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+          cp client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          cp client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
           python3 client_online_patch/patch_client_online.py
 
-          cp keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java \
-            keygen/src/main/java/com/jinli/keygen/MainActivity.java
-          cp keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java \
-            keygen/src/main/java/com/jinli/keygen/AdminApiManager.java
-          sed 's/package com.jinli.quickweb;/package com.jinli.keygen;/' \
-            client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java \
-            > keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
+          cp keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java keygen/src/main/java/com/jinli/keygen/MainActivity.java
+          cp keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java keygen/src/main/java/com/jinli/keygen/AdminApiManager.java
+          sed 's/package com.jinli.quickweb;/package com.jinli.keygen;/' client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java > keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
           python3 keygen_online_patch/patch_keygen_online.py
           python3 license_endpoint_hotfix/patch_endpoints.py
 
-          grep -q 'versionCode = 5' client/build.gradle.kts
-          grep -q 'versionName = "1.2.2"' client/build.gradle.kts
-          grep -q 'CUSTOM_HOST = "license.xn--8pv109c.top"' \
-            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
-          grep -q 'WORKER_HOST = "gams-license-api.2320006072.workers.dev"' \
-            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
-          grep -q 'DNS_RESOLVERS' \
-            client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
-          ! grep -q 'class LicenseCodec' client/src/main/java/com/jinli/quickweb/MainActivity.java
-          grep -q 'android.permission.INTERNET' keygen/src/main/AndroidManifest.xml
-          grep -q 'versionCode = 4' keygen/build.gradle.kts
-          grep -q 'versionName = "1.1.2"' keygen/build.gradle.kts
-          grep -q 'package com.jinli.keygen;' \
-            keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
+      - name: Apply GG secure runtime and branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=client_hardening_patch/src/main/java/com/jinli/quickweb
+          mkdir -p "$target"
+          for name in SecureStore DeviceIdentity OnlineLicenseManager MainActivity; do
+            cat "hardening_client_parts/${name}.java"/part* > "$target/${name}.java"
+          done
+          python3 client_hardening_patch/apply.py
+
+          grep -q 'versionCode = 6' client/build.gradle.kts
+          grep -q 'versionName = "1.3.0"' client/build.gradle.kts
+          grep -q 'android:label="GG"' client/src/main/AndroidManifest.xml
+          grep -q 'android:allowBackup="false"' client/src/main/AndroidManifest.xml
+          grep -q 'AndroidKeyStore' client/src/main/java/com/jinli/quickweb/DeviceIdentity.java
+          grep -q 'AES/GCM/NoPadding' client/src/main/java/com/jinli/quickweb/SecureStore.java
+          grep -q '/v1/device/unbind' client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          grep -q '/v1/script' client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          grep -q '正在初始化' client/src/main/java/com/jinli/quickweb/MainActivity.java
+          test ! -e client/src/main/assets/noname.js
+          test -s client/src/main/res/drawable/ic_launcher_foreground.xml
+          grep -q 'versionCode = 5' keygen/build.gradle.kts
+          grep -q 'versionName = "1.2.0"' keygen/build.gradle.kts
+          grep -q 'android:label="GG 管理器"' keygen/src/main/AndroidManifest.xml
 
       - uses: actions/setup-java@v4
         with:
@@ -129,16 +116,25 @@ jobs:
       - name: Build release APKs
         run: gradle :client:assembleRelease :keygen:assembleRelease --stacktrace
 
-      - name: Rename APKs
+      - name: Verify and rename APKs
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist
-          cp client/build/outputs/apk/release/client-release.apk "dist/快捷工具-客户端-联网授权-v1.2.2.apk"
-          cp keygen/build/outputs/apk/release/keygen-release.apk "dist/在线卡密管理器-v1.1.2.apk"
+          client_apk="client/build/outputs/apk/release/client-release.apk"
+          admin_apk="keygen/build/outputs/apk/release/keygen-release.apk"
+          unzip -l "$client_apk" > /tmp/client-files.txt
+          if grep -q 'assets/noname.js' /tmp/client-files.txt; then
+            echo "Embedded script must not be present"
+            exit 1
+          fi
+          cp "$client_apk" "dist/GG-v1.3.0.apk"
+          cp "$admin_apk" "dist/GG-管理器-v1.2.0.apk"
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Android-联网授权-多通道修复版
+          name: GG-v1.3.0-强化测试版
           path: dist/*
           if-no-files-found: error
           retention-days: 30

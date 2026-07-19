@@ -1,0 +1,117 @@
+    `SELECT id,key_preview,status,created_at,activated_at,expires_at,max_devices,note,last_seen_at,last_unbind_at,rebind_available_at
+       FROM licenses WHERE id=?`
+  ).bind(license.id).first();
+  return reply({ ok: true, license: updated });
+}
+
+async function issueChallenge(request, env) {
+  const body = await readJson(request);
+  const appVersion = appVersionOf(body);
+  requireSupportedVersion(appVersion);
+  const deviceHash = normalizeDevice(body.deviceId);
+  const purpose = string(body.purpose, 24);
+  if (!deviceHash) throw new HttpError(400, "bad_device", "设备信息无效");
+  if (!["activate", "check", "script", "unbind"].includes(purpose)) throw new HttpError(400, "bad_purpose", "请求用途无效");
+  const rateKey = `${await requestRateKey(request, "challenge")}:${deviceHash.slice(0, 12)}`;
+  if (!(await allowRate(env, rateKey, 60, 60))) throw new HttpError(429, "too_many_requests", "操作过于频繁");
+  const now = nowSeconds();
+  const nonce = base64Url(crypto.getRandomValues(new Uint8Array(24)));
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM challenges WHERE expires_at<? OR used_at IS NOT NULL").bind(now - 300),
+    env.DB.prepare(
+      "INSERT INTO challenges(nonce,device_hash,purpose,created_at,expires_at) VALUES(?,?,?,?,?)"
+    ).bind(nonce, deviceHash, purpose, now, now + CHALLENGE_SECONDS),
+  ]);
+  return reply({ ok: true, nonce, purpose, serverTime: now, expiresAt: now + CHALLENGE_SECONDS });
+}
+
+async function activate(request, env) {
+  const body = await readJson(request);
+  const appVersion = appVersionOf(body);
+  requireSupportedVersion(appVersion);
+  return appVersion >= SECURE_APP_VERSION ? activateSecure(request, env, body, appVersion) : activateLegacy(request, env, body, appVersion);
+}
+
+async function activateLegacy(request, env, body, appVersion) {
+  const ipKey = await requestRateKey(request, "activate-legacy");
+  if (!(await allowRate(env, ipKey, 30, 60))) return reply({ ok: false, code: "too_many_requests", message: "验证过于频繁，请稍后再试" }, 429);
+  const key = normalizeKey(body.licenseKey);
+  const deviceHash = normalizeDevice(body.deviceId);
+  const label = string(body.deviceLabel, 100);
+  if (key.length !== 32) return reply({ ok: false, code: "bad_key", message: "激活码格式错误" }, 400);
+  if (!deviceHash) return reply({ ok: false, code: "bad_device", message: "设备信息无效" }, 400);
+  const license = await findLicenseByKey(env, key);
+  if (!license) return reply({ ok: false, code: "license_not_found", message: "激活码无效" }, 404);
+  const stateError = await licenseStateError(env, license);
+  if (stateError) return stateError;
+  const now = nowSeconds();
+  const device = await bindLegacyDevice(env, license, deviceHash, label, now);
+  if (device.error) return device.error;
+  await env.DB.prepare("UPDATE licenses SET activated_at=COALESCE(activated_at,?),last_seen_at=? WHERE id=?").bind(now, now, license.id).run();
+  return licenseSuccess(env, license, deviceHash, device.row, now, false, appVersion);
+}
+
+async function activateSecure(request, env, body, appVersion) {
+  const ipKey = await requestRateKey(request, "activate-secure");
+  if (!(await allowRate(env, ipKey, 30, 60))) throw new HttpError(429, "too_many_requests", "操作过于频繁");
+  const key = normalizeKey(body.licenseKey);
+  const deviceHash = normalizeDevice(body.deviceId);
+  const label = string(body.deviceLabel, 100);
+  const publicKey = string(body.publicKey, 4096);
+  if (key.length !== 32) throw new HttpError(400, "bad_key", "激活码格式错误");
+  if (!deviceHash || !publicKey) throw new HttpError(400, "bad_device", "设备信息无效");
+  const payloadHash = await sha256Hex(`${key}|${publicKey}|${label}`);
+  const verified = await verifySignedRequest(env, body, "activate", publicKey, payloadHash);
+  const license = await findLicenseByKey(env, key);
+  if (!license) return reply({ ok: false, code: "license_not_found", message: "激活码无效" }, 404);
+  const stateError = await licenseStateError(env, license);
+  if (stateError) return stateError;
+  const now = nowSeconds();
+  if (license.rebind_available_at && Number(license.rebind_available_at) > now) {
+    return reply({ ok: false, code: "rebind_wait", message: `更换设备后需等待至 ${license.rebind_available_at}` }, 409);
+  }
+  const bound = await bindSecureDevice(env, license, deviceHash, label, publicKey, verified.keyFingerprint,
+    verified.certificateDigest, verified.riskFlags, now);
+  if (bound.error) return bound.error;
+  await env.DB.prepare("UPDATE licenses SET activated_at=COALESCE(activated_at,?),last_seen_at=? WHERE id=?").bind(now, now, license.id).run();
+  await audit(env, "secure_device_bound", license.id, deviceHash, JSON.stringify({ kid: verified.keyFingerprint, risk: verified.riskFlags }));
+  return licenseSuccess(env, license, deviceHash, bound.row, now, true, appVersion);
+}
+
+async function bindLegacyDevice(env, license, deviceHash, label, now) {
+  let device = await env.DB.prepare("SELECT * FROM devices WHERE license_id=? AND device_hash=?").bind(license.id, deviceHash).first();
+  if (device && device.key_fingerprint) return { error: reply({ ok: false, code: "upgrade_required", message: "请更新客户端后继续使用" }, 426) };
+  if (device && !device.revoked_at) {
+    await env.DB.prepare("UPDATE devices SET last_seen_at=?,label=? WHERE id=?").bind(now, label, device.id).run();
+    return { row: device };
+  }
+  const count = await activeDeviceCount(env, license.id);
+  if (count >= Number(license.max_devices)) return { error: reply({ ok: false, code: "device_limit", message: "该激活码已绑定其他设备" }, 409) };
+  if (device) {
+    await env.DB.prepare("UPDATE devices SET revoked_at=NULL,last_seen_at=?,label=?,session_version=session_version+1 WHERE id=?")
+      .bind(now, label, device.id).run();
+    device.revoked_at = null;
+    device.session_version = Number(device.session_version || 1) + 1;
+    return { row: device };
+  }
+  const id = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO devices(id,license_id,device_hash,label,created_at,last_seen_at,session_version)
+     VALUES(?,?,?,?,?,?,1)`
+  ).bind(id, license.id, deviceHash, label, now, now).run();
+  return { row: { id, session_version: 1 } };
+}
+
+async function bindSecureDevice(env, license, deviceHash, label, publicKey, keyFingerprint, certDigest, riskFlags, now) {
+  let device = await env.DB.prepare("SELECT * FROM devices WHERE license_id=? AND device_hash=?").bind(license.id, deviceHash).first();
+  if (device && !device.revoked_at) {
+    if (device.key_fingerprint && device.key_fingerprint !== keyFingerprint) {
+      return { error: reply({ ok: false, code: "device_key_changed", message: "设备安全信息发生变化，请先更换设备" }, 409) };
+    }
+    const version = Number(device.session_version || 1) + 1;
+    await env.DB.prepare(
+      `UPDATE devices SET last_seen_at=?,label=?,public_key=?,key_fingerprint=?,certificate_digest=?,risk_flags=?,session_version=? WHERE id=?`
+    ).bind(now, label, publicKey, keyFingerprint, certDigest, riskFlags, version, device.id).run();
+    return { row: { ...device, public_key: publicKey, key_fingerprint: keyFingerprint, certificate_digest: certDigest, session_version: version } };
+  }
+  const count = await activeDeviceCount(env, license.id);

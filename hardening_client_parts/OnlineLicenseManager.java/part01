@@ -1,0 +1,139 @@
+    private AuthResult checkOnline(String token) throws Exception {
+        String deviceId = identity.deviceId();
+        JSONObject body = signedBody("check", DeviceIdentity.sha256Hex(token), deviceId);
+        body.put("token", token);
+        return parseAuth(postJson("/v1/check", body, MAX_JSON_BYTES));
+    }
+
+    private RuntimeResult loadScriptAfterAuth(String key, AuthResult auth) throws Exception {
+        try {
+            ScriptResult script = fetchScript(auth.token);
+            saveSuccess(key, auth, script);
+            return RuntimeResult.valid(script.source, false, auth.permanent, auth.licenseExpiresAt,
+                    auth.permanent ? "启动成功" : "启动成功，有效期至 " + formatSeconds(auth.licenseExpiresAt));
+        } catch (java.io.IOException error) {
+            RuntimeResult fallback = offlineFallbackWithAuth(auth);
+            if (fallback.valid) return fallback;
+            throw error;
+        } catch (ApiException error) {
+            if ("script_unavailable".equals(error.code) || "server_error".equals(error.code)) {
+                RuntimeResult fallback = offlineFallbackWithAuth(auth);
+                if (fallback.valid) return fallback;
+            }
+            throw error;
+        }
+    }
+
+    private ScriptResult fetchScript(String token) throws Exception {
+        String deviceId = identity.deviceId();
+        JSONObject body = signedBody("script", DeviceIdentity.sha256Hex(token + "|script"), deviceId);
+        body.put("token", token);
+        JSONObject response = postJson("/v1/script", body, MAX_SCRIPT_RESPONSE_BYTES);
+        if (!response.optBoolean("ok", false)) throw apiError(response, 400);
+        JSONObject manifestObject = response.getJSONObject("manifest");
+        Manifest manifest = Manifest.parse(manifestObject);
+        verifyManifest(manifest);
+        byte[] scriptBytes = Base64.decode(response.getString("scriptBase64"), Base64.DEFAULT);
+        verifyScript(manifest, scriptBytes);
+        long serverTime = response.optLong("serverTime", 0L);
+        long leaseSeconds = Math.max(0L, Math.min(6L * 60L * 60L, response.optLong("leaseSeconds", 0L)));
+        if (serverTime <= 0 || leaseSeconds <= 0) throw new SecurityException("运行租期无效");
+        return new ScriptResult(new String(scriptBytes, StandardCharsets.UTF_8), manifest,
+                serverTime, serverTime + leaseSeconds);
+    }
+
+    private JSONObject signedBody(String purpose, String payloadHash, String deviceId) throws Exception {
+        JSONObject challengeRequest = new JSONObject()
+                .put("deviceId", deviceId)
+                .put("purpose", purpose)
+                .put("appVersion", APP_VERSION_CODE);
+        JSONObject challenge = postJson("/v1/challenge", challengeRequest, MAX_JSON_BYTES);
+        if (!challenge.optBoolean("ok", false)) throw apiError(challenge, 400);
+        String nonce = challenge.getString("nonce");
+        long timestamp = challenge.getLong("serverTime");
+        String fingerprint = identity.keyFingerprint();
+        String certificate = identity.certificateDigest();
+        DeviceIdentity.Risk risk = identity.risk();
+        String canonical = purpose + "\n" + nonce + "\n" + timestamp + "\n" + deviceId + "\n" +
+                fingerprint + "\n" + APP_VERSION_CODE + "\n" + certificate + "\n" + payloadHash;
+        return new JSONObject()
+                .put("purpose", purpose)
+                .put("nonce", nonce)
+                .put("timestamp", timestamp)
+                .put("deviceId", deviceId)
+                .put("keyFingerprint", fingerprint)
+                .put("certificateDigest", certificate)
+                .put("payloadHash", payloadHash)
+                .put("riskFlags", risk.flags)
+                .put("appVersion", APP_VERSION_CODE)
+                .put("signature", identity.signRawBase64(canonical));
+    }
+
+    private JSONObject postJson(String path, JSONObject body, int maximumBytes) throws Exception {
+        ResilientApiTransport.Response response = ResilientApiTransport.post(
+                path, body.toString(), "GG/6 Android", "", maximumBytes);
+        JSONObject object;
+        try { object = new JSONObject(response.body); }
+        catch (Exception error) { throw new java.io.IOException("服务器响应无效", error); }
+        if (response.status < 200 || response.status >= 300 || !object.optBoolean("ok", false)) {
+            throw apiError(object, response.status);
+        }
+        return object;
+    }
+
+    private AuthResult parseAuth(JSONObject object) throws ApiException {
+        if (!object.optBoolean("ok", false)) throw apiError(object, 400);
+        String token = object.optString("token", "");
+        if (token.isEmpty()) throw new ApiException(500, "bad_response", "服务响应无效");
+        return new AuthResult(
+                token,
+                object.optLong("tokenExpiresAt", 0L),
+                object.isNull("licenseExpiresAt") ? 0L : object.optLong("licenseExpiresAt", 0L),
+                object.optBoolean("permanent", false),
+                object.optBoolean("forceOnline", false),
+                object.optLong("serverTime", 0L)
+        );
+    }
+
+    private void saveSuccess(String key, AuthResult auth, ScriptResult script) throws Exception {
+        JSONObject state = secureStore.loadState();
+        state.put("licenseKey", normalizeKey(key));
+        state.put("token", auth.token);
+        state.put("tokenExpiresAt", auth.tokenExpiresAt);
+        state.put("licenseExpiresAt", auth.licenseExpiresAt);
+        state.put("permanent", auth.permanent);
+        state.put("forceOnline", auth.forceOnline);
+        state.put("lastServerTime", auth.serverTime);
+        state.put("savedWallMs", System.currentTimeMillis());
+        state.put("savedElapsedMs", SystemClock.elapsedRealtime());
+        state.put("bootCount", bootCount());
+        secureStore.saveState(state);
+        JSONObject cache = new JSONObject()
+                .put("source", script.source)
+                .put("manifest", script.manifest.toJson())
+                .put("serverTime", script.serverTime)
+                .put("leaseExpiresAt", script.leaseExpiresAt)
+                .put("savedWallMs", System.currentTimeMillis())
+                .put("savedElapsedMs", SystemClock.elapsedRealtime())
+                .put("bootCount", bootCount());
+        secureStore.writeCache(cache);
+    }
+
+    private RuntimeResult offlineFallbackWithAuth(AuthResult auth) {
+        if (auth.forceOnline) return RuntimeResult.invalid("当前环境需要联网初始化");
+        return offlineFallback();
+    }
+
+    private RuntimeResult offlineFallback() {
+        JSONObject state = secureStore.loadState();
+        if (state.optBoolean("forceOnline", false)) return RuntimeResult.invalid("当前环境需要联网初始化");
+        JSONObject cache = secureStore.readCache();
+        if (cache == null) return RuntimeResult.invalid("服务连接失败，请检查网络后重试");
+        try {
+            long estimatedServerTime = estimateServerTime(cache);
+            long leaseExpiresAt = cache.optLong("leaseExpiresAt", 0L);
+            boolean permanent = state.optBoolean("permanent", false);
+            long licenseExpiresAt = state.optLong("licenseExpiresAt", 0L);
+            if (estimatedServerTime <= 0 || estimatedServerTime > leaseExpiresAt) {
+                secureStore.deleteCache();
+                return RuntimeResult.invalid("需要联网完成初始化");

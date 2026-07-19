@@ -1,0 +1,117 @@
+    return reply({ ok: false, code: "device_unbound", message: "当前设备状态无效" }, 401);
+  }
+  await verifySignedRequest(env, body, "unbind", device.public_key, await sha256Hex(`${tokenText}|unbind`), device);
+  const now = nowSeconds();
+  if (license.last_unbind_at && now - Number(license.last_unbind_at) < UNBIND_COOLDOWN_SECONDS) {
+    return reply({ ok: false, code: "unbind_cooldown", message: "更换设备操作冷却中，请稍后再试" }, 429);
+  }
+  const recent = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM audit_log WHERE license_id=? AND event='self_unbind' AND created_at>=?"
+  ).bind(license.id, now - UNBIND_WINDOW_SECONDS).first();
+  if (Number(recent?.count || 0) >= UNBIND_WINDOW_LIMIT) {
+    return reply({ ok: false, code: "unbind_limit", message: "近期更换设备次数已达上限" }, 429);
+  }
+  let expiresAt = license.expires_at == null ? null : Number(license.expires_at);
+  let rebindAvailableAt = null;
+  if (expiresAt == null) {
+    rebindAvailableAt = now + UNBIND_PENALTY_SECONDS;
+  } else {
+    if (expiresAt - now <= UNBIND_PENALTY_SECONDS) {
+      return reply({ ok: false, code: "insufficient_time", message: "剩余时间不足6小时，无法自助更换设备" }, 409);
+    }
+    expiresAt -= UNBIND_PENALTY_SECONDS;
+  }
+  await env.DB.batch([
+    env.DB.prepare("UPDATE devices SET revoked_at=?,session_version=session_version+1 WHERE id=?").bind(now, device.id),
+    env.DB.prepare("UPDATE licenses SET expires_at=?,last_unbind_at=?,rebind_available_at=? WHERE id=?")
+      .bind(expiresAt, now, rebindAvailableAt, license.id),
+  ]);
+  await audit(env, "self_unbind", license.id, deviceHash, JSON.stringify({ penaltySeconds: UNBIND_PENALTY_SECONDS, expiresAt, rebindAvailableAt }));
+  return reply({ ok: true, penaltySeconds: UNBIND_PENALTY_SECONDS, licenseExpiresAt: expiresAt, rebindAvailableAt });
+}
+
+async function verifySignedRequest(env, body, expectedPurpose, publicKeyBase64, expectedPayloadHash, storedDevice = null) {
+  const deviceHash = normalizeDevice(body.deviceId);
+  const purpose = string(body.purpose, 24);
+  const nonce = string(body.nonce, 128);
+  const timestamp = Number(body.timestamp);
+  const keyFingerprint = normalizeHex64(body.keyFingerprint);
+  const certificateDigest = normalizeHex64(body.certificateDigest);
+  const payloadHash = normalizeHex64(body.payloadHash);
+  const riskFlags = string(body.riskFlags, 300);
+  const signature = string(body.signature, 1024);
+  if (!deviceHash || purpose !== expectedPurpose || !nonce || !Number.isFinite(timestamp)) throw new HttpError(400, "bad_signature_request", "设备验证信息无效");
+  if (Math.abs(nowSeconds() - timestamp) > 120) throw new HttpError(401, "stale_request", "请求已过期，请重试");
+  if (!keyFingerprint || !certificateDigest || !payloadHash || !signature) throw new HttpError(400, "bad_signature_request", "设备验证信息不完整");
+  if (!(await constantTimeTextEqual(payloadHash, expectedPayloadHash))) throw new HttpError(401, "payload_mismatch", "请求校验失败");
+  const publicBytes = base64Decode(publicKeyBase64);
+  const actualFingerprint = await sha256HexBytes(publicBytes);
+  if (!(await constantTimeTextEqual(actualFingerprint, keyFingerprint))) throw new HttpError(401, "key_mismatch", "设备密钥校验失败");
+  if (storedDevice) {
+    if (storedDevice.key_fingerprint !== keyFingerprint) throw new HttpError(401, "key_mismatch", "设备密钥校验失败");
+    if (storedDevice.certificate_digest && storedDevice.certificate_digest !== certificateDigest) throw new HttpError(401, "certificate_changed", "客户端签名发生变化");
+  }
+  const consumed = await env.DB.prepare(
+    "UPDATE challenges SET used_at=? WHERE nonce=? AND device_hash=? AND purpose=? AND used_at IS NULL AND expires_at>=?"
+  ).bind(nowSeconds(), nonce, deviceHash, purpose, nowSeconds()).run();
+  if (Number(consumed.meta?.changes || 0) !== 1) throw new HttpError(401, "bad_nonce", "验证请求已失效，请重试");
+  const canonical = [purpose, nonce, String(timestamp), deviceHash, keyFingerprint, String(appVersionOf(body)), certificateDigest, payloadHash].join("\n");
+  const publicKey = await crypto.subtle.importKey("spki", publicBytes, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+  const signatureBytes = base64Decode(signature);
+  const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, publicKey, signatureBytes, encoder.encode(canonical));
+  if (!ok) throw new HttpError(401, "bad_signature", "设备签名校验失败");
+  return { keyFingerprint, certificateDigest, riskFlags };
+}
+
+async function licenseSuccess(env, license, deviceHash, device, now, secure, appVersion) {
+  const riskScore = secure ? calculateRiskScore(device.risk_flags || "") : 0;
+  const forceOnline = riskScore >= 2;
+  const token = await signToken({
+    typ: "session",
+    lic: license.id,
+    dev: deviceHash,
+    kid: secure ? device.key_fingerprint : "",
+    sv: Number(device.session_version || 1),
+    app: appVersion,
+    iat: now,
+    exp: now + SESSION_SECONDS,
+    jti: crypto.randomUUID(),
+  }, env);
+  return reply({
+    ok: true,
+    token,
+    tokenExpiresAt: now + SESSION_SECONDS,
+    licenseExpiresAt: license.expires_at || null,
+    permanent: license.expires_at == null,
+    offlineGraceSeconds: forceOnline ? 0 : (secure ? OFFLINE_GRACE_SECONDS : LEGACY_OFFLINE_GRACE_SECONDS),
+    forceOnline,
+    serverTime: now,
+    minAppVersion: MIN_APP_VERSION,
+    latestAppVersion: LATEST_APP_VERSION,
+  });
+}
+
+async function loadScriptRelease(env) {
+  const now = Date.now();
+  if (memoryScriptCache && memoryScriptCache.expiresAt > now) return memoryScriptCache.value;
+  const manifestResponse = await githubFetch(env, `${GITHUB_RELEASE_BASE}manifest.json`);
+  if (!manifestResponse.ok) throw new HttpError(503, "script_unavailable", "核心服务暂时不可用");
+  const manifestText = await manifestResponse.text();
+  if (manifestText.length > 64 * 1024) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+  let manifest;
+  try { manifest = JSON.parse(manifestText); } catch { throw new HttpError(503, "script_invalid", "核心服务数据异常"); }
+  if (!manifest || !/^[A-Za-z0-9._-]+\.js$/.test(String(manifest.file || ""))) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+  if (!/^[0-9a-f]{64}$/i.test(String(manifest.sha256 || ""))) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+  const scriptResponse = await githubFetch(env, `${GITHUB_RELEASE_BASE}${manifest.file}`);
+  if (!scriptResponse.ok) throw new HttpError(503, "script_unavailable", "核心服务暂时不可用");
+  const bytes = new Uint8Array(await scriptResponse.arrayBuffer());
+  if (bytes.length <= 0 || bytes.length > MAX_SCRIPT_BYTES || Number(manifest.size) !== bytes.length) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+  const digest = await sha256HexBytes(bytes);
+  if (!(await constantTimeTextEqual(digest, String(manifest.sha256).toLowerCase()))) throw new HttpError(503, "script_invalid", "核心服务校验失败");
+  const value = { manifest, scriptBase64: base64Standard(bytes) };
+  memoryScriptCache = { value, expiresAt: now + 60_000 };
+  return value;
+}
+
+function githubFetch(env, url) {
+  const headers = new Headers({ "Accept": "application/vnd.github.raw+json", "User-Agent": "GG-License-Worker/2" });

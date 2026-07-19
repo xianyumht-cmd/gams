@@ -1,0 +1,97 @@
+                "align-items:center;justify-content:center;margin:0}.box{max-width:360px;padding:28px;text-align:center}" +
+                "button{border:0;border-radius:12px;background:#4f46e5;color:white;padding:12px 22px;font-size:16px}</style>" +
+                "</head><body><div class='box'><h2>页面暂时无法打开</h2><p>请检查网络后点击重新加载。</p>" +
+                "<button onclick=\"location.reload()\">重新加载</button></div></body></html>";
+        view.loadDataWithBaseURL(START_URL, html, "text/html", "UTF-8", null);
+    }
+
+    private boolean isScriptTarget(String url) {
+        if (url == null) return false;
+        try {
+            String host = Uri.parse(url).getHost();
+            return "m.66rpg.com".equalsIgnoreCase(host)
+                    || "www.66rpg.com".equalsIgnoreCase(host);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private String wrapUserScript(String source) {
+        return "(function(){" +
+                "if(window.__QUICK_WEB_APP_SCRIPT_LOADED__)return;" +
+                "window.__QUICK_WEB_APP_SCRIPT_LOADED__=true;" +
+                "try{\n" + source + "\n}" +
+                "catch(e){window.__QUICK_WEB_APP_SCRIPT_LOADED__=false;console.error('[App Script]',e);}" +
+                "})();";
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST && fileChooserCallback != null) {
+            Uri[] result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            fileChooserCallback.onReceiveValue(result);
+            fileChooserCallback = null;
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if (webView != null) webView.saveState(outState);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
+    }
+
+    @Override
+    protected void onStop() {
+        backgroundAtMs = System.currentTimeMillis();
+        super.onStop();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (browserVisible && backgroundAtMs > 0
+                && System.currentTimeMillis() - backgroundAtMs >= onlineLicenseManager.foregroundRecheckMs()) {
+            backgroundAtMs = 0L;
+            initializeService(null);
+        }
+    }
+
+    private void destroyWebView() {
+        if (scriptHandler != null) {
+            try { scriptHandler.remove(); } catch (Throwable ignored) { }
+            scriptHandler = null;
+        }
+        if (webView != null) {
+            webView.stopLoading();
+            webView.setWebChromeClient(null);
+            webView.setWebViewClient(null);
+            webView.removeAllViews();
+            webView.destroy();
+            webView = null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        browserVisible = false;
+        wrappedUserScript = null;
+        if (onlineLicenseManager != null) {
+            onlineLicenseManager.shutdown();
+            onlineLicenseManager = null;
+        }
+        destroyWebView();
+        super.onDestroy();
+    }
+
+}

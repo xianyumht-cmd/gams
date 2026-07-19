@@ -6,6 +6,9 @@
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": true },
+  "build": {
+    "command": "cat ../hardening_backend_parts/part* > src/index.js"
+  },
   "routes": [
     {
       "pattern": "license.xn--8pv109c.top",

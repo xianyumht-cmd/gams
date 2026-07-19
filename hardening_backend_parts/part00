@@ -1,0 +1,139 @@
+const SESSION_SECONDS = 2 * 60 * 60;
+const ADMIN_SECONDS = 12 * 60 * 60;
+const OFFLINE_GRACE_SECONDS = 6 * 60 * 60;
+const LEGACY_OFFLINE_GRACE_SECONDS = 24 * 60 * 60;
+const SCRIPT_LEASE_SECONDS = 6 * 60 * 60;
+const CHALLENGE_SECONDS = 90;
+const UNBIND_PENALTY_SECONDS = 6 * 60 * 60;
+const UNBIND_COOLDOWN_SECONDS = 24 * 60 * 60;
+const UNBIND_WINDOW_SECONDS = 30 * 24 * 60 * 60;
+const UNBIND_WINDOW_LIMIT = 5;
+const MIN_APP_VERSION = 5;
+const SECURE_APP_VERSION = 6;
+const LATEST_APP_VERSION = 6;
+const MAX_BODY_BYTES = 64 * 1024;
+const MAX_SCRIPT_BYTES = 2 * 1024 * 1024;
+const GITHUB_RELEASE_BASE = "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/remote-script/release/";
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+let memoryScriptCache = null;
+
+export default {
+  async fetch(request, env) {
+    try {
+      if (request.method === "OPTIONS") return cors(new Response(null, { status: 204 }));
+      const url = new URL(request.url);
+      if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+        return reply({
+          ok: true,
+          service: "gams-license-api",
+          version: 2,
+          minAppVersion: MIN_APP_VERSION,
+          latestAppVersion: LATEST_APP_VERSION,
+        });
+      }
+      if (request.method === "POST" && url.pathname === "/v1/admin/login") return adminLogin(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/create") return adminCreateLicenses(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/licenses") return adminListLicenses(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/action") return adminLicenseAction(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/challenge") return issueChallenge(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/activate") return activate(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/check") return check(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/script") return script(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/device/unbind") return selfUnbind(request, env);
+      return reply({ ok: false, code: "not_found", message: "接口不存在" }, 404);
+    } catch (error) {
+      if (error instanceof HttpError) return reply({ ok: false, code: error.code, message: error.message }, error.status);
+      console.error("Unhandled error", error);
+      return reply({ ok: false, code: "server_error", message: "服务暂时不可用" }, 500);
+    }
+  },
+};
+
+async function adminLogin(request, env) {
+  const ipKey = await requestRateKey(request, "admin-login");
+  if (!(await allowRate(env, ipKey, 5, 600))) return reply({ ok: false, code: "too_many_requests", message: "尝试次数过多，请稍后再试" }, 429);
+  const body = await readJson(request);
+  const password = string(body.password, 128);
+  if (!password || !(await constantTimeTextEqual(password, env.ADMIN_PASSWORD || ""))) {
+    await audit(env, "admin_login_failed", null, null, "");
+    return reply({ ok: false, code: "bad_password", message: "管理密码错误" }, 401);
+  }
+  const now = nowSeconds();
+  const token = await signToken({ typ: "admin", iat: now, exp: now + ADMIN_SECONDS, jti: crypto.randomUUID() }, env);
+  await audit(env, "admin_login_ok", null, null, "");
+  return reply({ ok: true, token, expiresAt: now + ADMIN_SECONDS });
+}
+
+async function adminCreateLicenses(request, env) {
+  await requireAdmin(request, env);
+  const body = await readJson(request);
+  const count = clampInteger(body.count, 1, 50, 1);
+  const durationDays = body.durationDays === -1 ? -1 : clampInteger(body.durationDays, 1, 3650, 30);
+  const maxDevices = clampInteger(body.maxDevices, 1, 10, 1);
+  const note = string(body.note, 200);
+  const now = nowSeconds();
+  const expiresAt = durationDays === -1 ? null : now + durationDays * 86400;
+  const created = [];
+  const statements = [];
+  for (let i = 0; i < count; i += 1) {
+    const key = randomKey();
+    const id = crypto.randomUUID();
+    const keyHash = await sha256Hex(key);
+    const preview = `${key.slice(0, 4)}…${key.slice(-4)}`;
+    statements.push(env.DB.prepare(
+      `INSERT INTO licenses (id,key_hash,key_preview,status,created_at,expires_at,max_devices,note)
+       VALUES (?,?,?,'active',?,?,?,?)`
+    ).bind(id, keyHash, preview, now, expiresAt, maxDevices, note));
+    created.push({ id, key, preview, expiresAt, maxDevices });
+  }
+  await env.DB.batch(statements);
+  await audit(env, "licenses_created", null, null, JSON.stringify({ count, durationDays, maxDevices }));
+  return reply({ ok: true, licenses: created });
+}
+
+async function adminListLicenses(request, env) {
+  await requireAdmin(request, env);
+  const url = new URL(request.url);
+  const limit = clampInteger(url.searchParams.get("limit"), 1, 100, 50);
+  const rows = await env.DB.prepare(
+    `SELECT l.id,l.key_preview,l.status,l.created_at,l.activated_at,l.expires_at,
+            l.max_devices,l.note,l.last_seen_at,l.last_unbind_at,l.rebind_available_at,
+            SUM(CASE WHEN d.id IS NOT NULL AND d.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices
+       FROM licenses l LEFT JOIN devices d ON d.license_id=l.id
+      GROUP BY l.id ORDER BY l.created_at DESC LIMIT ?`
+  ).bind(limit).all();
+  return reply({ ok: true, licenses: rows.results || [] });
+}
+
+async function adminLicenseAction(request, env) {
+  await requireAdmin(request, env);
+  const body = await readJson(request);
+  const action = string(body.action, 32);
+  const license = await findLicenseForAdmin(env, body);
+  if (!license) return reply({ ok: false, code: "license_not_found", message: "未找到卡密" }, 404);
+  const now = nowSeconds();
+  if (action === "disable") {
+    await env.DB.prepare("UPDATE licenses SET status='disabled' WHERE id=?").bind(license.id).run();
+  } else if (action === "enable") {
+    const status = license.expires_at && license.expires_at <= now ? "expired" : "active";
+    await env.DB.prepare("UPDATE licenses SET status=? WHERE id=?").bind(status, license.id).run();
+  } else if (action === "extend") {
+    const days = clampInteger(body.days, 1, 3650, 30);
+    const base = license.expires_at && license.expires_at > now ? license.expires_at : now;
+    await env.DB.prepare("UPDATE licenses SET expires_at=?,status='active' WHERE id=?").bind(base + days * 86400, license.id).run();
+  } else if (action === "permanent") {
+    await env.DB.prepare("UPDATE licenses SET expires_at=NULL,status='active' WHERE id=?").bind(license.id).run();
+  } else if (action === "unbind") {
+    const active = await env.DB.prepare("SELECT id FROM devices WHERE license_id=? AND revoked_at IS NULL").bind(license.id).all();
+    const statements = [env.DB.prepare("UPDATE licenses SET rebind_available_at=NULL WHERE id=?").bind(license.id)];
+    for (const device of active.results || []) {
+      statements.push(env.DB.prepare("UPDATE devices SET revoked_at=?,session_version=session_version+1 WHERE id=?").bind(now, device.id));
+    }
+    await env.DB.batch(statements);
+  } else {
+    return reply({ ok: false, code: "bad_action", message: "不支持的管理操作" }, 400);
+  }
+  await audit(env, `license_${action}`, license.id, null, JSON.stringify({ days: body.days || null }));
+  const updated = await env.DB.prepare(

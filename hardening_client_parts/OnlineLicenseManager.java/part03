@@ -1,0 +1,103 @@
+        static SimpleResult success(String message) { return new SimpleResult(true, message); }
+        static SimpleResult failure(String message) { return new SimpleResult(false, message); }
+    }
+
+    private static final class AuthResult {
+        final String token;
+        final long tokenExpiresAt;
+        final long licenseExpiresAt;
+        final boolean permanent;
+        final boolean forceOnline;
+        final long serverTime;
+        AuthResult(String token, long tokenExpiresAt, long licenseExpiresAt, boolean permanent, boolean forceOnline, long serverTime) {
+            this.token = token;
+            this.tokenExpiresAt = tokenExpiresAt;
+            this.licenseExpiresAt = licenseExpiresAt;
+            this.permanent = permanent;
+            this.forceOnline = forceOnline;
+            this.serverTime = serverTime;
+        }
+    }
+
+    private static final class ScriptResult {
+        final String source;
+        final Manifest manifest;
+        final long serverTime;
+        final long leaseExpiresAt;
+        ScriptResult(String source, Manifest manifest, long serverTime, long leaseExpiresAt) {
+            this.source = source;
+            this.manifest = manifest;
+            this.serverTime = serverTime;
+            this.leaseExpiresAt = leaseExpiresAt;
+        }
+    }
+
+    private static final class ApiException extends Exception {
+        final int status;
+        final String code;
+        final String message;
+        ApiException(int status, String code, String message) {
+            super(message);
+            this.status = status;
+            this.code = code;
+            this.message = message;
+        }
+    }
+
+    private static final class Manifest {
+        final int schemaVersion;
+        final String channel;
+        final int version;
+        final String versionName;
+        final String file;
+        final String sha256;
+        final int size;
+        final int minAppVersion;
+        final String publishedAt;
+        final String signatureAlgorithm;
+        final String signature;
+
+        Manifest(JSONObject object) {
+            schemaVersion = object.optInt("schemaVersion", 0);
+            channel = object.optString("channel", "");
+            version = object.optInt("version", 0);
+            versionName = object.optString("versionName", "");
+            file = object.optString("file", "");
+            sha256 = object.optString("sha256", "");
+            size = object.optInt("size", 0);
+            minAppVersion = object.optInt("minAppVersion", 0);
+            publishedAt = object.optString("publishedAt", "");
+            signatureAlgorithm = object.optString("signatureAlgorithm", "");
+            signature = object.optString("signature", "");
+        }
+
+        static Manifest parse(JSONObject object) { return new Manifest(object); }
+
+        String canonical() {
+            return "schemaVersion=" + schemaVersion + "\n" +
+                    "channel=" + channel + "\n" +
+                    "version=" + version + "\n" +
+                    "versionName=" + versionName + "\n" +
+                    "file=" + file + "\n" +
+                    "sha256=" + sha256 + "\n" +
+                    "size=" + size + "\n" +
+                    "minAppVersion=" + minAppVersion + "\n" +
+                    "publishedAt=" + publishedAt + "\n";
+        }
+
+        JSONObject toJson() throws Exception {
+            return new JSONObject()
+                    .put("schemaVersion", schemaVersion)
+                    .put("channel", channel)
+                    .put("version", version)
+                    .put("versionName", versionName)
+                    .put("file", file)
+                    .put("sha256", sha256)
+                    .put("size", size)
+                    .put("minAppVersion", minAppVersion)
+                    .put("publishedAt", publishedAt)
+                    .put("signatureAlgorithm", signatureAlgorithm)
+                    .put("signature", signature);
+        }
+    }
+}
