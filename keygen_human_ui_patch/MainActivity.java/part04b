@@ -1,0 +1,82 @@
+                             DurationControl challenge, DurationControl penalty, DurationControl cooldown,
+                             DurationControl window, EditText risk, EditText limit) {
+        globalOnline.setChecked("online".equals(name));
+        selfUnbind.setChecked(true);
+        if ("strict".equals(name)) {
+            setDuration(session, 3600);
+            setDuration(adminSession, 21600);
+            setDuration(recheck, 900);
+            setDuration(offline, 3600);
+            setDuration(legacyOffline, 21600);
+            setDuration(lease, 3600);
+            setDuration(challenge, 60);
+            setDuration(penalty, 21600);
+            setDuration(cooldown, 86400);
+            setDuration(window, 2592000);
+            risk.setText("1");
+            limit.setText("3");
+        } else if ("online".equals(name)) {
+            setDuration(session, 3600);
+            setDuration(adminSession, 21600);
+            setDuration(recheck, 600);
+            setDuration(offline, 0);
+            setDuration(legacyOffline, 0);
+            setDuration(lease, 3600);
+            setDuration(challenge, 60);
+            setDuration(penalty, 21600);
+            setDuration(cooldown, 86400);
+            setDuration(window, 2592000);
+            risk.setText("1");
+            limit.setText("3");
+        } else {
+            setDuration(session, 7200);
+            setDuration(adminSession, 43200);
+            setDuration(recheck, 1800);
+            setDuration(offline, 21600);
+            setDuration(legacyOffline, 86400);
+            setDuration(lease, 21600);
+            setDuration(challenge, 90);
+            setDuration(penalty, 21600);
+            setDuration(cooldown, 86400);
+            setDuration(window, 2592000);
+            risk.setText("2");
+            limit.setText("5");
+        }
+    }
+
+    private String validateSecurity(long session, long admin, long recheck, long offline, long legacy,
+                                    long lease, long challenge, int risk, long penalty, long cooldown,
+                                    long window, int limit) {
+        if (!range(session, 900, 86400)) return "客户端登录状态必须在15分钟到24小时之间。";
+        if (!range(admin, 900, 86400)) return "管理端登录状态必须在15分钟到24小时之间。";
+        if (!range(recheck, 300, 43200)) return "返回应用复检必须在5分钟到12小时之间。";
+        if (!range(offline, 0, 86400)) return "新版断网可用时间必须在0到24小时之间。";
+        if (!range(legacy, 0, 172800)) return "旧版断网可用时间必须在0到48小时之间。";
+        if (!range(lease, 300, 86400)) return "本地运行资源有效时间必须在5分钟到24小时之间。";
+        if (!range(challenge, 30, 300)) return "安全请求有效时间必须在30秒到5分钟之间。";
+        if (risk < 1 || risk > 5) return "风险强制联网阈值必须在1到5之间。";
+        if (!range(penalty, 0, 259200)) return "换设备扣除时间必须在0到3天之间。";
+        if (!range(cooldown, 0, 2592000)) return "换设备间隔必须在0到30天之间。";
+        if (!range(window, 86400, 7776000)) return "换设备统计周期必须在1到90天之间。";
+        if (limit < 1 || limit > 30) return "统计周期内最多换设备次数必须在1到30之间。";
+        return "";
+    }
+
+    private void showRuntimeManager() {
+        LinearLayout root = page("远程资源", "默认只显示运行状态、版本、发布时间和完整性结果");
+        addHelp(root, "资源源码、签名摘要和清单原文不会占据默认页面，可通过技术诊断查看。");
+        TextView output = box("点击刷新读取远程资源状态。");
+        Button refresh = primary("刷新运行状态");
+        Button releases = secondary("查看可用历史版本");
+        root.addView(refresh, full(dp(8)));
+        root.addView(releases, full(dp(10)));
+        root.addView(output, full(dp(14)));
+
+        final JSONObject[] lastData = {new J()};
+        refresh.setOnClickListener(v -> api.get("/v1/admin/runtime", result -> {
+            if (redirectUnauthorized(result)) return;
+            if (result.success) {
+                lastData[0] = result.data;
+                output.setText(HumanFormat.runtime(result.data));
+            } else output.setText(result.message);
+        }));
