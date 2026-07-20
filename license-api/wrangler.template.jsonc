@@ -7,7 +7,7 @@
   "preview_urls": false,
   "observability": { "enabled": true },
   "build": {
-    "command": "cat ../hardening_backend_parts/part* > src/index.js && python3 control_center_patch.py && python3 client_config_patch.py"
+    "command": "cat ../hardening_backend_parts/part* > src/index.js && python3 control_center_patch.py && python3 client_config_patch.py && python3 release_baseline_patch.py"
   },
   "routes": [
     {
