@@ -1,0 +1,163 @@
+        addLabeledField(form, "允许设备数", "填写1到10；留空保持不变。", devices);
+        addLabeledField(form, "精确到期时间", "使用“年-月-日 时:分”格式；留空保持不变。", expires);
+        form.addView(permanent, full(0));
+        permanent.setOnCheckedChangeListener((buttonView, isChecked) -> expires.setEnabled(!isChecked));
+
+        new AlertDialog.Builder(this)
+                .setTitle("修改卡密资料")
+                .setView(form)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    J body = identifier(value);
+                    if (clearNote.isChecked()) body.put("note", "");
+                    else if (!note.getText().toString().trim().isEmpty()) body.put("note", note.getText().toString().trim());
+
+                    if (!devices.getText().toString().trim().isEmpty()) {
+                        long max = parseLong(devices, 1L);
+                        if (max < 1 || max > 10) {
+                            toast("允许设备数必须在1到10之间。");
+                            return;
+                        }
+                        body.put("maxDevices", max);
+                    }
+
+                    if (permanent.isChecked()) {
+                        body.put("expiresAt", JSONObject.NULL);
+                    } else if (!expires.getText().toString().trim().isEmpty()) {
+                        long parsed = parseDateTime(expires.getText().toString().trim());
+                        if (parsed <= System.currentTimeMillis() / 1000L + 60L) {
+                            toast("到期时间格式不正确，或时间没有晚于现在。");
+                            return;
+                        }
+                        body.put("expiresAt", parsed);
+                    }
+
+                    api.post("/v1/admin/licenses/update", body, result -> {
+                        if (redirectUnauthorized(result)) return;
+                        output.setText(result.success ? HumanFormat.operation(result.data) : result.message);
+                    });
+                }).show();
+    }
+
+    private void batchAction(EditText idsInput, String action, long seconds, TextView output) {
+        JSONArray ids = splitIds(idsInput.getText().toString());
+        if (ids.length() == 0) {
+            output.setText("请至少填写一个卡密记录编号。");
+            return;
+        }
+        J body = new J().put("ids", ids).put("action", action);
+        if (seconds > 0) body.put("seconds", seconds);
+        api.post("/v1/admin/licenses/batch-action", body, result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? HumanFormat.operation(result.data) : result.message);
+        });
+    }
+
+    private void showDeviceManager() {
+        LinearLayout root = page("设备管理", "默认显示设备名称、状态、最后上线时间和风险结果");
+        addHelp(root, "公钥指纹、设备摘要和应用签名属于高级识别信息，只在设备详情中显示。");
+        TextView output = box("点击“刷新设备列表”读取设备。");
+        Button refresh = primary("刷新设备列表");
+        root.addView(refresh, full(dp(10)));
+        root.addView(output, full(dp(16)));
+        refresh.setOnClickListener(v -> api.get("/v1/admin/devices?limit=100", result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? HumanFormat.devices(result.data) : result.message);
+        }));
+
+        EditText deviceId = input("设备记录编号", false);
+        addLabeledField(root, "指定设备", "从设备列表复制“设备记录编号”后粘贴到这里。", deviceId);
+        LinearLayout row = horizontal();
+        Button detail = small("查看详情");
+        Button revoke = small("撤销设备");
+        row.addView(detail, weight());
+        row.addView(revoke, weightMargins());
+        root.addView(row, full(dp(14)));
+
+        detail.setOnClickListener(v -> {
+            String id = deviceId.getText().toString().trim();
+            if (id.isEmpty()) {
+                output.setText("请先填写设备记录编号。");
+                return;
+            }
+            api.get("/v1/admin/devices/detail?id=" + encode(id), result -> {
+                if (redirectUnauthorized(result)) return;
+                output.setText(result.success ? HumanFormat.deviceDetail(result.data) : result.message);
+            });
+        });
+        revoke.setOnClickListener(v -> confirmDanger("撤销设备",
+                "该设备当前登录状态会立即失效，但不会删除卡密。",
+                () -> {
+                    String id = deviceId.getText().toString().trim();
+                    if (id.isEmpty()) {
+                        output.setText("请先填写设备记录编号。");
+                        return;
+                    }
+                    api.post("/v1/admin/devices/revoke", new J().put("id", id), result -> {
+                        if (redirectUnauthorized(result)) return;
+                        output.setText(result.success ? "设备已撤销。" : result.message);
+                    });
+                }));
+
+        EditText license = input("完整卡密或卡密记录编号", false);
+        addLabeledField(root, "按卡密撤销全部设备", "该操作不会扣除卡密有效期。", license);
+        Button revokeAll = danger("撤销这张卡的全部设备");
+        revokeAll.setOnClickListener(v -> confirmDanger("撤销全部设备",
+                "该卡密当前绑定的所有设备都会立即退出。",
+                () -> {
+                    String value = license.getText().toString().trim();
+                    if (value.isEmpty()) {
+                        output.setText("请先输入完整卡密或记录编号。");
+                        return;
+                    }
+                    api.post("/v1/admin/devices/revoke-all", identifier(value), result -> {
+                        if (redirectUnauthorized(result)) return;
+                        output.setText(result.success ? HumanFormat.operation(result.data) : result.message);
+                    });
+                }));
+        root.addView(revokeAll, full(dp(16)));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void showVersionSettings() {
+        showLoading("版本与更新");
+        api.get("/v1/admin/settings", result -> {
+            if (redirectUnauthorized(result)) return;
+            if (!result.success) {
+                showErrorPage("版本与更新", result.message);
+                return;
+            }
+            currentSettings = result.data.optJSONObject("settings");
+            if (currentSettings == null) currentSettings = new J();
+            renderVersionSettings();
+        });
+    }
+
+    private void renderVersionSettings() {
+        LinearLayout root = page("版本与更新", "保存后服务器会自动下发，不需要重新编译客户端");
+        addHelp(root, "versionCode 是安装包内部版本数字。当前 GG v1.4.0 的 versionCode 为 8。");
+
+        EditText minimum = numeric("例如：5");
+        EditText latest = numeric("例如：8");
+        minimum.setText(String.valueOf(currentSettings.optInt("minAppVersion", 5)));
+        latest.setText(String.valueOf(currentSettings.optInt("latestAppVersion", 8)));
+        addLabeledField(root, "最低允许版本", "低于该数字的客户端会被要求更新。不要在多数用户升级前突然提高。", minimum);
+        addLabeledField(root, "当前最新版本", "用于告诉客户端现在发布的最新安装包版本。", latest);
+
+        CheckBox force = check("低于最新版本时必须更新", currentSettings.optBoolean("forceUpdate", false));
+        root.addView(force, full(dp(12)));
+
+        EditText url = input("https://...", false);
+        url.setText(currentSettings.optString("updateUrl", ""));
+        addLabeledField(root, "安装包下载地址", "必须使用 HTTPS。开启强制更新前必须先填写可用地址。", url);
+
+        EditText message = multiline("例如：修复授权和管理界面问题");
+        message.setText(currentSettings.optString("updateMessage", ""));
+        addLabeledField(root, "更新说明", "用户看到更新提示时会显示这段文字。", message);
+
+        TextView result = status("");
+        Button save = primary("检查并保存");
+        save.setOnClickListener(v -> {
+            int oldMin = currentSettings.optInt("minAppVersion", 5);
+            int oldLatest = currentSettings.optInt("latestAppVersion", 8);
