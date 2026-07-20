@@ -3,11 +3,13 @@ from pathlib import Path
 path = Path("client/src/main/java/com/jinli/quickweb/MainActivity.java")
 text = path.read_text(encoding="utf-8")
 
-def swap(old, new):
+
+def swap(old, new, already):
     global text
-    if old not in text:
+    if old in text:
+        text = text.replace(old, new, 1)
+    elif already not in text:
         raise SystemExit("Missing activity marker")
-    text = text.replace(old, new, 1)
 
 swap('''            if (!result.valid) {
                 showLicenseScreen(result.message);
@@ -21,7 +23,8 @@ swap('''            if (!result.valid) {
             }
             if (result.offline) Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
             showBrowser(savedInstanceState, result.source);
-            if (result.updateAvailable) showUpdateDialog(result.updateMessage, result.updateUrl, false);''')
+            if (result.updateAvailable) showUpdateDialog(result.updateMessage, result.updateUrl, false);''',
+     "result.updateRequired")
 
 swap('''                if (!result.valid) {
                     status.setTextColor(Color.rgb(185, 28, 28));
@@ -37,10 +40,13 @@ swap('''                if (!result.valid) {
                 }
                 Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
                 showBrowser(null, result.source);
-                if (result.updateAvailable) showUpdateDialog(result.updateMessage, result.updateUrl, false);''')
+                if (result.updateAvailable) showUpdateDialog(result.updateMessage, result.updateUrl, false);''',
+     "showBrowser(null, result.source);\n                if (result.updateAvailable)")
 
-swap('''                .setMessage(summary + "\n\n自助更换设备会扣除6小时有效期；永久服务将在6小时后允许新设备激活。")''', '''                .setMessage(summary + "\n\n" + onlineLicenseManager.getSelfUnbindSummary())''')
-swap('''                        .setMessage("当前设备将立即退出。限时服务会扣除6小时，24小时内只能自助操作一次。是否继续？")''', '''                        .setMessage("当前设备将立即退出。" + onlineLicenseManager.getSelfUnbindSummary() + " 是否继续？")''')
+swap('''                .setMessage(summary + "\n\n自助更换设备会扣除6小时有效期；永久服务将在6小时后允许新设备激活。")''', '''                .setMessage(summary + "\n\n" + onlineLicenseManager.getSelfUnbindSummary())''',
+     "onlineLicenseManager.getSelfUnbindSummary()")
+swap('''                        .setMessage("当前设备将立即退出。限时服务会扣除6小时，24小时内只能自助操作一次。是否继续？")''', '''                        .setMessage("当前设备将立即退出。" + onlineLicenseManager.getSelfUnbindSummary() + " 是否继续？")''',
+     'setMessage("当前设备将立即退出。" + onlineLicenseManager.getSelfUnbindSummary()')
 
 marker = '''    private void showNetworkError(WebView view) {'''
 insert = '''    private void showUpdateDialog(String message, String url, boolean required) {
@@ -59,8 +65,9 @@ insert = '''    private void showUpdateDialog(String message, String url, boolea
     }
 
 '''
-if marker not in text:
-    raise SystemExit("Missing update insertion marker")
-text = text.replace(marker, insert + marker, 1)
+if "private void showUpdateDialog(" not in text:
+    if marker not in text:
+        raise SystemExit("Missing update insertion marker")
+    text = text.replace(marker, insert + marker, 1)
 path.write_text(text, encoding="utf-8")
 print("Applied GG v1.4 update interface")
