@@ -1,0 +1,157 @@
+            int newMin = (int) parseLong(minimum, oldMin);
+            int newLatest = (int) parseLong(latest, oldLatest);
+            String updateUrl = url.getText().toString().trim();
+            if (newMin < 1 || newLatest < 1) {
+                result.setText("版本数字必须大于0。");
+                return;
+            }
+            if (newMin > newLatest) {
+                result.setText("最低允许版本不能高于当前最新版本。");
+                return;
+            }
+            if (!updateUrl.isEmpty() && !updateUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
+                result.setText("下载地址必须以 https:// 开头。");
+                return;
+            }
+            if (force.isChecked() && updateUrl.isEmpty()) {
+                result.setText("开启强制更新前必须填写安装包下载地址。");
+                return;
+            }
+
+            String impact = "最低允许版本：" + oldMin + " → " + newMin +
+                    "\n当前最新版本：" + oldLatest + " → " + newLatest +
+                    "\n强制更新：" + yesNo(currentSettings.optBoolean("forceUpdate", false)) +
+                    " → " + yesNo(force.isChecked());
+            if (newMin > oldMin) {
+                impact += "\n\n注意：版本 " + oldMin + " 到 " + (newMin - 1) + " 的客户端将无法继续使用。";
+            }
+
+            J changes = new J()
+                    .put("minAppVersion", newMin)
+                    .put("latestAppVersion", newLatest)
+                    .put("forceUpdate", force.isChecked())
+                    .put("updateUrl", updateUrl)
+                    .put("updateMessage", message.getText().toString().trim());
+            confirmChange("确认版本设置", impact,
+                    () -> saveSettings(changes, "version-update", result, this::showVersionSettings));
+        });
+        root.addView(save, full(dp(8)));
+        root.addView(result, full(dp(12)));
+
+        Button diagnostics = secondary("查看当前系统状态");
+        diagnostics.setOnClickListener(v -> showSettingsStatus());
+        root.addView(diagnostics, full(dp(12)));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void showSecuritySettings() {
+        showLoading("安全策略");
+        api.get("/v1/admin/settings", result -> {
+            if (redirectUnauthorized(result)) return;
+            if (!result.success) {
+                showErrorPage("安全策略", result.message);
+                return;
+            }
+            currentSettings = result.data.optJSONObject("settings");
+            if (currentSettings == null) currentSettings = new J();
+            renderSecuritySettings();
+        });
+    }
+
+    private void renderSecuritySettings() {
+        LinearLayout root = page("安全策略", "常用设置直接显示，高级设置默认折叠");
+        addHelp(root, "时间可以自由选择秒、分钟、小时或天。保存时管理器会自动转换，服务器仍会检查安全范围。");
+
+        CheckBox globalOnline = check("所有设备必须联网", currentSettings.optBoolean("globalForceOnline", false));
+        root.addView(globalOnline, full(dp(8)));
+        addHelp(root, "开启后不允许使用离线缓存。适合临时紧急控制，不建议长期默认开启。");
+
+        DurationControl offline = addDurationField(root, "断网后可继续使用",
+                "服务器暂时无法连接时，新版客户端最多还能使用多久。",
+                currentSettings.optLong("offlineGraceSeconds", 21600));
+        DurationControl recheck = addDurationField(root, "返回应用后重新验证",
+                "用户离开应用超过该时间，再回来时会重新连接服务器。",
+                currentSettings.optLong("foregroundRecheckSeconds", 1800));
+        DurationControl lease = addDurationField(root, "本地运行资源有效时间",
+                "客户端成功联网后，本地加密资源最多可以使用多久。",
+                currentSettings.optLong("scriptLeaseSeconds", 21600));
+
+        CheckBox selfUnbind = check("允许用户自助更换设备", currentSettings.optBoolean("selfUnbindEnabled", true));
+        root.addView(selfUnbind, full(dp(8)));
+        DurationControl penalty = addDurationField(root, "自助换设备扣除时间",
+                "限时卡每次自助换设备会从有效期中扣除这段时间；永久卡会等待同样时间后才能重新绑定。",
+                currentSettings.optLong("unbindPenaltySeconds", 21600));
+
+        LinearLayout advanced = new LinearLayout(this);
+        advanced.setOrientation(LinearLayout.VERTICAL);
+        advanced.setVisibility(View.GONE);
+        advanced.setPadding(0, dp(8), 0, 0);
+
+        DurationControl session = addDurationField(advanced, "客户端登录状态有效时间",
+                "超过该时间后客户端需要重新验证。允许范围为15分钟到24小时。",
+                currentSettings.optLong("sessionSeconds", 7200));
+        DurationControl adminSession = addDurationField(advanced, "管理端登录状态有效时间",
+                "超过该时间后 GG 管理器需要重新输入管理密码。",
+                currentSettings.optLong("adminSessionSeconds", 43200));
+        DurationControl legacyOffline = addDurationField(advanced, "旧版客户端断网可用时间",
+                "仅用于尚未升级到安全协议的旧版本。多数用户升级后可以逐步缩短。",
+                currentSettings.optLong("legacyOfflineGraceSeconds", 86400));
+        DurationControl challenge = addDurationField(advanced, "安全请求有效时间",
+                "一次性安全请求超过该时间就作废。推荐90秒。",
+                currentSettings.optLong("challengeSeconds", 90));
+
+        EditText risk = numeric("1到5");
+        risk.setText(String.valueOf(currentSettings.optInt("riskForceOnlineThreshold", 2)));
+        addLabeledField(advanced, "风险强制联网阈值",
+                "设备出现多少项风险标记后禁止离线。数字越小越严格，推荐2。", risk);
+
+        DurationControl cooldown = addDurationField(advanced, "两次自助换设备的间隔",
+                "用户完成一次自助换设备后，至少等待多久才能再次操作。",
+                currentSettings.optLong("unbindCooldownSeconds", 86400));
+        DurationControl window = addDurationField(advanced, "换设备次数统计周期",
+                "在这段周期内统计用户自助换设备的次数，推荐30天。",
+                currentSettings.optLong("unbindWindowSeconds", 2592000));
+
+        EditText limit = numeric("1到30");
+        limit.setText(String.valueOf(currentSettings.optInt("unbindWindowLimit", 5)));
+        addLabeledField(advanced, "统计周期内最多换设备次数",
+                "达到次数上限后，用户需要等待统计周期滚动过去。推荐5次。", limit);
+
+        Button toggleAdvanced = secondary("展开高级安全设置");
+        toggleAdvanced.setOnClickListener(v -> {
+            boolean show = advanced.getVisibility() != View.VISIBLE;
+            advanced.setVisibility(show ? View.VISIBLE : View.GONE);
+            toggleAdvanced.setText(show ? "收起高级安全设置" : "展开高级安全设置");
+        });
+        root.addView(toggleAdvanced, full(dp(8)));
+        root.addView(advanced, full(dp(14)));
+
+        root.addView(section("一键方案"), full(dp(8)));
+        addHelp(root, "点击方案只会填写表单，仍需点击保存并确认后才会生效。");
+        LinearLayout presets = horizontal();
+        Button recommended = small("推荐模式");
+        Button strict = small("严格模式");
+        Button online = small("纯在线");
+        presets.addView(recommended, weight());
+        presets.addView(strict, weightMargins());
+        presets.addView(online, weight());
+        root.addView(presets, full(dp(12)));
+
+        final String[] saveReason = {"security-policy"};
+        recommended.setOnClickListener(v -> {
+            applyPreset("recommended", globalOnline, selfUnbind, session, adminSession, recheck,
+                    offline, legacyOffline, lease, challenge, penalty, cooldown, window, risk, limit);
+            saveReason[0] = "recommended-preset";
+            toast("已填写推荐模式，确认无误后点击保存。");
+        });
+        strict.setOnClickListener(v -> {
+            applyPreset("strict", globalOnline, selfUnbind, session, adminSession, recheck,
+                    offline, legacyOffline, lease, challenge, penalty, cooldown, window, risk, limit);
+            saveReason[0] = "strict-preset";
+            toast("已填写严格模式，确认无误后点击保存。");
+        });
+        online.setOnClickListener(v -> {
+            applyPreset("online", globalOnline, selfUnbind, session, adminSession, recheck,
+                    offline, legacyOffline, lease, challenge, penalty, cooldown, window, risk, limit);
+            saveReason[0] = "online-preset";
