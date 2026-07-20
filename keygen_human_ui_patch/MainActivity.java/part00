@@ -1,0 +1,194 @@
+package com.jinli.keygen;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.Bundle;
+import android.text.InputType;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+public final class MainActivity extends Activity {
+    private static final String[] DURATION_UNITS = {"秒", "分钟", "小时", "天"};
+    private static final long[] DURATION_FACTORS = {1L, 60L, 3600L, 86400L};
+    private static final String[] AUDIT_LABELS = {
+            "全部操作", "管理员登录成功", "管理员登录失败", "创建卡密",
+            "修改卡密参数", "卡密续期", "用户自助更换设备",
+            "撤销设备", "修改系统设置", "回滚系统设置",
+            "暂停远程资源", "恢复远程资源", "切换远程资源版本"
+    };
+    private static final String[] AUDIT_CODES = {
+            "", "admin_login_ok", "admin_login_failed", "license_created",
+            "license_updated", "license_extend", "self_unbind",
+            "admin_device_revoked", "settings_updated", "settings_rollback",
+            "runtime_paused", "runtime_resumed", "runtime_selected"
+    };
+
+    private AdminApiManager api;
+    private JSONObject currentSettings = new J();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        api = new AdminApiManager(this);
+        if (api.hasSession()) showConsole();
+        else showLogin("");
+    }
+
+    private void showLogin(String initialMessage) {
+        LinearLayout root = page("GG 管理器", "使用管理密码进入授权控制台");
+        addHelp(root, "这里使用的是管理端登录密码，不是用户激活码。密码不会显示在页面中。");
+        EditText password = input("请输入管理密码", true);
+        TextView status = status(initialMessage);
+        Button login = primary("登录管理端");
+        root.addView(password, full(dp(14)));
+        root.addView(login, full(dp(10)));
+        root.addView(status, full(0));
+        login.setOnClickListener(v -> {
+            String value = password.getText().toString();
+            if (value.isEmpty()) {
+                status.setText("请输入管理密码");
+                return;
+            }
+            login.setEnabled(false);
+            status.setText("正在登录…");
+            api.login(value, result -> {
+                login.setEnabled(true);
+                if (!result.success) {
+                    status.setText(result.message);
+                    return;
+                }
+                showConsole();
+            });
+        });
+        setContentView(wrap(root));
+    }
+
+    private void showConsole() {
+        LinearLayout root = page("GG 管理器", "所有功能均保留，默认只显示容易理解的中文信息");
+        addHelp(root, "日常操作不会显示 JSON、数据库字段或秒数。技术信息放在各页面的“查看技术诊断”中。");
+
+        addMenu(root, "系统总览", "查看卡密、设备、风险、版本和运行状态", this::showDashboard);
+        addMenu(root, "卡密管理", "创建、搜索、续期、停用、解绑和批量操作", this::showLicenseManager);
+        addMenu(root, "设备管理", "查看设备状态、风险信息和撤销绑定", this::showDeviceManager);
+        addMenu(root, "版本与更新", "控制最低版本、强制更新、下载地址和说明", this::showVersionSettings);
+        addMenu(root, "安全策略", "控制联网、离线、复检、租期和换设备规则", this::showSecuritySettings);
+        addMenu(root, "远程资源", "查看运行版本、暂停、恢复和切换版本", this::showRuntimeManager);
+        addMenu(root, "操作记录", "用中文查看登录、卡密、设备和设置变更", this::showAudit);
+        addMenu(root, "配置历史", "查看历史修改并恢复到旧配置", this::showSettingsHistory);
+
+        TextView dangerTitle = section("危险操作");
+        root.addView(dangerTitle, full(dp(8)));
+        addHelp(root, "危险操作不会放在普通设置中，执行前会明确说明影响。");
+
+        Button revoke = danger("让所有设备重新登录");
+        revoke.setOnClickListener(v -> confirmDanger(
+                "让所有设备重新登录",
+                "所有客户端当前登录状态会立即失效。卡密和设备绑定不会删除，用户下次打开时会重新验证。",
+                () -> api.post("/v1/admin/sessions/revoke-all", new J(), result -> {
+                    if (redirectUnauthorized(result)) return;
+                    if (!result.success) {
+                        toast(result.message);
+                        return;
+                    }
+                    showHumanPage("操作完成", HumanFormat.operation(result.data), result.data, this::showConsole);
+                })));
+        root.addView(revoke, full(dp(12)));
+
+        Button logout = secondary("退出管理登录");
+        logout.setOnClickListener(v -> {
+            api.logout();
+            showLogin("");
+        });
+        root.addView(logout, full(0));
+        setContentView(wrap(root));
+    }
+
+    private void addMenu(LinearLayout root, String title, String description, Runnable action) {
+        Button button = secondary(title + "\n" + description);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        button.setMinHeight(dp(68));
+        button.setOnClickListener(v -> action.run());
+        root.addView(button, full(dp(10)));
+    }
+
+    private void showDashboard() {
+        showLoading("系统总览");
+        api.get("/v1/admin/dashboard", result -> {
+            if (redirectUnauthorized(result)) return;
+            if (!result.success) {
+                showErrorPage("系统总览", result.message);
+                return;
+            }
+            showHumanPage("系统总览", HumanFormat.dashboard(result.data), result.data, this::showConsole);
+        });
+    }
+
+    private void showLicenseManager() {
+        LinearLayout root = page("卡密管理", "搜索结果、详情和生成结果均使用中文显示");
+        addHelp(root, "搜索可以填写卡密预览、备注或记录编号。列表中的“记录编号”可用于单卡和批量操作。");
+
+        EditText query = input("搜索卡密或备注，可留空查看全部", false);
+        TextView output = box("点击“查询卡密”读取服务器列表。");
+        Button search = primary("查询卡密");
+        root.addView(query, full(dp(10)));
+        root.addView(search, full(dp(12)));
+        root.addView(output, full(dp(12)));
+        search.setOnClickListener(v -> {
+            search.setEnabled(false);
+            String path = "/v1/admin/licenses?limit=100&q=" + encode(query.getText().toString());
+            api.get(path, result -> {
+                search.setEnabled(true);
+                if (redirectUnauthorized(result)) return;
+                output.setText(result.success ? HumanFormat.licenses(result.data) : result.message);
+            });
+        });
+
+        Button create = secondary("创建新卡密");
+        create.setOnClickListener(v -> showCreateLicenseDialog(output));
+        root.addView(create, full(dp(20)));
+
+        root.addView(section("单张卡密操作"), full(dp(8)));
+        addHelp(root, "可以填写完整卡密，也可以粘贴查询结果中的记录编号。");
+        EditText keyOrId = input("完整卡密或记录编号", false);
+        root.addView(keyOrId, full(dp(10)));
+
+        Button detail = secondary("查看卡密和设备详情");
+        detail.setOnClickListener(v -> {
+            String value = keyOrId.getText().toString().trim();
+            if (value.isEmpty()) {
+                output.setText("请先输入完整卡密或记录编号。");
+                return;
+            }
+            api.get(detailPath(value), result -> {
+                if (redirectUnauthorized(result)) return;
+                output.setText(result.success ? HumanFormat.licenseDetail(result.data) : result.message);
+            });
+        });
+        root.addView(detail, full(dp(10)));
+
+        LinearLayout row = horizontal();
+        Button disable = small("停用");
+        Button enable = small("启用");
