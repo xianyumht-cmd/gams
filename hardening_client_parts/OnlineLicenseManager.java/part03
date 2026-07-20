@@ -9,13 +9,34 @@
         final boolean permanent;
         final boolean forceOnline;
         final long serverTime;
-        AuthResult(String token, long tokenExpiresAt, long licenseExpiresAt, boolean permanent, boolean forceOnline, long serverTime) {
+        final long configVersion;
+        final long foregroundRecheckSeconds;
+        final long scriptLeaseSeconds;
+        final int latestAppVersion;
+        final boolean forceUpdate;
+        final String updateUrl;
+        final String updateMessage;
+        final boolean selfUnbindEnabled;
+        final long unbindPenaltySeconds;
+        AuthResult(String token, long tokenExpiresAt, long licenseExpiresAt, boolean permanent, boolean forceOnline,
+                   long serverTime, long configVersion, long foregroundRecheckSeconds, long scriptLeaseSeconds,
+                   int latestAppVersion, boolean forceUpdate, String updateUrl, String updateMessage,
+                   boolean selfUnbindEnabled, long unbindPenaltySeconds) {
             this.token = token;
             this.tokenExpiresAt = tokenExpiresAt;
             this.licenseExpiresAt = licenseExpiresAt;
             this.permanent = permanent;
             this.forceOnline = forceOnline;
             this.serverTime = serverTime;
+            this.configVersion = configVersion;
+            this.foregroundRecheckSeconds = foregroundRecheckSeconds;
+            this.scriptLeaseSeconds = scriptLeaseSeconds;
+            this.latestAppVersion = latestAppVersion;
+            this.forceUpdate = forceUpdate;
+            this.updateUrl = updateUrl == null ? "" : updateUrl;
+            this.updateMessage = updateMessage == null ? "" : updateMessage;
+            this.selfUnbindEnabled = selfUnbindEnabled;
+            this.unbindPenaltySeconds = unbindPenaltySeconds;
         }
     }
 
