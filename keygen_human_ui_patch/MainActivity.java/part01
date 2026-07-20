@@ -1,0 +1,167 @@
+        Button unbind = small("解绑设备");
+        row.addView(disable, weight());
+        row.addView(enable, weightMargins());
+        row.addView(unbind, weight());
+        root.addView(row, full(dp(10)));
+        disable.setOnClickListener(v -> confirmDanger("停用卡密", "该卡密将无法继续验证，已有用户会受到影响。",
+                () -> licenseAction(keyOrId, "disable", 0L, output)));
+        enable.setOnClickListener(v -> licenseAction(keyOrId, "enable", 0L, output));
+        unbind.setOnClickListener(v -> confirmDanger("解绑全部设备",
+                "该卡密当前绑定的所有设备都会退出，但不会扣除卡密有效期。",
+                () -> licenseAction(keyOrId, "unbind", 0L, output)));
+
+        LinearLayout row2 = horizontal();
+        Button permanent = small("改为永久");
+        Button extend = small("续期");
+        Button edit = small("修改资料");
+        row2.addView(permanent, weight());
+        row2.addView(extend, weightMargins());
+        row2.addView(edit, weight());
+        root.addView(row2, full(dp(20)));
+        permanent.setOnClickListener(v -> confirmDanger("改为永久卡",
+                "保存后该卡密将不再有到期时间。",
+                () -> licenseAction(keyOrId, "permanent", 0L, output)));
+        extend.setOnClickListener(v -> showExtendDialog(keyOrId, output));
+        edit.setOnClickListener(v -> showLicenseEditDialog(keyOrId, output));
+
+        root.addView(section("批量操作"), full(dp(8)));
+        addHelp(root, "每行填写一个记录编号，也可以使用逗号分隔。最多一次处理100张。");
+        EditText ids = multiline("粘贴记录编号");
+        EditText batchDays = decimalNumeric("批量续期天数");
+        batchDays.setText("30");
+        root.addView(ids, full(dp(10)));
+        addLabeledField(root, "批量续期天数", "只在点击“批量续期”时使用。", batchDays);
+
+        LinearLayout batchRow = horizontal();
+        Button batchDisable = small("批量停用");
+        Button batchEnable = small("批量启用");
+        Button batchExtend = small("批量续期");
+        batchRow.addView(batchDisable, weight());
+        batchRow.addView(batchEnable, weightMargins());
+        batchRow.addView(batchExtend, weight());
+        root.addView(batchRow, full(dp(16)));
+        batchDisable.setOnClickListener(v -> confirmDanger("批量停用",
+                "所选卡密都会停止使用，请确认记录编号无误。",
+                () -> batchAction(ids, "disable", 0L, output)));
+        batchEnable.setOnClickListener(v -> batchAction(ids, "enable", 0L, output));
+        batchExtend.setOnClickListener(v -> {
+            long days = Math.max(1L, Math.round(parseDouble(batchDays, 30d)));
+            batchAction(ids, "extend", days * 86400L, output);
+        });
+
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void showCreateLicenseDialog(TextView output) {
+        LinearLayout form = dialogForm();
+        CheckBox permanent = check("永久卡密（没有到期时间）", false);
+        EditText days = decimalNumeric("有效天数");
+        EditText count = numeric("生成数量");
+        EditText devices = numeric("允许设备数");
+        EditText note = input("备注，可留空", false);
+        days.setText("30");
+        count.setText("1");
+        devices.setText("1");
+
+        form.addView(permanent, full(dp(8)));
+        addLabeledField(form, "有效期", "非永久卡在首次激活后开始计算。", days);
+        addLabeledField(form, "生成数量", "每次可以生成1到50张。", count);
+        addLabeledField(form, "每张允许设备数", "每张卡允许同时绑定1到10台设备。", devices);
+        addLabeledField(form, "备注", "便于你以后搜索和识别客户。", note);
+        permanent.setOnCheckedChangeListener((buttonView, isChecked) -> days.setEnabled(!isChecked));
+
+        new AlertDialog.Builder(this)
+                .setTitle("创建卡密")
+                .setView(form)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("创建", (dialog, which) -> {
+                    long durationDays = permanent.isChecked() ? -1L : Math.max(1L, Math.round(parseDouble(days, 30d)));
+                    long amount = parseLong(count, 1L);
+                    long maxDevices = parseLong(devices, 1L);
+                    if (amount < 1 || amount > 50) {
+                        toast("生成数量必须在1到50之间。");
+                        return;
+                    }
+                    if (maxDevices < 1 || maxDevices > 10) {
+                        toast("允许设备数必须在1到10之间。");
+                        return;
+                    }
+                    J body = new J()
+                            .put("durationDays", durationDays)
+                            .put("count", amount)
+                            .put("maxDevices", maxDevices)
+                            .put("note", note.getText().toString().trim());
+                    api.post("/v1/admin/licenses/create", body, result -> {
+                        if (redirectUnauthorized(result)) return;
+                        if (!result.success) {
+                            output.setText(result.message);
+                            return;
+                        }
+                        String human = HumanFormat.createdLicenses(result.data);
+                        output.setText(human);
+                        showCreatedResult(result.data);
+                    });
+                }).show();
+    }
+
+    private void showCreatedResult(JSONObject data) {
+        String keys = HumanFormat.createdKeys(data);
+        TextView text = box(HumanFormat.createdLicenses(data));
+        ScrollView scroll = new ScrollView(this);
+        scroll.setPadding(dp(10), dp(4), dp(10), 0);
+        scroll.addView(text);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("卡密生成成功")
+                .setView(scroll)
+                .setNegativeButton("关闭", null);
+        if (!keys.isEmpty()) {
+            builder.setPositiveButton("复制全部卡密", (dialog, which) -> copyText(keys));
+        }
+        builder.show();
+    }
+
+    private void licenseAction(EditText keyOrId, String action, long seconds, TextView output) {
+        String value = keyOrId.getText().toString().trim();
+        if (value.isEmpty()) {
+            output.setText("请先输入完整卡密或记录编号。");
+            return;
+        }
+        J body = identifier(value).put("action", action);
+        if (seconds > 0) body.put("seconds", seconds);
+        api.post("/v1/admin/licenses/action", body, result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? HumanFormat.operation(result.data) : result.message);
+        });
+    }
+
+    private void showExtendDialog(EditText keyOrId, TextView output) {
+        EditText days = decimalNumeric("续期天数");
+        days.setText("30");
+        LinearLayout form = dialogForm();
+        addLabeledField(form, "续期时间", "从当前到期时间继续增加；已到期则从现在开始增加。", days);
+        new AlertDialog.Builder(this)
+                .setTitle("卡密续期")
+                .setView(form)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确认续期", (dialog, which) -> {
+                    long value = Math.max(1L, Math.round(parseDouble(days, 30d)));
+                    licenseAction(keyOrId, "extend", value * 86400L, output);
+                }).show();
+    }
+
+    private void showLicenseEditDialog(EditText keyOrId, TextView output) {
+        String value = keyOrId.getText().toString().trim();
+        if (value.isEmpty()) {
+            output.setText("请先输入完整卡密或记录编号。");
+            return;
+        }
+        LinearLayout form = dialogForm();
+        EditText note = input("留空表示不修改", false);
+        CheckBox clearNote = check("清空原备注", false);
+        EditText devices = numeric("留空表示不修改");
+        EditText expires = input("例如：2026-08-20 18:30", false);
+        CheckBox permanent = check("把到期时间改为永久", false);
+
+        addLabeledField(form, "新备注", "可以填写客户名称或用途。", note);
+        form.addView(clearNote, full(dp(10)));
