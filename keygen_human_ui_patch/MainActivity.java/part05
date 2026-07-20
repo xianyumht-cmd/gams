@@ -1,0 +1,163 @@
+        releases.setOnClickListener(v -> api.get("/v1/admin/runtime/releases", result -> {
+            if (redirectUnauthorized(result)) return;
+            if (result.success) {
+                lastData[0] = result.data;
+                output.setText(HumanFormat.releases(result.data));
+            } else output.setText(result.message);
+        }));
+
+        LinearLayout row = horizontal();
+        Button pause = danger("暂停下发");
+        Button resume = small("恢复下发");
+        row.addView(pause, weight());
+        row.addView(resume, weightMargins());
+        root.addView(row, full(dp(12)));
+        pause.setOnClickListener(v -> confirmDanger("暂停远程资源",
+                "没有有效本地缓存的新客户端将无法启动。该操作会直接影响用户。",
+                () -> runtimeToggle("/v1/admin/runtime/pause", output)));
+        resume.setOnClickListener(v -> runtimeToggle("/v1/admin/runtime/resume", output));
+
+        EditText version = input("例如：1.0.2；留空跟随最新", false);
+        addLabeledField(root, "选择已登记版本",
+                "只能填写“可用历史版本”列表中已经登记的版本。留空表示自动跟随最新。", version);
+        Button select = secondary("应用资源版本");
+        root.addView(select, full(dp(8)));
+        select.setOnClickListener(v -> confirmDanger("切换远程资源版本",
+                "切换后新启动的客户端会使用所选版本。请先确认该版本已经登记并验证。",
+                () -> api.post("/v1/admin/runtime/select",
+                        new J().put("version", version.getText().toString().trim()), result -> {
+                            if (redirectUnauthorized(result)) return;
+                            output.setText(result.success ? HumanFormat.operation(result.data) : result.message);
+                        })));
+
+        Button diagnostics = secondary("查看最近一次技术诊断");
+        diagnostics.setOnClickListener(v -> showDiagnostics("远程资源技术诊断", lastData[0]));
+        root.addView(diagnostics, full(dp(14)));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void runtimeToggle(String path, TextView output) {
+        api.post(path, new J().put("reason", "GG 管理器操作"), result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? HumanFormat.operation(result.data) : result.message);
+        });
+    }
+
+    private void showAudit() {
+        LinearLayout root = page("操作记录", "选择操作类型后查看最近100条中文记录");
+        Spinner event = spinner(AUDIT_LABELS);
+        EditText licenseId = input("可留空", false);
+        addLabeledView(root, "操作类型", "选择“全部操作”可查看所有最近记录。", event);
+        addLabeledField(root, "指定卡密记录编号", "只查看某张卡密的记录时填写。", licenseId);
+
+        TextView output = box("点击“查询操作记录”开始读取。");
+        Button query = primary("查询操作记录");
+        root.addView(query, full(dp(10)));
+        root.addView(output, full(dp(14)));
+
+        final JSONObject[] lastData = {new J()};
+        query.setOnClickListener(v -> {
+            int position = Math.max(0, event.getSelectedItemPosition());
+            String eventCode = AUDIT_CODES[Math.min(position, AUDIT_CODES.length - 1)];
+            String path = "/v1/admin/audit?limit=100&event=" + encode(eventCode)
+                    + "&licenseId=" + encode(licenseId.getText().toString());
+            api.get(path, result -> {
+                if (redirectUnauthorized(result)) return;
+                if (result.success) {
+                    lastData[0] = result.data;
+                    output.setText(HumanFormat.audit(result.data));
+                } else output.setText(result.message);
+            });
+        });
+
+        Button diagnostics = secondary("查看最近一次技术诊断");
+        diagnostics.setOnClickListener(v -> showDiagnostics("操作记录技术诊断", lastData[0]));
+        root.addView(diagnostics, full(dp(14)));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void showSettingsHistory() {
+        LinearLayout root = page("配置历史", "每次保存前都会自动保留旧配置，便于恢复");
+        addHelp(root, "列表会显示配置版本、修改时间、修改原因和主要设置。需要恢复时复制“历史记录编号”。");
+        TextView output = box("点击刷新读取最近配置历史。");
+        Button refresh = primary("刷新配置历史");
+        root.addView(refresh, full(dp(10)));
+        root.addView(output, full(dp(12)));
+
+        final JSONObject[] lastData = {new J()};
+        refresh.setOnClickListener(v -> api.get("/v1/admin/settings/history?limit=50", result -> {
+            if (redirectUnauthorized(result)) return;
+            if (result.success) {
+                lastData[0] = result.data;
+                output.setText(HumanFormat.history(result.data));
+            } else output.setText(result.message);
+        }));
+
+        EditText historyId = input("粘贴历史记录编号", false);
+        addLabeledField(root, "要恢复的历史记录", "恢复后仍会保留现在的配置记录，可以再次回滚。", historyId);
+        Button rollback = danger("恢复到这份历史配置");
+        root.addView(rollback, full(dp(10)));
+        rollback.setOnClickListener(v -> confirmDanger("恢复历史配置",
+                "当前设置会被历史快照替换。现有会话代数会保留，不会让已经撤销的旧登录重新生效。",
+                () -> {
+                    String id = historyId.getText().toString().trim();
+                    if (id.isEmpty()) {
+                        output.setText("请先填写历史记录编号。");
+                        return;
+                    }
+                    api.post("/v1/admin/settings/rollback", new J().put("historyId", id), result -> {
+                        if (redirectUnauthorized(result)) return;
+                        output.setText(result.success ? "配置已恢复，新的配置版本已生成。" : result.message);
+                    });
+                }));
+
+        Button diagnostics = secondary("查看最近一次技术诊断");
+        diagnostics.setOnClickListener(v -> showDiagnostics("配置历史技术诊断", lastData[0]));
+        root.addView(diagnostics, full(dp(14)));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void saveSettings(JSONObject changes, String reason, TextView result, Runnable afterSuccess) {
+        int version = currentSettings.optInt("configVersion", 0);
+        J body = new J()
+                .put("settings", changes)
+                .put("expectedVersion", version)
+                .put("reason", reason);
+        api.post("/v1/admin/settings/update", body, response -> {
+            if (redirectUnauthorized(response)) return;
+            result.setText(response.success ? "保存成功，服务器已开始使用新设置。" : response.message);
+            if (response.success && afterSuccess != null) afterSuccess.run();
+        });
+    }
+
+    private void showSettingsStatus() {
+        String text = "只读系统状态\n\n" +
+                "配置版本：" + currentSettings.optInt("configVersion", 0) + "\n" +
+                "会话代数：" + currentSettings.optInt("sessionGeneration", 1) + "\n" +
+                "安全协议最低版本：" + currentSettings.optInt("secureAppVersion", 6) + "\n" +
+                "配置缓存时间：" + HumanFormat.duration(currentSettings.optLong("configCacheSeconds", 30)) + "\n" +
+                "远程资源下发：" + (currentSettings.optBoolean("scriptDeliveryEnabled", true) ? "正常" : "已暂停") + "\n" +
+                "固定资源版本：" + valueOr(currentSettings.optString("activeScriptVersion", ""), "自动跟随最新");
+        showTextDialog("系统状态", text);
+    }
+
+    private void showLoading(String title) {
+        LinearLayout root = page(title, "正在读取服务器数据…");
+        Button back = secondary("返回控制台");
+        back.setOnClickListener(v -> showConsole());
+        root.addView(back, full(0));
+        setContentView(wrap(root));
+    }
+
+    private void showErrorPage(String title, String message) {
+        LinearLayout root = page(title, "操作未完成");
+        root.addView(status(message), full(dp(16)));
+        Button back = secondary("返回控制台");
+        back.setOnClickListener(v -> showConsole());
+        root.addView(back, full(0));
+        setContentView(wrap(root));
+    }
+
