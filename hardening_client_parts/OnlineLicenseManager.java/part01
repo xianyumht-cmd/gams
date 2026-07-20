@@ -6,17 +6,26 @@
     }
 
     private RuntimeResult loadScriptAfterAuth(String key, AuthResult auth) throws Exception {
+        savePolicyState(key, auth);
+        if (auth.forceUpdate && auth.latestAppVersion > APP_VERSION_CODE) {
+            String message = auth.updateMessage.isEmpty() ? "发现必须安装的新版本" : auth.updateMessage;
+            return RuntimeResult.updateRequired(message, auth.updateUrl);
+        }
         try {
             ScriptResult script = fetchScript(auth.token);
             saveSuccess(key, auth, script);
+            String message = auth.permanent ? "启动成功" : "启动成功，有效期至 " + formatSeconds(auth.licenseExpiresAt);
+            boolean updateAvailable = auth.latestAppVersion > APP_VERSION_CODE;
+            if (updateAvailable && !auth.updateMessage.isEmpty()) message += "\n" + auth.updateMessage;
             return RuntimeResult.valid(script.source, false, auth.permanent, auth.licenseExpiresAt,
-                    auth.permanent ? "启动成功" : "启动成功，有效期至 " + formatSeconds(auth.licenseExpiresAt));
+                    message, updateAvailable, auth.updateUrl, auth.updateMessage);
         } catch (java.io.IOException error) {
             RuntimeResult fallback = offlineFallbackWithAuth(auth);
             if (fallback.valid) return fallback;
             throw error;
         } catch (ApiException error) {
-            if ("script_unavailable".equals(error.code) || "server_error".equals(error.code)) {
+            if ("script_unavailable".equals(error.code) || "server_error".equals(error.code)
+                    || "runtime_paused".equals(error.code)) {
                 RuntimeResult fallback = offlineFallbackWithAuth(auth);
                 if (fallback.valid) return fallback;
             }
@@ -36,7 +45,7 @@
         byte[] scriptBytes = Base64.decode(response.getString("scriptBase64"), Base64.DEFAULT);
         verifyScript(manifest, scriptBytes);
         long serverTime = response.optLong("serverTime", 0L);
-        long leaseSeconds = Math.max(0L, Math.min(6L * 60L * 60L, response.optLong("leaseSeconds", 0L)));
+        long leaseSeconds = bounded(response.optLong("leaseSeconds", 0L), 5L * 60L, 24L * 60L * 60L);
         if (serverTime <= 0 || leaseSeconds <= 0) throw new SecurityException("运行租期无效");
         return new ScriptResult(new String(scriptBytes, StandardCharsets.UTF_8), manifest,
                 serverTime, serverTime + leaseSeconds);
@@ -71,7 +80,7 @@
 
     private JSONObject postJson(String path, JSONObject body, int maximumBytes) throws Exception {
         ResilientApiTransport.Response response = ResilientApiTransport.post(
-                path, body.toString(), "GG/6 Android", "", maximumBytes);
+                path, body.toString(), "GG/8 Android", "", maximumBytes);
         JSONObject object;
         try { object = new JSONObject(response.body); }
         catch (Exception error) { throw new java.io.IOException("服务器响应无效", error); }
@@ -91,11 +100,20 @@
                 object.isNull("licenseExpiresAt") ? 0L : object.optLong("licenseExpiresAt", 0L),
                 object.optBoolean("permanent", false),
                 object.optBoolean("forceOnline", false),
-                object.optLong("serverTime", 0L)
+                object.optLong("serverTime", 0L),
+                object.optLong("configVersion", 0L),
+                bounded(object.optLong("foregroundRecheckSeconds", 1800L), 300L, 43200L),
+                bounded(object.optLong("scriptLeaseSeconds", 21600L), 300L, 86400L),
+                object.optInt("latestAppVersion", APP_VERSION_CODE),
+                object.optBoolean("forceUpdate", false),
+                object.optString("updateUrl", ""),
+                object.optString("updateMessage", ""),
+                object.optBoolean("selfUnbindEnabled", true),
+                bounded(object.optLong("unbindPenaltySeconds", 21600L), 0L, 259200L)
         );
     }
 
-    private void saveSuccess(String key, AuthResult auth, ScriptResult script) throws Exception {
+    private void savePolicyState(String key, AuthResult auth) throws Exception {
         JSONObject state = secureStore.loadState();
         state.put("licenseKey", normalizeKey(key));
         state.put("token", auth.token);
@@ -104,10 +122,23 @@
         state.put("permanent", auth.permanent);
         state.put("forceOnline", auth.forceOnline);
         state.put("lastServerTime", auth.serverTime);
+        state.put("configVersion", auth.configVersion);
+        state.put("foregroundRecheckSeconds", auth.foregroundRecheckSeconds);
+        state.put("scriptLeaseSeconds", auth.scriptLeaseSeconds);
+        state.put("latestAppVersion", auth.latestAppVersion);
+        state.put("forceUpdate", auth.forceUpdate);
+        state.put("updateUrl", auth.updateUrl);
+        state.put("updateMessage", auth.updateMessage);
+        state.put("selfUnbindEnabled", auth.selfUnbindEnabled);
+        state.put("unbindPenaltySeconds", auth.unbindPenaltySeconds);
         state.put("savedWallMs", System.currentTimeMillis());
         state.put("savedElapsedMs", SystemClock.elapsedRealtime());
         state.put("bootCount", bootCount());
         secureStore.saveState(state);
+    }
+
+    private void saveSuccess(String key, AuthResult auth, ScriptResult script) throws Exception {
+        savePolicyState(key, auth);
         JSONObject cache = new JSONObject()
                 .put("source", script.source)
                 .put("manifest", script.manifest.toJson())
@@ -120,12 +151,16 @@
     }
 
     private RuntimeResult offlineFallbackWithAuth(AuthResult auth) {
+        if (auth.forceUpdate && auth.latestAppVersion > APP_VERSION_CODE)
+            return RuntimeResult.updateRequired(auth.updateMessage, auth.updateUrl);
         if (auth.forceOnline) return RuntimeResult.invalid("当前环境需要联网初始化");
         return offlineFallback();
     }
 
     private RuntimeResult offlineFallback() {
         JSONObject state = secureStore.loadState();
+        if (state.optBoolean("forceUpdate", false) && state.optInt("latestAppVersion", APP_VERSION_CODE) > APP_VERSION_CODE)
+            return RuntimeResult.updateRequired(state.optString("updateMessage", "发现必须安装的新版本"), state.optString("updateUrl", ""));
         if (state.optBoolean("forceOnline", false)) return RuntimeResult.invalid("当前环境需要联网初始化");
         JSONObject cache = secureStore.readCache();
         if (cache == null) return RuntimeResult.invalid("服务连接失败，请检查网络后重试");

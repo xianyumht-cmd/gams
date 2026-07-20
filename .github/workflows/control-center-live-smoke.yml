@@ -1,0 +1,54 @@
+name: Test live GG control center
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "license-api/**"
+      - "hardening_backend_parts/**"
+      - ".github/workflows/control-center-live-smoke.yml"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      ENDPOINT: https://gams-license-api.2320006072.workers.dev
+    steps:
+      - name: Validate secret
+        shell: bash
+        run: test -n "$ADMIN_PASSWORD"
+
+      - name: Wait for Worker v3 update endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            status="$(curl -sS -o /tmp/client-config.json -w '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              --data '{"appVersion":8}' "$ENDPOINT/v1/client/config" || true)"
+            if [[ "$status" == "200" ]] && jq -e '.ok == true and .latestAppVersion >= 8' /tmp/client-config.json >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/client-config.json 2>/dev/null || true
+          exit 1
+
+      - name: Login and verify read-only administration routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          login="$(jq -n --arg password "$ADMIN_PASSWORD" '{password:$password}')"
+          token="$(curl -fsS -H 'Content-Type: application/json' --data "$login" \
+            "$ENDPOINT/v1/admin/login" | jq -er '.token')"
+          auth="Authorization: Bearer $token"
+          curl -fsS -H "$auth" "$ENDPOINT/v1/admin/dashboard" | jq -e '.ok == true and .settings.latestAppVersion >= 8' >/dev/null
+          curl -fsS -H "$auth" "$ENDPOINT/v1/admin/settings" | jq -e '.ok == true and .settings.configVersion >= 1' >/dev/null
+          curl -fsS -H "$auth" "$ENDPOINT/v1/admin/licenses?limit=1" | jq -e '.ok == true and (.licenses | type == "array")' >/dev/null
+          curl -fsS -H "$auth" "$ENDPOINT/v1/admin/devices?limit=1" | jq -e '.ok == true and (.devices | type == "array")' >/dev/null
+          curl -fsS -H "$auth" "$ENDPOINT/v1/admin/audit?limit=1" | jq -e '.ok == true and (.audit | type == "array")' >/dev/null
+          curl -fsS -H "$auth" "$ENDPOINT/v1/admin/runtime" | jq -e '.ok == true and has("enabled")' >/dev/null
+          curl -fsS -H "$auth" "$ENDPOINT/v1/admin/runtime/releases" | jq -e '.ok == true and (.releases | type == "array")' >/dev/null

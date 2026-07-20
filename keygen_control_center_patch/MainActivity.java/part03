@@ -1,0 +1,192 @@
+    private void showRuntimeManager() {
+        LinearLayout root = page("远程资源", "查看当前签名版本、暂停下发、恢复服务和选择已登记版本");
+        TextView output = box("点击刷新读取运行状态");
+        Button refresh = primary("刷新运行状态");
+        Button releases = secondary("查看已登记版本");
+        root.addView(refresh, full(dp(8)));
+        root.addView(releases, full(dp(10)));
+        root.addView(output, full(dp(14)));
+        refresh.setOnClickListener(v -> api.get("/v1/admin/runtime", result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? pretty(result.data) : result.message);
+        }));
+        releases.setOnClickListener(v -> api.get("/v1/admin/runtime/releases", result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? pretty(result.data) : result.message);
+        }));
+
+        LinearLayout row = horizontal();
+        Button pause = danger("暂停下发");
+        Button resume = small("恢复下发");
+        row.addView(pause, weight());
+        row.addView(resume, weightMargins());
+        root.addView(row, full(dp(12)));
+        pause.setOnClickListener(v -> confirmDanger("暂停远程资源", "新启动且没有有效缓存的客户端将无法进入。", () ->
+                runtimeToggle("/v1/admin/runtime/pause", output)));
+        resume.setOnClickListener(v -> runtimeToggle("/v1/admin/runtime/resume", output));
+
+        EditText version = input("选择已登记版本；留空恢复跟随最新版本", false);
+        Button select = secondary("应用资源版本");
+        root.addView(version, full(dp(8)));
+        root.addView(select, full(dp(14)));
+        select.setOnClickListener(v -> confirmDanger("切换资源版本",
+                "只允许选择服务器已经登记并验证过的签名版本。",
+                () -> api.post("/v1/admin/runtime/select",
+                        new JSONObject().put("version", version.getText().toString().trim()), result -> {
+                            if (redirectUnauthorized(result)) return;
+                            output.setText(result.success ? pretty(result.data) : result.message);
+                        })));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void runtimeToggle(String path, TextView output) {
+        api.post(path, new JSONObject().put("reason", "GG 管理器操作"), result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? pretty(result.data) : result.message);
+        });
+    }
+
+    private void showAudit() {
+        LinearLayout root = page("审计日志", "按事件或卡密 ID 筛选最近记录");
+        EditText event = input("事件名称，可留空", false);
+        EditText licenseId = input("卡密 ID，可留空", false);
+        TextView output = box("点击查询读取最近100条记录");
+        Button query = primary("查询日志");
+        root.addView(event, full(dp(8)));
+        root.addView(licenseId, full(dp(8)));
+        root.addView(query, full(dp(10)));
+        root.addView(output, full(dp(14)));
+        query.setOnClickListener(v -> {
+            String path = "/v1/admin/audit?limit=100&event=" + encode(event.getText().toString())
+                    + "&licenseId=" + encode(licenseId.getText().toString());
+            api.get(path, result -> {
+                if (redirectUnauthorized(result)) return;
+                output.setText(result.success ? pretty(result.data) : result.message);
+            });
+        });
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void showSettingsHistory() {
+        LinearLayout root = page("配置历史", "每次保存前都会记录完整快照，可按历史 ID 回滚");
+        TextView output = box("点击刷新读取最近配置历史");
+        Button refresh = primary("刷新配置历史");
+        root.addView(refresh, full(dp(10)));
+        root.addView(output, full(dp(12)));
+        refresh.setOnClickListener(v -> api.get("/v1/admin/settings/history?limit=50", result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? pretty(result.data) : result.message);
+        }));
+        EditText historyId = input("历史记录 ID", false);
+        Button rollback = danger("回滚到该历史配置");
+        root.addView(historyId, full(dp(8)));
+        root.addView(rollback, full(dp(14)));
+        rollback.setOnClickListener(v -> confirmDanger("回滚系统配置",
+                "将恢复该历史快照，并保留当前会话代数，防止旧会话意外恢复。",
+                () -> {
+                    String id = historyId.getText().toString().trim();
+                    if (id.isEmpty()) { output.setText("请输入历史记录 ID"); return; }
+                    api.post("/v1/admin/settings/rollback",
+                            new JSONObject().put("historyId", id), result -> {
+                                if (redirectUnauthorized(result)) return;
+                                output.setText(result.success ? pretty(result.data) : result.message);
+                            });
+                }));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void saveSettings(JSONObject changes, String reason, TextView result, Runnable afterSuccess) {
+        int version = currentSettings.optInt("configVersion", 0);
+        JSONObject body = new JSONObject()
+                .put("settings", changes)
+                .put("expectedVersion", version)
+                .put("reason", reason);
+        api.post("/v1/admin/settings/update", body, response -> {
+            if (redirectUnauthorized(response)) return;
+            result.setText(response.success ? "保存成功" : response.message);
+            if (response.success && afterSuccess != null) afterSuccess.run();
+        });
+    }
+
+    private JSONObject identifier(String value) {
+        String clean = value == null ? "" : value.trim();
+        JSONObject body = new JSONObject();
+        String normalized = clean.replaceAll("[^0-9A-Fa-f]", "").toUpperCase(Locale.ROOT);
+        if (normalized.length() == 32) body.put("licenseKey", normalized);
+        else body.put("id", clean);
+        return body;
+    }
+
+    private String detailPath(String value) {
+        JSONObject id = identifier(value);
+        if (id.has("licenseKey")) return "/v1/admin/licenses/detail?licenseKey=" + encode(id.optString("licenseKey"));
+        return "/v1/admin/licenses/detail?id=" + encode(id.optString("id"));
+    }
+
+    private JSONArray splitIds(String value) {
+        JSONArray array = new JSONArray();
+        if (value == null) return array;
+        String[] pieces = value.split("[,\\n\\r\\t ]+");
+        for (String piece : pieces) {
+            String clean = piece.trim();
+            if (!clean.isEmpty()) array.put(clean);
+            if (array.length() >= 100) break;
+        }
+        return array;
+    }
+
+    private boolean redirectUnauthorized(AdminApiManager.Result result) {
+        if (!result.unauthorized) return false;
+        showLogin(result.message);
+        return true;
+    }
+
+    private void toastResult(AdminApiManager.Result result) {
+        if (redirectUnauthorized(result)) return;
+        Toast.makeText(this, result.success ? "操作成功" : result.message, Toast.LENGTH_LONG).show();
+    }
+
+    private void confirmDanger(String title, String message, Runnable action) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确认执行", (dialog, which) -> action.run())
+                .show();
+    }
+
+    private void addBack(LinearLayout root) {
+        Button back = secondary("返回控制台");
+        back.setOnClickListener(v -> showConsole());
+        root.addView(back, full(0));
+    }
+
+    private void setNumber(EditText field, String key, long fallback) {
+        field.setText(String.valueOf(currentSettings.optLong(key, fallback)));
+    }
+
+    private long parseLong(EditText input, long fallback) {
+        try { return Long.parseLong(input.getText().toString().trim()); }
+        catch (Exception ignored) { return fallback; }
+    }
+
+    private String pretty(JSONObject object) {
+        try { return object.toString(2); }
+        catch (Exception ignored) { return String.valueOf(object); }
+    }
+
+    private String encode(String value) {
+        try { return java.net.URLEncoder.encode(value == null ? "" : value, "UTF-8"); }
+        catch (Exception ignored) { return ""; }
+    }
+
+    private void copyText(String value) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(ClipData.newPlainText("GG 管理器", value));
+            Toast.makeText(this, "已复制", Toast.LENGTH_SHORT).show();
+        }
+    }

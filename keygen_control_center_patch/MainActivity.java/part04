@@ -1,0 +1,169 @@
+    private LinearLayout page(String titleText, String description) {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(22), dp(30), dp(22), dp(30));
+        root.setBackgroundColor(Color.rgb(245, 247, 251));
+        TextView title = new TextView(this);
+        title.setText(titleText);
+        title.setTextSize(27);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(Color.rgb(17, 24, 39));
+        root.addView(title, full(dp(8)));
+        TextView subtitle = new TextView(this);
+        subtitle.setText(description);
+        subtitle.setTextSize(14);
+        subtitle.setTextColor(Color.rgb(75, 85, 99));
+        subtitle.setLineSpacing(0, 1.2f);
+        root.addView(subtitle, full(dp(22)));
+        return root;
+    }
+
+    private ScrollView wrap(LinearLayout root) {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.addView(root, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return scroll;
+    }
+
+    private LinearLayout dialogForm() {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(22), dp(8), dp(22), 0);
+        return form;
+    }
+
+    private LinearLayout horizontal() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        return row;
+    }
+
+    private EditText input(String hint, boolean password) {
+        EditText field = new EditText(this);
+        field.setHint(hint);
+        field.setTextSize(15);
+        field.setSingleLine(true);
+        field.setPadding(dp(12), dp(12), dp(12), dp(12));
+        field.setInputType(password
+                ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD
+                : InputType.TYPE_CLASS_TEXT);
+        return field;
+    }
+
+    private EditText numeric(String hint) {
+        EditText field = input(hint, false);
+        field.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        return field;
+    }
+
+    private EditText multiline(String hint) {
+        EditText field = input(hint, false);
+        field.setSingleLine(false);
+        field.setMinLines(3);
+        field.setGravity(Gravity.TOP);
+        return field;
+    }
+
+    private CheckBox check(String text, boolean checked) {
+        CheckBox box = new CheckBox(this);
+        box.setText(text);
+        box.setTextSize(15);
+        box.setChecked(checked);
+        return box;
+    }
+
+    private TextView section(String text) {
+        TextView title = new TextView(this);
+        title.setText(text);
+        title.setTextSize(18);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(Color.rgb(31, 41, 55));
+        return title;
+    }
+
+    private TextView status(String value) {
+        TextView text = new TextView(this);
+        text.setText(value == null ? "" : value);
+        text.setTextSize(14);
+        text.setTextColor(Color.rgb(185, 28, 28));
+        text.setLineSpacing(0, 1.2f);
+        return text;
+    }
+
+    private TextView box(String value) {
+        TextView text = new TextView(this);
+        text.setText(value == null ? "" : value);
+        text.setTextSize(13);
+        text.setTextColor(Color.rgb(31, 41, 55));
+        text.setTypeface(Typeface.MONOSPACE);
+        text.setPadding(dp(14), dp(14), dp(14), dp(14));
+        text.setBackgroundColor(Color.WHITE);
+        text.setTextIsSelectable(true);
+        return text;
+    }
+
+    private Button primary(String text) {
+        Button button = baseButton(text);
+        button.setTextColor(Color.WHITE);
+        button.setBackgroundColor(Color.rgb(79, 70, 229));
+        return button;
+    }
+
+    private Button secondary(String text) {
+        Button button = baseButton(text);
+        button.setTextColor(Color.rgb(31, 41, 55));
+        button.setBackgroundColor(Color.rgb(229, 231, 235));
+        return button;
+    }
+
+    private Button danger(String text) {
+        Button button = baseButton(text);
+        button.setTextColor(Color.WHITE);
+        button.setBackgroundColor(Color.rgb(185, 28, 28));
+        return button;
+    }
+
+    private Button small(String text) {
+        Button button = secondary(text);
+        button.setTextSize(13);
+        button.setMinHeight(dp(48));
+        return button;
+    }
+
+    private Button baseButton(String text) {
+        Button button = new Button(this);
+        button.setText(text);
+        button.setAllCaps(false);
+        button.setTextSize(15);
+        button.setPadding(dp(12), dp(8), dp(12), dp(8));
+        return button;
+    }
+
+    private LinearLayout.LayoutParams full(int bottomMargin) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 0, 0, bottomMargin);
+        return params;
+    }
+
+    private LinearLayout.LayoutParams weight() {
+        return new LinearLayout.LayoutParams(0, dp(50), 1f);
+    }
+
+    private LinearLayout.LayoutParams weightMargins() {
+        LinearLayout.LayoutParams params = weight();
+        params.setMargins(dp(8), 0, dp(8), 0);
+        return params;
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (api != null) api.shutdown();
+        super.onDestroy();
+    }
+}

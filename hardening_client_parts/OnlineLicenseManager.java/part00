@@ -23,10 +23,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class OnlineLicenseManager {
-    private static final int APP_VERSION_CODE = 6;
+    private static final int APP_VERSION_CODE = 8;
     private static final int MAX_JSON_BYTES = 128 * 1024;
     private static final int MAX_SCRIPT_RESPONSE_BYTES = 3 * 1024 * 1024;
-    private static final long FOREGROUND_RECHECK_MS = 30L * 60L * 1000L;
+    private static final long DEFAULT_FOREGROUND_RECHECK_MS = 30L * 60L * 1000L;
     private static final long CLOCK_ROLLBACK_TOLERANCE_MS = 5L * 60L * 1000L;
     private static final String PUBLIC_KEY_DER_BASE64 =
             "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn1P0wJwOtd+btZuTxPslVdjaOxSE" +
@@ -48,7 +48,23 @@ final class OnlineLicenseManager {
         return normalizeKey(secureStore.loadState().optString("licenseKey", "")).length() == 32;
     }
 
-    long foregroundRecheckMs() { return FOREGROUND_RECHECK_MS; }
+    long foregroundRecheckMs() {
+        long seconds = secureStore.loadState().optLong("foregroundRecheckSeconds", DEFAULT_FOREGROUND_RECHECK_MS / 1000L);
+        return bounded(seconds, 300L, 43200L) * 1000L;
+    }
+
+    boolean isSelfUnbindEnabled() {
+        return secureStore.loadState().optBoolean("selfUnbindEnabled", true);
+    }
+
+    String getUpdateUrl() { return secureStore.loadState().optString("updateUrl", ""); }
+    String getUpdateMessage() { return secureStore.loadState().optString("updateMessage", ""); }
+
+    String getSelfUnbindSummary() {
+        JSONObject state = secureStore.loadState();
+        if (!state.optBoolean("selfUnbindEnabled", true)) return "当前已关闭自助更换设备。";
+        return "自助更换设备将扣除" + durationText(state.optLong("unbindPenaltySeconds", 21600L)) + "有效期。";
+    }
 
     void initializeSavedAsync(RuntimeCallback callback) {
         executor.execute(() -> {
@@ -118,10 +134,12 @@ final class OnlineLicenseManager {
                 if (!response.optBoolean("ok", false)) throw apiError(response, 400);
                 long expiresAt = response.isNull("licenseExpiresAt") ? 0L : response.optLong("licenseExpiresAt", 0L);
                 long rebindAt = response.isNull("rebindAvailableAt") ? 0L : response.optLong("rebindAvailableAt", 0L);
+                long penalty = response.optLong("penaltySeconds", state.optLong("unbindPenaltySeconds", 21600L));
                 secureStore.clearAuthorization();
+                String duration = durationText(penalty);
                 String message = rebindAt > 0
-                        ? "更换设备成功，6小时后可在新设备重新激活"
-                        : "更换设备成功，已扣除6小时，有效期至 " + formatSeconds(expiresAt);
+                        ? "更换设备成功，" + duration + "后可在新设备重新激活"
+                        : "更换设备成功，已扣除" + duration + "，有效期至 " + formatSeconds(expiresAt);
                 deliver(callback, SimpleResult.success(message));
             } catch (java.io.IOException error) {
                 deliver(callback, SimpleResult.failure("服务连接失败，请检查网络后重试"));
@@ -140,7 +158,11 @@ final class OnlineLicenseManager {
         long lastSuccess = state.optLong("lastServerTime", 0L);
         String validity = permanent ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
         String last = lastSuccess > 0 ? formatSeconds(lastSuccess) : "尚未完成";
-        return "有效期：" + validity + "\n最近初始化：" + last;
+        long configVersion = state.optLong("configVersion", 0L);
+        int latest = state.optInt("latestAppVersion", APP_VERSION_CODE);
+        return "有效期：" + validity + "\n最近初始化：" + last +
+                "\n客户端版本：1.4.0" + (configVersion > 0 ? "\n策略版本：" + configVersion : "") +
+                (latest > APP_VERSION_CODE ? "\n发现新版本：" + latest : "");
     }
 
     void clear() { secureStore.clearAuthorization(); }
@@ -159,4 +181,3 @@ final class OnlineLicenseManager {
         AuthResult auth = parseAuth(response);
         return loadScriptAfterAuth(key, auth);
     }
-

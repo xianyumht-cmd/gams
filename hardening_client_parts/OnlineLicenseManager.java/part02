@@ -7,8 +7,10 @@
             verifyManifest(manifest);
             byte[] scriptBytes = cache.getString("source").getBytes(StandardCharsets.UTF_8);
             verifyScript(manifest, scriptBytes);
+            boolean updateAvailable = state.optInt("latestAppVersion", APP_VERSION_CODE) > APP_VERSION_CODE;
             return RuntimeResult.valid(new String(scriptBytes, StandardCharsets.UTF_8), true,
-                    permanent, licenseExpiresAt, "网络暂时不可用，已使用安全缓存");
+                    permanent, licenseExpiresAt, "网络暂时不可用，已使用安全缓存",
+                    updateAvailable, state.optString("updateUrl", ""), state.optString("updateMessage", ""));
         } catch (Exception error) {
             secureStore.deleteCache();
             return RuntimeResult.invalid("服务连接失败，请检查网络后重试");
@@ -69,15 +71,18 @@
     }
 
     private String userMessage(ApiException error) {
-        if ("upgrade_required".equals(error.code)) return "客户端版本过低，请更新后继续使用";
+        if ("upgrade_required".equals(error.code)) return error.message == null || error.message.trim().isEmpty()
+                ? "客户端版本过低，请更新后继续使用" : error.message;
         if ("license_expired".equals(error.code)) return "服务已到期";
         if ("license_disabled".equals(error.code)) return "服务已暂停，请联系支持";
         if ("device_limit".equals(error.code)) return "激活码已绑定其他设备";
         if ("device_key_changed".equals(error.code) || "certificate_changed".equals(error.code)) return "设备安全信息发生变化，请先更换设备";
-        if ("rebind_wait".equals(error.code)) return "更换设备后需等待6小时再激活";
-        if ("unbind_cooldown".equals(error.code)) return "24小时内只能自助更换一次设备";
+        if ("rebind_wait".equals(error.code)) return error.message;
+        if ("self_unbind_disabled".equals(error.code)) return "当前已关闭自助更换设备";
+        if ("unbind_cooldown".equals(error.code)) return error.message;
         if ("unbind_limit".equals(error.code)) return "近期更换设备次数已达上限";
-        if ("insufficient_time".equals(error.code)) return "剩余时间不足6小时，无法自助更换设备";
+        if ("insufficient_time".equals(error.code)) return error.message;
+        if ("runtime_paused".equals(error.code)) return "服务维护中，请稍后再试";
         if ("too_many_requests".equals(error.code)) return "操作过于频繁，请稍后再试";
         return error.message == null || error.message.trim().isEmpty() ? "操作失败，请重试" : error.message;
     }
@@ -92,6 +97,17 @@
 
     static String normalizeKey(String input) {
         return input == null ? "" : input.replaceAll("[^0-9A-Fa-f]", "").toUpperCase(Locale.ROOT);
+    }
+
+    private static long bounded(long value, long minimum, long maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private static String durationText(long seconds) {
+        if (seconds <= 0) return "0分钟";
+        if (seconds % 86400L == 0) return (seconds / 86400L) + "天";
+        if (seconds % 3600L == 0) return (seconds / 3600L) + "小时";
+        return Math.max(1L, seconds / 60L) + "分钟";
     }
 
     private static String formatSeconds(long seconds) {
@@ -111,18 +127,40 @@
         final long expiresAt;
         final String source;
         final String message;
-        private RuntimeResult(boolean valid, boolean offline, boolean permanent, long expiresAt, String source, String message) {
+        final boolean updateAvailable;
+        final boolean updateRequired;
+        final String updateUrl;
+        final String updateMessage;
+        private RuntimeResult(boolean valid, boolean offline, boolean permanent, long expiresAt, String source,
+                              String message, boolean updateAvailable, boolean updateRequired,
+                              String updateUrl, String updateMessage) {
             this.valid = valid;
             this.offline = offline;
             this.permanent = permanent;
             this.expiresAt = expiresAt;
             this.source = source == null ? "" : source;
             this.message = message == null ? "" : message;
+            this.updateAvailable = updateAvailable;
+            this.updateRequired = updateRequired;
+            this.updateUrl = updateUrl == null ? "" : updateUrl;
+            this.updateMessage = updateMessage == null ? "" : updateMessage;
         }
         static RuntimeResult valid(String source, boolean offline, boolean permanent, long expiresAt, String message) {
-            return new RuntimeResult(true, offline, permanent, expiresAt, source, message);
+            return valid(source, offline, permanent, expiresAt, message, false, "", "");
         }
-        static RuntimeResult invalid(String message) { return new RuntimeResult(false, false, false, 0L, "", message); }
+        static RuntimeResult valid(String source, boolean offline, boolean permanent, long expiresAt, String message,
+                                   boolean updateAvailable, String updateUrl, String updateMessage) {
+            return new RuntimeResult(true, offline, permanent, expiresAt, source, message,
+                    updateAvailable, false, updateUrl, updateMessage);
+        }
+        static RuntimeResult updateRequired(String message, String updateUrl) {
+            return new RuntimeResult(false, false, false, 0L, "", message,
+                    true, true, updateUrl, message);
+        }
+        static RuntimeResult invalid(String message) {
+            return new RuntimeResult(false, false, false, 0L, "", message,
+                    false, false, "", "");
+        }
     }
 
     static final class SimpleResult {

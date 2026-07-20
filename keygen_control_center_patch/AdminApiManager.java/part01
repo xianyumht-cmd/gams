@@ -1,0 +1,86 @@
+    private String authorization() throws UnauthorizedException {
+        String token = preferences.getString(PREF_TOKEN, "");
+        long expires = preferences.getLong(PREF_EXPIRES, 0L);
+        if (token.isEmpty() || expires <= System.currentTimeMillis() / 1000L + 30L) {
+            throw new UnauthorizedException();
+        }
+        return "Bearer " + token;
+    }
+
+    private Result parse(JSONObject object, int status) {
+        boolean ok = object.optBoolean("ok", status >= 200 && status < 300);
+        if (!ok || status < 200 || status >= 300) {
+            return Result.error(object.optString("message", "操作失败"));
+        }
+        return Result.success(object);
+    }
+
+    private static JSONObject parseJson(String text) throws Exception {
+        return new JSONObject(text == null || text.trim().isEmpty() ? "{}" : text);
+    }
+
+    private byte[] readLimited(InputStream input) throws IOException {
+        try (InputStream source = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int total = 0;
+            int read;
+            while ((read = source.read(buffer)) != -1) {
+                total += read;
+                if (total > MAX_BYTES) throw new IOException("服务器响应过大");
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        }
+    }
+
+    private void deliver(Callback callback, Result result) {
+        if (callback != null) mainHandler.post(() -> callback.onResult(result));
+    }
+
+    private static String message(Exception error, String fallback) {
+        String value = error.getMessage();
+        return value == null || value.trim().isEmpty() ? fallback : value;
+    }
+
+    private static String join(List<String> values) {
+        StringBuilder output = new StringBuilder();
+        for (String value : values) {
+            if (output.length() > 0) output.append("；");
+            output.append(value);
+        }
+        return output.toString();
+    }
+
+    interface Callback {
+        void onResult(Result result);
+    }
+
+    static final class Result {
+        final boolean success;
+        final boolean unauthorized;
+        final String message;
+        final JSONObject data;
+
+        private Result(boolean success, boolean unauthorized, String message, JSONObject data) {
+            this.success = success;
+            this.unauthorized = unauthorized;
+            this.message = message == null ? "" : message;
+            this.data = data == null ? new JSONObject() : data;
+        }
+
+        static Result success(JSONObject data) {
+            return new Result(true, false, "操作成功", data);
+        }
+
+        static Result error(String message) {
+            return new Result(false, false, message, new JSONObject());
+        }
+
+        static Result unauthorized(String message) {
+            return new Result(false, true, message, new JSONObject());
+        }
+    }
+
+    private static final class UnauthorizedException extends Exception {
+    }
+}

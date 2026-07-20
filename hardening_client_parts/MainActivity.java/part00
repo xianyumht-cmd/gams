@@ -84,10 +84,12 @@ public final class MainActivity extends Activity {
             if (isFinishing() || isDestroyed()) return;
             if (!result.valid) {
                 showLicenseScreen(result.message);
+                if (result.updateRequired) showUpdateDialog(result.updateMessage, result.updateUrl, true);
                 return;
             }
             if (result.offline) Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
             showBrowser(savedInstanceState, result.source);
+            if (result.updateAvailable) showUpdateDialog(result.updateMessage, result.updateUrl, false);
         });
     }
 
@@ -183,5 +185,12 @@ public final class MainActivity extends Activity {
         status.setGravity(Gravity.CENTER);
         status.setPadding(0, dp(18), 0, 0);
         root.addView(status, matchWrap(0));
+
+        String savedUpdateUrl = onlineLicenseManager.getUpdateUrl();
+        if (savedUpdateUrl != null && !savedUpdateUrl.trim().isEmpty()) {
+            Button update = actionButton("下载新版本", true);
+            update.setOnClickListener(v -> openUpdateUrl(savedUpdateUrl));
+            root.addView(update, matchWrap(dp(18)));
+        }
 
         TextView tip = new TextView(this);

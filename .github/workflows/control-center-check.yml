@@ -1,0 +1,45 @@
+name: Validate GG control center
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "license-api/**"
+      - "hardening_backend_parts/**"
+      - "client_hardening_patch/**"
+      - "hardening_client_parts/**"
+      - "client_control_center_patch/**"
+      - "keygen_control_center_patch/**"
+      - ".github/workflows/control-center-check.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Assemble Worker v3
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat hardening_backend_parts/part* > license-api/src/index.js
+          (cd license-api && python3 control_center_patch.py && python3 client_config_patch.py && python3 release_baseline_patch.py)
+          node --check license-api/src/index.js
+      - name: Verify control-center routes and defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '/v1/client/config' license-api/src/index.js
+          grep -q '/v1/admin/settings/update' license-api/src/index.js
+          grep -q '/v1/admin/devices/revoke' license-api/src/index.js
+          grep -q '/v1/admin/sessions/revoke-all' license-api/src/index.js
+          grep -q '/v1/admin/runtime/select' license-api/src/index.js
+          grep -q 'sessionGeneration' license-api/src/index.js
+          grep -q 'foregroundRecheckSeconds' license-api/src/index.js
+          grep -q 'Math.max(8' license-api/src/index.js
+          grep -q 'CREATE TABLE IF NOT EXISTS system_settings' license-api/migrations/0003_control_center.sql
+          grep -q 'CREATE TABLE IF NOT EXISTS script_releases' license-api/migrations/0003_control_center.sql
