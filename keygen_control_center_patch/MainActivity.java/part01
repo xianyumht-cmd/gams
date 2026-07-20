@@ -1,0 +1,166 @@
+    private void showLicenseManager() {
+        LinearLayout root = page("卡密管理", "支持搜索、创建、详情、参数修改、状态操作和批量处理");
+        EditText query = input("卡密预览、备注或卡密 ID", false);
+        TextView output = box("点击查询读取服务器卡密列表");
+        Button search = primary("查询卡密");
+        root.addView(query, full(dp(10)));
+        root.addView(search, full(dp(12)));
+        root.addView(output, full(dp(16)));
+        search.setOnClickListener(v -> {
+            search.setEnabled(false);
+            String path = "/v1/admin/licenses?limit=100&q=" + encode(query.getText().toString());
+            api.get(path, result -> {
+                search.setEnabled(true);
+                if (redirectUnauthorized(result)) return;
+                output.setText(result.success ? pretty(result.data) : result.message);
+            });
+        });
+
+        Button create = secondary("创建卡密");
+        create.setOnClickListener(v -> showCreateLicenseDialog(output));
+        root.addView(create, full(dp(18)));
+
+        root.addView(section("单卡操作"), full(dp(8)));
+        EditText keyOrId = input("完整卡密或卡密 ID", false);
+        root.addView(keyOrId, full(dp(10)));
+        Button detail = secondary("查看卡密与设备详情");
+        detail.setOnClickListener(v -> {
+            String value = keyOrId.getText().toString().trim();
+            if (value.isEmpty()) { output.setText("请输入卡密或卡密 ID"); return; }
+            api.get(detailPath(value), result -> {
+                if (redirectUnauthorized(result)) return;
+                output.setText(result.success ? pretty(result.data) : result.message);
+            });
+        });
+        root.addView(detail, full(dp(10)));
+
+        LinearLayout row = horizontal();
+        Button disable = small("停用");
+        Button enable = small("启用");
+        Button unbind = small("解绑全部设备");
+        row.addView(disable, weight());
+        row.addView(enable, weightMargins());
+        row.addView(unbind, weight());
+        root.addView(row, full(dp(10)));
+        disable.setOnClickListener(v -> licenseAction(keyOrId, "disable", 0L, output));
+        enable.setOnClickListener(v -> licenseAction(keyOrId, "enable", 0L, output));
+        unbind.setOnClickListener(v -> confirmDanger("管理员解绑", "将撤销该卡密所有当前设备，不扣除有效期。",
+                () -> licenseAction(keyOrId, "unbind", 0L, output)));
+
+        LinearLayout row2 = horizontal();
+        Button permanent = small("改为永久");
+        Button extend = small("自定义续期");
+        Button edit = small("修改参数");
+        row2.addView(permanent, weight());
+        row2.addView(extend, weightMargins());
+        row2.addView(edit, weight());
+        root.addView(row2, full(dp(16)));
+        permanent.setOnClickListener(v -> licenseAction(keyOrId, "permanent", 0L, output));
+        extend.setOnClickListener(v -> showExtendDialog(keyOrId, output));
+        edit.setOnClickListener(v -> showLicenseEditDialog(keyOrId, output));
+
+        root.addView(section("批量操作"), full(dp(8)));
+        EditText ids = input("卡密 ID，使用逗号或换行分隔，最多100个", false);
+        EditText batchDays = numeric("续期天数，仅批量续期时使用");
+        root.addView(ids, full(dp(10)));
+        root.addView(batchDays, full(dp(10)));
+        LinearLayout batchRow = horizontal();
+        Button batchDisable = small("批量停用");
+        Button batchEnable = small("批量启用");
+        Button batchExtend = small("批量续期");
+        batchRow.addView(batchDisable, weight());
+        batchRow.addView(batchEnable, weightMargins());
+        batchRow.addView(batchExtend, weight());
+        root.addView(batchRow, full(dp(16)));
+        batchDisable.setOnClickListener(v -> batchAction(ids, "disable", 0L, output));
+        batchEnable.setOnClickListener(v -> batchAction(ids, "enable", 0L, output));
+        batchExtend.setOnClickListener(v -> batchAction(ids, "extend", parseLong(batchDays, 30L) * 86400L, output));
+
+        Button back = secondary("返回控制台");
+        back.setOnClickListener(v -> showConsole());
+        root.addView(back, full(0));
+        setContentView(wrap(root));
+    }
+
+    private void showCreateLicenseDialog(TextView output) {
+        LinearLayout form = dialogForm();
+        EditText days = numeric("有效天数；输入 -1 表示永久");
+        EditText count = numeric("生成数量 1-50");
+        EditText devices = numeric("允许设备数 1-10");
+        EditText note = input("备注", false);
+        days.setText("30"); count.setText("1"); devices.setText("1");
+        form.addView(days, full(dp(8)));
+        form.addView(count, full(dp(8)));
+        form.addView(devices, full(dp(8)));
+        form.addView(note, full(0));
+        new AlertDialog.Builder(this)
+                .setTitle("创建卡密")
+                .setView(form)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("创建", (dialog, which) -> {
+                    JSONObject body = new JSONObject()
+                            .put("durationDays", parseLong(days, 30L))
+                            .put("count", parseLong(count, 1L))
+                            .put("maxDevices", parseLong(devices, 1L))
+                            .put("note", note.getText().toString());
+                    api.post("/v1/admin/licenses/create", body, result -> {
+                        if (redirectUnauthorized(result)) return;
+                        output.setText(result.success ? pretty(result.data) : result.message);
+                    });
+                }).show();
+    }
+
+    private void licenseAction(EditText keyOrId, String action, long seconds, TextView output) {
+        String value = keyOrId.getText().toString().trim();
+        if (value.isEmpty()) { output.setText("请输入卡密或卡密 ID"); return; }
+        JSONObject body = identifier(value).put("action", action);
+        if (seconds > 0) body.put("seconds", seconds);
+        api.post("/v1/admin/licenses/action", body, result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? pretty(result.data) : result.message);
+        });
+    }
+
+    private void showExtendDialog(EditText keyOrId, TextView output) {
+        EditText days = numeric("续期天数 1-3650");
+        days.setText("30");
+        new AlertDialog.Builder(this).setTitle("自定义续期").setView(days)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("续期", (dialog, which) ->
+                        licenseAction(keyOrId, "extend", parseLong(days, 30L) * 86400L, output)).show();
+    }
+
+    private void showLicenseEditDialog(EditText keyOrId, TextView output) {
+        String value = keyOrId.getText().toString().trim();
+        if (value.isEmpty()) { output.setText("请输入卡密或卡密 ID"); return; }
+        LinearLayout form = dialogForm();
+        EditText note = input("新备注", false);
+        EditText devices = numeric("最大设备数 1-10");
+        EditText expires = numeric("准确到期 Unix 秒；留空不修改");
+        form.addView(note, full(dp(8)));
+        form.addView(devices, full(dp(8)));
+        form.addView(expires, full(0));
+        new AlertDialog.Builder(this).setTitle("修改卡密参数").setView(form)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    JSONObject body = identifier(value);
+                    if (!note.getText().toString().trim().isEmpty()) body.put("note", note.getText().toString());
+                    if (!devices.getText().toString().trim().isEmpty()) body.put("maxDevices", parseLong(devices, 1L));
+                    if (!expires.getText().toString().trim().isEmpty()) body.put("expiresAt", parseLong(expires, 0L));
+                    api.post("/v1/admin/licenses/update", body, result -> {
+                        if (redirectUnauthorized(result)) return;
+                        output.setText(result.success ? pretty(result.data) : result.message);
+                    });
+                }).show();
+    }
+
+    private void batchAction(EditText idsInput, String action, long seconds, TextView output) {
+        JSONArray ids = splitIds(idsInput.getText().toString());
+        if (ids.length() == 0) { output.setText("请输入至少一个卡密 ID"); return; }
+        JSONObject body = new JSONObject().put("ids", ids).put("action", action);
+        if (seconds > 0) body.put("seconds", seconds);
+        api.post("/v1/admin/licenses/batch-action", body, result -> {
+            if (redirectUnauthorized(result)) return;
+            output.setText(result.success ? pretty(result.data) : result.message);
+        });
+    }
