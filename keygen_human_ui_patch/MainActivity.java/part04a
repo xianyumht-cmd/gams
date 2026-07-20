@@ -1,0 +1,70 @@
+            toast("已填写纯在线模式，确认无误后点击保存。");
+        });
+
+        TextView result = status("");
+        Button save = primary("检查并保存安全策略");
+        save.setOnClickListener(v -> {
+            long sessionSeconds = seconds(session);
+            long adminSessionSeconds = seconds(adminSession);
+            long recheckSeconds = seconds(recheck);
+            long offlineSeconds = seconds(offline);
+            long legacySeconds = seconds(legacyOffline);
+            long leaseSeconds = seconds(lease);
+            long challengeSeconds = seconds(challenge);
+            long penaltySeconds = seconds(penalty);
+            long cooldownSeconds = seconds(cooldown);
+            long windowSeconds = seconds(window);
+            int riskValue = (int) parseLong(risk, 2L);
+            int limitValue = (int) parseLong(limit, 5L);
+
+            String error = validateSecurity(sessionSeconds, adminSessionSeconds, recheckSeconds,
+                    offlineSeconds, legacySeconds, leaseSeconds, challengeSeconds, riskValue,
+                    penaltySeconds, cooldownSeconds, windowSeconds, limitValue);
+            if (!error.isEmpty()) {
+                result.setText(error);
+                return;
+            }
+
+            J changes = new J()
+                    .put("sessionSeconds", sessionSeconds)
+                    .put("adminSessionSeconds", adminSessionSeconds)
+                    .put("foregroundRecheckSeconds", recheckSeconds)
+                    .put("offlineGraceSeconds", offlineSeconds)
+                    .put("legacyOfflineGraceSeconds", legacySeconds)
+                    .put("scriptLeaseSeconds", leaseSeconds)
+                    .put("challengeSeconds", challengeSeconds)
+                    .put("riskForceOnlineThreshold", riskValue)
+                    .put("globalForceOnline", globalOnline.isChecked())
+                    .put("selfUnbindEnabled", selfUnbind.isChecked())
+                    .put("unbindPenaltySeconds", penaltySeconds)
+                    .put("unbindCooldownSeconds", cooldownSeconds)
+                    .put("unbindWindowSeconds", windowSeconds)
+                    .put("unbindWindowLimit", limitValue);
+
+            String impact = "所有设备必须联网：" + yesNo(currentSettings.optBoolean("globalForceOnline", false)) +
+                    " → " + yesNo(globalOnline.isChecked()) +
+                    "\n断网可用时间：" + HumanFormat.duration(currentSettings.optLong("offlineGraceSeconds", 21600)) +
+                    " → " + HumanFormat.duration(offlineSeconds) +
+                    "\n返回应用复检：" + HumanFormat.duration(currentSettings.optLong("foregroundRecheckSeconds", 1800)) +
+                    " → " + HumanFormat.duration(recheckSeconds) +
+                    "\n自助换设备：" + yesNo(currentSettings.optBoolean("selfUnbindEnabled", true)) +
+                    " → " + yesNo(selfUnbind.isChecked()) +
+                    "\n换设备扣除：" + HumanFormat.duration(currentSettings.optLong("unbindPenaltySeconds", 21600)) +
+                    " → " + HumanFormat.duration(penaltySeconds);
+
+            confirmChange("确认安全策略", impact,
+                    () -> saveSettings(changes, saveReason[0], result, this::showSecuritySettings));
+        });
+        root.addView(save, full(dp(8)));
+        root.addView(result, full(dp(12)));
+
+        Button system = secondary("查看只读系统状态");
+        system.setOnClickListener(v -> showSettingsStatus());
+        root.addView(system, full(dp(12)));
+        addBack(root);
+        setContentView(wrap(root));
+    }
+
+    private void applyPreset(String name, CheckBox globalOnline, CheckBox selfUnbind,
+                             DurationControl session, DurationControl adminSession, DurationControl recheck,
+                             DurationControl offline, DurationControl legacyOffline, DurationControl lease,
