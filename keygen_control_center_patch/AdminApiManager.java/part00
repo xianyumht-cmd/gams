@@ -1,0 +1,131 @@
+package com.jinli.keygen;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
+
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.net.ssl.HttpsURLConnection;
+
+final class AdminApiManager {
+    private static final String PREFS = "gg_admin_state_v3";
+    private static final String PREF_TOKEN = "token";
+    private static final String PREF_EXPIRES = "expires";
+    private static final int MAX_BYTES = 2 * 1024 * 1024;
+    private static final int CONNECT_TIMEOUT_MS = 5000;
+    private static final int READ_TIMEOUT_MS = 12000;
+
+    private final SharedPreferences preferences;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    AdminApiManager(Context context) {
+        preferences = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    boolean hasSession() {
+        return !preferences.getString(PREF_TOKEN, "").isEmpty()
+                && preferences.getLong(PREF_EXPIRES, 0L) > System.currentTimeMillis() / 1000L + 60L;
+    }
+
+    void login(String password, Callback callback) {
+        callPost("/v1/admin/login", new JSONObject().put("password", password), false, result -> {
+            if (result.success) {
+                preferences.edit()
+                        .putString(PREF_TOKEN, result.data.optString("token", ""))
+                        .putLong(PREF_EXPIRES, result.data.optLong("expiresAt", 0L))
+                        .apply();
+            }
+            callback.onResult(result);
+        });
+    }
+
+    void get(String path, Callback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject response = getJson(path, authorization());
+                deliver(callback, parse(response, 200));
+            } catch (UnauthorizedException error) {
+                logout();
+                deliver(callback, Result.unauthorized("管理登录已失效，请重新登录"));
+            } catch (Exception error) {
+                deliver(callback, Result.error(message(error, "无法连接服务器")));
+            }
+        });
+    }
+
+    void post(String path, JSONObject body, Callback callback) {
+        callPost(path, body == null ? new JSONObject() : body, true, callback);
+    }
+
+    void logout() {
+        preferences.edit().clear().apply();
+    }
+
+    void shutdown() {
+        executor.shutdownNow();
+    }
+
+    private void callPost(String path, JSONObject body, boolean authorized, Callback callback) {
+        executor.execute(() -> {
+            try {
+                String authorization = authorized ? authorization() : "";
+                ResilientApiTransport.Response response = ResilientApiTransport.post(
+                        path, body.toString(), "GG-Admin/7 Android", authorization, MAX_BYTES);
+                JSONObject object = parseJson(response.body);
+                if (response.status == 401) throw new UnauthorizedException();
+                deliver(callback, parse(object, response.status));
+            } catch (UnauthorizedException error) {
+                logout();
+                deliver(callback, Result.unauthorized("管理登录已失效，请重新登录"));
+            } catch (Exception error) {
+                deliver(callback, Result.error(message(error, "操作失败")));
+            }
+        });
+    }
+
+    private JSONObject getJson(String path, String authorization) throws Exception {
+        List<String> errors = new ArrayList<>();
+        for (String host : new String[]{RuntimeNames.customHost(), RuntimeNames.workerHost()}) {
+            HttpsURLConnection connection = null;
+            try {
+                connection = (HttpsURLConnection) new URL("https://" + host + path).openConnection();
+                connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(READ_TIMEOUT_MS);
+                connection.setRequestMethod("GET");
+                connection.setUseCaches(false);
+                connection.setInstanceFollowRedirects(false);
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("User-Agent", "GG-Admin/7 Android");
+                connection.setRequestProperty("Authorization", authorization);
+                int status = connection.getResponseCode();
+                if (status == 401) throw new UnauthorizedException();
+                InputStream stream = status >= 200 && status < 400
+                        ? connection.getInputStream() : connection.getErrorStream();
+                String body = stream == null ? "{}" : new String(readLimited(stream), StandardCharsets.UTF_8);
+                JSONObject object = parseJson(body);
+                if (status >= 200 && status < 300) return object;
+                String code = object.optString("code", "HTTP " + status);
+                errors.add(host + ": " + code);
+            } catch (UnauthorizedException error) {
+                throw error;
+            } catch (Exception error) {
+                errors.add(host + ": " + message(error, "连接失败"));
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        }
+        throw new IOException(errors.isEmpty() ? "没有可用连接通道" : join(errors));
+    }
