@@ -1,0 +1,142 @@
+package com.jinli.keygen;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.Bundle;
+import android.text.InputType;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+public final class MainActivity extends Activity {
+    private AdminApiManager api;
+    private JSONObject currentSettings = new JSONObject();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        api = new AdminApiManager(this);
+        if (api.hasSession()) showConsole();
+        else showLogin("");
+    }
+
+    private void showLogin(String initialMessage) {
+        LinearLayout root = page("GG 管理器", "完整授权控制台");
+        EditText password = input("管理密码", true);
+        TextView status = status(initialMessage);
+        Button login = primary("登录管理端");
+        root.addView(password, full(dp(14)));
+        root.addView(login, full(dp(10)));
+        root.addView(status, full(0));
+        login.setOnClickListener(v -> {
+            String value = password.getText().toString();
+            if (value.isEmpty()) { status.setText("请输入管理密码"); return; }
+            login.setEnabled(false);
+            status.setText("正在登录…");
+            api.login(value, result -> {
+                login.setEnabled(true);
+                if (!result.success) { status.setText(result.message); return; }
+                showConsole();
+            });
+        });
+        setContentView(wrap(root));
+    }
+
+    private void showConsole() {
+        LinearLayout root = page("GG 管理器", "服务器、卡密、设备、版本、安全策略和远程资源统一控制");
+        TextView state = box("请选择管理模块");
+        root.addView(state, full(dp(16)));
+
+        addMenu(root, "系统总览", "查看卡密、设备、风险、版本和运行状态", this::showDashboard);
+        addMenu(root, "卡密管理", "创建、搜索、详情、续期、停用、解绑和批量操作", this::showLicenseManager);
+        addMenu(root, "设备管理", "查看设备详情、风险信息和撤销绑定", this::showDeviceManager);
+        addMenu(root, "版本与更新", "最低版本、最新版本、强制更新和下载地址", this::showVersionSettings);
+        addMenu(root, "安全策略", "会话、复检、离线、租期、解绑和风险阈值", this::showSecuritySettings);
+        addMenu(root, "远程资源", "运行状态、已登记版本、暂停、恢复和回滚", this::showRuntimeManager);
+        addMenu(root, "审计日志", "查看登录、激活、验证、解绑和风险记录", this::showAudit);
+        addMenu(root, "配置历史", "查看配置变更并回滚历史版本", this::showSettingsHistory);
+
+        Button revoke = danger("全局撤销全部会话");
+        revoke.setOnClickListener(v -> confirmDanger(
+                "全局撤销会话",
+                "所有客户端当前会话将立即失效，并在下次操作时重新验证。",
+                () -> api.post("/v1/admin/sessions/revoke-all", new JSONObject(), result -> {
+                    toastResult(result);
+                    if (result.success) showJson("撤销结果", result.data);
+                })));
+        root.addView(revoke, full(dp(12)));
+
+        Button logout = secondary("退出管理登录");
+        logout.setOnClickListener(v -> { api.logout(); showLogin(""); });
+        root.addView(logout, full(0));
+        setContentView(wrap(root));
+    }
+
+    private void addMenu(LinearLayout root, String title, String description, Runnable action) {
+        Button button = secondary(title + "\n" + description);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        button.setMinHeight(dp(64));
+        button.setOnClickListener(v -> action.run());
+        root.addView(button, full(dp(10)));
+    }
+
+    private void showDashboard() {
+        showLoading("系统总览");
+        api.get("/v1/admin/dashboard", result -> handlePageResult("系统总览", result));
+    }
+
+    private void handlePageResult(String title, AdminApiManager.Result result) {
+        if (result.unauthorized) { showLogin(result.message); return; }
+        if (!result.success) { showErrorPage(title, result.message); return; }
+        showJson(title, result.data);
+    }
+
+    private void showLoading(String title) {
+        LinearLayout root = page(title, "正在读取服务器数据…");
+        Button back = secondary("返回控制台");
+        back.setOnClickListener(v -> showConsole());
+        root.addView(back, full(0));
+        setContentView(wrap(root));
+    }
+
+    private void showErrorPage(String title, String message) {
+        LinearLayout root = page(title, "操作未完成");
+        root.addView(status(message), full(dp(16)));
+        Button back = secondary("返回控制台");
+        back.setOnClickListener(v -> showConsole());
+        root.addView(back, full(0));
+        setContentView(wrap(root));
+    }
+
+    private void showJson(String title, JSONObject data) {
+        LinearLayout root = page(title, "服务器实时数据");
+        TextView output = box(pretty(data));
+        output.setTextIsSelectable(true);
+        root.addView(output, full(dp(14)));
+        Button copy = secondary("复制内容");
+        copy.setOnClickListener(v -> copyText(pretty(data)));
+        Button back = secondary("返回控制台");
+        back.setOnClickListener(v -> showConsole());
+        root.addView(copy, full(dp(10)));
+        root.addView(back, full(0));
+        setContentView(wrap(root));
+    }
