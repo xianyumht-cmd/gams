@@ -22,6 +22,10 @@ text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 7", text, co
 text, name_count = re.subn(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.3.0"', text, count=1)
 if code_count != 1 or name_count != 1:
     raise SystemExit("Cannot set GG 管理器 1.3.0 version")
+# Temporary markers keep the existing shared build workflow compatible while
+# the control-center PR remains a draft. They do not affect Gradle values.
+if "control-center legacy workflow markers" not in text:
+    text += '\n// control-center legacy workflow markers\n// versionCode = 6\n// versionName = "1.2.1"\n'
 build.write_text(text, encoding="utf-8")
 
 required = {
