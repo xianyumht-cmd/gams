@@ -45,7 +45,7 @@ jobs:
       - name: Install Playwright Chromium
         run: npm exec --yes playwright@1.52.0 install --with-deps chromium
 
-      - name: Confirm page requests only the self-hosted engine
+      - name: Test redirect deterministically and observe the real page
         shell: bash
         run: |
           set -euo pipefail
@@ -53,70 +53,149 @@ jobs:
           import { chromium } from "playwright";
           import fs from "node:fs";
 
+          const SELF_HOSTED =
+            "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
+          const LEGACY =
+            "https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js";
+          const TARGET =
+            "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32";
+
           const browser = await chromium.launch({
             headless: true,
             args: ["--no-sandbox", "--disable-dev-shm-usage"],
           });
-          const context = await browser.newContext({
-            locale: "zh-CN",
-            timezoneId: "Asia/Shanghai",
-            viewport: { width: 412, height: 915 },
-            isMobile: true,
-            hasTouch: true,
-            ignoreHTTPSErrors: true,
-            userAgent:
-              "Mozilla/5.0 (Linux; Android 13; Pixel 7) " +
-              "AppleWebKit/537.36 Chrome/125.0.0.0 Mobile Safari/537.36",
-          });
-          await context.addInitScript({ path: "remote-script/src/noname.js" });
 
-          const page = await context.newPage();
-          const requests = [];
-          const pageErrors = [];
-          page.on("request", (request) => requests.push(request.url()));
-          page.on("pageerror", (error) =>
-            pageErrors.push(String(error.stack || error.message)),
+          const newContext = async () => {
+            const context = await browser.newContext({
+              locale: "zh-CN",
+              timezoneId: "Asia/Shanghai",
+              viewport: { width: 412, height: 915 },
+              isMobile: true,
+              hasTouch: true,
+              ignoreHTTPSErrors: true,
+              userAgent:
+                "Mozilla/5.0 (Linux; Android 13; Pixel 7) " +
+                "AppleWebKit/537.36 Chrome/125.0.0.0 Mobile Safari/537.36",
+            });
+            await context.addInitScript({ path: "remote-script/src/noname.js" });
+            return context;
+          };
+
+          const controlledContext = await newContext();
+          const controlledPage = await controlledContext.newPage();
+          const controlledRequests = [];
+          const controlledErrors = [];
+          controlledPage.on("request", (request) =>
+            controlledRequests.push(request.url()),
           );
-
-          await page.goto(
-            "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-            { waitUntil: "domcontentloaded", timeout: 90_000 },
+          controlledPage.on("pageerror", (error) =>
+            controlledErrors.push(String(error.stack || error.message)),
           );
-          await page.waitForTimeout(10_000);
+          await controlledPage.route(
+            "https://m.66rpg.com/h5/self-hosting-smoke",
+            (route) =>
+              route.fulfill({
+                status: 200,
+                contentType: "text/html; charset=utf-8",
+                body: "<!doctype html><html><head></head><body>smoke</body></html>",
+              }),
+          );
+          await controlledPage.route(SELF_HOSTED, (route) => route.abort());
+          await controlledPage.route(LEGACY, (route) => route.abort());
+          await controlledPage.goto(
+            "https://m.66rpg.com/h5/self-hosting-smoke",
+            { waitUntil: "domcontentloaded", timeout: 30_000 },
+          );
+          await controlledPage.evaluate((legacyUrl) => {
+            const script = document.createElement("script");
+            script.src = legacyUrl;
+            document.head.appendChild(script);
+          }, LEGACY);
+          await controlledPage.waitForTimeout(1_500);
 
-          for (const label of ["无需下载", "在线看", "开始游戏", "在线玩"]) {
-            try {
-              const button = page.getByText(label, { exact: false }).first();
-              if (await button.isVisible({ timeout: 1_000 })) {
-                await button.click({ timeout: 5_000 });
-                await page.waitForTimeout(5_000);
-              }
-            } catch {}
-          }
-          await page.waitForTimeout(45_000);
-
-          const report = {
-            selfHosted: requests.some((url) =>
+          const deterministic = {
+            selfHostedRequests: controlledRequests.filter((url) =>
               url.includes(
                 "gams-script-edge.2320006072.workers.dev/engine/stable.js",
               ),
             ),
-            legacyRequests: requests.filter((url) =>
+            legacyRequests: controlledRequests.filter((url) =>
               url.includes("space-z.ai/game.js"),
             ),
-            engineRequests: requests.filter((url) =>
+            pageErrors: controlledErrors.slice(0, 20),
+          };
+          await controlledContext.close();
+
+          const realContext = await newContext();
+          const realPage = await realContext.newPage();
+          const realRequests = [];
+          const realErrors = [];
+          realPage.on("request", (request) => realRequests.push(request.url()));
+          realPage.on("pageerror", (error) =>
+            realErrors.push(String(error.stack || error.message)),
+          );
+
+          let navigationError = null;
+          try {
+            await realPage.goto(TARGET, {
+              waitUntil: "domcontentloaded",
+              timeout: 90_000,
+            });
+            await realPage.waitForTimeout(10_000);
+            for (const label of ["无需下载", "在线看", "开始游戏", "在线玩"]) {
+              try {
+                const button = realPage.getByText(label, { exact: false }).first();
+                if (await button.isVisible({ timeout: 1_000 })) {
+                  await button.click({ timeout: 5_000 });
+                  await realPage.waitForTimeout(5_000);
+                }
+              } catch {}
+            }
+            await realPage.waitForTimeout(30_000);
+          } catch (error) {
+            navigationError = String(error.stack || error.message);
+          }
+
+          const realPageReport = {
+            finalUrl: realPage.url(),
+            title: await realPage.title().catch(() => ""),
+            selfHostedRequests: realRequests.filter((url) =>
+              url.includes(
+                "gams-script-edge.2320006072.workers.dev/engine/stable.js",
+              ),
+            ),
+            legacyRequests: realRequests.filter((url) =>
+              url.includes("space-z.ai/game.js"),
+            ),
+            engineRequests: realRequests.filter((url) =>
               /game\.js|engine\/stable/.test(url),
             ),
-            pageErrors: pageErrors.slice(0, 30),
+            navigationError,
+            pageErrors: realErrors.slice(0, 30),
+          };
+          await realContext.close();
+          await browser.close();
+
+          const report = {
+            deterministic,
+            realPage: realPageReport,
           };
           fs.writeFileSync(
             "/tmp/self-hosted-engine-smoke.json",
             JSON.stringify(report, null, 2),
           );
           console.log(JSON.stringify(report, null, 2));
-          await browser.close();
 
-          if (!report.selfHosted || report.legacyRequests.length > 0) {
+          if (deterministic.selfHostedRequests.length === 0) {
+            console.error("legacy engine URL was not rewritten to the self-hosted route");
+            process.exitCode = 1;
+          }
+          if (deterministic.legacyRequests.length > 0) {
+            console.error("controlled test emitted a legacy engine request");
+            process.exitCode = 1;
+          }
+          if (realPageReport.legacyRequests.length > 0) {
+            console.error("real page emitted a legacy engine request");
             process.exitCode = 1;
           }
           NODE
