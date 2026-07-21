@@ -1,5 +1,5 @@
-name: One-shot capture official game scripts
-# trigger: 2026-07-22-1
+name: One-shot capture official game page
+# trigger: lightweight-2026-07-22
 
 on:
   push:
@@ -13,191 +13,69 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Chromium
-        run: npm exec --yes playwright@1.52.0 install --with-deps chromium
-
-      - name: Capture page scripts
+      - name: Fetch official H5 page
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/official-page/scripts
-          cat > /tmp/capture.mjs <<'NODE'
-          import { chromium } from 'playwright';
-          import fs from 'node:fs';
-          import path from 'node:path';
-          import crypto from 'node:crypto';
-
-          const target = 'https://m.66rpg.com/h5/1690283?ohp=v3&quality=32';
-          const out = '/tmp/official-page';
-          const scriptsDir = path.join(out, 'scripts');
-          const externalSha = '51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43';
-          const sleep = ms => new Promise(r => setTimeout(r, ms));
-          const sha256 = data => crypto.createHash('sha256').update(data).digest('hex');
-          const safe = url => url.replace(/^https?:\/\//i, '').replace(/[^a-z0-9._-]+/gi, '_').slice(0, 170);
-
-          const browser = await chromium.launch({
-            headless: true,
-            args: ['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-dev-shm-usage']
-          });
-          const context = await browser.newContext({
-            ignoreHTTPSErrors: true,
-            locale: 'zh-CN',
-            timezoneId: 'Asia/Shanghai',
-            viewport: { width: 412, height: 915 },
-            deviceScaleFactor: 2.625,
-            isMobile: true,
-            hasTouch: true,
-            userAgent: 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36'
-          });
-          const page = await context.newPage();
-          page.setDefaultTimeout(12_000);
-          page.setDefaultNavigationTimeout(90_000);
-
-          const events = [];
-          const jobs = [];
-          const consoleLines = [];
-          let seq = 0;
-
-          page.on('console', m => consoleLines.push(`[${m.type()}] ${m.text()}`));
-          page.on('pageerror', e => consoleLines.push(`[pageerror] ${e.stack || e.message}`));
-          page.on('requestfailed', r => events.push({
-            kind: 'failed', url: r.url(), resourceType: r.resourceType(), failure: r.failure()?.errorText || ''
-          }));
-          page.on('response', response => {
-            jobs.push((async () => {
-              const request = response.request();
-              const headers = await response.allHeaders().catch(() => ({}));
-              const url = response.url();
-              const contentType = String(headers['content-type'] || '');
-              const resourceType = request.resourceType();
-              const row = { kind: 'response', url, status: response.status(), resourceType, contentType };
-              events.push(row);
-              if (response.status() >= 400) return;
-              if (!(resourceType === 'script' || /javascript|ecmascript/i.test(contentType) || /\.js(?:[?#]|$)/i.test(url))) return;
-              try {
-                const body = await response.body();
-                const text = body.toString('utf8');
-                row.bytes = body.length;
-                row.sha256 = sha256(body);
-                row.markers = {};
-                for (const term of ['webpackChunk','SAL_getUserData','SAL_Login','SAL_setStorage','createBuyOrder','get_goods_list','getUserHaveAllPropNum','PropShop','itemPrice','mallViewData','totalFlower','freshFlower','isLogin','userData','goods_id','order_id']) {
-                  row.markers[term] = text.split(term).length - 1;
-                }
-                row.savedAs = `scripts/${String(++seq).padStart(3,'0')}-${safe(url)}.js`;
-                fs.writeFileSync(path.join(out, row.savedAs), body);
-              } catch (e) {
-                row.bodyError = String(e?.stack || e);
-              }
-            })());
-          });
-
-          await page.addInitScript(() => {
-            window.__scriptLog = [];
-            const log = (kind, value) => {
-              try { window.__scriptLog.push({ kind, value: String(value || ''), time: Date.now() }); } catch {}
-            };
-            const d = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
-            if (d?.get && d?.set) Object.defineProperty(HTMLScriptElement.prototype, 'src', {
-              configurable: d.configurable,
-              enumerable: d.enumerable,
-              get: d.get,
-              set(value) { log('src', value); return d.set.call(this, value); }
-            });
-            const sa = Element.prototype.setAttribute;
-            Element.prototype.setAttribute = function(name, value) {
-              if (this instanceof HTMLScriptElement && String(name).toLowerCase() === 'src') log('setAttribute', value);
-              return sa.call(this, name, value);
-            };
-            const ac = Node.prototype.appendChild;
-            Node.prototype.appendChild = function(child) {
-              if (child instanceof HTMLScriptElement) log('appendChild', child.src || child.getAttribute('src'));
-              return ac.call(this, child);
-            };
-          });
-
-          let navigationError = null;
-          try {
-            await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 90_000 });
-          } catch (e) {
-            navigationError = String(e?.stack || e);
+          OUT=/tmp/official-page-raw
+          mkdir -p "$OUT"
+          URL='https://m.66rpg.com/h5/1690283?ohp=v3&quality=32'
+          UA='Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36'
+          curl --fail --location --compressed --retry 3 --connect-timeout 20 --max-time 120 \
+            -A "$UA" -D "$OUT/headers.txt" "$URL" -o "$OUT/page.html"
+          wc -c "$OUT/page.html" > "$OUT/size.txt"
+          sha256sum "$OUT/page.html" > "$OUT/sha256.txt"
+          python - <<'PY'
+          from pathlib import Path
+          import html, json, re
+          p = Path('/tmp/official-page-raw/page.html')
+          text = p.read_text('utf-8', errors='replace')
+          patterns = {
+              'script_src': r'<script[^>]+src=["\']([^"\']+)',
+              'all_js_urls': r'(?:https?:)?//[^"\'\s<>]+?\.js(?:\?[^"\'\s<>]*)?',
+              'relative_js': r'["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',
+              'webpack_chunks': r'webpackChunk[A-Za-z0-9_$]*',
           }
-          await sleep(12_000);
+          result = {}
+          for key, pattern in patterns.items():
+              values = []
+              for m in re.finditer(pattern, text, re.I):
+                  value = m.group(1) if m.lastindex else m.group(0)
+                  value = html.unescape(value)
+                  if value not in values:
+                      values.append(value)
+              result[key] = values
+          result['title'] = re.findall(r'<title[^>]*>(.*?)</title>', text, re.I | re.S)[:3]
+          result['prefix'] = text[:2000]
+          Path('/tmp/official-page-raw/extracted.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), 'utf-8')
+          lines = []
+          for key, values in result.items():
+              if isinstance(values, list):
+                  lines.append(f'[{key}] {len(values)}')
+                  lines.extend(str(v) for v in values)
+                  lines.append('')
+          Path('/tmp/official-page-raw/summary.txt').write_text('\n'.join(lines), 'utf-8')
+          PY
+          cat "$OUT/summary.txt"
 
-          const clicks = [];
-          for (const label of ['无需下载','在线看','开始游戏','在线玩','立即试玩','继续访问']) {
-            try {
-              const item = page.getByText(label, { exact: false }).first();
-              if (await item.isVisible({ timeout: 1000 })) {
-                await item.click({ timeout: 5000 });
-                clicks.push({ label, clicked: true });
-                await sleep(5000);
-              }
-            } catch (e) {
-              clicks.push({ label, clicked: false, error: String(e?.message || e) });
-            }
-          }
-
-          await sleep(55_000);
-          await Promise.allSettled(jobs);
-
-          const pageState = await page.evaluate(() => ({
-            title: document.title,
-            url: location.href,
-            bodyText: (document.body?.innerText || '').slice(0, 20000),
-            scripts: [...document.scripts].map(s => ({ src: s.src, type: s.type, textLength: s.textContent?.length || 0 })),
-            scriptLog: window.__scriptLog || []
-          })).catch(e => ({ error: String(e?.stack || e) }));
-
-          fs.writeFileSync(path.join(out, 'page.html'), await page.content().catch(() => ''));
-          fs.writeFileSync(path.join(out, 'page.png'), await page.screenshot({ fullPage: true }).catch(() => Buffer.alloc(0)));
-          fs.writeFileSync(path.join(out, 'console.txt'), consoleLines.join('\n') + '\n');
-
-          const candidates = events.filter(x => x.savedAs && x.bytes).map(x => {
-            const m = x.markers || {};
-            const score = Math.min(30, Math.floor(x.bytes / 400000)) +
-              (m.webpackChunk || 0) * 3 + (m.SAL_getUserData || 0) * 25 +
-              (m.SAL_Login || 0) * 15 + (m.PropShop || 0) * 8 +
-              (m.itemPrice || 0) * 3 + (m.mallViewData || 0) * 5 +
-              (m.createBuyOrder || 0) * 10;
-            return { ...x, score, sameAsExternal: x.sha256 === externalSha };
-          }).sort((a,b) => b.score - a.score || b.bytes - a.bytes);
-
-          if (candidates[0]) fs.copyFileSync(path.join(out, candidates[0].savedAs), path.join(out, 'official-game-candidate.js'));
-
-          const report = {
-            capturedAt: new Date().toISOString(), target, finalUrl: page.url(), navigationError,
-            clicks, externalSha, candidates, pageState, events
-          };
-          fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify(report, null, 2));
-          const lines = [`target: ${target}`, `finalUrl: ${page.url()}`, `navigationError: ${navigationError || 'none'}`, `candidates: ${candidates.length}`, ''];
-          candidates.slice(0,30).forEach((c,i) => lines.push(
-            `#${i+1}`, `score: ${c.score}`, `url: ${c.url}`, `status: ${c.status}`, `bytes: ${c.bytes}`,
-            `sha256: ${c.sha256}`, `sameAsExternal: ${c.sameAsExternal}`, `markers: ${JSON.stringify(c.markers)}`, `savedAs: ${c.savedAs}`, ''
-          ));
-          fs.writeFileSync(path.join(out, 'summary.txt'), lines.join('\n'));
-          console.log(lines.join('\n'));
-          await browser.close();
-          NODE
-          node /tmp/capture.mjs
-
-      - name: Save outputs to analysis branch
+      - name: Save raw capture to analysis branch
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin analysis/official-game-capture-20260722
           git worktree add /tmp/analysis origin/analysis/official-game-capture-20260722
-          rm -rf /tmp/analysis/analysis-snapshots/official-page
+          rm -rf /tmp/analysis/analysis-snapshots/official-page-raw
           mkdir -p /tmp/analysis/analysis-snapshots
-          cp -a /tmp/official-page /tmp/analysis/analysis-snapshots/official-page
+          cp -a /tmp/official-page-raw /tmp/analysis/analysis-snapshots/official-page-raw
           cd /tmp/analysis
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add analysis-snapshots/official-page
-          git commit -m 'Capture official page game scripts for analysis'
+          git add analysis-snapshots/official-page-raw
+          git commit -m 'Capture official H5 page source for analysis'
           git push origin HEAD:analysis/official-game-capture-20260722
