@@ -1,5 +1,5 @@
-name: One-shot analyze official and external game scripts
-# trigger: semantic-compare-2026-07-22
+name: One-shot extract targeted game script contexts
+# trigger: contexts-2026-07-22
 
 on:
   push:
@@ -19,126 +19,63 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download and analyze
+      - name: Extract normalized contexts
         shell: bash
         run: |
           set -euo pipefail
-          OUT=/tmp/game-semantic-comparison
+          OUT=/tmp/game-targeted-contexts
           mkdir -p "$OUT"
-          OFFICIAL='https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001'
-          EXTERNAL='https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js'
-          curl --fail --location --compressed --retry 3 --connect-timeout 20 --max-time 180 "$OFFICIAL" -o "$OUT/official.js"
-          curl --fail --location --compressed --retry 3 --connect-timeout 20 --max-time 180 "$EXTERNAL" -o "$OUT/external.js"
-          cat > /tmp/semantic.py <<'PY'
+          curl --fail --location --compressed --retry 3 --max-time 180 'https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001' -o "$OUT/official.js"
+          curl --fail --location --compressed --retry 3 --max-time 180 'https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js' -o "$OUT/external.js"
+          cat > /tmp/contexts.py <<'PY'
           from pathlib import Path
-          import ast, hashlib, json, re
-
-          out = Path('/tmp/game-semantic-comparison')
-          official_b = (out/'official.js').read_bytes()
-          external_b = (out/'external.js').read_bytes()
-          official = official_b.decode('utf-8', errors='replace')
-          external = external_b.decode('utf-8', errors='replace')
-          external_stripped = re.sub(r'^/\*[^*]{0,100}\*/', '', external, count=1)
-
-          def sha(s): return hashlib.sha256(s.encode('utf-8')).hexdigest()
-          def common_prefix(a,b):
-              n=min(len(a),len(b)); i=0; step=1024*1024
-              while i+step<=n and a[i:i+step]==b[i:i+step]: i+=step
-              while i<n and a[i]==b[i]: i+=1
-              return i
-          def common_suffix(a,b,prefix=0):
-              n=min(len(a),len(b))-prefix; i=0
-              while i<n and a[-1-i]==b[-1-i]: i+=1
-              return i
-
-          # Collapse adjacent quoted string literals. The files deliberately split many names as 'ab'+'cd'.
-          concat_re = re.compile(r"(?P<a>'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")\s*\+\s*(?P<b>'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")")
-          def normalize(src, max_passes=30):
-              counts=[]
-              for _ in range(max_passes):
-                  replaced=0
+          import ast, json, re
+          out=Path('/tmp/game-targeted-contexts')
+          concat_re=re.compile(r"(?P<a>'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")\s*\+\s*(?P<b>'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")")
+          def normalize(src):
+              src=re.sub(r'^/\*[^*]{0,100}\*/','',src,count=1)
+              for _ in range(30):
+                  count=0
                   def repl(m):
-                      nonlocal replaced
+                      nonlocal count
                       try:
                           a=ast.literal_eval(m.group('a')); b=ast.literal_eval(m.group('b'))
-                          if not isinstance(a,str) or not isinstance(b,str): return m.group(0)
-                          replaced+=1
-                          return json.dumps(a+b, ensure_ascii=False)
-                      except Exception:
-                          return m.group(0)
-                  src2=concat_re.sub(repl,src)
-                  counts.append(replaced)
-                  src=src2
-                  if replaced==0: break
-              return src, counts
-
-          norm_o, passes_o = normalize(official)
-          norm_e, passes_e = normalize(external_stripped)
-
-          string_re = re.compile(r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"")
-          def strings(src):
-              values=[]
-              for m in string_re.finditer(src):
-                  raw=m.group(0)
-                  try:
-                      v=ast.literal_eval(raw)
-                      if isinstance(v,str): values.append(v)
-                  except Exception: pass
-              return values
-          strings_o=strings(norm_o); strings_e=strings(norm_e)
-          set_o=set(strings_o); set_e=set(strings_e)
-
-          sal_re=re.compile(r'\bSAL_[A-Za-z0-9_]+\b')
-          sal_o=set(sal_re.findall(norm_o)); sal_e=set(sal_re.findall(norm_e))
-          module_re=re.compile(r'(?:^|[,{}])\s*(\d{1,8})\s*:\s*(?:function|\()')
-          modules_o=set(module_re.findall(norm_o)); modules_e=set(module_re.findall(norm_e))
-          url_re=re.compile(r'https?://[^\s"\'<>),]+')
-          urls_o=set(url_re.findall(norm_o)); urls_e=set(url_re.findall(norm_e))
-
-          keywords=re.compile(r'(login|flower|goods|order|mall|prop|user|token|uid|save|storage|crack|debug|disable|purchase|pay|recharge|free|runtime|video|encrypt|decrypt|鲜花|商城|登录|购买|订单|脚本|存档|支付)',re.I)
-          def relevant(values):
-              return sorted({v for v in values if 2 < len(v) <= 300 and keywords.search(v)})
-          rel_o=set(relevant(set_o)); rel_e=set(relevant(set_e))
-
-          terms=['脚本加载完成~','webpackChunk_lodash_modules','SAL_getUserData','SAL_Login','SAL_setStorage','createBuyOrder','get_goods_list','getUserHaveAllPropNum','PropShop','itemPrice','mallViewData','totalFlower','freshFlower','wildFlower','haveFlower','isLogin','userData','goods_id','buy_num','order_id','disable-devtool','crack_user','gameOpenTime','saveFileData','getSaveFileData']
-          report={
-              'official_bytes':len(official_b),'external_bytes':len(external_b),
-              'external_leading_comment':external[:100] if external.startswith('/*') else '',
-              'common_prefix_after_stripping_comment':common_prefix(official,external_stripped),
-              'common_suffix_after_stripping_comment':common_suffix(official,external_stripped,common_prefix(official,external_stripped)),
-              'official_normalization_passes':passes_o,'external_normalization_passes':passes_e,
-              'official_normalized_chars':len(norm_o),'external_normalized_chars':len(norm_e),
-              'official_normalized_sha256':sha(norm_o),'external_normalized_sha256':sha(norm_e),
-              'normalized_identical':norm_o==norm_e,
-              'official_string_literal_count':len(strings_o),'external_string_literal_count':len(strings_e),
-              'official_unique_strings':len(set_o),'external_unique_strings':len(set_e),
-              'shared_unique_strings':len(set_o&set_e),
-              'official_only_unique_strings':len(set_o-set_e),'external_only_unique_strings':len(set_e-set_o),
-              'official_sal_count':len(sal_o),'external_sal_count':len(sal_e),
-              'sal_shared':sorted(sal_o&sal_e),'sal_official_only':sorted(sal_o-sal_e),'sal_external_only':sorted(sal_e-sal_o),
-              'official_module_ids':sorted(modules_o),'external_module_ids':sorted(modules_e),
-              'module_ids_shared':sorted(modules_o&modules_e),
-              'official_urls':sorted(urls_o),'external_urls':sorted(urls_e),
-              'official_only_urls':sorted(urls_o-urls_e),'external_only_urls':sorted(urls_e-urls_o),
-              'term_counts':{t:{'official_raw':official.count(t),'external_raw':external.count(t),'official_normalized':norm_o.count(t),'external_normalized':norm_e.count(t)} for t in terms},
-              'relevant_shared_count':len(rel_o&rel_e),
-              'relevant_official_only_count':len(rel_o-rel_e),
-              'relevant_external_only_count':len(rel_e-rel_o),
-              'relevant_official_only':sorted(rel_o-rel_e)[:1000],
-              'relevant_external_only':sorted(rel_e-rel_o)[:1000],
-              'relevant_shared_sample':sorted(rel_o&rel_e)[:1000]
+                          if isinstance(a,str) and isinstance(b,str):
+                              count+=1; return json.dumps(a+b,ensure_ascii=False)
+                      except Exception: pass
+                      return m.group(0)
+                  src=concat_re.sub(repl,src)
+                  if count==0: break
+              return src
+          sources={
+              'official':normalize((out/'official.js').read_text('utf-8',errors='replace')),
+              'external':normalize((out/'external.js').read_text('utf-8',errors='replace')),
           }
-          (out/'semantic-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),'utf-8')
+          terms=['脚本加载完成~','flowerCount','totalFlower','freshFlower','wildFlower','haveFlower','userFlower','createBuyOrder','get_goods_list','getUserHaveAllPropNum','PropShop','itemPrice','mallViewData','isLogin','userData','currentUserData','showLocal','goods_id','buy_num','order_id','disable-devtool','crack_user','gameOpenTime','saveFileData','getSaveFileData','SAL_getUserData','SAL_Login']
+          def contexts(src,term,limit=8,radius=420):
+              rows=[]; lower=src.lower(); needle=term.lower(); pos=0
+              while len(rows)<limit:
+                  i=lower.find(needle,pos)
+                  if i<0: break
+                  start=max(0,i-radius); end=min(len(src),i+len(term)+radius)
+                  rows.append(re.sub(r'\s+',' ',src[start:end]))
+                  pos=i+len(term)
+              return rows
+          report={}
           lines=[]
-          scalar_keys=['official_bytes','external_bytes','external_leading_comment','common_prefix_after_stripping_comment','common_suffix_after_stripping_comment','official_normalization_passes','external_normalization_passes','official_normalized_chars','external_normalized_chars','official_normalized_sha256','external_normalized_sha256','normalized_identical','official_string_literal_count','external_string_literal_count','official_unique_strings','external_unique_strings','shared_unique_strings','official_only_unique_strings','external_only_unique_strings','official_sal_count','external_sal_count','relevant_shared_count','relevant_official_only_count','relevant_external_only_count']
-          for k in scalar_keys: lines.append(f'{k}: {report[k]}')
-          lines += ['',f'sal_official_only: {report["sal_official_only"]}',f'sal_external_only: {report["sal_external_only"]}',f'official_module_ids: {report["official_module_ids"]}',f'external_module_ids: {report["external_module_ids"]}','','official_only_urls:']+report['official_only_urls']+['','external_only_urls:']+report['external_only_urls']+['','term_counts:']
-          for t,v in report['term_counts'].items(): lines.append(f'  {t!r}: {v}')
-          lines += ['','relevant_external_only:']+report['relevant_external_only']+['','relevant_official_only:']+report['relevant_official_only']
-          (out/'semantic-summary.txt').write_text('\n'.join(lines)+'\n','utf-8')
-          print('\n'.join(lines[:200]))
+          for term in terms:
+              report[term]={}
+              lines.append(f'===== {term} =====')
+              for name,src in sources.items():
+                  rows=contexts(src,term)
+                  report[term][name]=rows
+                  lines.append(f'--- {name} matches={src.lower().count(term.lower())} contexts={len(rows)} ---')
+                  for i,row in enumerate(rows,1): lines.append(f'[{i}] {row}')
+              lines.append('')
+          (out/'targeted-contexts.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),'utf-8')
+          (out/'targeted-contexts.txt').write_text('\n'.join(lines)+'\n','utf-8')
           PY
-          python /tmp/semantic.py
+          python /tmp/contexts.py
           rm "$OUT/official.js" "$OUT/external.js"
 
       - name: Save report to analysis branch
@@ -147,12 +84,12 @@ jobs:
           set -euo pipefail
           git fetch origin analysis/official-game-capture-20260722
           git worktree add /tmp/analysis origin/analysis/official-game-capture-20260722
-          rm -rf /tmp/analysis/analysis-snapshots/game-semantic-comparison
+          rm -rf /tmp/analysis/analysis-snapshots/game-targeted-contexts
           mkdir -p /tmp/analysis/analysis-snapshots
-          cp -a /tmp/game-semantic-comparison /tmp/analysis/analysis-snapshots/game-semantic-comparison
+          cp -a /tmp/game-targeted-contexts /tmp/analysis/analysis-snapshots/game-targeted-contexts
           cd /tmp/analysis
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add analysis-snapshots/game-semantic-comparison
-          git commit -m 'Analyze semantic differences in game scripts'
+          git add analysis-snapshots/game-targeted-contexts
+          git commit -m 'Extract targeted game script contexts'
           git push origin HEAD:analysis/official-game-capture-20260722
