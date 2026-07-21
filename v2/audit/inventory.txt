@@ -276,6 +276,23 @@
 ./v2/audit/key-files.txt:71:                <category android:name="android.intent.category.LAUNCHER" />
 ./v2/audit/key-files.txt:139:rootProject.name = "QuickWebLicenseSuite"
 ./v2/audit/key-files.txt:140:include(":client", ":keygen")
+./v2/audit/key-files.txt:163:    namespace = "com.jinli.quickweb"
+./v2/audit/key-files.txt:167:        applicationId = "com.jinli.quickweb"
+./v2/audit/key-files.txt:176:            applicationIdSuffix = ".debug"
+./v2/audit/key-files.txt:205:    <uses-permission android:name="android.permission.INTERNET" />
+./v2/audit/key-files.txt:206:    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+./v2/audit/key-files.txt:219:            android:name=".MainActivity"
+./v2/audit/key-files.txt:223:                <action android:name="android.intent.action.MAIN" />
+./v2/audit/key-files.txt:224:                <category android:name="android.intent.category.LAUNCHER" />
+./v2/audit/key-files.txt:243:    namespace = "com.jinli.keygen"
+./v2/audit/key-files.txt:247:        applicationId = "com.jinli.keygen"
+./v2/audit/key-files.txt:256:            applicationIdSuffix = ".debug"
+./v2/audit/key-files.txt:285:    <uses-permission android:name="android.permission.INTERNET" />
+./v2/audit/key-files.txt:297:            android:name=".MainActivity"
+./v2/audit/key-files.txt:301:                <action android:name="android.intent.action.MAIN" />
+./v2/audit/key-files.txt:302:                <category android:name="android.intent.category.LAUNCHER" />
+./v2/audit/key-files.txt:326:rootProject.name = "QuickWebLicenseSuite"
+./v2/audit/key-files.txt:327:include(":client", ":keygen")
 ./v2/audit/final-source-report.txt:46:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/MainActivity.java:1:package com.jinli.keygen;
 ./v2/audit/final-source-report.txt:47:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/J.java:1:package com.jinli.keygen;
 ./v2/audit/final-source-report.txt:48:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java:1:package com.jinli.keygen;
