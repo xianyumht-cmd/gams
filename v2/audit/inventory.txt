@@ -110,7 +110,54 @@
 ./script_parts/part000.js
 ./settings.gradle.kts
 ./v2/README.md
+./v2/audit/current-final-project/build.gradle.kts
+./v2/audit/current-final-project/client/build.gradle.kts
+./v2/audit/current-final-project/client/lint.xml
+./v2/audit/current-final-project/client/proguard-rules.pro
+./v2/audit/current-final-project/client/src/main/AndroidManifest.xml
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/DeviceIdentity.java
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/RuntimeNames.java
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java
+./v2/audit/current-final-project/client/src/main/res/drawable/gg_icon_background.xml
+./v2/audit/current-final-project/client/src/main/res/drawable/ic_launcher_foreground.xml
+./v2/audit/current-final-project/client/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+./v2/audit/current-final-project/client/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+./v2/audit/current-final-project/client/src/main/res/mipmap-anydpi/ic_launcher.xml
+./v2/audit/current-final-project/client/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+./v2/audit/current-final-project/gradle.properties
+./v2/audit/current-final-project/keygen/build.gradle.kts
+./v2/audit/current-final-project/keygen/lint.xml
+./v2/audit/current-final-project/keygen/proguard-rules.pro
+./v2/audit/current-final-project/keygen/src/main/AndroidManifest.xml
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/AdminApiManager.java
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/J.java
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/MainActivity.java
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/RuntimeNames.java
+./v2/audit/current-final-project/keygen/src/main/res/drawable/gg_icon_background.xml
+./v2/audit/current-final-project/keygen/src/main/res/drawable/ic_launcher_foreground.xml
+./v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+./v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+./v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi/ic_launcher.xml
+./v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+./v2/audit/current-final-project/license-api/client_config_patch.py
+./v2/audit/current-final-project/license-api/control_center_patch.py
+./v2/audit/current-final-project/license-api/migrations/0001_init.sql
+./v2/audit/current-final-project/license-api/migrations/0002_secure_devices.sql
+./v2/audit/current-final-project/license-api/migrations/0003_control_center.sql
+./v2/audit/current-final-project/license-api/release_baseline_patch.py
+./v2/audit/current-final-project/license-api/src/index.js
+./v2/audit/current-final-project/license-api/wrangler.template.jsonc
+./v2/audit/current-final-project/settings.gradle.kts
+./v2/audit/current-hardened-backend.js
+./v2/audit/current-hardened-backend.sha256
+./v2/audit/files.json
+./v2/audit/final-source-report.txt
 ./v2/audit/inventory.txt
+./v2/audit/key-files.txt
 
 # DIRECTORIES
 .
@@ -164,6 +211,14 @@
 ./script_parts
 ./v2
 ./v2/audit
+./v2/audit/current-final-project
+./v2/audit/current-final-project/client
+./v2/audit/current-final-project/client/src
+./v2/audit/current-final-project/keygen
+./v2/audit/current-final-project/keygen/src
+./v2/audit/current-final-project/license-api
+./v2/audit/current-final-project/license-api/migrations
+./v2/audit/current-final-project/license-api/src
 
 # PACKAGE / APPLICATION IDS
 ./keygen_online_patch/patch_keygen_online.py:12:        '    <uses-permission android:name="android.permission.INTERNET" />'
@@ -183,6 +238,61 @@
 ./client/build.gradle.kts:6:    namespace = "com.jinli.quickweb"
 ./client/build.gradle.kts:10:        applicationId = "com.jinli.quickweb"
 ./client/build.gradle.kts:19:            applicationIdSuffix = ".debug"
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/MainActivity.java:1:package com.jinli.keygen;
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/J.java:1:package com.jinli.keygen;
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java:1:package com.jinli.keygen;
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/RuntimeNames.java:1:package com.jinli.keygen;
+./v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/AdminApiManager.java:1:package com.jinli.keygen;
+./v2/audit/current-final-project/keygen/src/main/AndroidManifest.xml:3:    <uses-permission android:name="android.permission.INTERNET" />
+./v2/audit/current-final-project/keygen/src/main/AndroidManifest.xml:15:            android:name=".MainActivity"
+./v2/audit/current-final-project/keygen/src/main/AndroidManifest.xml:19:                <action android:name="android.intent.action.MAIN" />
+./v2/audit/current-final-project/keygen/src/main/AndroidManifest.xml:20:                <category android:name="android.intent.category.LAUNCHER" />
+./v2/audit/current-final-project/keygen/build.gradle.kts:6:    namespace = "com.jinli.keygen"
+./v2/audit/current-final-project/keygen/build.gradle.kts:10:        applicationId = "com.jinli.keygen"
+./v2/audit/current-final-project/keygen/build.gradle.kts:19:            applicationIdSuffix = ".debug"
+./v2/audit/current-final-project/settings.gradle.kts:17:rootProject.name = "QuickWebLicenseSuite"
+./v2/audit/current-final-project/settings.gradle.kts:18:include(":client", ":keygen")
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:1:package com.jinli.quickweb;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:1:package com.jinli.quickweb;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/DeviceIdentity.java:1:package com.jinli.quickweb;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:1:package com.jinli.quickweb;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/RuntimeNames.java:1:package com.jinli.quickweb;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:1:package com.jinli.quickweb;
+./v2/audit/current-final-project/client/src/main/AndroidManifest.xml:3:    <uses-permission android:name="android.permission.INTERNET" />
+./v2/audit/current-final-project/client/src/main/AndroidManifest.xml:4:    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+./v2/audit/current-final-project/client/src/main/AndroidManifest.xml:17:            android:name=".MainActivity"
+./v2/audit/current-final-project/client/src/main/AndroidManifest.xml:21:                <action android:name="android.intent.action.MAIN" />
+./v2/audit/current-final-project/client/src/main/AndroidManifest.xml:22:                <category android:name="android.intent.category.LAUNCHER" />
+./v2/audit/current-final-project/client/build.gradle.kts:6:    namespace = "com.jinli.quickweb"
+./v2/audit/current-final-project/client/build.gradle.kts:10:        applicationId = "com.jinli.quickweb"
+./v2/audit/current-final-project/client/build.gradle.kts:19:            applicationIdSuffix = ".debug"
+./v2/audit/key-files.txt:15:    namespace = "com.jinli.quickweb"
+./v2/audit/key-files.txt:19:        applicationId = "com.jinli.quickweb"
+./v2/audit/key-files.txt:28:            applicationIdSuffix = ".debug"
+./v2/audit/key-files.txt:56:    <uses-permission android:name="android.permission.INTERNET" />
+./v2/audit/key-files.txt:57:    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+./v2/audit/key-files.txt:66:            android:name=".MainActivity"
+./v2/audit/key-files.txt:70:                <action android:name="android.intent.action.MAIN" />
+./v2/audit/key-files.txt:71:                <category android:name="android.intent.category.LAUNCHER" />
+./v2/audit/key-files.txt:139:rootProject.name = "QuickWebLicenseSuite"
+./v2/audit/key-files.txt:140:include(":client", ":keygen")
+./v2/audit/final-source-report.txt:46:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/MainActivity.java:1:package com.jinli.keygen;
+./v2/audit/final-source-report.txt:47:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/J.java:1:package com.jinli.keygen;
+./v2/audit/final-source-report.txt:48:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java:1:package com.jinli.keygen;
+./v2/audit/final-source-report.txt:49:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/RuntimeNames.java:1:package com.jinli.keygen;
+./v2/audit/final-source-report.txt:50:v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/AdminApiManager.java:1:package com.jinli.keygen;
+./v2/audit/final-source-report.txt:52:v2/audit/current-final-project/keygen/build.gradle.kts:6:    namespace = "com.jinli.keygen"
+./v2/audit/final-source-report.txt:53:v2/audit/current-final-project/keygen/build.gradle.kts:10:        applicationId = "com.jinli.keygen"
+./v2/audit/final-source-report.txt:56:v2/audit/current-final-project/keygen/build.gradle.kts:19:            applicationIdSuffix = ".debug"
+./v2/audit/final-source-report.txt:60:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:1:package com.jinli.quickweb;
+./v2/audit/final-source-report.txt:65:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:1:package com.jinli.quickweb;
+./v2/audit/final-source-report.txt:66:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/DeviceIdentity.java:1:package com.jinli.quickweb;
+./v2/audit/final-source-report.txt:67:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:1:package com.jinli.quickweb;
+./v2/audit/final-source-report.txt:68:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/RuntimeNames.java:1:package com.jinli.quickweb;
+./v2/audit/final-source-report.txt:69:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:1:package com.jinli.quickweb;
+./v2/audit/final-source-report.txt:71:v2/audit/current-final-project/client/build.gradle.kts:6:    namespace = "com.jinli.quickweb"
+./v2/audit/final-source-report.txt:72:v2/audit/current-final-project/client/build.gradle.kts:10:        applicationId = "com.jinli.quickweb"
+./v2/audit/final-source-report.txt:75:v2/audit/current-final-project/client/build.gradle.kts:19:            applicationIdSuffix = ".debug"
 ./hardening_client_parts/OnlineLicenseManager.java/part00:1:package com.jinli.quickweb;
 ./hardening_client_parts/MainActivity.java/part00:1:package com.jinli.quickweb;
 ./hardening_client_parts/DeviceIdentity.java/part00:1:package com.jinli.quickweb;
@@ -262,6 +372,74 @@ keygen_online_patch/patch_keygen_online.py:11:        '<manifest xmlns:android="
 ./remote-script/src/noname.js:10233:  const SELF_HOSTED_ENGINE_URL = "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
 ./remote-script/src/noname.js:10238:      return parsed.hostname.endsWith(".space-z.ai") && /\/game\.js$/i.test(parsed.pathname);
 ./client_hardening_patch/apply.py:258:asset = Path("client/src/main/assets/noname.js")
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:28:    private static final int MAX_SCRIPT_RESPONSE_BYTES = 3 * 1024 * 1024;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:257:        JSONObject response = postJson("/v1/script", body, MAX_SCRIPT_RESPONSE_BYTES);
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:30:import android.webkit.WebView;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:31:import android.webkit.WebViewClient;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:42:import androidx.webkit.WebViewCompat;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:43:import androidx.webkit.WebViewFeature;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:52:    private static final Set<String> SCRIPT_ORIGINS = new HashSet<>(Arrays.asList(
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:57:    private WebView webView;
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:71:        WebView.setWebContentsDebuggingEnabled(false);
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:97:        destroyWebView();
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:124:        destroyWebView();
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:266:        configureWebView();
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:308:        webView = new WebView(this);
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:343:    private void configureWebView() {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:368:        webView.setWebViewClient(new WebViewClient() {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:370:            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:379:            public void onPageFinished(WebView view, String url) {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:388:            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:403:            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:413:            public void onProgressChanged(WebView view, int newProgress) {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:420:                    WebView currentWebView,
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:441:        nativeDocumentStartEnabled = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:444:            scriptHandler = WebViewCompat.addDocumentStartJavaScript(
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:447:                    SCRIPT_ORIGINS
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:488:                        WebView.clearClientCertPreferences(null);
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:548:    private void showNetworkError(WebView view) {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:571:                "if(window.__QUICK_WEB_APP_SCRIPT_LOADED__)return;" +
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:572:                "window.__QUICK_WEB_APP_SCRIPT_LOADED__=true;" +
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:574:                "catch(e){window.__QUICK_WEB_APP_SCRIPT_LOADED__=false;console.error('[App Script]',e);}" +
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:620:    private void destroyWebView() {
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:628:            webView.setWebViewClient(null);
+./v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:643:        destroyWebView();
+./v2/audit/current-final-project/license-api/control_center_patch.py:351:  if (bytes.length <= 0 || bytes.length > MAX_SCRIPT_BYTES || Number(manifest.size) !== bytes.length) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+./v2/audit/files.json:148:    "path": "game-engine/release/game-1.0.2.js",
+./v2/audit/files.json:527:    "path": "remote-script/src/noname.js",
+./v2/audit/key-files.txt:86:- File: `release/game-1.0.2.js`
+./v2/audit/key-files.txt:89:- Runtime URL: `https://gams-script-edge.2320006072.workers.dev/engine/stable.js`
+./v2/audit/key-files.txt:91:The original `space-z.ai` URL is retained only as release provenance in the signed manifest. Runtime traffic is redirected to the self-hosted Cloudflare Worker endpoint.
+./v2/audit/key-files.txt:95:Run the **Publish versioned game engine** workflow with a new HTTPS source URL, a higher semantic version, and the expected SHA-256. The workflow downloads, verifies, signs and publishes an immutable version without changing `noname.js`, because `/engine/stable.js` resolves the signed stable manifest.
+./v2/audit/current-hardened-backend.js:5:const SCRIPT_LEASE_SECONDS = 6 * 60 * 60;
+./v2/audit/current-hardened-backend.js:15:const MAX_SCRIPT_BYTES = 2 * 1024 * 1024;
+./v2/audit/current-hardened-backend.js:344:    leaseSeconds: SCRIPT_LEASE_SECONDS,
+./v2/audit/current-hardened-backend.js:470:  if (bytes.length <= 0 || bytes.length > MAX_SCRIPT_BYTES || Number(manifest.size) !== bytes.length) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+./v2/audit/final-source-report.txt:107:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:30:import android.webkit.WebView;
+./v2/audit/final-source-report.txt:108:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:31:import android.webkit.WebViewClient;
+./v2/audit/final-source-report.txt:109:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:42:import androidx.webkit.WebViewCompat;
+./v2/audit/final-source-report.txt:110:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:43:import androidx.webkit.WebViewFeature;
+./v2/audit/final-source-report.txt:111:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:57:    private WebView webView;
+./v2/audit/final-source-report.txt:112:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:71:        WebView.setWebContentsDebuggingEnabled(false);
+./v2/audit/final-source-report.txt:113:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:97:        destroyWebView();
+./v2/audit/final-source-report.txt:114:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:124:        destroyWebView();
+./v2/audit/final-source-report.txt:115:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:266:        configureWebView();
+./v2/audit/final-source-report.txt:116:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:308:        webView = new WebView(this);
+./v2/audit/final-source-report.txt:117:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:343:    private void configureWebView() {
+./v2/audit/final-source-report.txt:119:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:368:        webView.setWebViewClient(new WebViewClient() {
+./v2/audit/final-source-report.txt:120:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:370:            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+./v2/audit/final-source-report.txt:122:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:379:            public void onPageFinished(WebView view, String url) {
+./v2/audit/final-source-report.txt:124:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:388:            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+./v2/audit/final-source-report.txt:125:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:403:            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+./v2/audit/final-source-report.txt:126:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:413:            public void onProgressChanged(WebView view, int newProgress) {
+./v2/audit/final-source-report.txt:127:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:420:                    WebView currentWebView,
+./v2/audit/final-source-report.txt:128:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:441:        nativeDocumentStartEnabled = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
+./v2/audit/final-source-report.txt:129:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:444:            scriptHandler = WebViewCompat.addDocumentStartJavaScript(
+./v2/audit/final-source-report.txt:131:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:488:                        WebView.clearClientCertPreferences(null);
+./v2/audit/final-source-report.txt:134:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:548:    private void showNetworkError(WebView view) {
+./v2/audit/final-source-report.txt:135:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:620:    private void destroyWebView() {
+./v2/audit/final-source-report.txt:136:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:628:            webView.setWebViewClient(null);
+./v2/audit/final-source-report.txt:137:v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:643:        destroyWebView();
 ./license-api/control_center_patch.py:351:  if (bytes.length <= 0 || bytes.length > MAX_SCRIPT_BYTES || Number(manifest.size) !== bytes.length) throw new HttpError(503, "script_invalid", "核心服务数据异常");
 ./game-engine/README.md:8:- File: `release/game-1.0.2.js`
 ./game-engine/README.md:11:- Runtime URL: `https://gams-script-edge.2320006072.workers.dev/engine/stable.js`
