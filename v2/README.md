@@ -1,5 +1,24 @@
-# V2 Server-Authoritative Rewrite
+# V2 encrypted runtime test channel
 
-This branch contains the isolated Android V2 client, V2 manager, runtime backend, migration tooling, and leakage verification. V1 mainline and version 8 remain active until manual acceptance.
+V1 version 8 remains active and unchanged.
 
-Android isolation completed. V2 implementation code push retry started without workflow files.
+## Android packages
+
+- Client: `com.jinli.ggsecure`
+- Manager: `com.jinli.ggsecure.manager`
+
+They can be installed beside the V1 applications.
+
+## Runtime security model
+
+1. The release workflow packages the current control script and modified engine into one ZIP.
+2. The ZIP is encrypted with a random AES-256-GCM content key.
+3. Only the encrypted bundle and an encrypted content-key envelope are committed.
+4. The V2 client authenticates through the existing license service.
+5. The runtime Worker validates the session, bound EC device key, APK certificate digest, nonce and request signature.
+6. The Worker wraps the content key to a device-local Android Keystore RSA key.
+7. The APK downloads ciphertext with caching disabled, unwraps and decrypts only in memory.
+8. The control script is installed from native memory and the engine request is served from native memory through WebView interception.
+9. The client never writes the plaintext control script or engine to APK assets, WebView cache, SharedPreferences or local files.
+
+This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
