@@ -1,5 +1,5 @@
 name: Smoke test self-hosted game engine
-# One-shot PR trigger for rollout verification
+# One-shot PR trigger with report comment
 
 on:
   workflow_dispatch:
@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   smoke:
@@ -51,6 +52,8 @@ jobs:
         run: npm exec --yes playwright@1.52.0 install --with-deps chromium
 
       - name: Confirm page requests only the self-hosted engine
+        id: browser
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -101,6 +104,9 @@ jobs:
           await page.waitForTimeout(45_000);
 
           const report = {
+            finalUrl: page.url(),
+            title: await page.title(),
+            bodyText: (await page.locator("body").innerText().catch(() => "")).slice(0, 2000),
             selfHosted: requests.some((url) =>
               url.includes(
                 "gams-script-edge.2320006072.workers.dev/engine/stable.js",
@@ -126,6 +132,29 @@ jobs:
           }
           NODE
           node /tmp/smoke.mjs
+
+      - name: Post smoke report to PR
+        if: always() && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          {
+            echo '### Self-hosted engine browser smoke report'
+            echo
+            echo '```json'
+            cat /tmp/self-hosted-engine-smoke.json
+            echo '```'
+          } > /tmp/smoke-comment.md
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/smoke-comment.md
+
+      - name: Enforce browser result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.browser.outcome }}" = "success"
 
       - uses: actions/upload-artifact@v4
         if: always()
