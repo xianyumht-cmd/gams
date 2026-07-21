@@ -1,6 +1,6 @@
     private void showLicenseManager() {
-        LinearLayout root = page("卡密管理", "支持搜索、创建、详情、参数修改、状态操作和批量处理");
-        EditText query = input("卡密预览、备注或卡密 ID", false);
+        LinearLayout root = page("卡密管理", "支持搜索、创建、查看详情、续期、停用、解绑和批量处理");
+        EditText query = input("输入卡密预览、备注或卡密编号", false);
         TextView output = box("点击查询读取服务器卡密列表");
         Button search = primary("查询卡密");
         root.addView(query, full(dp(10)));
@@ -20,13 +20,13 @@
         create.setOnClickListener(v -> showCreateLicenseDialog(output));
         root.addView(create, full(dp(18)));
 
-        root.addView(section("单卡操作"), full(dp(8)));
-        EditText keyOrId = input("完整卡密或卡密 ID", false);
+        root.addView(section("单张卡密操作"), full(dp(8)));
+        EditText keyOrId = input("输入完整卡密或卡密编号", false);
         root.addView(keyOrId, full(dp(10)));
         Button detail = secondary("查看卡密与设备详情");
         detail.setOnClickListener(v -> {
             String value = keyOrId.getText().toString().trim();
-            if (value.isEmpty()) { output.setText("请输入卡密或卡密 ID"); return; }
+            if (value.isEmpty()) { output.setText("请输入卡密或卡密编号"); return; }
             api.get(detailPath(value), result -> {
                 if (redirectUnauthorized(result)) return;
                 output.setText(result.success ? pretty(result.data) : result.message);
@@ -44,7 +44,7 @@
         root.addView(row, full(dp(10)));
         disable.setOnClickListener(v -> licenseAction(keyOrId, "disable", 0L, output));
         enable.setOnClickListener(v -> licenseAction(keyOrId, "enable", 0L, output));
-        unbind.setOnClickListener(v -> confirmDanger("管理员解绑", "将撤销该卡密所有当前设备，不扣除有效期。",
+        unbind.setOnClickListener(v -> confirmDanger("管理员解绑", "将撤销该卡密绑定的全部设备，不会扣除有效期。",
                 () -> licenseAction(keyOrId, "unbind", 0L, output)));
 
         LinearLayout row2 = horizontal();
@@ -60,8 +60,8 @@
         edit.setOnClickListener(v -> showLicenseEditDialog(keyOrId, output));
 
         root.addView(section("批量操作"), full(dp(8)));
-        EditText ids = input("卡密 ID，使用逗号或换行分隔，最多100个", false);
-        EditText batchDays = numeric("续期天数，仅批量续期时使用");
+        EditText ids = input("卡密编号，使用逗号或换行分隔，最多100个", false);
+        EditText batchDays = numeric("续期天数，仅批量续期时填写");
         root.addView(ids, full(dp(10)));
         root.addView(batchDays, full(dp(10)));
         LinearLayout batchRow = horizontal();
@@ -84,10 +84,10 @@
 
     private void showCreateLicenseDialog(TextView output) {
         LinearLayout form = dialogForm();
-        EditText days = numeric("有效天数；输入 -1 表示永久");
+        EditText days = numeric("有效天数；输入 -1 表示永久有效");
         EditText count = numeric("生成数量 1-50");
-        EditText devices = numeric("允许设备数 1-10");
-        EditText note = input("备注", false);
+        EditText devices = numeric("最多允许设备数 1-10");
+        EditText note = input("备注，可留空", false);
         days.setText("30"); count.setText("1"); devices.setText("1");
         form.addView(days, full(dp(8)));
         form.addView(count, full(dp(8)));
@@ -112,7 +112,7 @@
 
     private void licenseAction(EditText keyOrId, String action, long seconds, TextView output) {
         String value = keyOrId.getText().toString().trim();
-        if (value.isEmpty()) { output.setText("请输入卡密或卡密 ID"); return; }
+        if (value.isEmpty()) { output.setText("请输入卡密或卡密编号"); return; }
         JSONObject body = identifier(value).put("action", action);
         if (seconds > 0) body.put("seconds", seconds);
         api.post("/v1/admin/licenses/action", body, result -> {
@@ -132,11 +132,11 @@
 
     private void showLicenseEditDialog(EditText keyOrId, TextView output) {
         String value = keyOrId.getText().toString().trim();
-        if (value.isEmpty()) { output.setText("请输入卡密或卡密 ID"); return; }
+        if (value.isEmpty()) { output.setText("请输入卡密或卡密编号"); return; }
         LinearLayout form = dialogForm();
-        EditText note = input("新备注", false);
-        EditText devices = numeric("最大设备数 1-10");
-        EditText expires = numeric("准确到期 Unix 秒；留空不修改");
+        EditText note = input("新备注；留空表示不修改", false);
+        EditText devices = numeric("最多允许设备数 1-10；留空不修改");
+        EditText expires = input("到期时间，例如 2026-08-31 23:59；留空不修改", false);
         form.addView(note, full(dp(8)));
         form.addView(devices, full(dp(8)));
         form.addView(expires, full(0));
@@ -146,7 +146,15 @@
                     JSONObject body = identifier(value);
                     if (!note.getText().toString().trim().isEmpty()) body.put("note", note.getText().toString());
                     if (!devices.getText().toString().trim().isEmpty()) body.put("maxDevices", parseLong(devices, 1L));
-                    if (!expires.getText().toString().trim().isEmpty()) body.put("expiresAt", parseLong(expires, 0L));
+                    String expiresText = expires.getText().toString().trim();
+                    if (!expiresText.isEmpty()) {
+                        Long parsed = parseDateTimeSeconds(expiresText);
+                        if (parsed == null) {
+                            output.setText("到期时间格式不正确，请按“年-月-日 时:分”填写，例如 2026-08-31 23:59");
+                            return;
+                        }
+                        body.put("expiresAt", parsed);
+                    }
                     api.post("/v1/admin/licenses/update", body, result -> {
                         if (redirectUnauthorized(result)) return;
                         output.setText(result.success ? pretty(result.data) : result.message);
@@ -156,7 +164,7 @@
 
     private void batchAction(EditText idsInput, String action, long seconds, TextView output) {
         JSONArray ids = splitIds(idsInput.getText().toString());
-        if (ids.length() == 0) { output.setText("请输入至少一个卡密 ID"); return; }
+        if (ids.length() == 0) { output.setText("请输入至少一个卡密编号"); return; }
         JSONObject body = new JSONObject().put("ids", ids).put("action", action);
         if (seconds > 0) body.put("seconds", seconds);
         api.post("/v1/admin/licenses/batch-action", body, result -> {
