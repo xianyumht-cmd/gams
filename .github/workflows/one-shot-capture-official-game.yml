@@ -1,5 +1,5 @@
-name: One-shot capture official game page
-# trigger: lightweight-2026-07-22
+name: One-shot compare official and external game scripts
+# trigger: compare-2026-07-22
 
 on:
   push:
@@ -11,71 +11,126 @@ permissions:
   contents: write
 
 jobs:
-  capture:
+  compare:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Fetch official H5 page
+      - name: Download and compare scripts
         shell: bash
         run: |
           set -euo pipefail
-          OUT=/tmp/official-page-raw
+          OUT=/tmp/game-comparison
           mkdir -p "$OUT"
-          URL='https://m.66rpg.com/h5/1690283?ohp=v3&quality=32'
+          OFFICIAL='https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001'
+          EXTERNAL='https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js'
           UA='Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36'
-          curl --fail --location --compressed --retry 3 --connect-timeout 20 --max-time 120 \
-            -A "$UA" -D "$OUT/headers.txt" "$URL" -o "$OUT/page.html"
-          wc -c "$OUT/page.html" > "$OUT/size.txt"
-          sha256sum "$OUT/page.html" > "$OUT/sha256.txt"
+          curl --fail --location --compressed --retry 3 --connect-timeout 20 --max-time 180 -A "$UA" "$OFFICIAL" -o "$OUT/official-game.js"
+          curl --fail --location --compressed --retry 3 --connect-timeout 20 --max-time 180 -A "$UA" "$EXTERNAL" -o "$OUT/external-game.js"
           python - <<'PY'
           from pathlib import Path
-          import html, json, re
-          p = Path('/tmp/official-page-raw/page.html')
-          text = p.read_text('utf-8', errors='replace')
-          patterns = {
-              'script_src': r'<script[^>]+src=["\']([^"\']+)',
-              'all_js_urls': r'(?:https?:)?//[^"\'\s<>]+?\.js(?:\?[^"\'\s<>]*)?',
-              'relative_js': r'["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',
-              'webpack_chunks': r'webpackChunk[A-Za-z0-9_$]*',
-          }
-          result = {}
-          for key, pattern in patterns.items():
-              values = []
-              for m in re.finditer(pattern, text, re.I):
-                  value = m.group(1) if m.lastindex else m.group(0)
-                  value = html.unescape(value)
-                  if value not in values:
-                      values.append(value)
-              result[key] = values
-          result['title'] = re.findall(r'<title[^>]*>(.*?)</title>', text, re.I | re.S)[:3]
-          result['prefix'] = text[:2000]
-          Path('/tmp/official-page-raw/extracted.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), 'utf-8')
-          lines = []
-          for key, values in result.items():
-              if isinstance(values, list):
-                  lines.append(f'[{key}] {len(values)}')
-                  lines.extend(str(v) for v in values)
-                  lines.append('')
-          Path('/tmp/official-page-raw/summary.txt').write_text('\n'.join(lines), 'utf-8')
-          PY
-          cat "$OUT/summary.txt"
+          import hashlib, json, re
 
-      - name: Save raw capture to analysis branch
+          out = Path('/tmp/game-comparison')
+          official = (out / 'official-game.js').read_bytes()
+          external = (out / 'external-game.js').read_bytes()
+
+          def sha(data):
+              return hashlib.sha256(data).hexdigest()
+
+          limit = min(len(official), len(external))
+          prefix = 0
+          step = 1024 * 1024
+          while prefix + step <= limit and official[prefix:prefix+step] == external[prefix:prefix+step]:
+              prefix += step
+          while prefix < limit and official[prefix] == external[prefix]:
+              prefix += 1
+
+          suffix = 0
+          max_suffix = limit - prefix
+          while suffix + step <= max_suffix and official[len(official)-suffix-step:len(official)-suffix if suffix else None] == external[len(external)-suffix-step:len(external)-suffix if suffix else None]:
+              suffix += step
+          while suffix < max_suffix and official[len(official)-1-suffix] == external[len(external)-1-suffix]:
+              suffix += 1
+
+          block = 64 * 1024
+          blocks = max((len(official)+block-1)//block, (len(external)+block-1)//block)
+          differing_blocks = []
+          for i in range(blocks):
+              a = official[i*block:(i+1)*block]
+              b = external[i*block:(i+1)*block]
+              if a != b:
+                  differing_blocks.append(i)
+
+          official_text = official.decode('utf-8', errors='replace')
+          external_text = external.decode('utf-8', errors='replace')
+          terms = [
+              '脚本加载完成~', 'webpackChunk_lodash_modules', 'SAL_getUserData',
+              'SAL_Login', 'createBuyOrder', 'get_goods_list', 'getUserHaveAllPropNum',
+              'PropShop', 'itemPrice', 'mallViewData', 'totalFlower', 'isLogin',
+              'goods_id', 'order_id', 'alert('
+          ]
+
+          report = {
+              'official_url': 'https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001',
+              'external_url': 'https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js',
+              'official_bytes': len(official),
+              'external_bytes': len(external),
+              'byte_difference': len(external) - len(official),
+              'official_sha256': sha(official),
+              'external_sha256': sha(external),
+              'identical': official == external,
+              'external_starts_with_official': external.startswith(official),
+              'official_starts_with_external': official.startswith(external),
+              'common_prefix_bytes': prefix,
+              'common_suffix_bytes': suffix,
+              'official_changed_region_bytes': max(0, len(official)-prefix-suffix),
+              'external_changed_region_bytes': max(0, len(external)-prefix-suffix),
+              'block_size': block,
+              'total_blocks': blocks,
+              'differing_block_count': len(differing_blocks),
+              'differing_blocks_first_200': differing_blocks[:200],
+              'official_prefix_repr': repr(official_text[:500]),
+              'external_prefix_repr': repr(external_text[:500]),
+              'official_suffix_repr': repr(official_text[-1000:]),
+              'external_suffix_repr': repr(external_text[-1000:]),
+              'term_counts': {
+                  term: {
+                      'official': official_text.count(term),
+                      'external': external_text.count(term)
+                  } for term in terms
+              }
+          }
+
+          (out / 'comparison-report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
+          lines = []
+          for key, value in report.items():
+              if key != 'term_counts':
+                  lines.append(f'{key}: {value}')
+          lines.append('')
+          lines.append('term_counts:')
+          for term, values in report['term_counts'].items():
+              lines.append(f'  {term!r}: official={values["official"]}, external={values["external"]}')
+          (out / 'comparison-summary.txt').write_text('\n'.join(lines) + '\n', 'utf-8')
+          print('\n'.join(lines))
+          PY
+          rm "$OUT/external-game.js"
+
+      - name: Save comparison to analysis branch
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin analysis/official-game-capture-20260722
           git worktree add /tmp/analysis origin/analysis/official-game-capture-20260722
-          rm -rf /tmp/analysis/analysis-snapshots/official-page-raw
+          rm -rf /tmp/analysis/analysis-snapshots/game-comparison
           mkdir -p /tmp/analysis/analysis-snapshots
-          cp -a /tmp/official-page-raw /tmp/analysis/analysis-snapshots/official-page-raw
+          cp -a /tmp/game-comparison /tmp/analysis/analysis-snapshots/game-comparison
           cd /tmp/analysis
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add analysis-snapshots/official-page-raw
-          git commit -m 'Capture official H5 page source for analysis'
+          git add analysis-snapshots/game-comparison
+          git commit -m 'Compare official and external game scripts'
           git push origin HEAD:analysis/official-game-capture-20260722
