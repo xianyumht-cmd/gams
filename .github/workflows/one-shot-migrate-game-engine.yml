@@ -1,0 +1,783 @@
+name: One-shot migrate game engine to self-hosting
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-shot-migrate-game-engine.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KEY_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      TARGET_BRANCH: engine-self-hosting-20260722
+      EXTERNAL_GAME_URL: https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js
+      EXTERNAL_GAME_SHA256: 51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43
+      EXTERNAL_GAME_SIZE: "11589175"
+      SELF_HOSTED_ENGINE_URL: https://gams-script-edge.2320006072.workers.dev/engine/stable.js
+      TEST_PAGE_URL: https://m.66rpg.com/h5/1690283?ohp=v3&quality=32
+
+    steps:
+      - name: Checkout and prepare migration worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin main "${TARGET_BRANCH}"
+          git checkout -q FETCH_HEAD
+          git worktree add /tmp/migration "origin/${TARGET_BRANCH}"
+          cd /tmp/migration
+          git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          test -n "${KEY_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
+
+      - name: Download, verify and prepare migration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/migrate_engine.py <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          import os
+          import re
+          import urllib.parse
+          import urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          ROOT = Path('/tmp/migration')
+          EXTERNAL_URL = os.environ['EXTERNAL_GAME_URL']
+          EXPECTED_SHA = os.environ['EXTERNAL_GAME_SHA256'].lower()
+          EXPECTED_SIZE = int(os.environ['EXTERNAL_GAME_SIZE'])
+          SELF_HOSTED_URL = os.environ['SELF_HOSTED_ENGINE_URL']
+          TEST_PAGE_URL = os.environ['TEST_PAGE_URL']
+          USER_AGENT = (
+              'Mozilla/5.0 (Linux; Android 13; Pixel 7) '
+              'AppleWebKit/537.36 (KHTML, like Gecko) '
+              'Chrome/125.0.0.0 Mobile Safari/537.36'
+          )
+
+          def now_iso() -> str:
+              return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+          def download(url: str, timeout: int = 120) -> bytes:
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      'User-Agent': USER_AGENT,
+                      'Accept': '*/*',
+                      'Referer': TEST_PAGE_URL,
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=timeout) as response:
+                  if response.status != 200:
+                      raise RuntimeError(f'download failed: {url} status={response.status}')
+                  return response.read()
+
+          def sha256(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+
+          release_dir = ROOT / 'game-engine' / 'release'
+          release_dir.mkdir(parents=True, exist_ok=True)
+          engine_data = download(EXTERNAL_URL)
+          engine_sha = sha256(engine_data)
+          if len(engine_data) != EXPECTED_SIZE:
+              raise SystemExit(f'engine size mismatch: {len(engine_data)} != {EXPECTED_SIZE}')
+          if engine_sha != EXPECTED_SHA:
+              raise SystemExit(f'engine sha256 mismatch: {engine_sha} != {EXPECTED_SHA}')
+          engine_filename = 'game-1.0.2.js'
+          (release_dir / engine_filename).write_bytes(engine_data)
+
+          # Capture the current official page/resource baseline for later change detection.
+          html_data = download(TEST_PAGE_URL)
+          html = html_data.decode('utf-8', errors='replace')
+          script_sources = re.findall(
+              r'<script[^>]+src=["\']([^"\']+)["\']',
+              html,
+              flags=re.IGNORECASE,
+          )
+          resolved = [urllib.parse.urljoin(TEST_PAGE_URL, src.strip()) for src in script_sources]
+          wanted = {
+              'officialGame': '/bin/official/game.js',
+              'salInterface': '/bin/official/lib/SALInterface.js',
+              'webGLLib': '/bin/official/lib/webGLLib.js',
+              'gameInfoData': '/common/GameInfoData.js',
+          }
+          resources: dict[str, dict[str, object]] = {}
+          for name, marker in wanted.items():
+              candidates = [url for url in resolved if marker in urllib.parse.urlparse(url).path]
+              if not candidates:
+                  raise SystemExit(f'cannot locate upstream resource {name}: {marker}')
+              url = candidates[0]
+              body = download(url)
+              resources[name] = {
+                  'url': url,
+                  'size': len(body),
+                  'sha256': sha256(body),
+              }
+
+          baseline = {
+              'schemaVersion': 1,
+              'pageUrl': TEST_PAGE_URL,
+              'capturedAt': now_iso(),
+              'resources': resources,
+          }
+          (ROOT / 'game-engine' / 'upstream-baseline.json').write_text(
+              json.dumps(baseline, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+
+          compatibility = {
+              'schemaVersion': 1,
+              'stable': {
+                  'nonameVersion': '1.1.1',
+                  'engineVersion': '1.0.2',
+                  'officialPageVersion': '202607090001',
+                  'appMinVersion': 8,
+                  'testedPages': [TEST_PAGE_URL],
+                  'status': 'stable',
+              },
+          }
+          (ROOT / 'game-engine' / 'compatibility.json').write_text(
+              json.dumps(compatibility, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+
+          published_at = now_iso()
+          manifest = {
+              'schemaVersion': 1,
+              'channel': 'stable',
+              'version': 10002,
+              'versionName': '1.0.2',
+              'file': engine_filename,
+              'sha256': engine_sha,
+              'size': len(engine_data),
+              'sourceUrl': EXTERNAL_URL,
+              'minNonameVersion': '1.1.1',
+              'publishedAt': published_at,
+          }
+          canonical_keys = (
+              'schemaVersion', 'channel', 'version', 'versionName', 'file',
+              'sha256', 'size', 'sourceUrl', 'minNonameVersion', 'publishedAt',
+          )
+          canonical = ''.join(f'{key}={manifest[key]}\n' for key in canonical_keys)
+          Path('/tmp/engine-manifest-canonical.txt').write_text(canonical, encoding='utf-8', newline='\n')
+          Path('/tmp/engine-manifest-unsigned.json').write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+
+          readme = f'''# Self-hosted game engine\n\nThis directory stores immutable, versioned snapshots of the modified game runtime.\n\n## Current stable release\n\n- Version: `1.0.2`\n- File: `release/{engine_filename}`\n- Size: `{len(engine_data)}` bytes\n- SHA-256: `{engine_sha}`\n- Runtime URL: `{SELF_HOSTED_URL}`\n\nThe original `space-z.ai` URL is retained only as release provenance in the signed manifest. Runtime traffic is redirected to the self-hosted Cloudflare Worker endpoint.\n\n## Updating\n\nRun the **Publish versioned game engine** workflow with a new HTTPS source URL, a higher semantic version, and the expected SHA-256. The workflow downloads, verifies, signs and publishes an immutable version without changing `noname.js`, because `/engine/stable.js` resolves the signed stable manifest.\n\n## Upstream monitoring\n\nThe upstream monitor compares the official page, `game.js`, `SALInterface.js`, `webGLLib.js` and `GameInfoData.js` against `upstream-baseline.json`. Changes open a GitHub issue but do not automatically replace the stable engine.\n'''
+          (ROOT / 'game-engine' / 'README.md').write_text(readme, encoding='utf-8')
+
+          # Extend the existing edge Worker with versioned engine and stable alias routes.
+          worker = r'''const SCRIPT_RELEASE_BASE = "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/remote-script/release/";
+          const ENGINE_RELEASE_BASE = "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/";
+
+          function json(body, status = 200) {
+            return new Response(JSON.stringify(body), {
+              status,
+              headers: {
+                "content-type": "application/json; charset=utf-8",
+                "cache-control": "no-store",
+                "x-content-type-options": "nosniff",
+              },
+            });
+          }
+
+          async function fetchUpstream(base, filename, method, ttl) {
+            return fetch(base + encodeURIComponent(filename), {
+              method,
+              headers: { "user-agent": "gams-script-edge/2.0" },
+              cf: { cacheEverything: true, cacheTtl: ttl },
+            });
+          }
+
+          function responseHeaders(upstream, contentType, cacheControl) {
+            const headers = new Headers(upstream.headers);
+            headers.set("content-type", contentType);
+            headers.set("cache-control", cacheControl);
+            headers.set("x-content-type-options", "nosniff");
+            headers.set("access-control-allow-origin", "*");
+            return headers;
+          }
+
+          async function proxyVersioned(base, filename, request, isManifest = false) {
+            const upstream = await fetchUpstream(
+              base,
+              filename,
+              request.method,
+              isManifest ? 60 : 31536000,
+            );
+            if (!upstream.ok) {
+              return json({ ok: false, error: "upstream_unavailable", status: upstream.status }, 502);
+            }
+            const headers = responseHeaders(
+              upstream,
+              isManifest ? "application/json; charset=utf-8" : "text/javascript; charset=utf-8",
+              isManifest
+                ? "public, max-age=30, s-maxage=60"
+                : "public, max-age=31536000, immutable",
+            );
+            return new Response(upstream.body, { status: 200, headers });
+          }
+
+          async function stableEngine(request) {
+            const manifestResponse = await fetchUpstream(ENGINE_RELEASE_BASE, "manifest.json", "GET", 60);
+            if (!manifestResponse.ok) {
+              return json({ ok: false, error: "engine_manifest_unavailable", status: manifestResponse.status }, 502);
+            }
+            let manifest;
+            try {
+              manifest = await manifestResponse.json();
+            } catch {
+              return json({ ok: false, error: "engine_manifest_invalid" }, 502);
+            }
+            const filename = String(manifest.file || "");
+            if (!/^game-[A-Za-z0-9._-]+\.js$/.test(filename)) {
+              return json({ ok: false, error: "engine_filename_invalid" }, 502);
+            }
+            const upstream = await fetchUpstream(ENGINE_RELEASE_BASE, filename, request.method, 31536000);
+            if (!upstream.ok) {
+              return json({ ok: false, error: "engine_unavailable", status: upstream.status }, 502);
+            }
+            const headers = responseHeaders(
+              upstream,
+              "text/javascript; charset=utf-8",
+              "public, max-age=30, s-maxage=60",
+            );
+            headers.set("x-engine-version", String(manifest.versionName || "unknown"));
+            headers.set("x-engine-sha256", String(manifest.sha256 || ""));
+            return new Response(upstream.body, { status: 200, headers });
+          }
+
+          export default {
+            async fetch(request) {
+              if (request.method !== "GET" && request.method !== "HEAD") {
+                return json({ ok: false, error: "method_not_allowed" }, 405);
+              }
+
+              const url = new URL(request.url);
+              if (url.pathname === "/" || url.pathname === "/health") {
+                return json({ ok: true, service: "signed-script-edge", engineHosting: true });
+              }
+
+              const scriptMatch = url.pathname.match(/^\/release\/(manifest\.json|noname-[A-Za-z0-9._-]+\.js)$/);
+              if (scriptMatch) {
+                const filename = scriptMatch[1];
+                return proxyVersioned(SCRIPT_RELEASE_BASE, filename, request, filename === "manifest.json");
+              }
+
+              if (url.pathname === "/engine/stable.js") {
+                return stableEngine(request);
+              }
+
+              const engineMatch = url.pathname.match(/^\/engine\/(manifest\.json|game-[A-Za-z0-9._-]+\.js)$/);
+              if (engineMatch) {
+                const filename = engineMatch[1];
+                return proxyVersioned(ENGINE_RELEASE_BASE, filename, request, filename === "manifest.json");
+              }
+
+              return json({ ok: false, error: "not_found" }, 404);
+            },
+          };
+          '''
+          worker = '\n'.join(line[10:] if line.startswith('          ') else line for line in worker.splitlines()) + '\n'
+          (ROOT / 'script-edge' / 'src' / 'index.js').write_text(worker, encoding='utf-8')
+
+          # Bump noname.js and append a late-installed redirect guard. It wraps the
+          # hooks installed by the obfuscated script and rewrites only the former
+          # space-z.ai game.js request to the stable self-hosted endpoint.
+          noname_path = ROOT / 'remote-script' / 'src' / 'noname.js'
+          noname = noname_path.read_text(encoding='utf-8')
+          old_version = '// @version      1.1.0'
+          if old_version not in noname:
+              raise SystemExit('expected noname.js version 1.1.0 not found')
+          noname = noname.replace(old_version, '// @version      1.1.1', 1)
+          noname = noname.replace('状态：2026年7月21日正常使用', '状态：2026年7月22日正常使用', 1)
+          guard = r'''
+
+          // ===== Self-hosted modified game engine redirect =====
+          ;(() => {
+            "use strict";
+            if (window.__GG_SELF_HOSTED_ENGINE_REDIRECT__) return;
+            window.__GG_SELF_HOSTED_ENGINE_REDIRECT__ = true;
+
+            const SELF_HOSTED_ENGINE_URL = "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
+            const isLegacyEngineUrl = (value) => {
+              if (!value) return false;
+              try {
+                const parsed = new URL(String(value), location.href);
+                return parsed.hostname.endsWith(".space-z.ai") && /\/game\.js$/i.test(parsed.pathname);
+              } catch {
+                return /space-z\.ai\/game\.js(?:[?#]|$)/i.test(String(value));
+              }
+            };
+            const rewriteEngineUrl = (value) =>
+              isLegacyEngineUrl(value) ? SELF_HOSTED_ENGINE_URL : value;
+            const rewriteScriptNode = (node) => {
+              if (!(node instanceof HTMLScriptElement)) return;
+              const current = node.getAttribute("src") || node.src;
+              if (isLegacyEngineUrl(current)) node.src = SELF_HOSTED_ENGINE_URL;
+            };
+
+            const srcDescriptor = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, "src");
+            if (srcDescriptor?.get && srcDescriptor?.set) {
+              Object.defineProperty(HTMLScriptElement.prototype, "src", {
+                configurable: srcDescriptor.configurable,
+                enumerable: srcDescriptor.enumerable,
+                get: srcDescriptor.get,
+                set(value) {
+                  return srcDescriptor.set.call(this, rewriteEngineUrl(value));
+                },
+              });
+            }
+
+            const originalSetAttribute = Element.prototype.setAttribute;
+            Element.prototype.setAttribute = function(name, value) {
+              if (this instanceof HTMLScriptElement && String(name).toLowerCase() === "src") {
+                value = rewriteEngineUrl(value);
+              }
+              return originalSetAttribute.call(this, name, value);
+            };
+
+            const originalAppendChild = Node.prototype.appendChild;
+            Node.prototype.appendChild = function(child) {
+              rewriteScriptNode(child);
+              return originalAppendChild.call(this, child);
+            };
+
+            const originalInsertBefore = Node.prototype.insertBefore;
+            Node.prototype.insertBefore = function(child, reference) {
+              rewriteScriptNode(child);
+              return originalInsertBefore.call(this, child, reference);
+            };
+          })();
+          // ===== End self-hosted modified game engine redirect =====
+          '''
+          guard = '\n'.join(line[10:] if line.startswith('          ') else line for line in guard.splitlines()) + '\n'
+          if 'SELF_HOSTED_ENGINE_URL' in noname:
+              raise SystemExit('self-hosted engine guard already exists')
+          noname_path.write_text(noname.rstrip() + guard, encoding='utf-8')
+
+          workflows = ROOT / '.github' / 'workflows'
+          workflows.mkdir(parents=True, exist_ok=True)
+
+          publish_workflow = r'''name: Publish versioned game engine
+
+          on:
+            workflow_dispatch:
+              inputs:
+                source_url:
+                  description: HTTPS URL of the modified game.js to import
+                  required: true
+                  type: string
+                version_name:
+                  description: New semantic version, for example 1.0.3
+                  required: true
+                  type: string
+                expected_sha256:
+                  description: Expected lowercase SHA-256 of the source file
+                  required: true
+                  type: string
+                expected_size:
+                  description: Optional exact byte size
+                  required: false
+                  type: string
+                min_noname_version:
+                  description: Minimum compatible noname.js version
+                  required: true
+                  default: "1.1.1"
+                  type: string
+
+          permissions:
+            contents: write
+
+          jobs:
+            publish:
+              runs-on: ubuntu-latest
+              timeout-minutes: 20
+              env:
+                KEY_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+                GH_TOKEN: ${{ github.token }}
+              steps:
+                - name: Checkout main with write authentication
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    git init -q .
+                    git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+                    git fetch -q --depth 1 origin main
+                    git checkout -q FETCH_HEAD
+                - name: Validate and import immutable engine release
+                  shell: bash
+                  env:
+                    SOURCE_URL: ${{ inputs.source_url }}
+                    VERSION_NAME: ${{ inputs.version_name }}
+                    EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+                    EXPECTED_SIZE: ${{ inputs.expected_size }}
+                    MIN_NONAME_VERSION: ${{ inputs.min_noname_version }}
+                  run: |
+                    set -euo pipefail
+                    test -n "${KEY_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
+                    [[ "${SOURCE_URL}" == https://* ]] || { echo "source_url must use HTTPS"; exit 1; }
+                    [[ "${VERSION_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid version_name"; exit 1; }
+                    [[ "${EXPECTED_SHA256}" =~ ^[0-9a-f]{64}$ ]] || { echo "invalid expected_sha256"; exit 1; }
+                    mkdir -p game-engine/release
+                    filename="game-${VERSION_NAME}.js"
+                    test ! -e "game-engine/release/${filename}" || { echo "release already exists"; exit 1; }
+                    curl --fail --location --silent --show-error --retry 3 \
+                      -A "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36" \
+                      -o "game-engine/release/${filename}" "${SOURCE_URL}"
+                    actual_sha="$(sha256sum "game-engine/release/${filename}" | awk '{print $1}')"
+                    actual_size="$(stat -c %s "game-engine/release/${filename}")"
+                    test "${actual_sha}" = "${EXPECTED_SHA256}" || { echo "SHA-256 mismatch"; exit 1; }
+                    if [[ -n "${EXPECTED_SIZE}" ]]; then test "${actual_size}" = "${EXPECTED_SIZE}" || { echo "size mismatch"; exit 1; }; fi
+                    export filename actual_sha actual_size
+                    python3 - <<'PY'
+                    import json, os, re
+                    from datetime import datetime, timezone
+                    from pathlib import Path
+                    version_name = os.environ['VERSION_NAME']
+                    nums = [int(x) for x in version_name.split('.')]
+                    version = nums[0] * 10000 + nums[1] * 100 + nums[2]
+                    old = json.loads(Path('game-engine/release/manifest.json').read_text(encoding='utf-8'))
+                    if version <= int(old['version']):
+                        raise SystemExit(f"new version {version_name} must be higher than {old['versionName']}")
+                    manifest = {
+                        'schemaVersion': 1,
+                        'channel': 'stable',
+                        'version': version,
+                        'versionName': version_name,
+                        'file': os.environ['filename'],
+                        'sha256': os.environ['actual_sha'],
+                        'size': int(os.environ['actual_size']),
+                        'sourceUrl': os.environ['SOURCE_URL'],
+                        'minNonameVersion': os.environ['MIN_NONAME_VERSION'],
+                        'publishedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+                    }
+                    keys = ('schemaVersion','channel','version','versionName','file','sha256','size','sourceUrl','minNonameVersion','publishedAt')
+                    Path('/tmp/engine-canonical.txt').write_text(''.join(f'{k}={manifest[k]}\n' for k in keys), encoding='utf-8', newline='\n')
+                    Path('/tmp/engine-unsigned.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+                    PY
+                    openssl enc -d -aes-256-cbc -pbkdf2 \
+                      -in remote-script/keys/private.pem.enc -out /tmp/script-private.pem -pass env:KEY_PASSWORD
+                    openssl dgst -sha256 -sign /tmp/script-private.pem -out /tmp/engine.sig /tmp/engine-canonical.txt
+                    openssl dgst -sha256 -verify remote-script/keys/public.pem -signature /tmp/engine.sig /tmp/engine-canonical.txt
+                    python3 - <<'PY'
+                    import base64, json
+                    from pathlib import Path
+                    data=json.loads(Path('/tmp/engine-unsigned.json').read_text(encoding='utf-8'))
+                    data['signatureAlgorithm']='SHA256withECDSA'
+                    data['signature']=base64.b64encode(Path('/tmp/engine.sig').read_bytes()).decode('ascii')
+                    Path('game-engine/release/manifest.json').write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+                    compatibility=json.loads(Path('game-engine/compatibility.json').read_text(encoding='utf-8'))
+                    compatibility['stable']['engineVersion']=data['versionName']
+                    compatibility['stable']['nonameVersion']=data['minNonameVersion']
+                    Path('game-engine/compatibility.json').write_text(json.dumps(compatibility, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+                    PY
+                    rm -f /tmp/script-private.pem /tmp/engine.sig /tmp/engine-canonical.txt /tmp/engine-unsigned.json
+                    git config user.name "github-actions[bot]"
+                    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                    git add game-engine
+                    git commit -m "Publish game engine ${VERSION_NAME}"
+                    git push origin HEAD:main
+          '''
+          publish_workflow = '\n'.join(line[10:] if line.startswith('          ') else line for line in publish_workflow.splitlines()) + '\n'
+          (workflows / 'publish-game-engine.yml').write_text(publish_workflow, encoding='utf-8')
+
+          validate_workflow = r'''name: Validate self-hosted engine release
+
+          on:
+            pull_request:
+              branches: [main]
+              paths:
+                - game-engine/**
+                - script-edge/**
+                - remote-script/src/noname.js
+                - .github/workflows/publish-game-engine.yml
+                - .github/workflows/monitor-upstream-engine.yml
+                - .github/workflows/smoke-self-hosted-engine.yml
+                - .github/workflows/validate-engine-release.yml
+            push:
+              branches: [main]
+              paths:
+                - game-engine/**
+                - script-edge/**
+                - remote-script/src/noname.js
+
+          permissions:
+            contents: read
+
+          jobs:
+            validate:
+              runs-on: ubuntu-latest
+              timeout-minutes: 10
+              steps:
+                - uses: actions/checkout@v4
+                - name: Verify engine manifest, hash and signature
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    python3 - <<'PY'
+                    import base64, hashlib, json
+                    from pathlib import Path
+                    m=json.loads(Path('game-engine/release/manifest.json').read_text(encoding='utf-8'))
+                    f=Path('game-engine/release')/m['file']
+                    body=f.read_bytes()
+                    assert len(body)==m['size'], (len(body),m['size'])
+                    assert hashlib.sha256(body).hexdigest()==m['sha256']
+                    keys=('schemaVersion','channel','version','versionName','file','sha256','size','sourceUrl','minNonameVersion','publishedAt')
+                    Path('/tmp/engine-canonical.txt').write_text(''.join(f'{k}={m[k]}\n' for k in keys), encoding='utf-8', newline='\n')
+                    Path('/tmp/engine.sig').write_bytes(base64.b64decode(m['signature'], validate=True))
+                    json.loads(Path('game-engine/upstream-baseline.json').read_text(encoding='utf-8'))
+                    json.loads(Path('game-engine/compatibility.json').read_text(encoding='utf-8'))
+                    print(m['versionName'], len(body), m['sha256'])
+                    PY
+                    openssl dgst -sha256 -verify remote-script/keys/public.pem \
+                      -signature /tmp/engine.sig /tmp/engine-canonical.txt
+                - name: Validate JavaScript and routing
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    node --check script-edge/src/index.js
+                    node --check remote-script/src/noname.js
+                    grep -q 'SELF_HOSTED_ENGINE_URL' remote-script/src/noname.js
+                    grep -q '/engine/stable.js' script-edge/src/index.js
+                    grep -q 'game-engine/release' script-edge/src/index.js
+          '''
+          validate_workflow = '\n'.join(line[10:] if line.startswith('          ') else line for line in validate_workflow.splitlines()) + '\n'
+          (workflows / 'validate-engine-release.yml').write_text(validate_workflow, encoding='utf-8')
+
+          monitor_workflow = r'''name: Monitor official game engine upstream
+
+          on:
+            workflow_dispatch:
+            schedule:
+              - cron: "17 4 * * *"
+
+          permissions:
+            contents: read
+            issues: write
+
+          jobs:
+            monitor:
+              runs-on: ubuntu-latest
+              timeout-minutes: 15
+              steps:
+                - uses: actions/checkout@v4
+                - name: Compare official resources with approved baseline
+                  id: compare
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    python3 - <<'PY'
+                    import hashlib, json, re, urllib.parse, urllib.request
+                    from datetime import datetime, timezone
+                    from pathlib import Path
+                    baseline=json.loads(Path('game-engine/upstream-baseline.json').read_text(encoding='utf-8'))
+                    page=baseline['pageUrl']
+                    ua='Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36'
+                    def get(url):
+                        req=urllib.request.Request(url,headers={'User-Agent':ua,'Accept':'*/*','Referer':page})
+                        with urllib.request.urlopen(req,timeout=120) as r: return r.read()
+                    html=get(page).decode('utf-8',errors='replace')
+                    srcs=[urllib.parse.urljoin(page,s.strip()) for s in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',html,re.I)]
+                    markers={'officialGame':'/bin/official/game.js','salInterface':'/bin/official/lib/SALInterface.js','webGLLib':'/bin/official/lib/webGLLib.js','gameInfoData':'/common/GameInfoData.js'}
+                    current={}
+                    for name,marker in markers.items():
+                        urls=[u for u in srcs if marker in urllib.parse.urlparse(u).path]
+                        if not urls: raise SystemExit(f'missing resource {name}: {marker}')
+                        body=get(urls[0]); current[name]={'url':urls[0],'size':len(body),'sha256':hashlib.sha256(body).hexdigest()}
+                    changed={}
+                    for name,value in current.items():
+                        previous=baseline['resources'].get(name)
+                        if previous != value: changed[name]={'previous':previous,'current':value}
+                    report={'checkedAt':datetime.now(timezone.utc).isoformat(),'pageUrl':page,'changed':changed,'current':current}
+                    Path('/tmp/upstream-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+                    with open(Path('/tmp/upstream-report.md'),'w',encoding='utf-8') as out:
+                        out.write('# Official engine upstream check\n\n')
+                        out.write(f"Page: `{page}`\n\n")
+                        if changed:
+                            out.write('## Changes detected\n\n```json\n'+json.dumps(changed,ensure_ascii=False,indent=2)+'\n```\n')
+                        else:
+                            out.write('No approved resource changed.\n')
+                    print(json.dumps(report,ensure_ascii=False,indent=2))
+                    Path('/tmp/changed').write_text('1' if changed else '0')
+                    PY
+                    cat /tmp/upstream-report.md >> "$GITHUB_STEP_SUMMARY"
+                    echo "changed=$(cat /tmp/changed)" >> "$GITHUB_OUTPUT"
+                - uses: actions/upload-artifact@v4
+                  with:
+                    name: upstream-engine-check
+                    path: /tmp/upstream-report.json
+                    retention-days: 30
+                - name: Open one deduplicated maintenance issue
+                  if: steps.compare.outputs.changed == '1'
+                  shell: bash
+                  env:
+                    GH_TOKEN: ${{ github.token }}
+                  run: |
+                    set -euo pipefail
+                    title="Official game engine upstream changed"
+                    existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "${title} in:title" --json number --jq '.[0].number // empty')"
+                    if [[ -z "${existing}" ]]; then
+                      gh issue create --repo "$GITHUB_REPOSITORY" --title "${title}" --body-file /tmp/upstream-report.md
+                    else
+                      gh issue comment "${existing}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/upstream-report.md
+                    fi
+                    exit 1
+          '''
+          monitor_workflow = '\n'.join(line[10:] if line.startswith('          ') else line for line in monitor_workflow.splitlines()) + '\n'
+          (workflows / 'monitor-upstream-engine.yml').write_text(monitor_workflow, encoding='utf-8')
+
+          smoke_workflow = r'''name: Smoke test self-hosted game engine
+
+          on:
+            workflow_dispatch:
+            schedule:
+              - cron: "31 5 * * 1"
+
+          permissions:
+            contents: read
+
+          jobs:
+            smoke:
+              runs-on: ubuntu-latest
+              timeout-minutes: 25
+              steps:
+                - uses: actions/checkout@v4
+                - name: Verify deployed manifest and stable engine
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    base="https://gams-script-edge.2320006072.workers.dev"
+                    curl --fail --silent --show-error --retry 3 "${base}/engine/manifest.json" -o /tmp/engine-manifest.json
+                    curl --fail --silent --show-error --retry 3 "${base}/engine/stable.js" -o /tmp/stable.js
+                    python3 - <<'PY'
+                    import hashlib,json
+                    from pathlib import Path
+                    m=json.loads(Path('/tmp/engine-manifest.json').read_text(encoding='utf-8'))
+                    b=Path('/tmp/stable.js').read_bytes()
+                    assert len(b)==m['size'],(len(b),m['size'])
+                    assert hashlib.sha256(b).hexdigest()==m['sha256']
+                    print(m['versionName'],len(b),m['sha256'])
+                    PY
+                - name: Install Playwright Chromium
+                  run: npm exec --yes playwright@1.52.0 install --with-deps chromium
+                - name: Confirm the page requests the self-hosted engine
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    cat > /tmp/smoke.mjs <<'NODE'
+                    import { chromium } from 'playwright';
+                    import fs from 'node:fs';
+                    const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+                    const context=await browser.newContext({
+                      locale:'zh-CN',timezoneId:'Asia/Shanghai',viewport:{width:412,height:915},
+                      isMobile:true,hasTouch:true,ignoreHTTPSErrors:true,
+                      userAgent:'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/125.0.0.0 Mobile Safari/537.36'
+                    });
+                    await context.addInitScript({path:'remote-script/src/noname.js'});
+                    const page=await context.newPage();
+                    const requests=[]; const errors=[];
+                    page.on('request',r=>requests.push(r.url()));
+                    page.on('pageerror',e=>errors.push(String(e.stack||e.message)));
+                    await page.goto('https://m.66rpg.com/h5/1690283?ohp=v3&quality=32',{waitUntil:'domcontentloaded',timeout:90000});
+                    await page.waitForTimeout(10000);
+                    for (const label of ['无需下载','在线看','开始游戏','在线玩']) {
+                      try { const x=page.getByText(label,{exact:false}).first(); if(await x.isVisible({timeout:1000})){await x.click();await page.waitForTimeout(5000);} } catch {}
+                    }
+                    await page.waitForTimeout(45000);
+                    const selfHosted=requests.some(u=>u.includes('gams-script-edge.2320006072.workers.dev/engine/stable.js'));
+                    const legacy=requests.filter(u=>u.includes('space-z.ai/game.js'));
+                    const gVisible=await page.locator('text=G').count().catch(()=>0);
+                    fs.writeFileSync('/tmp/smoke-report.json',JSON.stringify({selfHosted,legacy,gVisible,errors:errors.slice(0,30),requests:requests.filter(u=>/game\.js|engine\/stable/.test(u))},null,2));
+                    console.log(fs.readFileSync('/tmp/smoke-report.json','utf8'));
+                    await browser.close();
+                    if(!selfHosted) process.exitCode=1;
+                    if(legacy.length) process.exitCode=1;
+                    NODE
+                    node /tmp/smoke.mjs
+                - uses: actions/upload-artifact@v4
+                  if: always()
+                  with:
+                    name: self-hosted-engine-smoke-report
+                    path: /tmp/smoke-report.json
+                    retention-days: 30
+          '''
+          smoke_workflow = '\n'.join(line[10:] if line.startswith('          ') else line for line in smoke_workflow.splitlines()) + '\n'
+          (workflows / 'smoke-self-hosted-engine.yml').write_text(smoke_workflow, encoding='utf-8')
+          PY
+
+          cd /tmp/migration
+          python3 /tmp/migrate_engine.py
+
+      - name: Sign engine manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/migration
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/script-private.pem \
+            -pass env:KEY_PASSWORD
+          chmod 600 /tmp/script-private.pem
+          openssl dgst -sha256 -sign /tmp/script-private.pem \
+            -out /tmp/engine-manifest.sig /tmp/engine-manifest-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/engine-manifest.sig /tmp/engine-manifest-canonical.txt
+          python3 - <<'PY'
+          import base64, json
+          from pathlib import Path
+          data=json.loads(Path('/tmp/engine-manifest-unsigned.json').read_text(encoding='utf-8'))
+          data['signatureAlgorithm']='SHA256withECDSA'
+          data['signature']=base64.b64encode(Path('/tmp/engine-manifest.sig').read_bytes()).decode('ascii')
+          Path('/tmp/migration/game-engine/release/manifest.json').write_text(
+              json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+          rm -f /tmp/script-private.pem /tmp/engine-manifest.sig /tmp/engine-manifest-canonical.txt /tmp/engine-manifest-unsigned.json
+
+      - name: Validate migration output
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/migration
+          node --check script-edge/src/index.js
+          node --check remote-script/src/noname.js
+          python3 - <<'PY'
+          import base64, hashlib, json
+          from pathlib import Path
+          m=json.loads(Path('game-engine/release/manifest.json').read_text(encoding='utf-8'))
+          b=(Path('game-engine/release')/m['file']).read_bytes()
+          assert len(b)==m['size']==11589175
+          assert hashlib.sha256(b).hexdigest()==m['sha256']=='51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43'
+          keys=('schemaVersion','channel','version','versionName','file','sha256','size','sourceUrl','minNonameVersion','publishedAt')
+          Path('/tmp/check-canonical.txt').write_text(''.join(f'{k}={m[k]}\n' for k in keys),encoding='utf-8',newline='\n')
+          Path('/tmp/check.sig').write_bytes(base64.b64decode(m['signature'],validate=True))
+          assert 'SELF_HOSTED_ENGINE_URL' in Path('remote-script/src/noname.js').read_text(encoding='utf-8')
+          PY
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/check.sig /tmp/check-canonical.txt
+          grep -q '/engine/stable.js' script-edge/src/index.js
+          grep -q 'version      1.1.1' remote-script/src/noname.js
+          git status --short
+
+      - name: Commit migration to dedicated branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/migration
+          git add game-engine script-edge/src/index.js remote-script/src/noname.js .github/workflows/publish-game-engine.yml .github/workflows/validate-engine-release.yml .github/workflows/monitor-upstream-engine.yml .github/workflows/smoke-self-hosted-engine.yml
+          git commit -m "Self-host modified game engine and add maintenance pipeline"
+          git push origin HEAD:"${TARGET_BRANCH}"
