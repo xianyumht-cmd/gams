@@ -1,9 +1,14 @@
 name: Smoke test self-hosted game engine
+# One-shot PR trigger for rollout verification
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "31 5 * * 1"
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/smoke-self-hosted-engine.yml
 
 permissions:
   contents: read
