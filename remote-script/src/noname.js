@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.0.4
+// @version      1.0.5
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -15,8 +15,10 @@ const USER_PANEL_CONFIG = {
   badgeText: "菜单",
   title: "使用前必看",
   noticeItems: [
+    "点上面无需下载，然后点在线看",
+    "不要点击分类,直接点击作品或搜索",
     "不要登录自己的账号",
-    "不要点击橙光按钮，点击后可能卡死",
+    "不要点击橙光按钮",
     "商城一次只购买一个商品，可以重复购买",
     "不要点击商城中的“一键领取”"
   ],
@@ -4320,9 +4322,9 @@ function hwyqahb() {
       ["icon"]:"跳"
     },
     ["enable"+"FreeMo"+"de"]: {
-      ["title"]:"免费功能",
+      ["title"]:"默认开启",
       ["tip"]:"无限花",
-      ["icon"]:"免"
+      ["icon"]:"on"
     },
     ["enable"+"LoginB"+"ypass"]: {
       ["title"]:"免登录",
