@@ -1,0 +1,145 @@
+name: Monitor official game engine upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare official resources with approved baseline
+        id: compare
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import re
+          import urllib.parse
+          import urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          baseline = json.loads(
+              Path("game-engine/upstream-baseline.json").read_text(encoding="utf-8")
+          )
+          page_url = baseline["pageUrl"]
+          user_agent = (
+              "Mozilla/5.0 (Linux; Android 13; Pixel 7) "
+              "AppleWebKit/537.36 (KHTML, like Gecko) "
+              "Chrome/125.0.0.0 Mobile Safari/537.36"
+          )
+
+          def download(url: str) -> bytes:
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": user_agent,
+                      "Accept": "*/*",
+                      "Referer": page_url,
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  return response.read()
+
+          html = download(page_url).decode("utf-8", errors="replace")
+          script_sources = re.findall(
+              r'<script[^>]+src=["\']([^"\']+)["\']',
+              html,
+              flags=re.IGNORECASE,
+          )
+          resolved = [
+              urllib.parse.urljoin(page_url, source.strip())
+              for source in script_sources
+          ]
+          markers = {
+              "officialGame": "/bin/official/game.js",
+              "salInterface": "/bin/official/lib/SALInterface.js",
+              "webGLLib": "/bin/official/lib/webGLLib.js",
+              "gameInfoData": "/common/GameInfoData.js",
+          }
+
+          current = {}
+          for name, marker in markers.items():
+              candidates = [
+                  url for url in resolved
+                  if marker in urllib.parse.urlparse(url).path
+              ]
+              if not candidates:
+                  raise SystemExit(f"missing upstream resource: {name} ({marker})")
+              url = candidates[0]
+              body = download(url)
+              current[name] = {
+                  "url": url,
+                  "size": len(body),
+                  "sha256": hashlib.sha256(body).hexdigest(),
+              }
+
+          changed = {
+              name: {
+                  "previous": baseline["resources"].get(name),
+                  "current": value,
+              }
+              for name, value in current.items()
+              if baseline["resources"].get(name) != value
+          }
+          report = {
+              "checkedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "pageUrl": page_url,
+              "changed": changed,
+              "current": current,
+          }
+          Path("/tmp/upstream-report.json").write_text(
+              json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          Path("/tmp/changed").write_text("1" if changed else "0", encoding="utf-8")
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          PY
+          cat /tmp/upstream-report.json >> "$GITHUB_STEP_SUMMARY"
+          echo "changed=$(cat /tmp/changed)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upstream-engine-check
+          path: /tmp/upstream-report.json
+          retention-days: 30
+
+      - name: Open or update maintenance issue
+        if: steps.compare.outputs.changed == '1'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          title="Official game engine upstream changed"
+          existing="$(
+            gh issue list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --search "${title} in:title" \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+          if [[ -z "${existing}" ]]; then
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "${title}" \
+              --body-file /tmp/upstream-report.json
+          else
+            gh issue comment "${existing}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body-file /tmp/upstream-report.json
+          fi
+          exit 1
