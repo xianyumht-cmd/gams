@@ -44,6 +44,9 @@ jobs:
           echo "5313bb5fadd05200e77d4a9e639419b9c26531437219622ba4051360ca25cc26  /tmp/v2-implementation.tar.gz" | sha256sum -c -
           tar -xzf /tmp/v2-implementation.tar.gz
           rm -f /tmp/v2-implementation.tar.gz
+          rm -f .github/workflows/v2-build-apks.yml \
+            .github/workflows/v2-deploy-runtime.yml \
+            .github/workflows/v2-publish-runtime.yml
 
       - name: Build initial encrypted V2 release
         shell: bash
@@ -111,23 +114,12 @@ jobs:
             exit 1
           fi
 
-      - name: Commit V2 implementation
+      - name: Commit and push V2 implementation code
         shell: bash
         run: |
           set -euo pipefail
           git add -A v2
-          for workflow in \
-            .github/workflows/v2-build-apks.yml \
-            .github/workflows/v2-deploy-runtime.yml \
-            .github/workflows/v2-publish-runtime.yml; do
-            test -s "${workflow}"
-            git add "${workflow}"
-          done
           git add -f v2/runtime/release/bundle-*.bin
           git status --short
-          if git diff --cached --quiet; then
-            echo "No V2 implementation changes to commit"
-            exit 0
-          fi
           git commit -m "Implement encrypted memory-only V2 runtime and isolated Android apps"
           git push origin HEAD:"${TARGET_BRANCH}"
