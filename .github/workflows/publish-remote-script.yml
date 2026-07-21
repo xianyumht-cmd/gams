@@ -1,110 +1,135 @@
-name: One-shot self-hosted game engine migration runner
+name: Publish signed remote script
+# Manual trigger marker for remote script 1.0.9
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
+      - remote-script/src/noname.js
       - .github/workflows/publish-remote-script.yml
 
 permissions:
   contents: write
 
 jobs:
-  migrate:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     env:
-      GH_TOKEN: ${{ github.token }}
       KEY_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
-      TARGET_BRANCH: engine-self-hosting-20260722
-      EXTERNAL_GAME_URL: https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js
-      EXTERNAL_GAME_SHA256: 51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43
-      EXTERNAL_GAME_SIZE: "11589175"
-      SELF_HOSTED_ENGINE_URL: https://gams-script-edge.2320006072.workers.dev/engine/stable.js
-      TEST_PAGE_URL: https://m.66rpg.com/h5/1690283?ohp=v3&quality=32
-
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout main and migration branch
+      - name: Checkout main with write authentication
         shell: bash
         run: |
           set -euo pipefail
           git init -q .
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch -q --depth 1 origin main "${TARGET_BRANCH}"
+          git fetch -q --depth 1 origin main
           git checkout -q FETCH_HEAD
-          git worktree add /tmp/migration "origin/${TARGET_BRANCH}"
-          cd /tmp/migration
-          git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
           test -n "${KEY_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
+          test -s remote-script/src/noname.js
+          test -s remote-script/release/manifest.json
+          test -s remote-script/keys/private.pem.enc
+          test -s remote-script/keys/public.pem
 
-      - name: Extract and run migration implementation
+      - name: Unlock existing signing key
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          source=Path('.github/workflows/one-shot-migrate-game-engine.yml').read_text(encoding='utf-8')
-          marker="          cat > /tmp/migrate_engine.py <<'PY'\n"
-          start=source.index(marker)+len(marker)
-          end=source.index("\n          PY\n",start)
-          block=source[start:end]
-          lines=[line[10:] if line.startswith('          ') else line for line in block.splitlines()]
-          Path('/tmp/migrate_engine.py').write_text('\n'.join(lines)+'\n',encoding='utf-8')
-          PY
-          python3 /tmp/migrate_engine.py
-
-      - name: Sign engine release manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd /tmp/migration
           openssl enc -d -aes-256-cbc -pbkdf2 \
             -in remote-script/keys/private.pem.enc \
-            -out /tmp/private.pem \
+            -out /tmp/script-private.pem \
             -pass env:KEY_PASSWORD
-          chmod 600 /tmp/private.pem
-          openssl dgst -sha256 -sign /tmp/private.pem \
-            -out /tmp/engine.sig /tmp/engine-manifest-canonical.txt
-          openssl dgst -sha256 -verify remote-script/keys/public.pem \
-            -signature /tmp/engine.sig /tmp/engine-manifest-canonical.txt
-          python3 - <<'PY'
-          import base64,json
-          from pathlib import Path
-          m=json.loads(Path('/tmp/engine-manifest-unsigned.json').read_text(encoding='utf-8'))
-          m['signatureAlgorithm']='SHA256withECDSA'
-          m['signature']=base64.b64encode(Path('/tmp/engine.sig').read_bytes()).decode('ascii')
-          Path('/tmp/migration/game-engine/release/manifest.json').write_text(json.dumps(m,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-          PY
-          rm -f /tmp/private.pem /tmp/engine.sig /tmp/engine-manifest-canonical.txt /tmp/engine-manifest-unsigned.json
+          chmod 600 /tmp/script-private.pem
 
-      - name: Validate and push migration branch
+      - name: Build unsigned release data
         shell: bash
         run: |
           set -euo pipefail
-          cd /tmp/migration
-          node --check script-edge/src/index.js
-          node --check remote-script/src/noname.js
           python3 - <<'PY'
-          import base64,hashlib,json
           from pathlib import Path
-          m=json.loads(Path('game-engine/release/manifest.json').read_text(encoding='utf-8'))
-          b=(Path('game-engine/release')/m['file']).read_bytes()
-          assert len(b)==m['size']==11589175
-          assert hashlib.sha256(b).hexdigest()==m['sha256']=='51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43'
-          keys=('schemaVersion','channel','version','versionName','file','sha256','size','sourceUrl','minNonameVersion','publishedAt')
-          Path('/tmp/check-canonical').write_text(''.join(f'{k}={m[k]}\n' for k in keys),encoding='utf-8',newline='\n')
-          Path('/tmp/check.sig').write_bytes(base64.b64decode(m['signature'],validate=True))
+          import hashlib, json, re
+          from datetime import datetime, timezone
+
+          source = Path("remote-script/src/noname.js")
+          text = source.read_text(encoding="utf-8")
+          match = re.search(r"^//\s*@version\s+([^\s]+)", text, re.MULTILINE)
+          if not match:
+              raise SystemExit("noname.js must contain a // @version line")
+
+          version_name = match.group(1)
+          nums = [int(x) for x in re.findall(r"\d+", version_name)[:3]]
+          while len(nums) < 3:
+              nums.append(0)
+          version = nums[0] * 10000 + nums[1] * 100 + nums[2]
+
+          old = json.loads(Path("remote-script/release/manifest.json").read_text(encoding="utf-8"))
+          if version <= int(old["version"]):
+              raise SystemExit(
+                  f"New script version {version_name} must be higher than {old['versionName']}"
+              )
+
+          filename = f"noname-{version_name}.js"
+          release_file = Path("remote-script/release") / filename
+          release_file.write_bytes(source.read_bytes())
+          manifest = {
+              "schemaVersion": 1,
+              "channel": "stable",
+              "version": version,
+              "versionName": version_name,
+              "file": filename,
+              "sha256": hashlib.sha256(release_file.read_bytes()).hexdigest(),
+              "size": release_file.stat().st_size,
+              "minAppVersion": 1,
+              "publishedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+          }
+          keys = (
+              "schemaVersion", "channel", "version", "versionName", "file",
+              "sha256", "size", "minAppVersion", "publishedAt"
+          )
+          canonical = "".join(f"{key}={manifest[key]}\n" for key in keys)
+          Path("/tmp/manifest-canonical.txt").write_text(canonical, encoding="utf-8", newline="\n")
+          Path("/tmp/manifest-unsigned.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8"
+          )
           PY
+
+      - name: Sign and verify release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl dgst -sha256 -sign /tmp/script-private.pem \
+            -out /tmp/manifest.sig /tmp/manifest-canonical.txt
           openssl dgst -sha256 -verify remote-script/keys/public.pem \
-            -signature /tmp/check.sig /tmp/check-canonical
-          grep -q '/engine/stable.js' script-edge/src/index.js
-          grep -q 'version      1.1.1' remote-script/src/noname.js
-          git add game-engine script-edge/src/index.js remote-script/src/noname.js \
-            .github/workflows/publish-game-engine.yml \
-            .github/workflows/validate-engine-release.yml \
-            .github/workflows/monitor-upstream-engine.yml \
-            .github/workflows/smoke-self-hosted-engine.yml
-          git commit -m "Self-host modified game engine and add maintenance pipeline"
-          git push origin HEAD:"${TARGET_BRANCH}"
+            -signature /tmp/manifest.sig /tmp/manifest-canonical.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, json
+          manifest = json.loads(Path("/tmp/manifest-unsigned.json").read_text(encoding="utf-8"))
+          manifest["signatureAlgorithm"] = "SHA256withECDSA"
+          manifest["signature"] = base64.b64encode(Path("/tmp/manifest.sig").read_bytes()).decode("ascii")
+          Path("remote-script/release/manifest.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Commit signed release
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f /tmp/script-private.pem /tmp/manifest.sig /tmp/manifest-canonical.txt /tmp/manifest-unsigned.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add remote-script/release
+          git commit -m "Publish signed remote script $(python3 -c 'import json; print(json.load(open("remote-script/release/manifest.json"))["versionName"])')"
+          git push origin HEAD:main
