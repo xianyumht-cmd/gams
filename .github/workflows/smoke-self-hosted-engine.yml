@@ -1,9 +1,14 @@
 name: Smoke test self-hosted game engine
+# Temporary PR trigger after ESM resolution fix
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "31 5 * * 1"
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/smoke-self-hosted-engine.yml
 
 permissions:
   contents: read
