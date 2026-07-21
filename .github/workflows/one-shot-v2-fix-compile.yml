@@ -1,0 +1,57 @@
+name: One-shot fix GG V2 Java compile
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.head_ref == 'v2-server-authoritative'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_BRANCH: v2-server-authoritative
+    steps:
+      - name: Checkout V2 branch with write authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin "${TARGET_BRANCH}"
+          git checkout -B "${TARGET_BRANCH}" FETCH_HEAD
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fix ApiException message access
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java')
+          text=path.read_text(encoding='utf-8')
+          old='''        return error.message == null || error.message.trim().isEmpty()\n                ? "操作失败，请重试" : error.message;'''
+          new='''        String message = error.getMessage();\n        return message == null || message.trim().isEmpty()\n                ? "操作失败，请重试" : message;'''
+          if old in text:
+              path.write_text(text.replace(old,new,1),encoding='utf-8')
+          elif new not in text:
+              raise SystemExit('expected V2 compile patch target not found')
+          PY
+
+      - name: Commit patch when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          if git diff --cached --quiet; then
+            echo "V2 compile patch already applied"
+            exit 0
+          fi
+          git commit -m "Fix V2 ApiException message access"
+          git push origin HEAD:"${TARGET_BRANCH}"
