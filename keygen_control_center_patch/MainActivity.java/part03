@@ -224,7 +224,9 @@
         while (keys.hasNext()) {
             String key = keys.next();
             Object value = object.opt(key);
-            if ("ok".equalsIgnoreCase(key) && Boolean.TRUE.equals(value)) continue;
+            String normalized = normalizeKey(key);
+            if ("ok".equals(normalized) && Boolean.TRUE.equals(value)) continue;
+            if ("settingsjson".equals(normalized) || "manifestjson".equals(normalized) || "token".equals(normalized)) continue;
             appendHumanValue(out, key, value, depth);
         }
     }
@@ -260,6 +262,17 @@
             appendObject(out, (JSONObject) value, depth + 1);
             return;
         }
+        if (value instanceof String && ("detail".equals(normalizeKey(key)) || "reason".equals(normalizeKey(key)))) {
+            String text = String.valueOf(value).trim();
+            if (text.startsWith("{") && text.endsWith("}")) {
+                try {
+                    indent(out, depth).append(label).append("：\n");
+                    appendObject(out, new JSONObject(text), depth + 1);
+                    return;
+                } catch (Exception ignored) {
+                }
+            }
+        }
         if (value instanceof JSONArray) {
             indent(out, depth).append(label).append("：\n");
             appendArray(out, (JSONArray) value, depth + 1);
@@ -274,12 +287,24 @@
     }
 
     private String humanScalar(String key, Object value) {
-        if (value instanceof Boolean) return ((Boolean) value) ? "是（已开启）" : "否（已关闭）";
         String normalizedKey = normalizeKey(key);
+        if (value instanceof Boolean) {
+            boolean enabled = (Boolean) value;
+            if ("permanent".equals(normalizedKey)) return enabled ? "是（永久有效）" : "否（有固定到期时间）";
+            if ("scriptdeliveryenabled".equals(normalizedKey) || "enabled".equals(normalizedKey)) {
+                return enabled ? "正常下发" : "已暂停下发";
+            }
+            return enabled ? "是（已开启）" : "否（已关闭）";
+        }
         if (value instanceof Number) {
             long number = ((Number) value).longValue();
             if (isTimeKey(normalizedKey)) return formatTimestamp(number);
-            if (isDurationKey(normalizedKey)) return formatDuration(number);
+            if (isDurationKey(normalizedKey)) {
+                if (number <= 0L && normalizedKey.contains("offline")) return "不允许离线";
+                if (number <= 0L && normalizedKey.contains("penalty")) return "不扣除有效期";
+                if (number <= 0L && normalizedKey.contains("cooldown")) return "无需等待";
+                return formatDuration(number);
+            }
             if ("sizebytes".equals(normalizedKey)) return formatBytes(number);
             return String.valueOf(value);
         }
@@ -317,6 +342,8 @@
             case "releases": return "已登记版本";
             case "runtime": return "远程资源状态";
             case "dashboard": return "系统总览";
+            case "service": return "服务名称";
+            case "apiversion": return "接口版本";
             case "id": return "记录编号";
             case "licenseid": return "卡密编号";
             case "licensekey": return "完整卡密";
@@ -340,6 +367,7 @@
             case "sessionversion": return "设备会话代数";
             case "configversion": return "配置版本";
             case "minappversion": return "最低可用客户端版本";
+            case "secureappversion": return "启用安全验证的最低客户端版本";
             case "latestappversion": return "最新客户端版本";
             case "forceupdate": return "是否强制更新";
             case "updateurl": return "更新下载地址";
@@ -359,13 +387,41 @@
             case "unbindwindowseconds": return "解绑次数统计周期";
             case "unbindwindowlimit": return "统计周期内最多解绑次数";
             case "sessiongeneration": return "全局会话代数";
+            case "scriptdeliveryenabled": return "远程资源是否允许下发";
+            case "activescriptversion": return "当前指定的远程资源版本";
+            case "configcacheseconds": return "配置缓存时间";
+            case "activations24h": return "最近24小时激活数量";
+            case "riskdevices": return "存在风险的在线设备数量";
+            case "active": return "正常数量";
+            case "disabled": return "已停用数量";
+            case "expired": return "已到期数量";
+            case "enabled": return "远程资源下发状态";
+            case "manifest": return "资源签名信息";
+            case "error": return "错误信息";
+            case "requested": return "请求处理数量";
+            case "success": return "成功处理数量";
+            case "permanent": return "是否永久有效";
+            case "forceonline": return "是否强制联网";
+            case "tokenexpiresat": return "登录状态到期时间";
+            case "licenseexpiresat": return "卡密到期时间";
+            case "penaltyseconds": return "换设备扣除时长";
+            case "purpose": return "请求用途";
+            case "servertime": return "服务器时间";
+            case "nonce": return "安全验证随机码";
             case "event": return "操作类型";
             case "detail": return "操作详情";
             case "reason": return "操作原因";
+            case "changedat": return "修改时间";
+            case "changedby": return "操作者";
+            case "updatedat": return "更新时间";
+            case "updatedby": return "更新者";
+            case "licensestatus": return "卡密状态";
             case "version": return "版本号";
             case "filename": return "文件名称";
+            case "file": return "资源文件名称";
             case "sha256": return "文件校验值";
             case "sizebytes": return "文件大小";
+            case "size": return "文件大小";
             case "firstseenat": return "首次登记时间";
             case "manifestjson": return "签名清单";
             case "currentversion": return "当前使用版本";
@@ -401,6 +457,9 @@
             case "device": return "设备";
             case "devices": return "设备";
             case "error": return "错误";
+            case "enabled": return "已启用";
+            case "disabled": return "已停用";
+            case "expired": return "已到期";
             case "expires": return "到期";
             case "expiry": return "到期";
             case "force": return "强制";
@@ -441,19 +500,42 @@
             case "success": return "成功";
             case "failed": return "失败";
             case "admin_login": return "管理员登录";
+            case "admin_login_ok": return "管理员登录成功";
+            case "admin_login_failed": return "管理员登录失败";
             case "activate": return "设备激活";
             case "verify": return "授权复检";
             case "self_unbind": return "用户自助更换设备";
             case "admin_unbind": return "管理员解绑设备";
-            case "license_create": return "创建卡密";
-            case "license_update": return "修改卡密";
+            case "admin_device_revoked": return "管理员撤销单个设备";
+            case "admin_devices_revoked_all": return "管理员撤销该卡全部设备";
+            case "license_create":
+            case "license_created": return "创建卡密";
+            case "license_update":
+            case "license_updated": return "修改卡密";
+            case "license_disable": return "停用卡密";
+            case "license_enable": return "启用卡密";
+            case "license_extend": return "续期卡密";
+            case "license_permanent": return "将卡密改为永久有效";
+            case "license_unbind": return "解绑卡密设备";
             case "license_batch_action": return "批量处理卡密";
-            case "settings_update": return "修改系统设置";
+            case "license_batch_disable": return "批量停用卡密";
+            case "license_batch_enable": return "批量启用卡密";
+            case "license_batch_extend": return "批量续期卡密";
+            case "license_batch_unbind": return "批量解绑卡密";
+            case "settings_update":
+            case "settings_updated": return "修改系统设置";
             case "settings_rollback": return "回滚系统设置";
-            case "sessions_revoke_all": return "全局撤销会话";
-            case "runtime_pause": return "暂停远程资源";
-            case "runtime_resume": return "恢复远程资源";
-            case "runtime_select": return "切换远程资源版本";
+            case "sessions_revoke_all":
+            case "sessions_revoked_all": return "全局撤销会话";
+            case "runtime_pause":
+            case "runtime_paused": return "暂停远程资源";
+            case "runtime_resume":
+            case "runtime_resumed": return "恢复远程资源";
+            case "runtime_select":
+            case "runtime_selected": return "切换远程资源版本";
+            case "security-policy": return "修改安全策略";
+            case "version-update": return "修改版本与更新设置";
+            case "revoke-all-sessions": return "全局撤销全部会话";
             case "disable": return "停用";
             case "enable": return "启用";
             case "unbind": return "解绑设备";
@@ -515,7 +597,7 @@
     }
 
     private String formatDuration(long totalSeconds) {
-        if (totalSeconds <= 0L) return "不允许离线或无需等待";
+        if (totalSeconds <= 0L) return "0秒";
         long days = totalSeconds / 86400L;
         long hours = (totalSeconds % 86400L) / 3600L;
         long minutes = (totalSeconds % 3600L) / 60L;
