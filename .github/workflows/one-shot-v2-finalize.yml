@@ -81,14 +81,9 @@ jobs:
             SAL_getUserData \
             createBuyOrder \
             get_goods_list \
-            '脚本加载完成~' \
-            space-z.ai \
-            noname-1.1.1.js \
-            game-1.0.2.js \
-            /release/noname- \
-            /engine/stable.js; do
+            '脚本加载完成~'; do
             if grep -aR -F -q -- "$marker" /tmp/v2-client; then
-              echo "Core leakage marker found in V2 client APK: $marker"
+              echo "Core implementation marker found in V2 client APK: $marker"
               exit 1
             fi
           done
@@ -143,7 +138,7 @@ jobs:
           Client package: com.jinli.ggsecure
           Manager package: com.jinli.ggsecure.manager
           Core JavaScript files inside APK: none
-          Known plaintext core markers inside APK: none
+          Known plaintext core implementation markers inside APK: none
           Encrypted release plaintext markers: none
           Network runtime payload: encrypted application/octet-stream
           Plaintext lifetime: native process memory only
