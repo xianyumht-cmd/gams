@@ -3,11 +3,11 @@ from pathlib import Path
 path = Path("remote-script/src/noname.js")
 text = path.read_text(encoding="utf-8")
 
-old_version = "// @version      1.0.6"
-new_version = "// @version      1.0.7"
+old_version = "// @version      1.0.8"
+new_version = "// @version      1.0.9"
 if new_version not in text:
     if old_version not in text:
-        raise SystemExit("Expected current script version 1.0.6")
+        raise SystemExit("Expected current script version 1.0.8")
     text = text.replace(old_version, new_version, 1)
 
 old = '''  function start() {
@@ -59,4 +59,4 @@ if old not in text:
 text = text.replace(old, new, 1)
 
 path.write_text(text, encoding="utf-8")
-print("Patched early menu readiness and bumped noname.js to 1.0.7")
+print("Patched early menu readiness and bumped noname.js to 1.0.9")
