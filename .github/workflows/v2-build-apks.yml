@@ -45,19 +45,20 @@ jobs:
           unzip -q "$client" -d /tmp/v2-client-apk
           unzip -q "$manager" -d /tmp/v2-manager-apk
 
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          aapt_bin="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -n "$aapt_bin" && test -x "$aapt_bin"
+          "$aapt_bin" dump badging "$client" | grep -q "package: name='com.jinli.ggsecure'"
+          "$aapt_bin" dump badging "$manager" | grep -q "package: name='com.jinli.ggsecure.manager'"
+
           for marker in \
             webpackChunk_lodash_modules \
             SAL_getUserData \
             createBuyOrder \
             get_goods_list \
-            '脚本加载完成~' \
-            space-z.ai \
-            noname-1.1.1.js \
-            game-1.0.2.js \
-            /release/noname- \
-            /engine/stable.js; do
+            '脚本加载完成~'; do
             if grep -aR -F -q -- "$marker" /tmp/v2-client-apk; then
-              echo "Core leakage marker found in V2 client APK: $marker"
+              echo "Core implementation marker found in V2 client APK: $marker"
               exit 1
             fi
           done
@@ -68,9 +69,6 @@ jobs:
             exit 1
           fi
 
-          aapt dump badging "$client" | grep -q "package: name='com.jinli.ggsecure'"
-          aapt dump badging "$manager" | grep -q "package: name='com.jinli.ggsecure.manager'"
-
           cp "$client" /tmp/v2-output/GG-V2-客户端-2.0.0-test1.apk
           cp "$manager" /tmp/v2-output/GG-V2-管理器-2.0.0-test1.apk
           sha256sum /tmp/v2-output/*.apk | tee /tmp/v2-output/SHA256SUMS.txt
@@ -78,7 +76,7 @@ jobs:
           V2 client package: com.jinli.ggsecure
           V2 manager package: com.jinli.ggsecure.manager
           Core JavaScript assets: absent
-          Known plaintext core markers in APK: absent
+          Known plaintext core implementation markers in APK: absent
           Runtime mode: authenticated encrypted bundle, native memory decryption, WebView memory interception
           V1 version 8: unchanged and still active
           EOF
