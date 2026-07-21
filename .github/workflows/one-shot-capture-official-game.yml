@@ -1,4 +1,5 @@
 name: One-shot capture official game scripts
+# trigger: 2026-07-22-1
 
 on:
   push:
