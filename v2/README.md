@@ -23,4 +23,4 @@ They can be installed beside the V1 applications.
 
 This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
 
-Java compile fix and final rebuild started.
+Java compile fix applied. Final rebuild, leakage scan and runtime deployment retriggered.
