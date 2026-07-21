@@ -23,4 +23,11 @@ They can be installed beside the V1 applications.
 
 This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
 
-APK build and leakage scan passed. Runtime deployment diagnostics started.
+## Current status
+
+- Client and manager release APKs compile successfully.
+- Package-name verification passed.
+- APK scan found no JavaScript assets or known plaintext core implementation markers.
+- Encrypted release scan found no known plaintext core markers.
+- Cloudflare V2 runtime Worker is deployed and its online health check passed.
+- V2 is awaiting manual Android testing before any change to V1 version 8.
