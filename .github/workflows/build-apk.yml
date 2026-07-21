@@ -129,24 +129,67 @@ jobs:
           set -o pipefail
           gradle :client:assembleRelease :keygen:assembleRelease --stacktrace 2>&1 | tee /tmp/gradle-build.log
 
-      - name: Upload build diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: GG-v1.4.0-and-manager-v1.3.0-build-diagnostics
-          path: |
-            /tmp/apply-v14.log
-            /tmp/gradle-build.log
-          if-no-files-found: warn
-          retention-days: 7
+      - name: Sign APKs with fixed GG release key
+        shell: bash
+        env:
+          GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+          GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GG_RELEASE_KEYSTORE_BASE64:-}" || -z "${GG_RELEASE_KEYSTORE_PASSWORD:-}" ]]; then
+            echo "::error::Missing GG_RELEASE_KEYSTORE_BASE64 or GG_RELEASE_KEYSTORE_PASSWORD repository secret"
+            exit 1
+          fi
 
-      - name: Verify and rename APKs
+          client_apk="client/build/outputs/apk/release/client-release.apk"
+          admin_apk="keygen/build/outputs/apk/release/keygen-release.apk"
+          test -s "$client_apk"
+          test -s "$admin_apk"
+
+          keystore="$RUNNER_TEMP/GG-release.jks"
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          keytool -list \
+            -keystore "$keystore" \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" \
+            -alias gg-release >/dev/null
+
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          apksigner="$build_tools/apksigner"
+          test -x "$apksigner"
+
+          sign_apk() {
+            local input="$1"
+            local output="${input%.apk}-fixed-signed.apk"
+            "$apksigner" sign \
+              --ks "$keystore" \
+              --ks-key-alias gg-release \
+              --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --v1-signing-enabled true \
+              --v2-signing-enabled true \
+              --v3-signing-enabled true \
+              --v4-signing-enabled false \
+              --out "$output" \
+              "$input"
+            mv "$output" "$input"
+          }
+
+          sign_apk "$client_apk"
+          sign_apk "$admin_apk"
+          rm -f "$keystore"
+
+      - name: Verify fixed signature and rename APKs
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
           client_apk="client/build/outputs/apk/release/client-release.apk"
           admin_apk="keygen/build/outputs/apk/release/keygen-release.apk"
+          expected_cert="F220C5D47513C744CB9B5F17C0F8F39B0C109F8F7DC892989713EEF33FDBE0C4"
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          apksigner="$build_tools/apksigner"
+
           test -s client/build/outputs/mapping/release/mapping.txt
           test -s keygen/build/outputs/mapping/release/mapping.txt
           unzip -l "$client_apk" > /tmp/client-files.txt
@@ -155,13 +198,42 @@ jobs:
           if strings /tmp/client.dex | grep -q 'Lcom/jinli/quickweb/OnlineLicenseManager;'; then exit 1; fi
           if strings /tmp/client.dex | grep -q 'gams-license-api.2320006072.workers.dev'; then exit 1; fi
           if strings /tmp/client.dex | grep -q 'license.xn--8pv109c.top'; then exit 1; fi
-          cp "$client_apk" "dist/GG-v1.4.0-动态策略测试版.apk"
-          cp "$admin_apk" "dist/GG-管理器-v1.3.0-人类语言版.apk"
+
+          "$apksigner" verify --verbose --print-certs "$client_apk" | tee /tmp/client-signature.txt
+          "$apksigner" verify --verbose --print-certs "$admin_apk" | tee /tmp/admin-signature.txt
+
+          for log in /tmp/client-signature.txt /tmp/admin-signature.txt; do
+            grep -q 'Verified using v1 scheme.*true' "$log"
+            grep -q 'Verified using v2 scheme.*true' "$log"
+            grep -q 'Verified using v3 scheme.*true' "$log"
+          done
+
+          client_cert="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/client-signature.txt | head -n 1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          admin_cert="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/admin-signature.txt | head -n 1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          test "$client_cert" = "$expected_cert"
+          test "$admin_cert" = "$expected_cert"
+
+          cp "$client_apk" "dist/GG-v1.4.0-固定正式签名版.apk"
+          cp "$admin_apk" "dist/GG-管理器-v1.3.0-固定正式签名版.apk"
+          printf '%s\n' "$expected_cert" > dist/SIGNING_CERT_SHA256.txt
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-fixed-release-signing-build-diagnostics
+          path: |
+            /tmp/apply-v14.log
+            /tmp/gradle-build.log
+            /tmp/client-signature.txt
+            /tmp/admin-signature.txt
+          if-no-files-found: warn
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-v1.4.0-and-manager-v1.3.0
+          name: GG-fixed-release-signed
           path: dist/*
           if-no-files-found: error
           retention-days: 30
