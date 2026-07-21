@@ -2,4 +2,4 @@
 
 This branch contains the isolated Android V2 client, V2 manager, runtime backend, migration tooling, and leakage verification. V1 mainline and version 8 remain active until manual acceptance.
 
-Android isolation completed. Complete V2 tree commit retry started.
+Android isolation completed. V2 implementation code push retry started without workflow files.
