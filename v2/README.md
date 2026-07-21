@@ -23,4 +23,4 @@ They can be installed beside the V1 applications.
 
 This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
 
-Build succeeded. Refined leakage scan and runtime deployment started.
+Build succeeded. SDK-aware leakage scan and runtime deployment started.
