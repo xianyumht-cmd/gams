@@ -20,5 +20,5 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add remote-script/src/noname.js
-          git commit -m "Apply menu sizing before the first G click"
+          git commit -m "Apply menu sizing before the first G click on 1.0.9"
           git push
