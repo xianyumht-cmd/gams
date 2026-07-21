@@ -1,0 +1,216 @@
+name: One-shot V2 Android bootstrap
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.head_ref == 'v2-server-authoritative'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_BRANCH: v2-server-authoritative
+    steps:
+      - name: Checkout V2 branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin "${TARGET_BRANCH}"
+          git checkout -B "${TARGET_BRANCH}" FETCH_HEAD
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create isolated V2 Android project
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_root=v2/audit/current-final-project
+          test -s "$source_root/client/src/main/java/com/jinli/quickweb/DeviceIdentity.java"
+          test -s "$source_root/keygen/src/main/java/com/jinli/keygen/MainActivity.java"
+
+          rm -rf v2/android
+          mkdir -p v2/android/client/src/main/java/com/jinli/ggsecure
+          mkdir -p v2/android/manager/src/main/java/com/jinli/ggsecure/manager
+          mkdir -p v2/android/client/src/main/res
+          mkdir -p v2/android/manager/src/main/res
+
+          cp -a "$source_root/client/src/main/res/." v2/android/client/src/main/res/
+          cp -a "$source_root/keygen/src/main/res/." v2/android/manager/src/main/res/
+          cp "$source_root/client/proguard-rules.pro" v2/android/client/proguard-rules.pro
+          cp "$source_root/client/lint.xml" v2/android/client/lint.xml
+          cp "$source_root/keygen/proguard-rules.pro" v2/android/manager/proguard-rules.pro
+          cp "$source_root/keygen/lint.xml" v2/android/manager/lint.xml
+
+          for name in DeviceIdentity SecureStore ResilientApiTransport RuntimeNames; do
+            sed 's/package com\.jinli\.quickweb;/package com.jinli.ggsecure;/' \
+              "$source_root/client/src/main/java/com/jinli/quickweb/${name}.java" \
+              > "v2/android/client/src/main/java/com/jinli/ggsecure/${name}.java"
+          done
+
+          for name in MainActivity AdminApiManager ResilientApiTransport RuntimeNames J; do
+            sed 's/package com\.jinli\.keygen;/package com.jinli.ggsecure.manager;/' \
+              "$source_root/keygen/src/main/java/com/jinli/keygen/${name}.java" \
+              > "v2/android/manager/src/main/java/com/jinli/ggsecure/manager/${name}.java"
+          done
+          find v2/android/manager/src/main/java -type f -name '*.java' -print0 \
+            | xargs -0 sed -i 's/com\.jinli\.keygen/com.jinli.ggsecure.manager/g'
+
+          cat > v2/android/settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "GGSecureV2"
+          include(":client", ":manager")
+          EOF
+
+          cat > v2/android/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.9.3" apply false
+          }
+          EOF
+
+          cat > v2/android/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.nonTransitiveRClass=true
+          EOF
+
+          cat > v2/android/client/build.gradle.kts <<'EOF'
+          plugins { id("com.android.application") }
+          android {
+              namespace = "com.jinli.ggsecure"
+              compileSdk = 35
+              defaultConfig {
+                  applicationId = "com.jinli.ggsecure"
+                  minSdk = 24
+                  targetSdk = 35
+                  versionCode = 1
+                  versionName = "2.0.0-test1"
+              }
+              buildTypes {
+                  debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
+                  release {
+                      isMinifyEnabled = true
+                      isShrinkResources = true
+                      signingConfig = signingConfigs.getByName("debug")
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              lint { abortOnError = true; lintConfig = file("lint.xml") }
+          }
+          dependencies { implementation("androidx.webkit:webkit:1.16.0") }
+          EOF
+
+          cat > v2/android/manager/build.gradle.kts <<'EOF'
+          plugins { id("com.android.application") }
+          android {
+              namespace = "com.jinli.ggsecure.manager"
+              compileSdk = 35
+              defaultConfig {
+                  applicationId = "com.jinli.ggsecure.manager"
+                  minSdk = 24
+                  targetSdk = 35
+                  versionCode = 1
+                  versionName = "2.0.0-test1"
+              }
+              buildTypes {
+                  debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
+                  release {
+                      isMinifyEnabled = true
+                      isShrinkResources = true
+                      signingConfig = signingConfigs.getByName("debug")
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              lint { abortOnError = true; lintConfig = file("lint.xml") }
+          }
+          EOF
+
+          cat > v2/android/client/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application
+                  android:allowBackup="false"
+                  android:debuggable="false"
+                  android:extractNativeLibs="false"
+                  android:fullBackupContent="false"
+                  android:hardwareAccelerated="true"
+                  android:label="GG V2 测试版"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:usesCleartextTraffic="false">
+                  <activity
+                      android:name=".MainActivity"
+                      android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > v2/android/manager/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application
+                  android:allowBackup="false"
+                  android:debuggable="false"
+                  android:label="GG V2 管理器"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:usesCleartextTraffic="false">
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          sed -i 's/android:label="GG 管理器"/android:label="GG V2 管理器"/g' v2/android/manager/src/main/AndroidManifest.xml
+          grep -RIl 'GG 管理器' v2/android/manager/src/main/java | xargs -r sed -i 's/GG 管理器/GG V2 管理器/g'
+
+          cat > v2/android/README.md <<'EOF'
+          # GG V2 Android
+
+          - Client package: `com.jinli.ggsecure`
+          - Manager package: `com.jinli.ggsecure.manager`
+          - Both can be installed beside V1.
+          - Runtime core must never be packaged as assets or persisted to disk.
+          EOF
+
+      - name: Commit bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add v2/android
+          git commit -m 'Bootstrap isolated V2 client and manager Android project'
+          git push origin HEAD:"${TARGET_BRANCH}"
