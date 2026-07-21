@@ -70,21 +70,40 @@ jobs:
           PY
           rm -f /tmp/private.pem /tmp/engine.sig /tmp/engine-manifest-canonical.txt /tmp/engine-manifest-unsigned.json
 
-      - name: Validate and push migration branch
+      - name: Validate JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/migration
           node --check script-edge/src/index.js
           node --check remote-script/src/noname.js
+          grep -q /engine/stable.js script-edge/src/index.js
+          grep -q 'version      1.1.1' remote-script/src/noname.js
+
+      - name: Verify engine bytes and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/migration
           python3 - <<'PY'
           import base64,hashlib,json
           from pathlib import Path
-          m=json.loads(Path('game-engine/release/manifest.json').read_text());b=(Path('game-engine/release')/m['file']).read_bytes();assert len(b)==m['size']==11589175;assert hashlib.sha256(b).hexdigest()==m['sha256']=='51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43';keys=('schemaVersion','channel','version','versionName','file','sha256','size','sourceUrl','minNonameVersion','publishedAt');Path('/tmp/canonical').write_text(''.join(f'{k}={m[k]}\n' for k in keys),newline='\n');Path('/tmp/checksig').write_bytes(base64.b64decode(m['signature'],validate=True))
+          m=json.loads(Path('game-engine/release/manifest.json').read_text())
+          b=(Path('game-engine/release')/m['file']).read_bytes()
+          assert len(b)==m['size']==11589175
+          assert hashlib.sha256(b).hexdigest()==m['sha256']=='51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43'
+          keys=('schemaVersion','channel','version','versionName','file','sha256','size','sourceUrl','minNonameVersion','publishedAt')
+          Path('/tmp/canonical').write_text(''.join(f'{k}={m[k]}\n' for k in keys),newline='\n')
+          Path('/tmp/checksig').write_bytes(base64.b64decode(m['signature'],validate=True))
           PY
           openssl dgst -sha256 -verify remote-script/keys/public.pem -signature /tmp/checksig /tmp/canonical
-          grep -q /engine/stable.js script-edge/src/index.js
-          grep -q 'version      1.1.1' remote-script/src/noname.js
-          git add game-engine script-edge/src/index.js remote-script/src/noname.js .github/workflows/publish-game-engine.yml .github/workflows/validate-engine-release.yml .github/workflows/monitor-upstream-engine.yml .github/workflows/smoke-self-hosted-engine.yml
-          git commit -m "Self-host modified game engine and add maintenance pipeline"
+
+      - name: Commit and push core migration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/migration
+          git status --short
+          git add game-engine script-edge/src/index.js remote-script/src/noname.js
+          git commit -m "Self-host modified game engine core release"
           git push origin HEAD:"${TARGET_BRANCH}"
