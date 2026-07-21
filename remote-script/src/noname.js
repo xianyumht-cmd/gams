@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.0.3
+// @version      1.0.4
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -13,10 +13,17 @@
 // ===== 可修改显示配置：只改这里即可 =====
 const USER_PANEL_CONFIG = {
   badgeText: "菜单",
-  title: "宝宝切记：1.不要登陆自己的账号；2.橙光按钮不要点.点就卡死.3.商城只可购买1个，可多次购买.4.不要点击商城里的一键领取",
-  subtitle: "状态:更新时间:2026年7月21 正常使用，此项目后续由【锦鲤】更新维护，有问题联系客服锦鲤",
-  metaText: "ios风格主题",
-  footerText: "全部设置和数据在本地存档，刷新页面后仍会保持当前状态，清理浏览器缓存垃圾可能导致存档丢失。",
+  title: "使用前必看",
+  noticeItems: [
+    "不要登录自己的账号",
+    "不要点击橙光按钮，点击后可能卡死",
+    "商城一次只购买一个商品，可以重复购买",
+    "不要点击商城中的“一键领取”"
+  ],
+  subtitle: "状态：2026年7月21日正常使用",
+  maintainerText: "本项目后续由【锦鲤】更新维护，有问题请联系客服锦鲤",
+  metaText: "iOS 风格主题",
+  footerText: "全部设置和数据保存在本地，刷新页面后仍会保留。清理浏览器缓存可能导致存档丢失。",
   dragTitle: "按住这里可拖动悬浮窗",
   floatingButtonText: "G",
   floatingButtonTitle: "点击展开，按住拖动",
@@ -28,6 +35,20 @@ const USER_PANEL_CONFIG = {
   customTip: "自定义当前鲜花与累充数量",
   customIcon: "充",
   customButton: "去修改"
+};
+
+const USER_PANEL_STYLE = {
+  titleSize: "18px",
+  noticeSize: "14px",
+  subtitleSize: "13px",
+  itemTitleSize: "14px",
+  itemDescriptionSize: "13px",
+  buttonSize: "14px",
+  footerSize: "12px",
+  floatingButtonSize: "16px",
+  titleLineHeight: "1.35",
+  bodyLineHeight: "1.65",
+  secondaryLineHeight: "1.5"
 };
 // ===== 配置结束 =====
 
@@ -9877,3 +9898,184 @@ function hwyqahb() {
   };
   vLsxqxg["init"]()
 })();
+
+// ===== 可读说明布局增强 =====
+(() => {
+  const config = USER_PANEL_CONFIG;
+  const styleConfig = USER_PANEL_STYLE;
+  const styleId = "gg-readable-panel-style-v1";
+  const noticeId = "gg-readable-notice-list";
+  const maintainerId = "gg-readable-maintainer";
+  let applying = false;
+
+  function injectStyle() {
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `
+      .gg-readable-title {
+        font-size: ${styleConfig.titleSize} !important;
+        line-height: ${styleConfig.titleLineHeight} !important;
+        font-weight: 700 !important;
+        text-align: left !important;
+        overflow-wrap: anywhere;
+      }
+      #${noticeId} {
+        box-sizing: border-box;
+        width: 100%;
+        margin: 10px 0 14px !important;
+        padding: 10px 12px 10px 32px !important;
+        border: 1px solid rgba(245, 158, 11, 0.22);
+        border-radius: 12px;
+        background: rgba(255, 247, 237, 0.92);
+        color: #4b2e16;
+        font-size: ${styleConfig.noticeSize} !important;
+        line-height: ${styleConfig.bodyLineHeight} !important;
+        text-align: left !important;
+        list-style-position: outside;
+        overflow-wrap: anywhere;
+      }
+      #${noticeId} li {
+        margin: 5px 0 !important;
+        padding-left: 2px;
+      }
+      .gg-readable-subtitle,
+      #${maintainerId} {
+        font-size: ${styleConfig.subtitleSize} !important;
+        line-height: ${styleConfig.secondaryLineHeight} !important;
+        text-align: left !important;
+        overflow-wrap: anywhere;
+      }
+      #${maintainerId} {
+        margin-top: 5px;
+        opacity: 0.86;
+      }
+      .gg-readable-meta {
+        font-size: ${styleConfig.footerSize} !important;
+        line-height: ${styleConfig.secondaryLineHeight} !important;
+      }
+      .gg-readable-item-title {
+        font-size: ${styleConfig.itemTitleSize} !important;
+        line-height: 1.4 !important;
+        font-weight: 600 !important;
+      }
+      .gg-readable-item-description {
+        font-size: ${styleConfig.itemDescriptionSize} !important;
+        line-height: ${styleConfig.secondaryLineHeight} !important;
+        overflow-wrap: anywhere;
+      }
+      .gg-readable-action {
+        font-size: ${styleConfig.buttonSize} !important;
+        line-height: 1.2 !important;
+      }
+      .gg-readable-footer {
+        font-size: ${styleConfig.footerSize} !important;
+        line-height: ${styleConfig.secondaryLineHeight} !important;
+        text-align: left !important;
+        overflow-wrap: anywhere;
+      }
+      .gg-readable-floating {
+        font-size: ${styleConfig.floatingButtonSize} !important;
+        line-height: 1 !important;
+        font-weight: 700 !important;
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function leafWithExactText(value) {
+    if (!value || !document.body) return null;
+    const nodes = document.body.querySelectorAll("*");
+    for (const node of nodes) {
+      if (node.childElementCount !== 0) continue;
+      if ((node.textContent || "").trim() === value) return node;
+    }
+    return null;
+  }
+
+  function markText(value, className) {
+    const node = leafWithExactText(value);
+    if (node) node.classList.add(className);
+    return node;
+  }
+
+  function escapeSelector(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+    return String(value).replace(/["\\]/g, "\\$&");
+  }
+
+  function renderReadablePanel() {
+    if (applying || !document.documentElement) return;
+    applying = true;
+    try {
+      injectStyle();
+
+      const title = markText(config.title, "gg-readable-title");
+      if (title && !document.getElementById(noticeId) && Array.isArray(config.noticeItems)) {
+        const list = document.createElement("ol");
+        list.id = noticeId;
+        for (const item of config.noticeItems) {
+          const clean = String(item || "").trim();
+          if (!clean) continue;
+          const row = document.createElement("li");
+          row.textContent = clean;
+          list.appendChild(row);
+        }
+        if (list.childElementCount) title.insertAdjacentElement("afterend", list);
+      }
+
+      const subtitle = markText(config.subtitle, "gg-readable-subtitle");
+      if (subtitle && config.maintainerText && !document.getElementById(maintainerId)) {
+        const maintainer = document.createElement("div");
+        maintainer.id = maintainerId;
+        maintainer.textContent = config.maintainerText;
+        subtitle.insertAdjacentElement("afterend", maintainer);
+      }
+
+      markText(config.metaText, "gg-readable-meta");
+      markText(config.footerText, "gg-readable-footer");
+
+      [config.fullscreenName, config.customName].forEach(value =>
+        markText(value, "gg-readable-item-title")
+      );
+      [config.fullscreenTip, config.customTip].forEach(value =>
+        markText(value, "gg-readable-item-description")
+      );
+      [config.fullscreenButton, config.customButton].forEach(value =>
+        markText(value, "gg-readable-action")
+      );
+
+      if (config.floatingButtonTitle) {
+        const floating = document.querySelector(
+          `[title="${escapeSelector(config.floatingButtonTitle)}"]`
+        );
+        if (floating) floating.classList.add("gg-readable-floating");
+      }
+    } finally {
+      applying = false;
+    }
+  }
+
+  let scheduled = false;
+  function scheduleRender() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      renderReadablePanel();
+    });
+  }
+
+  function start() {
+    renderReadablePanel();
+    const observer = new MutationObserver(scheduleRender);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
+})();
+
