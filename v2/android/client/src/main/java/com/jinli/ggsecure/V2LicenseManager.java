@@ -387,8 +387,9 @@ final class V2LicenseManager {
         if ("runtime_paused".equals(error.code)) return "V2运行服务维护中";
         if ("upgrade_required".equals(error.code)) return "V2客户端需要更新";
         if ("too_many_requests".equals(error.code)) return "操作过于频繁，请稍后再试";
-        return error.message == null || error.message.trim().isEmpty()
-                ? "操作失败，请重试" : error.message;
+        String message = error.getMessage();
+        return message == null || message.trim().isEmpty()
+                ? "操作失败，请重试" : message;
     }
 
     private static String safeMessage(Throwable error) {
