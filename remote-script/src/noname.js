@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.0.6
+// @version      1.0.7
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -15,6 +15,7 @@ const USER_PANEL_CONFIG = {
   badgeText: "菜单",
   title: "使用前必看",
   noticeItems: [
+    "进游戏后再点击，否则此菜单显示不全",
     "点上面无需下载，然后点在线看",
     "不要点击分类,直接点击作品或搜索",
     "不要登录自己的账号",
@@ -23,9 +24,9 @@ const USER_PANEL_CONFIG = {
     "不要点击商城中的“一键领取”"
   ],
   subtitle: "状态：2026年7月21日正常使用",
-  maintainerText: "本项目后续由【锦鲤】更新维护，有问题请联系客服锦鲤",
+  maintainerText: "请先查看说明，有问题请联系客服",
   metaText: "iOS 风格主题",
-  footerText: "全部设置和数据保存在本地，刷新页面后仍会保留。清理浏览器缓存可能导致存档丢失。",
+  footerText: "全部设置和存档保存在本机，刷新页面后仍会保留。清理手机垃圾或点击重置可能导致存档丢失。",
   dragTitle: "按住这里可拖动悬浮窗",
   floatingButtonText: "G",
   floatingButtonTitle: "点击展开，按住拖动",
