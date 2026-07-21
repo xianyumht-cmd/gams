@@ -23,4 +23,4 @@ They can be installed beside the V1 applications.
 
 This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
 
-Android compile diagnostics started after the first real build failure.
+Java compile fix and final rebuild started.
