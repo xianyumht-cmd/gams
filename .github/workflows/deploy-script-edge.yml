@@ -1,4 +1,5 @@
 name: Deploy signed script edge
+# One-shot verification trigger for self-hosted engine rollout
 
 on:
   workflow_dispatch:
