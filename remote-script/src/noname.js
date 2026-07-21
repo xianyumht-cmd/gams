@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.0.7
+// @version      1.0.8
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -16,12 +16,13 @@ const USER_PANEL_CONFIG = {
   title: "使用前必看",
   noticeItems: [
     "进游戏后再点击，否则此菜单显示不全",
+    "如果画面没加载出来，点返回重新进就行",
     "点上面无需下载，然后点在线看",
     "不要点击分类,直接点击作品或搜索",
     "不要登录自己的账号",
+    "不要点击商城中的“一键领取”",
     "不要点击橙光按钮",
-    "商城一次只购买一个商品，可以重复购买",
-    "不要点击商城中的“一键领取”"
+    "商城一次只购买一个商品，可以重复购买"
   ],
   subtitle: "状态：2026年7月21日正常使用",
   maintainerText: "请先查看说明，有问题请联系客服",
