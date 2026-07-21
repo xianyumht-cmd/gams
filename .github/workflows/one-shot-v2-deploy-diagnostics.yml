@@ -1,0 +1,59 @@
+name: One-shot diagnose GG V2 runtime deployment
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'v2-server-authoritative'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v2-server-authoritative
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Deploy and capture complete diagnostics
+        shell: bash
+        run: |
+          set +e
+          exec > >(tee /tmp/v2-deploy.log) 2>&1
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || exit 21
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || exit 22
+          test -n "${LICENSE_ADMIN_PASSWORD:-}" || exit 23
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          echo "database_id=$database_id"
+          test -n "$database_id" && test "$database_id" != "null" || exit 24
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" \
+            v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.generated.jsonc
+          cd v2/runtime
+          printf '%s' "$LICENSE_ADMIN_PASSWORD" \
+            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+          code=$?
+          echo "secret_exit=$code"
+          test "$code" = 0 || exit "$code"
+          npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
+          code=$?
+          echo "deploy_exit=$code"
+          exit "$code"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2-runtime-deploy-diagnostics
+          path: /tmp/v2-deploy.log
+          retention-days: 3
+          if-no-files-found: error
