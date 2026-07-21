@@ -43,7 +43,9 @@ jobs:
           PY
 
       - name: Install Playwright Chromium
-        run: npm exec --yes playwright@1.52.0 install --with-deps chromium
+        run: |
+          npm install --no-save playwright@1.52.0
+          npx playwright install --with-deps chromium
 
       - name: Test redirect deterministically and observe the real page
         shell: bash
