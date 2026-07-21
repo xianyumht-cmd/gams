@@ -1,0 +1,130 @@
+name: Smoke test self-hosted game engine
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "31 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify deployed manifest and stable engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://gams-script-edge.2320006072.workers.dev"
+          curl --fail --silent --show-error --retry 3 \
+            "${base}/engine/manifest.json" \
+            -o /tmp/engine-manifest.json
+          curl --fail --silent --show-error --retry 3 \
+            "${base}/engine/stable.js" \
+            -o /tmp/stable-game.js
+
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(
+              Path("/tmp/engine-manifest.json").read_text(encoding="utf-8")
+          )
+          body = Path("/tmp/stable-game.js").read_bytes()
+          assert len(body) == manifest["size"], (len(body), manifest["size"])
+          assert hashlib.sha256(body).hexdigest() == manifest["sha256"]
+          print(manifest["versionName"], len(body), manifest["sha256"])
+          PY
+
+      - name: Install Playwright Chromium
+        run: npm exec --yes playwright@1.52.0 install --with-deps chromium
+
+      - name: Confirm page requests only the self-hosted engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/smoke.mjs <<'NODE'
+          import { chromium } from "playwright";
+          import fs from "node:fs";
+
+          const browser = await chromium.launch({
+            headless: true,
+            args: ["--no-sandbox", "--disable-dev-shm-usage"],
+          });
+          const context = await browser.newContext({
+            locale: "zh-CN",
+            timezoneId: "Asia/Shanghai",
+            viewport: { width: 412, height: 915 },
+            isMobile: true,
+            hasTouch: true,
+            ignoreHTTPSErrors: true,
+            userAgent:
+              "Mozilla/5.0 (Linux; Android 13; Pixel 7) " +
+              "AppleWebKit/537.36 Chrome/125.0.0.0 Mobile Safari/537.36",
+          });
+          await context.addInitScript({ path: "remote-script/src/noname.js" });
+
+          const page = await context.newPage();
+          const requests = [];
+          const pageErrors = [];
+          page.on("request", (request) => requests.push(request.url()));
+          page.on("pageerror", (error) =>
+            pageErrors.push(String(error.stack || error.message)),
+          );
+
+          await page.goto(
+            "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+            { waitUntil: "domcontentloaded", timeout: 90_000 },
+          );
+          await page.waitForTimeout(10_000);
+
+          for (const label of ["无需下载", "在线看", "开始游戏", "在线玩"]) {
+            try {
+              const button = page.getByText(label, { exact: false }).first();
+              if (await button.isVisible({ timeout: 1_000 })) {
+                await button.click({ timeout: 5_000 });
+                await page.waitForTimeout(5_000);
+              }
+            } catch {}
+          }
+          await page.waitForTimeout(45_000);
+
+          const report = {
+            selfHosted: requests.some((url) =>
+              url.includes(
+                "gams-script-edge.2320006072.workers.dev/engine/stable.js",
+              ),
+            ),
+            legacyRequests: requests.filter((url) =>
+              url.includes("space-z.ai/game.js"),
+            ),
+            engineRequests: requests.filter((url) =>
+              /game\.js|engine\/stable/.test(url),
+            ),
+            pageErrors: pageErrors.slice(0, 30),
+          };
+          fs.writeFileSync(
+            "/tmp/self-hosted-engine-smoke.json",
+            JSON.stringify(report, null, 2),
+          );
+          console.log(JSON.stringify(report, null, 2));
+          await browser.close();
+
+          if (!report.selfHosted || report.legacyRequests.length > 0) {
+            process.exitCode = 1;
+          }
+          NODE
+          node /tmp/smoke.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: self-hosted-engine-smoke-report
+          path: /tmp/self-hosted-engine-smoke.json
+          retention-days: 30

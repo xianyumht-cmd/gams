@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.1.0
+// @version      1.1.1
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -23,7 +23,7 @@ const USER_PANEL_CONFIG = {
     "不要点击橙光按钮",
     "商城一次只购买一个商品，可以重复购买"
   ],
-  subtitle: "状态：2026年7月21日正常使用",
+  subtitle: "状态：2026年7月22日正常使用",
   maintainerText: "请先查看说明，有问题请联系客服",
   metaText: "iOS 风格主题",
   footerText: "全部设置和存档保存在本机，刷新页面后仍会保留。清理手机垃圾或点击重置可能导致存档丢失。",
@@ -10224,3 +10224,45 @@ function hwyqahb() {
 
   start();
 })();
+
+// ===== Self-hosted modified game engine redirect =====
+;(() => {
+  "use strict";
+  if (window.__GG_SELF_HOSTED_ENGINE_REDIRECT__) return;
+  window.__GG_SELF_HOSTED_ENGINE_REDIRECT__ = true;
+  const SELF_HOSTED_ENGINE_URL = "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
+  const isLegacyEngineUrl = (value) => {
+    if (!value) return false;
+    try {
+      const parsed = new URL(String(value), location.href);
+      return parsed.hostname.endsWith(".space-z.ai") && /\/game\.js$/i.test(parsed.pathname);
+    } catch {
+      return /space-z\.ai\/game\.js(?:[?#]|$)/i.test(String(value));
+    }
+  };
+  const rewriteEngineUrl = (value) => isLegacyEngineUrl(value) ? SELF_HOSTED_ENGINE_URL : value;
+  const rewriteScriptNode = (node) => {
+    if (!(node instanceof HTMLScriptElement)) return;
+    const current = node.getAttribute("src") || node.src;
+    if (isLegacyEngineUrl(current)) node.src = SELF_HOSTED_ENGINE_URL;
+  };
+  const srcDescriptor = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, "src");
+  if (srcDescriptor?.get && srcDescriptor?.set) {
+    Object.defineProperty(HTMLScriptElement.prototype, "src", {
+      configurable: srcDescriptor.configurable,
+      enumerable: srcDescriptor.enumerable,
+      get: srcDescriptor.get,
+      set(value) { return srcDescriptor.set.call(this, rewriteEngineUrl(value)); },
+    });
+  }
+  const originalSetAttribute = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function(name, value) {
+    if (this instanceof HTMLScriptElement && String(name).toLowerCase() === "src") value = rewriteEngineUrl(value);
+    return originalSetAttribute.call(this, name, value);
+  };
+  const originalAppendChild = Node.prototype.appendChild;
+  Node.prototype.appendChild = function(child) { rewriteScriptNode(child); return originalAppendChild.call(this, child); };
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function(child, reference) { rewriteScriptNode(child); return originalInsertBefore.call(this, child, reference); };
+})();
+// ===== End self-hosted modified game engine redirect =====

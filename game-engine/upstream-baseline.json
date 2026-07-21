@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+  "capturedAt": "2026-07-21T17:31:24Z",
+  "resources": {
+    "officialGame": {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "size": 15372213,
+      "sha256": "baae434801689407444132888f944ef6f3b99235337a3cbfa97271ab8581e40c"
+    },
+    "salInterface": {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/SALInterface.js?v=202607090001",
+      "size": 18608,
+      "sha256": "bf0ac297deb72bce2ac416a839c7e706ef474221552c786e9ed134d81e9da271"
+    },
+    "webGLLib": {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+      "size": 262518,
+      "sha256": "ee0dcc10b025b94beb9753023438e4589eb73c847b431fd09c0f9092ec8a5b6e"
+    },
+    "gameInfoData": {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
+      "size": 773,
+      "sha256": "e9749bb8b62a6664c2e81420249d98cf1a6eef0c00b310b545754d9b57fea34d"
+    }
+  }
+}

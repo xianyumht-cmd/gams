@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "version": 10002,
+  "versionName": "1.0.2",
+  "file": "game-1.0.2.js",
+  "sha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43",
+  "size": 11589175,
+  "sourceUrl": "https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js",
+  "minNonameVersion": "1.1.1",
+  "publishedAt": "2026-07-21T17:31:24Z",
+  "signatureAlgorithm": "SHA256withECDSA",
+  "signature": "MEUCIA4Z9YoxB/LoYrhjSvJaS6GrfK6iKVdWhee/+xeJ62Q5AiEAwBjCJ2otf4Yu+Ooxcj0/Y9b0Q3SRx/dnc6+V2vTDT+U="
+}

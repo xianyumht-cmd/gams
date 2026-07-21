@@ -1,0 +1,76 @@
+name: Validate self-hosted engine release
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - game-engine/**
+      - script-edge/**
+      - remote-script/src/noname.js
+      - .github/workflows/publish-game-engine.yml
+      - .github/workflows/monitor-upstream-engine.yml
+      - .github/workflows/smoke-self-hosted-engine.yml
+      - .github/workflows/validate-engine-release.yml
+  push:
+    branches: [main]
+    paths:
+      - game-engine/**
+      - script-edge/**
+      - remote-script/src/noname.js
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify engine manifest, bytes and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("game-engine/release/manifest.json").read_text(encoding="utf-8"))
+          engine_path = Path("game-engine/release") / manifest["file"]
+          body = engine_path.read_bytes()
+          assert len(body) == manifest["size"], (len(body), manifest["size"])
+          assert hashlib.sha256(body).hexdigest() == manifest["sha256"]
+
+          keys = (
+              "schemaVersion", "channel", "version", "versionName", "file",
+              "sha256", "size", "sourceUrl", "minNonameVersion", "publishedAt",
+          )
+          Path("/tmp/engine-canonical.txt").write_text(
+              "".join(f"{key}={manifest[key]}\n" for key in keys),
+              encoding="utf-8",
+              newline="\n",
+          )
+          Path("/tmp/engine.sig").write_bytes(
+              base64.b64decode(manifest["signature"], validate=True)
+          )
+          json.loads(Path("game-engine/upstream-baseline.json").read_text(encoding="utf-8"))
+          json.loads(Path("game-engine/compatibility.json").read_text(encoding="utf-8"))
+          print(manifest["versionName"], len(body), manifest["sha256"])
+          PY
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/engine.sig /tmp/engine-canonical.txt
+
+      - name: Validate JavaScript and edge routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check script-edge/src/index.js
+          node --check remote-script/src/noname.js
+          grep -q 'SELF_HOSTED_ENGINE_URL' remote-script/src/noname.js
+          grep -q 'gams-script-edge.2320006072.workers.dev/engine/stable.js' remote-script/src/noname.js
+          grep -q '/engine/stable.js' script-edge/src/index.js
+          grep -q 'game-engine/release' script-edge/src/index.js
