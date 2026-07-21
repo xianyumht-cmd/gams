@@ -1,5 +1,5 @@
     private void showDeviceManager() {
-        LinearLayout root = page("设备管理", "查看绑定设备、公钥指纹、风险标记和会话状态");
+        LinearLayout root = page("设备管理", "查看绑定设备、风险提示、最近在线情况和会话状态");
         TextView output = box("点击刷新设备列表");
         Button refresh = primary("刷新设备列表");
         root.addView(refresh, full(dp(10)));
@@ -9,7 +9,7 @@
             output.setText(result.success ? pretty(result.data) : result.message);
         }));
 
-        EditText deviceId = input("设备记录 ID", false);
+        EditText deviceId = input("设备记录编号", false);
         root.addView(deviceId, full(dp(10)));
         LinearLayout row = horizontal();
         Button detail = small("设备详情");
@@ -19,27 +19,27 @@
         root.addView(row, full(dp(14)));
         detail.setOnClickListener(v -> {
             String id = deviceId.getText().toString().trim();
-            if (id.isEmpty()) { output.setText("请输入设备记录 ID"); return; }
+            if (id.isEmpty()) { output.setText("请输入设备记录编号"); return; }
             api.get("/v1/admin/devices/detail?id=" + encode(id), result -> {
                 if (redirectUnauthorized(result)) return;
                 output.setText(result.success ? pretty(result.data) : result.message);
             });
         });
-        revoke.setOnClickListener(v -> confirmDanger("撤销设备", "该设备当前会话将立即失效。", () -> {
+        revoke.setOnClickListener(v -> confirmDanger("撤销设备", "该设备当前登录状态将立即失效。", () -> {
             String id = deviceId.getText().toString().trim();
-            if (id.isEmpty()) { output.setText("请输入设备记录 ID"); return; }
+            if (id.isEmpty()) { output.setText("请输入设备记录编号"); return; }
             api.post("/v1/admin/devices/revoke", new JSONObject().put("id", id), result -> {
                 if (redirectUnauthorized(result)) return;
                 output.setText(result.success ? pretty(result.data) : result.message);
             });
         }));
 
-        EditText license = input("卡密或卡密 ID，用于撤销该卡全部设备", false);
+        EditText license = input("卡密或卡密编号，用于撤销该卡全部设备", false);
         root.addView(license, full(dp(10)));
         Button revokeAll = danger("撤销该卡全部设备");
-        revokeAll.setOnClickListener(v -> confirmDanger("撤销全部设备", "该卡密所有当前设备都会立即退出。", () -> {
+        revokeAll.setOnClickListener(v -> confirmDanger("撤销全部设备", "该卡密当前绑定的所有设备都会立即退出。", () -> {
             String value = license.getText().toString().trim();
-            if (value.isEmpty()) { output.setText("请输入卡密或卡密 ID"); return; }
+            if (value.isEmpty()) { output.setText("请输入卡密或卡密编号"); return; }
             api.post("/v1/admin/devices/revoke-all", identifier(value), result -> {
                 if (redirectUnauthorized(result)) return;
                 output.setText(result.success ? pretty(result.data) : result.message);
@@ -62,12 +62,12 @@
     }
 
     private void renderVersionSettings() {
-        LinearLayout root = page("版本与更新", "保存后由 Worker 动态下发，无需重新编译客户端");
-        EditText minimum = numeric("最低允许 versionCode");
-        EditText latest = numeric("最新 versionCode");
-        CheckBox force = check("低于最新版本时强制更新", currentSettings.optBoolean("forceUpdate", false));
-        EditText url = input("HTTPS 更新下载地址", false);
-        EditText message = multiline("更新说明");
+        LinearLayout root = page("版本与更新", "保存后服务器会自动下发，不需要重新编译客户端");
+        EditText minimum = numeric("最低可用客户端版本数字");
+        EditText latest = numeric("最新客户端版本数字");
+        CheckBox force = check("旧版本必须更新后才能继续使用", currentSettings.optBoolean("forceUpdate", false));
+        EditText url = input("更新包 HTTPS 下载地址", false);
+        EditText message = multiline("展示给用户的更新说明");
         minimum.setText(String.valueOf(currentSettings.optInt("minAppVersion", 5)));
         latest.setText(String.valueOf(currentSettings.optInt("latestAppVersion", 8)));
         url.setText(currentSettings.optString("updateUrl", ""));
@@ -106,34 +106,34 @@
     }
 
     private void renderSecuritySettings() {
-        LinearLayout root = page("安全策略", "所有输入均有服务器安全范围限制");
-        EditText session = numeric("客户端会话秒数 900-86400");
-        EditText adminSession = numeric("管理会话秒数 900-86400");
-        EditText recheck = numeric("前台复检秒数 300-43200");
-        EditText offline = numeric("新版离线秒数 0-86400");
-        EditText legacyOffline = numeric("旧版离线秒数 0-172800");
-        EditText lease = numeric("脚本租期秒数 300-86400");
-        EditText challenge = numeric("nonce 秒数 30-300");
-        EditText risk = numeric("风险强制在线阈值 1-5");
-        CheckBox globalOnline = check("全局强制在线", currentSettings.optBoolean("globalForceOnline", false));
-        CheckBox selfUnbind = check("允许用户自助更换设备", currentSettings.optBoolean("selfUnbindEnabled", true));
-        EditText penalty = numeric("解绑扣除秒数 0-259200");
-        EditText cooldown = numeric("解绑冷却秒数 0-2592000");
-        EditText window = numeric("统计窗口秒数 86400-7776000");
-        EditText limit = numeric("窗口内最多解绑次数 1-30");
+        LinearLayout root = page("安全策略", "直接填写小时、分钟和天数；服务器仍会自动限制不安全的数值");
+        EditText session = numeric("客户端保持登录（小时，1-24）");
+        EditText adminSession = numeric("管理器保持登录（小时，1-24）");
+        EditText recheck = numeric("客户端前台复检间隔（分钟，5-720）");
+        EditText offline = numeric("新版客户端允许离线（小时，0-24）");
+        EditText legacyOffline = numeric("旧版客户端允许离线（小时，0-48）");
+        EditText lease = numeric("远程资源授权有效期（小时，1-24）");
+        EditText challenge = numeric("单次安全验证有效期（秒，30-300）");
+        EditText risk = numeric("达到几级风险时强制联网（1-5）");
+        CheckBox globalOnline = check("所有客户端必须联网验证", currentSettings.optBoolean("globalForceOnline", false));
+        CheckBox selfUnbind = check("允许用户自己更换绑定设备", currentSettings.optBoolean("selfUnbindEnabled", true));
+        EditText penalty = numeric("用户自助换设备扣除时长（小时，0-72）");
+        EditText cooldown = numeric("两次自助换设备至少间隔（天，0-30）");
+        EditText window = numeric("解绑次数统计周期（天，1-90）");
+        EditText limit = numeric("统计周期内最多解绑次数（1-30）");
 
-        setNumber(session, "sessionSeconds", 7200);
-        setNumber(adminSession, "adminSessionSeconds", 43200);
-        setNumber(recheck, "foregroundRecheckSeconds", 1800);
-        setNumber(offline, "offlineGraceSeconds", 21600);
-        setNumber(legacyOffline, "legacyOfflineGraceSeconds", 86400);
-        setNumber(lease, "scriptLeaseSeconds", 21600);
-        setNumber(challenge, "challengeSeconds", 90);
-        setNumber(risk, "riskForceOnlineThreshold", 2);
-        setNumber(penalty, "unbindPenaltySeconds", 21600);
-        setNumber(cooldown, "unbindCooldownSeconds", 86400);
-        setNumber(window, "unbindWindowSeconds", 2592000);
-        setNumber(limit, "unbindWindowLimit", 5);
+        setScaledNumber(session, "sessionSeconds", 3600L, 7200L);
+        setScaledNumber(adminSession, "adminSessionSeconds", 3600L, 43200L);
+        setScaledNumber(recheck, "foregroundRecheckSeconds", 60L, 1800L);
+        setScaledNumber(offline, "offlineGraceSeconds", 3600L, 21600L);
+        setScaledNumber(legacyOffline, "legacyOfflineGraceSeconds", 3600L, 86400L);
+        setScaledNumber(lease, "scriptLeaseSeconds", 3600L, 21600L);
+        setNumber(challenge, "challengeSeconds", 90L);
+        setNumber(risk, "riskForceOnlineThreshold", 2L);
+        setScaledNumber(penalty, "unbindPenaltySeconds", 3600L, 21600L);
+        setScaledNumber(cooldown, "unbindCooldownSeconds", 86400L, 86400L);
+        setScaledNumber(window, "unbindWindowSeconds", 86400L, 2592000L);
+        setNumber(limit, "unbindWindowLimit", 5L);
 
         EditText[] fields = {session, adminSession, recheck, offline, legacyOffline, lease,
                 challenge, risk, penalty, cooldown, window, limit};
@@ -144,19 +144,19 @@
         Button save = primary("保存安全策略");
         save.setOnClickListener(v -> {
             JSONObject changes = new JSONObject()
-                    .put("sessionSeconds", parseLong(session, 7200L))
-                    .put("adminSessionSeconds", parseLong(adminSession, 43200L))
-                    .put("foregroundRecheckSeconds", parseLong(recheck, 1800L))
-                    .put("offlineGraceSeconds", parseLong(offline, 21600L))
-                    .put("legacyOfflineGraceSeconds", parseLong(legacyOffline, 86400L))
-                    .put("scriptLeaseSeconds", parseLong(lease, 21600L))
+                    .put("sessionSeconds", scaledSeconds(session, 3600L, 7200L))
+                    .put("adminSessionSeconds", scaledSeconds(adminSession, 3600L, 43200L))
+                    .put("foregroundRecheckSeconds", scaledSeconds(recheck, 60L, 1800L))
+                    .put("offlineGraceSeconds", scaledSeconds(offline, 3600L, 21600L))
+                    .put("legacyOfflineGraceSeconds", scaledSeconds(legacyOffline, 3600L, 86400L))
+                    .put("scriptLeaseSeconds", scaledSeconds(lease, 3600L, 21600L))
                     .put("challengeSeconds", parseLong(challenge, 90L))
                     .put("riskForceOnlineThreshold", parseLong(risk, 2L))
                     .put("globalForceOnline", globalOnline.isChecked())
                     .put("selfUnbindEnabled", selfUnbind.isChecked())
-                    .put("unbindPenaltySeconds", parseLong(penalty, 21600L))
-                    .put("unbindCooldownSeconds", parseLong(cooldown, 86400L))
-                    .put("unbindWindowSeconds", parseLong(window, 2592000L))
+                    .put("unbindPenaltySeconds", scaledSeconds(penalty, 3600L, 21600L))
+                    .put("unbindCooldownSeconds", scaledSeconds(cooldown, 86400L, 86400L))
+                    .put("unbindWindowSeconds", scaledSeconds(window, 86400L, 2592000L))
                     .put("unbindWindowLimit", parseLong(limit, 5L));
             saveSettings(changes, "security-policy", result, this::showSecuritySettings);
         });
