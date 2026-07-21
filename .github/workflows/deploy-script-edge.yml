@@ -39,21 +39,43 @@ jobs:
       - name: Deploy Worker
         working-directory: script-edge
         run: npx --yes wrangler@4 deploy --config wrangler.jsonc
-      - name: Verify deployed endpoint
+      - name: Verify deployed script and engine endpoints
         shell: bash
         run: |
           set -euo pipefail
           endpoint="https://gams-script-edge.2320006072.workers.dev"
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-            "${endpoint}/health" | grep -q '"ok":true'
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-            "${endpoint}/release/manifest.json" > /tmp/manifest.json
+
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            "${endpoint}/health" > /tmp/health.json
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            "${endpoint}/release/manifest.json" > /tmp/script-manifest.json
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            "${endpoint}/engine/manifest.json" > /tmp/engine-manifest.json
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            "${endpoint}/engine/stable.js" > /tmp/stable-game.js
+
           python3 - <<'PY'
+          import hashlib
           import json
           from pathlib import Path
-          data = json.loads(Path('/tmp/manifest.json').read_text(encoding='utf-8'))
-          assert data['schemaVersion'] == 1
-          assert data['signatureAlgorithm'] == 'SHA256withECDSA'
-          assert len(data['sha256']) == 64
-          print('verified remote manifest:', data['versionName'])
+
+          health = json.loads(Path('/tmp/health.json').read_text(encoding='utf-8'))
+          assert health['ok'] is True
+          assert health['service'] == 'signed-script-edge'
+          assert health.get('engineHosting') is True
+
+          script = json.loads(Path('/tmp/script-manifest.json').read_text(encoding='utf-8'))
+          assert script['schemaVersion'] == 1
+          assert script['signatureAlgorithm'] == 'SHA256withECDSA'
+          assert len(script['sha256']) == 64
+
+          engine = json.loads(Path('/tmp/engine-manifest.json').read_text(encoding='utf-8'))
+          body = Path('/tmp/stable-game.js').read_bytes()
+          assert engine['schemaVersion'] == 1
+          assert engine['signatureAlgorithm'] == 'SHA256withECDSA'
+          assert len(body) == engine['size'], (len(body), engine['size'])
+          assert hashlib.sha256(body).hexdigest() == engine['sha256']
+
+          print('verified remote script:', script['versionName'])
+          print('verified remote engine:', engine['versionName'], len(body), engine['sha256'])
           PY
