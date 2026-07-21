@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.0.8
+// @version      1.0.9
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -10197,17 +10197,31 @@ function hwyqahb() {
     });
   }
 
+  function reinforceAfterInteraction() {
+    applyViewportLimit();
+    requestAnimationFrame(applyViewportLimit);
+    setTimeout(applyViewportLimit, 0);
+    setTimeout(applyViewportLimit, 80);
+  }
+
   function start() {
+    if (!document.documentElement) {
+      setTimeout(start, 0);
+      return;
+    }
+    injectViewportStyle();
     applyViewportLimit();
     const observer = new MutationObserver(scheduleApply);
     observer.observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener("pointerup", reinforceAfterInteraction, false);
+    document.addEventListener("touchend", reinforceAfterInteraction, { passive: true });
+    document.addEventListener("click", reinforceAfterInteraction, false);
     window.addEventListener("resize", scheduleApply, { passive: true });
-    window.addEventListener("orientationchange", scheduleApply, { passive: true });
+    window.addEventListener("orientationchange", reinforceAfterInteraction, { passive: true });
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", reinforceAfterInteraction, { once: true });
+    }
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start, { once: true });
-  } else {
-    start();
-  }
+  start();
 })();
