@@ -49,7 +49,7 @@
 
     private void showAudit() {
         LinearLayout root = page("审计日志", "按操作类型或卡密编号筛选最近记录，中文和英文名称都可以");
-        EditText event = input("操作类型，可留空，例如：管理员登录、激活、解绑", false);
+        EditText event = input("操作类型，可留空，例如：管理员登录成功、设备激活、自助换设备", false);
         EditText licenseId = input("卡密编号，可留空", false);
         TextView output = box("点击查询读取最近100条记录");
         Button query = primary("查询日志");
@@ -548,28 +548,38 @@
     private String eventCode(String input) {
         String clean = input == null ? "" : input.trim();
         switch (clean) {
-            case "管理员登录": return "admin_login";
+            case "管理员登录":
+            case "管理员登录成功": return "admin_login_ok";
+            case "管理员登录失败": return "admin_login_failed";
             case "设备激活":
             case "激活": return "activate";
             case "授权复检":
             case "复检": return "verify";
             case "用户自助更换设备":
             case "自助换设备": return "self_unbind";
-            case "管理员解绑设备":
-            case "管理员解绑":
-            case "解绑": return "admin_unbind";
-            case "创建卡密": return "license_create";
-            case "修改卡密": return "license_update";
-            case "批量处理卡密":
-            case "批量操作": return "license_batch_action";
+            case "管理员撤销单个设备":
+            case "撤销设备": return "admin_device_revoked";
+            case "管理员撤销该卡全部设备":
+            case "撤销该卡全部设备": return "admin_devices_revoked_all";
+            case "创建卡密": return "license_created";
+            case "修改卡密": return "license_updated";
+            case "停用卡密": return "license_disable";
+            case "启用卡密": return "license_enable";
+            case "续期卡密": return "license_extend";
+            case "卡密改为永久": return "license_permanent";
+            case "解绑卡密设备": return "license_unbind";
+            case "批量停用卡密": return "license_batch_disable";
+            case "批量启用卡密": return "license_batch_enable";
+            case "批量续期卡密": return "license_batch_extend";
+            case "批量解绑卡密": return "license_batch_unbind";
             case "修改系统设置":
-            case "修改设置": return "settings_update";
+            case "修改设置": return "settings_updated";
             case "回滚系统设置":
             case "回滚配置": return "settings_rollback";
-            case "全局撤销会话": return "sessions_revoke_all";
-            case "暂停远程资源": return "runtime_pause";
-            case "恢复远程资源": return "runtime_resume";
-            case "切换远程资源版本": return "runtime_select";
+            case "全局撤销会话": return "sessions_revoked_all";
+            case "暂停远程资源": return "runtime_paused";
+            case "恢复远程资源": return "runtime_resumed";
+            case "切换远程资源版本": return "runtime_selected";
             default: return clean;
         }
     }
