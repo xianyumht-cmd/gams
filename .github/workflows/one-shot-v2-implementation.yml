@@ -22,14 +22,14 @@ jobs:
       TARGET_BRANCH: v2-server-authoritative
 
     steps:
-      - name: Checkout V2 branch
+      - name: Checkout V2 branch and main payload source
         shell: bash
         run: |
           set -euo pipefail
           git init -q .
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch -q --depth 1 origin "${TARGET_BRANCH}"
-          git checkout -B "${TARGET_BRANCH}" FETCH_HEAD
+          git fetch -q --depth 1 origin main "${TARGET_BRANCH}"
+          git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           test -n "${KEY_PASSWORD:-}"
@@ -38,12 +38,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .github/v2-implementation-payload/part00 \
-              .github/v2-implementation-payload/part01 \
-              .github/v2-implementation-payload/part02 \
-              .github/v2-implementation-payload/part03 \
-              .github/v2-implementation-payload/part04 \
-              | tr -d '\r\n ' | base64 -d > /tmp/v2-implementation.tar.gz
+          for part in part00 part01 part02 part03 part04; do
+            git show "origin/main:.github/v2-implementation-payload/${part}"
+          done | tr -d '\r\n ' | base64 -d > /tmp/v2-implementation.tar.gz
           echo "5313bb5fadd05200e77d4a9e639419b9c26531437219622ba4051360ca25cc26  /tmp/v2-implementation.tar.gz" | sha256sum -c -
           tar -xzf /tmp/v2-implementation.tar.gz
           rm -f /tmp/v2-implementation.tar.gz
