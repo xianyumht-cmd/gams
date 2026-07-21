@@ -51,7 +51,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > /tmp/smoke.mjs <<'NODE'
+          cat > .self-hosted-engine-smoke.mjs <<'NODE'
           import { chromium } from "playwright";
           import fs from "node:fs";
 
@@ -201,7 +201,8 @@ jobs:
             process.exitCode = 1;
           }
           NODE
-          node /tmp/smoke.mjs
+          node .self-hosted-engine-smoke.mjs
+          rm -f .self-hosted-engine-smoke.mjs
 
       - uses: actions/upload-artifact@v4
         if: always()
