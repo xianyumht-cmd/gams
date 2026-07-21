@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.0.9
+// @version      1.1.0
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -15,7 +15,6 @@ const USER_PANEL_CONFIG = {
   badgeText: "菜单",
   title: "使用前必看",
   noticeItems: [
-    "进游戏后再点击，否则此菜单显示不全",
     "如果画面没加载出来，点返回重新进就行",
     "点上面无需下载，然后点在线看",
     "不要点击分类,直接点击作品或搜索",
@@ -4324,7 +4323,7 @@ function hwyqahb() {
       ["icon"]:"跳"
     },
     ["enable"+"FreeMo"+"de"]: {
-      ["title"]:"默认开启",
+      ["title"]:"按住此处可滑动",
       ["tip"]:"无限花",
       ["icon"]:"on"
     },
