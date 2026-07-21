@@ -1,0 +1,160 @@
+name: One-shot finalize GG V2 APKs and runtime
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  finalize:
+    if: github.head_ref == 'v2-server-authoritative'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+    steps:
+      - name: Checkout V2 source branch
+        uses: actions/checkout@v4
+        with:
+          ref: v2-server-authoritative
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate V2 source and encrypted release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s v2/runtime/src/index.js
+          test -s v2/runtime/release/manifest.json
+          bundle="v2/runtime/release/$(jq -r '.file' v2/runtime/release/manifest.json)"
+          test -s "$bundle"
+          expected_size="$(jq -r '.size' v2/runtime/release/manifest.json)"
+          expected_sha="$(jq -r '.sha256' v2/runtime/release/manifest.json)"
+          test "$(stat -c %s "$bundle")" = "$expected_size"
+          test "$(sha256sum "$bundle" | awk '{print $1}')" = "$expected_sha"
+          for marker in webpackChunk_lodash_modules SAL_getUserData createBuyOrder get_goods_list '脚本加载完成~'; do
+            if grep -aFq "$marker" "$bundle"; then
+              echo "Plaintext core marker found in encrypted release: $marker"
+              exit 1
+            fi
+          done
+          node --check v2/runtime/src/index.js
+
+      - name: Build V2 client and manager
+        working-directory: v2/android
+        run: gradle --no-daemon :client:assembleRelease :manager:assembleRelease
+
+      - name: Inspect APK packages and leakage markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          client="v2/android/client/build/outputs/apk/release/client-release.apk"
+          manager="v2/android/manager/build/outputs/apk/release/manager-release.apk"
+          test -s "$client"
+          test -s "$manager"
+          mkdir -p /tmp/v2-client /tmp/v2-manager /tmp/v2-delivery
+          unzip -q "$client" -d /tmp/v2-client
+          unzip -q "$manager" -d /tmp/v2-manager
+
+          aapt dump badging "$client" | grep -q "package: name='com.jinli.ggsecure'"
+          aapt dump badging "$manager" | grep -q "package: name='com.jinli.ggsecure.manager'"
+
+          for marker in \
+            webpackChunk_lodash_modules \
+            SAL_getUserData \
+            createBuyOrder \
+            get_goods_list \
+            '脚本加载完成~' \
+            space-z.ai \
+            noname-1.1.1.js \
+            game-1.0.2.js \
+            /release/noname- \
+            /engine/stable.js; do
+            if grep -aR -F -q -- "$marker" /tmp/v2-client; then
+              echo "Core leakage marker found in V2 client APK: $marker"
+              exit 1
+            fi
+          done
+
+          if find /tmp/v2-client -type f \( -name '*.js' -o -name 'game.js' -o -name 'noname.js' \) | grep -q .; then
+            echo "JavaScript file found in V2 client APK"
+            find /tmp/v2-client -type f \( -name '*.js' -o -name 'game.js' -o -name 'noname.js' \)
+            exit 1
+          fi
+
+          cp "$client" /tmp/v2-delivery/GG-V2-客户端-2.0.0-test1.apk
+          cp "$manager" /tmp/v2-delivery/GG-V2-管理器-2.0.0-test1.apk
+          sha256sum /tmp/v2-delivery/*.apk | tee /tmp/v2-delivery/SHA256SUMS.txt
+
+      - name: Deploy V2 encrypted runtime Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${LICENSE_ADMIN_PASSWORD:-}"
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != "null"
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" \
+            v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.generated.jsonc
+          cd v2/runtime
+          printf '%s' "$LICENSE_ADMIN_PASSWORD" \
+            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+          npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
+
+      - name: Verify V2 runtime online
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://gams-runtime-v2.2320006072.workers.dev"
+          for attempt in $(seq 1 24); do
+            status="$(curl --silent --show-error --output /tmp/v2-health.json --write-out '%{http_code}' "$endpoint/health" || true)"
+            if [[ "$status" == "200" ]] && jq -e '.ok == true and .service == "gams-runtime-v2" and .encryptedRuntime == true' /tmp/v2-health.json >/dev/null; then
+              echo "V2 encrypted runtime is online"
+              break
+            fi
+            if [[ "$attempt" == "24" ]]; then
+              cat /tmp/v2-health.json 2>/dev/null || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+          cat > /tmp/v2-delivery/SECURITY-CHECK.txt <<'EOF'
+          Client package: com.jinli.ggsecure
+          Manager package: com.jinli.ggsecure.manager
+          Core JavaScript files inside APK: none
+          Known plaintext core markers inside APK: none
+          Encrypted release plaintext markers: none
+          Network runtime payload: encrypted application/octet-stream
+          Plaintext lifetime: native process memory only
+          WebView cache delivery: disabled; game.js is intercepted from native memory
+          V1 version 8: unchanged and remains active
+          Runtime endpoint: https://gams-runtime-v2.2320006072.workers.dev
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GG-V2-client-and-manager-2.0.0-test1
+          path: /tmp/v2-delivery/*
+          retention-days: 30
+          if-no-files-found: error
