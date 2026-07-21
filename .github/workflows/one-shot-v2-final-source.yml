@@ -1,0 +1,117 @@
+name: One-shot V2 final source capture
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: github.head_ref == 'v2-server-authoritative'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_BRANCH: v2-server-authoritative
+    steps:
+      - name: Checkout V2 branch with write authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin "${TARGET_BRANCH}"
+          git checkout -B "${TARGET_BRANCH}" FETCH_HEAD
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Restore project payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+          names = [
+              'part00','part01','part02','part03a','part03b','part03c','part03d',
+              'part04','part05a','part05b','part05c','part05d','part06','part07','part08',
+          ]
+          expected = {
+              'part03a':'55daa0b004d668fac704fcdafd4ed95e1f4972c8b21e4d9cdcbd4e45760f3a06',
+              'part03b':'c15f08e8eed02a7def56ffadaab03263a14fe081802851987cffad3d64e1f7c4',
+              'part03c':'832e962722e94114bba427ee0bb9c013d09514d91b7d786713399795e2c00937',
+              'part03d':'3f1870c7564e9ae856945a14a724c02692708d2e209ffa0696ee621585a31256',
+              'part05a':'43c475b28ae2f1d5e5d12bc718338a51dff4116ab8661c0ee2ac66a183c3064e',
+              'part05b':'f45deca39cbe0398b3ce5d2209d0533c53198cfbd7a9c26b74eeb549de7c492f',
+              'part05c':'7f1bcd7ab9310339247b7469a84de37af5a9c76fe39b5fe6cb073f38e523d3f2',
+              'part05d':'ab252aed7f91fedeb9d6a6db184daae017d0fbed7248e464474ef837a7f45c65',
+          }
+          parts=[Path('payload_xz')/n for n in names]
+          for part in parts:
+              cleaned=''.join(part.read_text(encoding='utf-8').split()).encode()
+              if part.name in expected and hashlib.sha256(cleaned).hexdigest()!=expected[part.name]:
+                  raise SystemExit(f'checksum mismatch: {part}')
+          raw=base64.b64decode(''.join(''.join(p.read_text(encoding='utf-8').split()) for p in parts),validate=True)
+          if hashlib.sha256(raw).hexdigest()!='aab22ffe5e49fbcb6ba9efa8f960aa90057644ae5a94511d2334704dbb92ea9d':
+              raise SystemExit('payload checksum mismatch')
+          Path('/tmp/project_payload.tar.xz').write_bytes(raw)
+          PY
+          tar -xJf /tmp/project_payload.tar.xz
+
+      - name: Apply current production patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+          python3 client_patch/patch_client.py
+          cp client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+          cp client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+          python3 client_online_patch/patch_client_online.py
+          cp keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java keygen/src/main/java/com/jinli/keygen/MainActivity.java
+          cp keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java keygen/src/main/java/com/jinli/keygen/AdminApiManager.java
+          sed 's/package com.jinli.quickweb;/package com.jinli.keygen;/' client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java > keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
+          python3 keygen_online_patch/patch_keygen_online.py
+          python3 license_endpoint_hotfix/patch_endpoints.py
+          target=client_hardening_patch/src/main/java/com/jinli/quickweb
+          mkdir -p "$target"
+          for name in SecureStore DeviceIdentity OnlineLicenseManager MainActivity; do
+            cat "hardening_client_parts/${name}.java"/part* > "$target/${name}.java"
+          done
+          python3 client_hardening_patch/apply.py
+          python3 client_control_center_patch/version.py
+          python3 client_control_center_patch/activity_patch.py
+
+      - name: Capture final source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=v2/audit/current-final-project
+          rm -rf "$out"
+          mkdir -p "$out"
+          cp -a client "$out/client"
+          cp -a keygen "$out/keygen"
+          cp -a license-api "$out/license-api"
+          cp build.gradle.kts settings.gradle.kts gradle.properties "$out/"
+          find "$out" -type f \( -name '*.class' -o -name '*.jar' -o -name '*.apk' -o -name '*.so' \) -delete
+          find "$out" -type d \( -name build -o -name .gradle \) -prune -exec rm -rf {} + || true
+          {
+            echo '# FINAL SOURCE FILES'
+            find "$out" -type f -printf '%p\t%s bytes\n' | sort
+            echo
+            echo '# FINAL PACKAGE IDS'
+            grep -RInE '(applicationId|namespace|^package |android:label|versionCode|versionName)' "$out" || true
+            echo
+            echo '# SCRIPT / CACHE / BRIDGE REFERENCES'
+            grep -RInE '(RemoteScript|noname\.js|engine/stable|game-[0-9]|WebView|evaluateJavascript|JavascriptInterface|WebMessage|localStorage|cache|Cache|execute|challenge|session|nonce)' "$out/client" "$out/license-api" || true
+          } > v2/audit/final-source-report.txt
+
+      - name: Commit final source capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add v2/audit/current-final-project v2/audit/final-source-report.txt
+          git commit -m 'Capture current production Android and backend source for V2 migration'
+          git push origin HEAD:"${TARGET_BRANCH}"
