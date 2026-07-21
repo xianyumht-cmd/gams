@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.0.2
+// @version      1.0.3
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -13,12 +13,12 @@
 // ===== 可修改显示配置：只改这里即可 =====
 const USER_PANEL_CONFIG = {
   badgeText: "菜单",
-  title: "宝宝切记：使用前务必退出自己的账号；橙光按钮不要点.点就卡死.",
-  subtitle: "状态:更新时间:2026.7.6 正常使用，此项目后续由【锦鲤】更新维护，有问题联系客服锦鲤",
+  title: "宝宝切记：1.不要登陆自己的账号；2.橙光按钮不要点.点就卡死.3.商城只可购买1个，可多次购买.4.不要点击商城里的一键领取",
+  subtitle: "状态:更新时间:2026年7月21 正常使用，此项目后续由【锦鲤】更新维护，有问题联系客服锦鲤",
   metaText: "ios风格主题",
   footerText: "全部设置和数据在本地存档，刷新页面后仍会保持当前状态，清理浏览器缓存垃圾可能导致存档丢失。",
   dragTitle: "按住这里可拖动悬浮窗",
-  floatingButtonText: "锦",
+  floatingButtonText: "G",
   floatingButtonTitle: "点击展开，按住拖动",
   fullscreenName: "全屏模式",
   fullscreenTip: "一键进入或退出页面全屏显示",
