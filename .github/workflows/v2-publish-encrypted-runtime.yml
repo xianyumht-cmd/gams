@@ -1,0 +1,150 @@
+name: Publish GG V2 encrypted runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: New V2 runtime version, for example 2.0.1
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KEY_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VERSION_NAME: ${{ inputs.version_name }}
+      TARGET_BRANCH: v2-server-authoritative
+    steps:
+      - name: Checkout current main and V2 worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q origin main "${TARGET_BRANCH}"
+          git checkout -B main origin/main
+          git worktree add /tmp/gg-v2 "origin/${TARGET_BRANCH}"
+          cd /tmp/gg-v2
+          git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate version and source releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${KEY_PASSWORD:-}"
+          [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          new=os.environ['VERSION_NAME']
+          old=json.loads(Path('/tmp/gg-v2/v2/runtime/release/manifest.json').read_text())['versionName']
+          def key(v):
+              nums=[int(x) for x in re.findall(r'\d+',v)[:3]]
+              return tuple(nums+[0]*(3-len(nums)))
+          if key(new) <= key(old):
+              raise SystemExit(f'new V2 runtime {new} must be higher than {old}')
+          print('publishing',new,'over',old)
+          PY
+          script_file="$(jq -r '.file' remote-script/release/manifest.json)"
+          game_file="$(jq -r '.file' game-engine/release/manifest.json)"
+          test -s "remote-script/release/${script_file}"
+          test -s "game-engine/release/${game_file}"
+          printf '%s\n' "$script_file" > /tmp/v2-script-file
+          printf '%s\n' "$game_file" > /tmp/v2-game-file
+
+      - name: Build encrypted runtime release
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet cryptography
+          script_file="$(cat /tmp/v2-script-file)"
+          game_file="$(cat /tmp/v2-game-file)"
+          python3 /tmp/gg-v2/v2/runtime/tools/build_release.py \
+            "remote-script/release/${script_file}" \
+            "game-engine/release/${game_file}" \
+            "$VERSION_NAME" \
+            "$KEY_PASSWORD" \
+            /tmp/gg-v2/v2/runtime/release
+
+      - name: Sign and verify encrypted release
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/v2-private.pem \
+            -pass env:KEY_PASSWORD
+          openssl dgst -sha256 -sign /tmp/v2-private.pem \
+            -out /tmp/v2-runtime.sig /tmp/v2-runtime-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/v2-runtime.sig /tmp/v2-runtime-canonical.txt
+          python3 - <<'PY'
+          import base64, hashlib, json
+          from pathlib import Path
+          manifest=json.loads(Path('/tmp/v2-runtime-unsigned.json').read_text())
+          manifest['signatureAlgorithm']='SHA256withECDSA'
+          manifest['signature']=base64.b64encode(Path('/tmp/v2-runtime.sig').read_bytes()).decode()
+          release=Path('/tmp/gg-v2/v2/runtime/release')
+          (release/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          bundle=(release/manifest['file']).read_bytes()
+          assert len(bundle)==manifest['size']
+          assert hashlib.sha256(bundle).hexdigest()==manifest['sha256']
+          forbidden=[b'webpackChunk_lodash_modules',b'SAL_getUserData',b'createBuyOrder',b'get_goods_list']
+          assert all(marker not in bundle for marker in forbidden)
+          print('encrypted V2 release verified:',manifest['versionName'],len(bundle))
+          PY
+          rm -f /tmp/v2-private.pem /tmp/v2-runtime.sig /tmp/v2-runtime-canonical.txt /tmp/v2-runtime-unsigned.json
+
+      - name: Commit release to V2 branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/gg-v2
+          git add v2/runtime/release/manifest.json
+          git add -f "v2/runtime/release/bundle-${VERSION_NAME}.bin"
+          git commit -m "Publish encrypted V2 runtime ${VERSION_NAME}"
+          git push origin HEAD:"${TARGET_BRANCH}"
+
+      - name: Deploy updated V2 runtime Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != "null"
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" \
+            /tmp/gg-v2/v2/runtime/wrangler.template.jsonc \
+            > /tmp/gg-v2/v2/runtime/wrangler.generated.jsonc
+          cd /tmp/gg-v2/v2/runtime
+          printf '%s' "$KEY_PASSWORD" \
+            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+          npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
+
+      - name: Verify online service
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://gams-runtime-v2.2320006072.workers.dev"
+          for attempt in $(seq 1 24); do
+            status="$(curl --silent --show-error --output /tmp/v2-health.json --write-out '%{http_code}' "$endpoint/health" || true)"
+            if [[ "$status" == "200" ]] && jq -e '.ok == true and .encryptedRuntime == true' /tmp/v2-health.json >/dev/null; then
+              cat /tmp/v2-health.json
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/v2-health.json 2>/dev/null || true
+          exit 1
