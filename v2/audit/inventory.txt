@@ -1,0 +1,306 @@
+# FILE TREE
+./.gitcore
+./.github/workflows/build-apk.yml
+./.github/workflows/control-center-check.yml
+./.github/workflows/control-center-live-smoke.yml
+./.github/workflows/deploy-license-api.yml
+./.github/workflows/deploy-script-edge.yml
+./.github/workflows/monitor-upstream-engine.yml
+./.github/workflows/publish-game-engine.yml
+./.github/workflows/publish-remote-script.yml
+./.github/workflows/smoke-self-hosted-engine.yml
+./.github/workflows/validate-engine-release.yml
+./.main-build-trigger
+./build.gradle.kts
+./client/build.gradle.kts
+./client/lint.xml
+./client/proguard-rules.pro
+./client/src/main/AndroidManifest.xml
+./client_control_center_patch/activity_patch.py
+./client_control_center_patch/preflight_update.py
+./client_control_center_patch/version.py
+./client_hardening_patch/apply.py
+./client_online_patch/patch_client_online.py
+./client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+./client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+./client_patch/patch_client.py
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+./docs/control-center-baseline.md
+./game-engine/README.md
+./game-engine/compatibility.json
+./game-engine/release/game-1.0.2.js
+./game-engine/release/manifest.json
+./game-engine/upstream-baseline.json
+./gradle.properties
+./hardening_backend_parts/part00
+./hardening_backend_parts/part01
+./hardening_backend_parts/part02
+./hardening_backend_parts/part03
+./hardening_backend_parts/part04
+./hardening_backend_parts/part05
+./hardening_client_parts/DeviceIdentity.java/part00
+./hardening_client_parts/DeviceIdentity.java/part01
+./hardening_client_parts/MainActivity.java/part00
+./hardening_client_parts/MainActivity.java/part01
+./hardening_client_parts/MainActivity.java/part02
+./hardening_client_parts/MainActivity.java/part03
+./hardening_client_parts/OnlineLicenseManager.java/part00
+./hardening_client_parts/OnlineLicenseManager.java/part01
+./hardening_client_parts/OnlineLicenseManager.java/part02
+./hardening_client_parts/OnlineLicenseManager.java/part03
+./hardening_client_parts/SecureStore.java/part00
+./hardening_client_parts/SecureStore.java/part01
+./keygen/lint.xml
+./keygen_control_center_patch/AdminApiManager.java/part00
+./keygen_control_center_patch/AdminApiManager.java/part01
+./keygen_control_center_patch/J.java
+./keygen_control_center_patch/MainActivity.java/part00
+./keygen_control_center_patch/MainActivity.java/part01
+./keygen_control_center_patch/MainActivity.java/part02
+./keygen_control_center_patch/MainActivity.java/part03
+./keygen_control_center_patch/MainActivity.java/part04
+./keygen_control_center_patch/apply.py
+./keygen_control_center_patch/fix_json_types.py
+./keygen_online_patch/patch_keygen_online.py
+./keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java
+./keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java
+./license-api/client_config_patch.py
+./license-api/control_center_patch.py
+./license-api/migrations/0001_init.sql
+./license-api/migrations/0002_secure_devices.sql
+./license-api/migrations/0003_control_center.sql
+./license-api/release_baseline_patch.py
+./license-api/src/index.js
+./license-api/wrangler.template.jsonc
+./license_endpoint_hotfix/patch_endpoints.py
+./payload_parts/part000
+./payload_xz/part00
+./payload_xz/part01
+./payload_xz/part02
+./payload_xz/part03a
+./payload_xz/part03b
+./payload_xz/part03c
+./payload_xz/part03d
+./payload_xz/part04
+./payload_xz/part05
+./payload_xz/part05a
+./payload_xz/part05b
+./payload_xz/part05c
+./payload_xz/part05d
+./payload_xz/part06
+./payload_xz/part07
+./payload_xz/part08
+./remote-script/keys/private.pem.enc
+./remote-script/keys/public.der
+./remote-script/keys/public.pem
+./remote-script/release/manifest.json
+./remote-script/release/noname-1.0.2.js
+./remote-script/release/noname-1.0.3.js
+./remote-script/release/noname-1.0.4.js
+./remote-script/release/noname-1.0.5.js
+./remote-script/release/noname-1.0.6.js
+./remote-script/release/noname-1.0.7.js
+./remote-script/release/noname-1.0.8.js
+./remote-script/release/noname-1.0.9.js
+./remote-script/release/noname-1.1.0.js
+./remote-script/release/noname-1.1.1.js
+./remote-script/src/noname.js
+./script-edge/src/index.js
+./script-edge/wrangler.jsonc
+./script_parts/part000.js
+./settings.gradle.kts
+./v2/README.md
+./v2/audit/inventory.txt
+
+# DIRECTORIES
+.
+./.github
+./.github/workflows
+./client
+./client/src
+./client/src/main
+./client_control_center_patch
+./client_hardening_patch
+./client_online_patch
+./client_online_patch/src
+./client_online_patch/src/main
+./client_online_patch/src/main/java
+./client_online_patch/src/main/java/com
+./client_patch
+./client_patch/src
+./client_patch/src/main
+./client_patch/src/main/java
+./client_patch/src/main/java/com
+./docs
+./game-engine
+./game-engine/release
+./hardening_backend_parts
+./hardening_client_parts
+./hardening_client_parts/DeviceIdentity.java
+./hardening_client_parts/MainActivity.java
+./hardening_client_parts/OnlineLicenseManager.java
+./hardening_client_parts/SecureStore.java
+./keygen
+./keygen_control_center_patch
+./keygen_control_center_patch/AdminApiManager.java
+./keygen_control_center_patch/MainActivity.java
+./keygen_online_patch
+./keygen_online_patch/src
+./keygen_online_patch/src/main
+./keygen_online_patch/src/main/java
+./keygen_online_patch/src/main/java/com
+./license-api
+./license-api/migrations
+./license-api/src
+./license_endpoint_hotfix
+./payload_parts
+./payload_xz
+./remote-script
+./remote-script/keys
+./remote-script/release
+./remote-script/src
+./script-edge
+./script-edge/src
+./script_parts
+./v2
+./v2/audit
+
+# PACKAGE / APPLICATION IDS
+./keygen_online_patch/patch_keygen_online.py:12:        '    <uses-permission android:name="android.permission.INTERNET" />'
+./keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java:1:package com.jinli.keygen;
+./keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java:1:package com.jinli.keygen;
+./client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:1:package com.jinli.quickweb;
+./client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:1:package com.jinli.quickweb;
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:1:package com.jinli.quickweb;
+./.github/workflows/build-apk.yml:75:          sed 's/package com.jinli.quickweb;/package com.jinli.keygen;/' client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java > keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
+./settings.gradle.kts:17:rootProject.name = "QuickWebLicenseSuite"
+./settings.gradle.kts:18:include(":client", ":keygen")
+./client/src/main/AndroidManifest.xml:3:    <uses-permission android:name="android.permission.INTERNET" />
+./client/src/main/AndroidManifest.xml:4:    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+./client/src/main/AndroidManifest.xml:13:            android:name=".MainActivity"
+./client/src/main/AndroidManifest.xml:17:                <action android:name="android.intent.action.MAIN" />
+./client/src/main/AndroidManifest.xml:18:                <category android:name="android.intent.category.LAUNCHER" />
+./client/build.gradle.kts:6:    namespace = "com.jinli.quickweb"
+./client/build.gradle.kts:10:        applicationId = "com.jinli.quickweb"
+./client/build.gradle.kts:19:            applicationIdSuffix = ".debug"
+./hardening_client_parts/OnlineLicenseManager.java/part00:1:package com.jinli.quickweb;
+./hardening_client_parts/MainActivity.java/part00:1:package com.jinli.quickweb;
+./hardening_client_parts/DeviceIdentity.java/part00:1:package com.jinli.quickweb;
+./hardening_client_parts/SecureStore.java/part00:1:package com.jinli.quickweb;
+./keygen_control_center_patch/MainActivity.java/part00:1:package com.jinli.keygen;
+./keygen_control_center_patch/J.java:1:package com.jinli.keygen;
+./keygen_control_center_patch/AdminApiManager.java/part00:1:package com.jinli.keygen;
+
+# BUILD TASKS AND WORKFLOWS
+.github/workflows/deploy-script-edge.yml:41:        run: npx --yes wrangler@4 deploy --config wrangler.jsonc
+.github/workflows/deploy-license-api.yml:68:            wrangler.template.jsonc > wrangler.generated.jsonc
+.github/workflows/deploy-license-api.yml:76:            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+.github/workflows/deploy-license-api.yml:80:        run: npx --yes wrangler@4 d1 migrations apply gams-license-db --remote --config wrangler.generated.jsonc
+.github/workflows/deploy-license-api.yml:87:          npx --yes wrangler@4 deploy --config wrangler.generated.jsonc > /tmp/wrangler-deploy.log 2>&1
+.github/workflows/deploy-license-api.yml:89:          tail -n 160 /tmp/wrangler-deploy.log
+.github/workflows/deploy-license-api.yml:94:        uses: actions/upload-artifact@v4
+.github/workflows/deploy-license-api.yml:97:          path: /tmp/wrangler-deploy.log
+.github/workflows/smoke-self-hosted-engine.yml:207:      - uses: actions/upload-artifact@v4
+.github/workflows/monitor-upstream-engine.yml:113:      - uses: actions/upload-artifact@v4
+.github/workflows/build-apk.yml:130:          gradle :client:assembleRelease :keygen:assembleRelease --stacktrace 2>&1 | tee /tmp/gradle-build.log
+.github/workflows/build-apk.yml:134:        uses: actions/upload-artifact@v4
+.github/workflows/build-apk.yml:148:          client_apk="client/build/outputs/apk/release/client-release.apk"
+.github/workflows/build-apk.yml:149:          admin_apk="keygen/build/outputs/apk/release/keygen-release.apk"
+.github/workflows/build-apk.yml:152:          unzip -l "$client_apk" > /tmp/client-files.txt
+.github/workflows/build-apk.yml:154:          unzip -p "$client_apk" classes.dex > /tmp/client.dex
+.github/workflows/build-apk.yml:158:          cp "$client_apk" "dist/GG-v1.4.0-动态策略测试版.apk"
+.github/workflows/build-apk.yml:159:          cp "$admin_apk" "dist/GG-管理器-v1.3.0-人类语言版.apk"
+.github/workflows/build-apk.yml:160:          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+.github/workflows/build-apk.yml:162:      - uses: actions/upload-artifact@v4
+keygen_online_patch/patch_keygen_online.py:10:        '<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
+keygen_online_patch/patch_keygen_online.py:11:        '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n'
+
+# REMOTE SCRIPT REFERENCES
+./client_control_center_patch/activity_patch.py:66:    marker = "    private void showNetworkError(WebView view) {"
+./hardening_backend_parts/part00:5:const SCRIPT_LEASE_SECONDS = 6 * 60 * 60;
+./hardening_backend_parts/part00:15:const MAX_SCRIPT_BYTES = 2 * 1024 * 1024;
+./hardening_backend_parts/part03:108:  if (bytes.length <= 0 || bytes.length > MAX_SCRIPT_BYTES || Number(manifest.size) !== bytes.length) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+./hardening_backend_parts/part02:88:    leaseSeconds: SCRIPT_LEASE_SECONDS,
+./client_online_patch/patch_client_online.py:73:        destroyWebView();
+./client_online_patch/patch_client_online.py:203:        destroyWebView();
+./client_online_patch/patch_client_online.py:216:        destroyWebView();
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:35:    private static final int MAX_MANIFEST_BYTES = 64 * 1024;
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:36:    private static final int MAX_SCRIPT_BYTES = 2 * 1024 * 1024;
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:90:                        MAX_MANIFEST_BYTES
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:102:                        MAX_SCRIPT_BYTES
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:120:                    readFile(manifestFile, MAX_MANIFEST_BYTES),
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:126:            byte[] scriptBytes = readFile(scriptFile, MAX_SCRIPT_BYTES);
+./client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java:186:        if (manifest.size <= 0 || manifest.size > MAX_SCRIPT_BYTES) {
+./client_patch/patch_client.py:31:    "        wrappedUserScript = wrapUserScript(readAssetText(\"noname.js\"));\n"
+./client_patch/patch_client.py:33:    "        configureWebView();\n"
+./client_patch/patch_client.py:43:    "                scriptManager.loadLocalOrBundled(readAssetText(\"noname.js\"));\n"
+./client_patch/patch_client.py:49:    "        configureWebView();\n"
+./client_patch/patch_client.py:81:    "        destroyWebView();\n"
+./client_patch/patch_client.py:90:    "        destroyWebView();\n"
+./.github/workflows/deploy-script-edge.yml:55:            "${endpoint}/engine/stable.js" > /tmp/stable-game.js
+./.github/workflows/publish-remote-script.yml:10:      - remote-script/src/noname.js
+./.github/workflows/publish-remote-script.yml:38:          test -s remote-script/src/noname.js
+./.github/workflows/publish-remote-script.yml:62:          source = Path("remote-script/src/noname.js")
+./.github/workflows/publish-remote-script.yml:66:              raise SystemExit("noname.js must contain a // @version line")
+./.github/workflows/smoke-self-hosted-engine.yml:28:            "${base}/engine/stable.js" \
+./.github/workflows/smoke-self-hosted-engine.yml:59:            "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
+./.github/workflows/smoke-self-hosted-engine.yml:61:            "https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js";
+./.github/workflows/smoke-self-hosted-engine.yml:82:            await context.addInitScript({ path: "remote-script/src/noname.js" });
+./.github/workflows/smoke-self-hosted-engine.yml:121:                "gams-script-edge.2320006072.workers.dev/engine/stable.js",
+./.github/workflows/smoke-self-hosted-engine.yml:125:              url.includes("space-z.ai/game.js"),
+./.github/workflows/smoke-self-hosted-engine.yml:166:                "gams-script-edge.2320006072.workers.dev/engine/stable.js",
+./.github/workflows/smoke-self-hosted-engine.yml:170:              url.includes("space-z.ai/game.js"),
+./.github/workflows/build-apk.yml:107:            test ! -e client/src/main/assets/noname.js
+./.github/workflows/build-apk.yml:153:          if grep -q 'assets/noname.js' /tmp/client-files.txt; then exit 1; fi
+./.github/workflows/validate-engine-release.yml:9:      - remote-script/src/noname.js
+./.github/workflows/validate-engine-release.yml:19:      - remote-script/src/noname.js
+./.github/workflows/validate-engine-release.yml:72:          node --check remote-script/src/noname.js
+./.github/workflows/validate-engine-release.yml:73:          grep -q 'SELF_HOSTED_ENGINE_URL' remote-script/src/noname.js
+./.github/workflows/validate-engine-release.yml:74:          grep -q 'gams-script-edge.2320006072.workers.dev/engine/stable.js' remote-script/src/noname.js
+./.github/workflows/validate-engine-release.yml:75:          grep -q '/engine/stable.js' script-edge/src/index.js
+./.github/workflows/publish-game-engine.yml:23:        description: Minimum compatible noname.js version
+./remote-script/src/noname.js:10233:  const SELF_HOSTED_ENGINE_URL = "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
+./remote-script/src/noname.js:10238:      return parsed.hostname.endsWith(".space-z.ai") && /\/game\.js$/i.test(parsed.pathname);
+./client_hardening_patch/apply.py:258:asset = Path("client/src/main/assets/noname.js")
+./license-api/control_center_patch.py:351:  if (bytes.length <= 0 || bytes.length > MAX_SCRIPT_BYTES || Number(manifest.size) !== bytes.length) throw new HttpError(503, "script_invalid", "核心服务数据异常");
+./game-engine/README.md:8:- File: `release/game-1.0.2.js`
+./game-engine/README.md:11:- Runtime URL: `https://gams-script-edge.2320006072.workers.dev/engine/stable.js`
+./game-engine/README.md:13:The original `space-z.ai` URL is retained only as release provenance in the signed manifest. Runtime traffic is redirected to the self-hosted Cloudflare Worker endpoint.
+./game-engine/README.md:17:Run the **Publish versioned game engine** workflow with a new HTTPS source URL, a higher semantic version, and the expected SHA-256. The workflow downloads, verifies, signs and publishes an immutable version without changing `noname.js`, because `/engine/stable.js` resolves the signed stable manifest.
+./game-engine/release/manifest.json:6:  "file": "game-1.0.2.js",
+./game-engine/release/manifest.json:9:  "sourceUrl": "https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js",
+./script-edge/src/index.js:1:const SCRIPT_RELEASE_BASE = "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/remote-script/release/";
+./script-edge/src/index.js:82:      return proxyVersioned(SCRIPT_RELEASE_BASE, filename, request, filename === "manifest.json");
+./script-edge/src/index.js:84:    if (url.pathname === "/engine/stable.js") return stableEngine(request);
+./hardening_client_parts/OnlineLicenseManager.java/part00:28:    private static final int MAX_SCRIPT_RESPONSE_BYTES = 3 * 1024 * 1024;
+./hardening_client_parts/OnlineLicenseManager.java/part01:40:        JSONObject response = postJson("/v1/script", body, MAX_SCRIPT_RESPONSE_BYTES);
+./hardening_client_parts/MainActivity.java/part00:30:import android.webkit.WebView;
+./hardening_client_parts/MainActivity.java/part00:31:import android.webkit.WebViewClient;
+./hardening_client_parts/MainActivity.java/part00:42:import androidx.webkit.WebViewCompat;
+./hardening_client_parts/MainActivity.java/part00:43:import androidx.webkit.WebViewFeature;
+./hardening_client_parts/MainActivity.java/part00:52:    private static final Set<String> SCRIPT_ORIGINS = new HashSet<>(Arrays.asList(
+./hardening_client_parts/MainActivity.java/part00:57:    private WebView webView;
+./hardening_client_parts/MainActivity.java/part00:71:        WebView.setWebContentsDebuggingEnabled(false);
+./hardening_client_parts/MainActivity.java/part00:97:        destroyWebView();
+./hardening_client_parts/MainActivity.java/part00:124:        destroyWebView();
+./hardening_client_parts/MainActivity.java/part03:21:                "if(window.__QUICK_WEB_APP_SCRIPT_LOADED__)return;" +
+./hardening_client_parts/MainActivity.java/part03:22:                "window.__QUICK_WEB_APP_SCRIPT_LOADED__=true;" +
+./hardening_client_parts/MainActivity.java/part03:24:                "catch(e){window.__QUICK_WEB_APP_SCRIPT_LOADED__=false;console.error('[App Script]',e);}" +
+./hardening_client_parts/MainActivity.java/part03:70:    private void destroyWebView() {
+./hardening_client_parts/MainActivity.java/part03:78:            webView.setWebViewClient(null);
+./hardening_client_parts/MainActivity.java/part03:93:        destroyWebView();
+./hardening_client_parts/MainActivity.java/part01:69:        configureWebView();
+./hardening_client_parts/MainActivity.java/part01:111:        webView = new WebView(this);
+./hardening_client_parts/MainActivity.java/part01:146:    private void configureWebView() {
+./hardening_client_parts/MainActivity.java/part01:171:        webView.setWebViewClient(new WebViewClient() {
+./hardening_client_parts/MainActivity.java/part01:173:            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+./hardening_client_parts/MainActivity.java/part02:1:            public void onPageFinished(WebView view, String url) {
+./hardening_client_parts/MainActivity.java/part02:10:            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+./hardening_client_parts/MainActivity.java/part02:25:            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+./hardening_client_parts/MainActivity.java/part02:35:            public void onProgressChanged(WebView view, int newProgress) {
+./hardening_client_parts/MainActivity.java/part02:42:                    WebView currentWebView,
+./hardening_client_parts/MainActivity.java/part02:63:        nativeDocumentStartEnabled = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
+./hardening_client_parts/MainActivity.java/part02:66:            scriptHandler = WebViewCompat.addDocumentStartJavaScript(
+./hardening_client_parts/MainActivity.java/part02:69:                    SCRIPT_ORIGINS
+./hardening_client_parts/MainActivity.java/part02:110:                        WebView.clearClientCertPreferences(null);
+./hardening_client_parts/MainActivity.java/part02:151:    private void showNetworkError(WebView view) {
