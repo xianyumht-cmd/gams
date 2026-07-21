@@ -1,0 +1,226 @@
+# FINAL SOURCE FILES
+v2/audit/current-final-project/build.gradle.kts	74 bytes
+v2/audit/current-final-project/client/build.gradle.kts	969 bytes
+v2/audit/current-final-project/client/lint.xml	110 bytes
+v2/audit/current-final-project/client/proguard-rules.pro	429 bytes
+v2/audit/current-final-project/client/src/main/AndroidManifest.xml	1135 bytes
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/DeviceIdentity.java	9057 bytes
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java	27387 bytes
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java	35644 bytes
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java	20228 bytes
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/RuntimeNames.java	1095 bytes
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java	8713 bytes
+v2/audit/current-final-project/client/src/main/res/drawable/gg_icon_background.xml	264 bytes
+v2/audit/current-final-project/client/src/main/res/drawable/ic_launcher_foreground.xml	1075 bytes
+v2/audit/current-final-project/client/src/main/res/mipmap-anydpi-v26/ic_launcher.xml	269 bytes
+v2/audit/current-final-project/client/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml	269 bytes
+v2/audit/current-final-project/client/src/main/res/mipmap-anydpi/ic_launcher.xml	251 bytes
+v2/audit/current-final-project/client/src/main/res/mipmap-anydpi/ic_launcher_round.xml	251 bytes
+v2/audit/current-final-project/gradle.properties	106 bytes
+v2/audit/current-final-project/keygen/build.gradle.kts	982 bytes
+v2/audit/current-final-project/keygen/lint.xml	110 bytes
+v2/audit/current-final-project/keygen/proguard-rules.pro	469 bytes
+v2/audit/current-final-project/keygen/src/main/AndroidManifest.xml	992 bytes
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/AdminApiManager.java	8732 bytes
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/J.java	1393 bytes
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/MainActivity.java	62319 bytes
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java	20226 bytes
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/RuntimeNames.java	696 bytes
+v2/audit/current-final-project/keygen/src/main/res/drawable/gg_icon_background.xml	264 bytes
+v2/audit/current-final-project/keygen/src/main/res/drawable/ic_launcher_foreground.xml	1075 bytes
+v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi-v26/ic_launcher.xml	269 bytes
+v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml	269 bytes
+v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi/ic_launcher.xml	251 bytes
+v2/audit/current-final-project/keygen/src/main/res/mipmap-anydpi/ic_launcher_round.xml	251 bytes
+v2/audit/current-final-project/license-api/client_config_patch.py	1705 bytes
+v2/audit/current-final-project/license-api/control_center_patch.py	44256 bytes
+v2/audit/current-final-project/license-api/migrations/0001_init.sql	1414 bytes
+v2/audit/current-final-project/license-api/migrations/0002_secure_devices.sql	791 bytes
+v2/audit/current-final-project/license-api/migrations/0003_control_center.sql	1706 bytes
+v2/audit/current-final-project/license-api/release_baseline_patch.py	518 bytes
+v2/audit/current-final-project/license-api/src/index.js	17480 bytes
+v2/audit/current-final-project/license-api/wrangler.template.jsonc	720 bytes
+v2/audit/current-final-project/settings.gradle.kts	354 bytes
+
+# FINAL PACKAGE IDS
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/MainActivity.java:1:package com.jinli.keygen;
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/J.java:1:package com.jinli.keygen;
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java:1:package com.jinli.keygen;
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/RuntimeNames.java:1:package com.jinli.keygen;
+v2/audit/current-final-project/keygen/src/main/java/com/jinli/keygen/AdminApiManager.java:1:package com.jinli.keygen;
+v2/audit/current-final-project/keygen/src/main/AndroidManifest.xml:6:        android:label="GG 管理器"
+v2/audit/current-final-project/keygen/build.gradle.kts:6:    namespace = "com.jinli.keygen"
+v2/audit/current-final-project/keygen/build.gradle.kts:10:        applicationId = "com.jinli.keygen"
+v2/audit/current-final-project/keygen/build.gradle.kts:13:        versionCode = 7
+v2/audit/current-final-project/keygen/build.gradle.kts:14:        versionName = "1.3.0"
+v2/audit/current-final-project/keygen/build.gradle.kts:19:            applicationIdSuffix = ".debug"
+v2/audit/current-final-project/keygen/build.gradle.kts:20:            versionNameSuffix = "-debug"
+v2/audit/current-final-project/keygen/build.gradle.kts:41:// versionCode = 6
+v2/audit/current-final-project/keygen/build.gradle.kts:42:// versionName = "1.2.1"
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:1:package com.jinli.quickweb;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:647:        final String versionName;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:660:            versionName = object.optString("versionName", "");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:676:                    "versionName=" + versionName + "\n" +
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:689:                    .put("versionName", versionName)
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:1:package com.jinli.quickweb;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/DeviceIdentity.java:1:package com.jinli.quickweb;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:1:package com.jinli.quickweb;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/RuntimeNames.java:1:package com.jinli.quickweb;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:1:package com.jinli.quickweb;
+v2/audit/current-final-project/client/src/main/AndroidManifest.xml:8:        android:label="GG"
+v2/audit/current-final-project/client/build.gradle.kts:6:    namespace = "com.jinli.quickweb"
+v2/audit/current-final-project/client/build.gradle.kts:10:        applicationId = "com.jinli.quickweb"
+v2/audit/current-final-project/client/build.gradle.kts:13:        versionCode = 8
+v2/audit/current-final-project/client/build.gradle.kts:14:        versionName = "1.4.0"
+v2/audit/current-final-project/client/build.gradle.kts:19:            applicationIdSuffix = ".debug"
+v2/audit/current-final-project/client/build.gradle.kts:20:            versionNameSuffix = "-debug"
+
+# SCRIPT / CACHE / BRIDGE REFERENCES
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:70:        executor.execute(() -> {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:93:                        if ("bad_session".equals(error.code) || "device_unbound".equals(error.code)) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:117:        executor.execute(() -> {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:137:        executor.execute(() -> {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:141:                if (token.isEmpty()) throw new ApiException(401, "bad_session", "服务状态已失效");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:272:        JSONObject challengeRequest = new JSONObject()
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:276:        JSONObject challenge = postJson("/v1/challenge", challengeRequest, MAX_JSON_BYTES);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:277:        if (!challenge.optBoolean("ok", false)) throw apiError(challenge, 400);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:278:        String nonce = challenge.getString("nonce");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:279:        long timestamp = challenge.getLong("serverTime");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:283:        String canonical = purpose + "\n" + nonce + "\n" + timestamp + "\n" + deviceId + "\n" +
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:287:                .put("nonce", nonce)
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:359:        JSONObject cache = new JSONObject()
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:367:        secureStore.writeCache(cache);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:382:        JSONObject cache = secureStore.readCache();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:383:        if (cache == null) return RuntimeResult.invalid("服务连接失败，请检查网络后重试");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:385:            long estimatedServerTime = estimateServerTime(cache);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:386:            long leaseExpiresAt = cache.optLong("leaseExpiresAt", 0L);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:390:                secureStore.deleteCache();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:394:                secureStore.deleteCache();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:397:            Manifest manifest = Manifest.parse(cache.getJSONObject("manifest"));
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:399:            byte[] scriptBytes = cache.getString("source").getBytes(StandardCharsets.UTF_8);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:406:            secureStore.deleteCache();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:411:    private long estimateServerTime(JSONObject cache) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:412:        long serverTime = cache.optLong("serverTime", 0L);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:413:        long savedWall = cache.optLong("savedWallMs", 0L);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:414:        long savedElapsed = cache.optLong("savedElapsedMs", 0L);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java:415:        int savedBoot = cache.optInt("bootCount", -1);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:30:import android.webkit.WebView;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:31:import android.webkit.WebViewClient;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:42:import androidx.webkit.WebViewCompat;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:43:import androidx.webkit.WebViewFeature;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:57:    private WebView webView;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:71:        WebView.setWebContentsDebuggingEnabled(false);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:97:        destroyWebView();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:124:        destroyWebView();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:266:        configureWebView();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:308:        webView = new WebView(this);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:343:    private void configureWebView() {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:360:        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:368:        webView.setWebViewClient(new WebViewClient() {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:370:            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:374:                    view.evaluateJavascript(wrappedUserScript, null);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:379:            public void onPageFinished(WebView view, String url) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:383:                    view.evaluateJavascript(wrappedUserScript, null);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:388:            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:403:            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:413:            public void onProgressChanged(WebView view, int newProgress) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:420:                    WebView currentWebView,
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:441:        nativeDocumentStartEnabled = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:444:            scriptHandler = WebViewCompat.addDocumentStartJavaScript(
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:484:                        webView.clearCache(true);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:488:                        WebView.clearClientCertPreferences(null);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:489:                        webView.evaluateJavascript(
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:490:                                "try{localStorage.clear();sessionStorage.clear();}catch(e){}",
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:548:    private void showNetworkError(WebView view) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:620:    private void destroyWebView() {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:628:            webView.setWebViewClient(null);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/MainActivity.java:643:        destroyWebView();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:86:        connection.setUseCaches(false);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:129:            SSLSession session = ssl.getSession();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:131:            if (!verifier.verify(host, session)) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java:415:        if ("challenge".equalsIgnoreCase(response.mitigated)) return "（Cloudflare 挑战）";
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:27:    private static final String CACHE_ALIAS = "gg_cache_aes_v1";
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:33:    private final File cacheFile;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:38:        this.cacheFile = new File(new File(this.context.getFilesDir(), "runtime"), "data.bin");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:65:            deleteCache();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:87:        deleteCache();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:90:    synchronized void writeCache(JSONObject cache) throws Exception {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:91:        File directory = cacheFile.getParentFile();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:95:        byte[] plain = cache.toString().getBytes(StandardCharsets.UTF_8);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:96:        byte[] encrypted = encrypt(plain, cacheKey(), "script-cache");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:103:        if (cacheFile.exists() && !cacheFile.delete()) throw new IllegalStateException("无法更新运行数据");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:104:        if (!temporary.renameTo(cacheFile)) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:106:                 FileOutputStream output = new FileOutputStream(cacheFile)) {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:117:    synchronized JSONObject readCache() {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:118:        if (!cacheFile.isFile() || cacheFile.length() <= 0 || cacheFile.length() > MAX_CACHE_BYTES) return null;
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:119:        try (FileInputStream input = new FileInputStream(cacheFile);
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:129:            byte[] plain = decrypt(output.toByteArray(), cacheKey(), "script-cache");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:132:            deleteCache();
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:137:    synchronized void deleteCache() {
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:138:        try { if (cacheFile.exists()) cacheFile.delete(); } catch (Exception ignored) { }
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:139:        File temporary = new File(cacheFile.getParentFile(), "data.tmp");
+v2/audit/current-final-project/client/src/main/java/com/jinli/quickweb/SecureStore.java:144:    private SecretKey cacheKey() throws Exception { return getOrCreateKey(CACHE_ALIAS); }
+v2/audit/current-final-project/license-api/src/index.js:201:  const payload = await verifyToken(token, env, "session");
+v2/audit/current-final-project/license-api/src/index.js:203:    return reply({ ok: false, code: "bad_session", message: "授权会话无效，请重新输入卡密" }, 401);
+v2/audit/current-final-project/license-api/src/index.js:223:    typ: "session", lic: license.id, dev: deviceHash,
+v2/audit/current-final-project/license-api/src/index.js:398:  headers.set("cache-control", "no-store");
+v2/audit/current-final-project/license-api/migrations/0002_secure_devices.sql:5:ALTER TABLE devices ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1;
+v2/audit/current-final-project/license-api/migrations/0002_secure_devices.sql:9:CREATE TABLE IF NOT EXISTS challenges (
+v2/audit/current-final-project/license-api/migrations/0002_secure_devices.sql:10:  nonce TEXT PRIMARY KEY,
+v2/audit/current-final-project/license-api/migrations/0002_secure_devices.sql:18:CREATE INDEX IF NOT EXISTS idx_challenges_expiry ON challenges(expires_at, used_at);
+v2/audit/current-final-project/license-api/migrations/0003_control_center.sql:38:  '{"minAppVersion":5,"secureAppVersion":6,"latestAppVersion":7,"forceUpdate":false,"updateUrl":"","updateMessage":"","sessionSeconds":7200,"adminSessionSeconds":43200,"foregroundRecheckSeconds":1800,"offlineGraceSeconds":21600,"legacyOfflineGraceSeconds":86400,"scriptLeaseSeconds":21600,"challengeSeconds":90,"globalForceOnline":false,"riskForceOnlineThreshold":2,"selfUnbindEnabled":true,"unbindPenaltySeconds":21600,"unbindCooldownSeconds":86400,"unbindWindowSeconds":2592000,"unbindWindowLimit":5,"sessionGeneration":1,"scriptDeliveryEnabled":true,"activeScriptVersion":"","configCacheSeconds":30}',
+v2/audit/current-final-project/license-api/client_config_patch.py:7:route_marker = '      if (request.method === "POST" && url.pathname === "/v1/challenge") return issueChallenge(request, env);\n'
+v2/audit/current-final-project/license-api/control_center_patch.py:62:  sessionSeconds: 7200,
+v2/audit/current-final-project/license-api/control_center_patch.py:68:  challengeSeconds: 90,
+v2/audit/current-final-project/license-api/control_center_patch.py:76:  sessionGeneration: 1,
+v2/audit/current-final-project/license-api/control_center_patch.py:79:  configCacheSeconds: 30,
+v2/audit/current-final-project/license-api/control_center_patch.py:81:let memorySettingsCache = null;
+v2/audit/current-final-project/license-api/control_center_patch.py:83:text = text.replace("let memoryScriptCache = null;", "let memoryScriptCache = null;\n" + settings_block, 1)
+v2/audit/current-final-project/license-api/control_center_patch.py:113:      if (request.method === "POST" && url.pathname === "/v1/admin/sessions/revoke-all") return adminRevokeAllSessions(request, env);
+v2/audit/current-final-project/license-api/control_center_patch.py:119:      if (request.method === "POST" && url.pathname === "/v1/challenge") return issueChallenge(request, env);
+v2/audit/current-final-project/license-api/control_center_patch.py:204:issue_challenge = r'''async function issueChallenge(request, env) {
+v2/audit/current-final-project/license-api/control_center_patch.py:213:  const rateKey = `${await requestRateKey(request, "challenge")}:${deviceHash.slice(0, 12)}`;
+v2/audit/current-final-project/license-api/control_center_patch.py:216:  const nonce = base64Url(crypto.getRandomValues(new Uint8Array(24)));
+v2/audit/current-final-project/license-api/control_center_patch.py:218:    env.DB.prepare("DELETE FROM challenges WHERE expires_at<? OR used_at IS NOT NULL").bind(now - 300),
+v2/audit/current-final-project/license-api/control_center_patch.py:219:    env.DB.prepare("INSERT INTO challenges(nonce,device_hash,purpose,created_at,expires_at) VALUES(?,?,?,?,?)")
+v2/audit/current-final-project/license-api/control_center_patch.py:220:      .bind(nonce, deviceHash, purpose, now, now + settings.challengeSeconds),
+v2/audit/current-final-project/license-api/control_center_patch.py:222:  return reply({ ok: true, nonce, purpose, serverTime: now, expiresAt: now + settings.challengeSeconds });
+v2/audit/current-final-project/license-api/control_center_patch.py:224:text = replace_function(text, "issueChallenge", issue_challenge)
+v2/audit/current-final-project/license-api/control_center_patch.py:253:  const payload = await verifyToken(tokenText, env, "session");
+v2/audit/current-final-project/license-api/control_center_patch.py:254:  if (!payload || payload.dev !== deviceHash) return reply({ ok: false, code: "bad_session", message: "服务状态已失效" }, 401);
+v2/audit/current-final-project/license-api/control_center_patch.py:260:  if (!device || payload.kid !== device.key_fingerprint || Number(payload.sv) !== Number(device.session_version)) return reply({ ok: false, code: "device_unbound", message: "当前设备状态无效" }, 401);
+v2/audit/current-final-project/license-api/control_center_patch.py:281:  const payload = await verifyToken(tokenText, env, "session");
+v2/audit/current-final-project/license-api/control_center_patch.py:282:  if (!payload || payload.dev !== deviceHash) return reply({ ok: false, code: "bad_session", message: "服务状态已失效" }, 401);
+v2/audit/current-final-project/license-api/control_center_patch.py:288:  if (!device || payload.kid !== device.key_fingerprint || Number(payload.sv) !== Number(device.session_version)) return reply({ ok: false, code: "device_unbound", message: "当前设备状态无效" }, 401);
+v2/audit/current-final-project/license-api/control_center_patch.py:303:    env.DB.prepare("UPDATE devices SET revoked_at=?,session_version=session_version+1 WHERE id=?").bind(now, device.id),
+v2/audit/current-final-project/license-api/control_center_patch.py:315:  const token = await signToken({ typ: "session", lic: license.id, dev: deviceHash,
+v2/audit/current-final-project/license-api/control_center_patch.py:316:    kid: secure ? device.key_fingerprint : "", sv: Number(device.session_version || 1), app: appVersion,
+v2/audit/current-final-project/license-api/control_center_patch.py:317:    sg: settings.sessionGeneration, iat: now, exp: now + settings.sessionSeconds, jti: crypto.randomUUID() }, env);
+v2/audit/current-final-project/license-api/control_center_patch.py:319:    ok: true, token, tokenExpiresAt: now + settings.sessionSeconds,
+v2/audit/current-final-project/license-api/control_center_patch.py:335:  const cacheKey = settings.activeScriptVersion || "current";
+v2/audit/current-final-project/license-api/control_center_patch.py:337:  if (memoryScriptCache && memoryScriptCache.key === cacheKey && memoryScriptCache.expiresAt > nowMs) return memoryScriptCache.value;
+v2/audit/current-final-project/license-api/control_center_patch.py:355:  memoryScriptCache = { key: cacheKey, value, expiresAt: nowMs + 60000 };
+v2/audit/current-final-project/license-api/control_center_patch.py:369:    if (expectedType === "session") {
+v2/audit/current-final-project/license-api/control_center_patch.py:371:      if (Number(payload.sg || 1) !== Number(settings.sessionGeneration)) return null;
+v2/audit/current-final-project/license-api/control_center_patch.py:386:    'const requestSettings = await loadSettings(env);\n  if (Math.abs(nowSeconds() - timestamp) > Math.max(120, requestSettings.challengeSeconds + 30)) throw new HttpError(401, "stale_request", "请求已过期，请重试");',
+v2/audit/current-final-project/license-api/control_center_patch.py:393:  if (!force && memorySettingsCache && memorySettingsCache.expiresAt > now) return memorySettingsCache.value;
+v2/audit/current-final-project/license-api/control_center_patch.py:399:    memorySettingsCache = { value, expiresAt: now + value.configCacheSeconds * 1000 };
+v2/audit/current-final-project/license-api/control_center_patch.py:404:    memorySettingsCache = { value, expiresAt: now + 5000 };
+v2/audit/current-final-project/license-api/control_center_patch.py:415:  integer("sessionSeconds", 900, 86400);
+v2/audit/current-final-project/license-api/control_center_patch.py:421:  integer("challengeSeconds", 30, 300);
+v2/audit/current-final-project/license-api/control_center_patch.py:427:  integer("sessionGeneration", 1, 1000000000);
+v2/audit/current-final-project/license-api/control_center_patch.py:428:  integer("configCacheSeconds", 5, 300);
+v2/audit/current-final-project/license-api/control_center_patch.py:443:  const next = validateSettings({ ...current, ...nextInput, sessionGeneration: current.sessionGeneration }, current);
+v2/audit/current-final-project/license-api/control_center_patch.py:454:  memorySettingsCache = null;
+v2/audit/current-final-project/license-api/control_center_patch.py:455:  memoryScriptCache = null;
+v2/audit/current-final-project/license-api/control_center_patch.py:502:  snapshot.sessionGeneration = Math.max(current.sessionGeneration, Number(snapshot.sessionGeneration || 1));
+v2/audit/current-final-project/license-api/control_center_patch.py:513:  const devices = await env.DB.prepare("SELECT id,device_hash,label,created_at,last_seen_at,revoked_at,key_fingerprint,certificate_digest,risk_flags,session_version FROM devices WHERE license_id=? ORDER BY created_at DESC").bind(license.id).all();
+v2/audit/current-final-project/license-api/control_center_patch.py:570:  const rows = await env.DB.prepare(`SELECT d.id,d.license_id,l.key_preview,d.device_hash,d.label,d.created_at,d.last_seen_at,d.revoked_at,d.key_fingerprint,d.certificate_digest,d.risk_flags,d.session_version FROM devices d JOIN licenses l ON l.id=d.license_id ${where} ORDER BY d.last_seen_at DESC LIMIT ? OFFSET ?`).bind(...bindings, limit, offset).all();
+v2/audit/current-final-project/license-api/control_center_patch.py:589:  await env.DB.prepare("UPDATE devices SET revoked_at=?,session_version=session_version+1 WHERE id=?").bind(now, id).run();
+v2/audit/current-final-project/license-api/control_center_patch.py:622:  const nextGeneration = current.sessionGeneration + 1;
+v2/audit/current-final-project/license-api/control_center_patch.py:625:  const next = { ...current, sessionGeneration: nextGeneration }; delete next.configVersion;
+v2/audit/current-final-project/license-api/control_center_patch.py:627:    env.DB.prepare("INSERT INTO system_settings_history(id,config_version,settings_json,changed_at,changed_by,reason) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(), current.configVersion, JSON.stringify(stripConfigVersion(current)), now, admin.jti || "admin", "revoke-all-sessions"),
+v2/audit/current-final-project/license-api/control_center_patch.py:630:  memorySettingsCache = null;
+v2/audit/current-final-project/license-api/control_center_patch.py:631:  await audit(env, "sessions_revoked_all", null, null, JSON.stringify({ sessionGeneration: nextGeneration }));
+v2/audit/current-final-project/license-api/control_center_patch.py:632:  return reply({ ok: true, sessionGeneration: nextGeneration, configVersion: nextVersion });
+v2/audit/current-final-project/license-api/control_center_patch.py:694:  const result = await env.DB.prepare("UPDATE devices SET revoked_at=?,session_version=session_version+1 WHERE license_id=? AND revoked_at IS NULL").bind(now, licenseId).run();

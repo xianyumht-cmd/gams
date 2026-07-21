@@ -1,0 +1,215 @@
+package com.jinli.quickweb;
+
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
+import android.os.Build;
+import android.os.Debug;
+import android.provider.Settings;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
+
+import org.json.JSONObject;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SignatureException;
+import java.security.spec.ECGenParameterSpec;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
+final class DeviceIdentity {
+    private static final String SIGNING_ALIAS = "gg_device_ec_v1";
+
+    private final Context context;
+    private final SecureStore store;
+
+    DeviceIdentity(Context context, SecureStore store) {
+        this.context = context.getApplicationContext();
+        this.store = store;
+    }
+
+    String deviceId() throws Exception {
+        JSONObject state = store.loadState();
+        String installId = state.optString("installId", "");
+        if (installId.isEmpty()) {
+            installId = UUID.randomUUID().toString();
+            state.put("installId", installId);
+            store.saveState(state);
+        }
+        String androidId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+        return sha256Hex(context.getPackageName() + "|" + String.valueOf(androidId) + "|" + installId);
+    }
+
+    String deviceLabel() {
+        String value = (Build.MANUFACTURER + " " + Build.MODEL).trim();
+        return value.length() > 100 ? value.substring(0, 100) : value;
+    }
+
+    String publicKeyBase64() throws Exception {
+        return Base64.encodeToString(publicKey().getEncoded(), Base64.NO_WRAP);
+    }
+
+    String keyFingerprint() throws Exception {
+        return hex(MessageDigest.getInstance("SHA-256").digest(publicKey().getEncoded()));
+    }
+
+    String signRawBase64(String canonical) throws Exception {
+        KeyStore store = keyStore();
+        PrivateKey privateKey = (PrivateKey) store.getKey(SIGNING_ALIAS, null);
+        if (privateKey == null) {
+            ensureKeyPair();
+            privateKey = (PrivateKey) keyStore().getKey(SIGNING_ALIAS, null);
+        }
+        java.security.Signature signer = java.security.Signature.getInstance("SHA256withECDSA");
+        signer.initSign(privateKey);
+        signer.update(canonical.getBytes(StandardCharsets.UTF_8));
+        return Base64.encodeToString(derToRaw(signer.sign(), 32), Base64.NO_WRAP);
+    }
+
+    String certificateDigest() throws Exception {
+        PackageManager manager = context.getPackageManager();
+        PackageInfo info;
+        Signature[] signatures;
+        if (Build.VERSION.SDK_INT >= 28) {
+            info = manager.getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNING_CERTIFICATES);
+            signatures = info.signingInfo == null ? null : info.signingInfo.getApkContentsSigners();
+        } else {
+            info = manager.getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
+            signatures = info.signatures;
+        }
+        if (signatures == null || signatures.length == 0) throw new SignatureException("没有应用签名");
+        return hex(MessageDigest.getInstance("SHA-256").digest(signatures[0].toByteArray()));
+    }
+
+    Risk risk() {
+        List<String> flags = new ArrayList<>();
+        try {
+            if ((context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) flags.add("debuggable");
+        } catch (Exception ignored) { }
+        if (Debug.isDebuggerConnected() || Debug.waitingForDebugger()) flags.add("debugger");
+        if (Build.TAGS != null && Build.TAGS.contains("test-keys")) flags.add("test_keys");
+        String[] paths = {
+                "/system/bin/su", "/system/xbin/su", "/sbin/su", "/data/local/bin/su",
+                "/data/local/xbin/su", "/system/app/Superuser.apk", "/data/adb/magisk"
+        };
+        for (String path : paths) {
+            if (new File(path).exists()) { flags.add("root"); break; }
+        }
+        String[] hookClasses = {
+                "de.robv.android.xposed.XposedBridge",
+                "com.saurik.substrate.MS$2",
+                "org.lsposed.lspd.core.Main"
+        };
+        for (String name : hookClasses) {
+            try { Class.forName(name); flags.add("hook"); break; } catch (Throwable ignored) { }
+        }
+        return new Risk(join(flags), flags.size());
+    }
+
+    private PublicKey publicKey() throws Exception {
+        KeyStore keyStore = keyStore();
+        java.security.cert.Certificate certificate = keyStore.getCertificate(SIGNING_ALIAS);
+        if (certificate == null) {
+            ensureKeyPair();
+            certificate = keyStore.getCertificate(SIGNING_ALIAS);
+        }
+        if (certificate == null) throw new IllegalStateException("无法创建设备密钥");
+        byte[] encoded = certificate.getPublicKey().getEncoded();
+        return KeyFactory.getInstance("EC").generatePublic(new java.security.spec.X509EncodedKeySpec(encoded));
+    }
+
+    private void ensureKeyPair() throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore");
+        generator.initialize(new KeyGenParameterSpec.Builder(SIGNING_ALIAS,
+                KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY)
+                .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
+                .setDigests(KeyProperties.DIGEST_SHA256)
+                .setUserAuthenticationRequired(false)
+                .build());
+        generator.generateKeyPair();
+    }
+
+    private KeyStore keyStore() throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        return keyStore;
+    }
+
+    private static byte[] derToRaw(byte[] der, int fieldSize) {
+        if (der.length < 8 || der[0] != 0x30) throw new IllegalArgumentException("签名格式无效");
+        int offset = 1;
+        int sequenceLength = readLength(der, offset);
+        offset += lengthBytes(der[offset]);
+        if (sequenceLength <= 0 || offset >= der.length || der[offset++] != 0x02) throw new IllegalArgumentException("签名格式无效");
+        int rLength = readLength(der, offset);
+        offset += lengthBytes(der[offset]);
+        byte[] r = new byte[rLength];
+        System.arraycopy(der, offset, r, 0, rLength);
+        offset += rLength;
+        if (offset >= der.length || der[offset++] != 0x02) throw new IllegalArgumentException("签名格式无效");
+        int sLength = readLength(der, offset);
+        offset += lengthBytes(der[offset]);
+        byte[] s = new byte[sLength];
+        System.arraycopy(der, offset, s, 0, sLength);
+        byte[] raw = new byte[fieldSize * 2];
+        copyInteger(r, raw, 0, fieldSize);
+        copyInteger(s, raw, fieldSize, fieldSize);
+        return raw;
+    }
+
+    private static int readLength(byte[] data, int offset) {
+        int first = data[offset] & 0xff;
+        if ((first & 0x80) == 0) return first;
+        int count = first & 0x7f;
+        int value = 0;
+        for (int i = 1; i <= count; i++) value = (value << 8) | (data[offset + i] & 0xff);
+        return value;
+    }
+
+    private static int lengthBytes(byte first) { return ((first & 0x80) == 0) ? 1 : 1 + (first & 0x7f); }
+
+    private static void copyInteger(byte[] integer, byte[] target, int targetOffset, int size) {
+        int sourceOffset = 0;
+        while (sourceOffset < integer.length - 1 && integer[sourceOffset] == 0) sourceOffset++;
+        int count = integer.length - sourceOffset;
+        if (count > size) { sourceOffset += count - size; count = size; }
+        System.arraycopy(integer, sourceOffset, target, targetOffset + size - count, count);
+    }
+
+    static String sha256Hex(String value) throws Exception {
+        return hex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    static String hex(byte[] bytes) {
+        StringBuilder output = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) output.append(String.format(Locale.ROOT, "%02x", value & 0xff));
+        return output.toString();
+    }
+
+    private static String join(List<String> values) {
+        StringBuilder output = new StringBuilder();
+        for (String value : values) {
+            if (output.length() > 0) output.append(',');
+            output.append(value);
+        }
+        return output.toString();
+    }
+
+    static final class Risk {
+        final String flags;
+        final int score;
+        Risk(String flags, int score) { this.flags = flags; this.score = score; }
+    }
+}
