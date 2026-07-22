@@ -16,7 +16,7 @@ import javax.crypto.spec.OAEPParameterSpec;
 import javax.crypto.spec.PSource;
 
 final class RuntimeKeyManager {
-    private static final String ALIAS = "gg_v2_runtime_rsa_1";
+    private static final String ALIAS = "gg_v2_runtime_rsa_oaep_sha1_2";
 
     String publicKeyBase64() throws Exception {
         return Base64.encodeToString(publicKey().getEncoded(), Base64.NO_WRAP);
@@ -33,9 +33,9 @@ final class RuntimeKeyManager {
             ensureKeyPair();
             privateKey = (PrivateKey) keyStore().getKey(ALIAS, null);
         }
-        Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+        Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding");
         OAEPParameterSpec spec = new OAEPParameterSpec(
-                "SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT);
+                "SHA-1", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT);
         cipher.init(Cipher.DECRYPT_MODE, privateKey, spec);
         return cipher.doFinal(wrapped);
     }
@@ -58,7 +58,7 @@ final class RuntimeKeyManager {
                 ALIAS,
                 KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
                 .setKeySize(2048)
-                .setDigests(KeyProperties.DIGEST_SHA256)
+                .setDigests(KeyProperties.DIGEST_SHA1)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
                 .setUserAuthenticationRequired(false)
                 .build());
