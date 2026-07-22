@@ -1,0 +1,160 @@
+name: Diagnose deterministic engine loader path
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-shot-controlled-engine-loader.yml
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prepare exact V2-patched noname source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('remote-script/src/noname.js').read_bytes()
+          virtual = b'https://ggv2.local/runtime/game.js'
+          old_urls = [
+              b'https://gams-script-edge.2320006072.workers.dev/engine/stable.js',
+              b'https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js',
+          ]
+          patched = source
+          counts = {}
+          for old in old_urls:
+              counts[old.decode()] = patched.count(old)
+              patched = patched.replace(old, virtual)
+          Path('/tmp/runtime-noname.js').write_bytes(patched)
+          Path('/tmp/replacement-counts.txt').write_text(repr(counts), encoding='utf-8')
+          print(counts)
+          PY
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Observe parser and dynamic script replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/controlled-loader.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+
+          const TARGET = 'https://m.66rpg.com/h5/controlled-engine-loader';
+          const OFFICIAL = 'https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001';
+          const LEGACY = 'https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js';
+          const STABLE = 'https://gams-script-edge.2320006072.workers.dev/engine/stable.js';
+          const VIRTUAL = 'https://ggv2.local/runtime/game.js';
+          const source = fs.readFileSync('/tmp/runtime-noname.js', 'utf8');
+          const wrapped = `(function(){if(window.__GG_V2_CONTROL_LOADED__)return;window.__GG_V2_CONTROL_LOADED__=true;try{\n${source}\n}catch(e){window.__GG_V2_CONTROL_LOADED__=false;console.error('[GG]',e);}})();`;
+
+          const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+          const context = await browser.newContext({
+            locale: 'zh-CN',
+            viewport: { width: 412, height: 915 },
+            isMobile: true,
+            hasTouch: true,
+            ignoreHTTPSErrors: true,
+          });
+          await context.addInitScript({ content: wrapped });
+
+          const requests = [];
+          const consoleEvents = [];
+          const pageErrors = [];
+          const fulfilled = [];
+          const page = await context.newPage();
+          page.on('request', request => requests.push({ url: request.url(), type: request.resourceType() }));
+          page.on('console', message => consoleEvents.push({ type: message.type(), text: message.text() }));
+          page.on('pageerror', error => pageErrors.push(String(error.stack || error.message)));
+
+          await page.route(TARGET, route => route.fulfill({
+            status: 200,
+            contentType: 'text/html; charset=utf-8',
+            body: `<!doctype html><html><head><meta charset="utf-8"><script id="parser-engine" src="${OFFICIAL}"></script></head><body><div id="result">ok</div></body></html>`,
+          }));
+          await page.route('**/*', async route => {
+            const url = route.request().url();
+            if ([OFFICIAL, LEGACY, STABLE, VIRTUAL].some(prefix => url.startsWith(prefix))) {
+              fulfilled.push(url);
+              await route.fulfill({ status: 200, contentType: 'application/javascript', body: `window.__LOADED_ENGINE_URLS__=(window.__LOADED_ENGINE_URLS__||[]);window.__LOADED_ENGINE_URLS__.push(${JSON.stringify(url)});` });
+              return;
+            }
+            await route.continue();
+          });
+
+          await page.goto(TARGET, { waitUntil: 'load', timeout: 60_000 });
+          await page.waitForTimeout(2_000);
+          const parserState = await page.evaluate(() => {
+            const node = document.getElementById('parser-engine');
+            return {
+              src: node?.src || '',
+              attr: node?.getAttribute('src') || '',
+              outerHTML: node?.outerHTML || '',
+              loaded: window.__LOADED_ENGINE_URLS__ || [],
+              controlLoaded: !!window.__GG_V2_CONTROL_LOADED__,
+            };
+          });
+
+          await page.evaluate((official) => {
+            const script = document.createElement('script');
+            script.id = 'dynamic-engine';
+            script.src = official;
+            document.head.appendChild(script);
+          }, OFFICIAL);
+          await page.waitForTimeout(2_000);
+          const dynamicState = await page.evaluate(() => {
+            const node = document.getElementById('dynamic-engine');
+            return {
+              src: node?.src || '',
+              attr: node?.getAttribute('src') || '',
+              outerHTML: node?.outerHTML || '',
+              loaded: window.__LOADED_ENGINE_URLS__ || [],
+            };
+          });
+
+          const report = {
+            replacementCounts: fs.readFileSync('/tmp/replacement-counts.txt', 'utf8'),
+            parserState,
+            dynamicState,
+            requests,
+            fulfilled,
+            consoleEvents: consoleEvents.slice(0, 50),
+            pageErrors: pageErrors.slice(0, 30),
+          };
+          fs.writeFileSync('/tmp/controlled-loader.json', JSON.stringify(report, null, 2));
+          console.log(JSON.stringify(report, null, 2));
+          await browser.close();
+          NODE
+          node /tmp/controlled-loader.mjs
+
+      - name: Commit diagnosis and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/diagnostics
+          cp /tmp/controlled-loader.json docs/diagnostics/controlled-engine-loader-20260723.json
+          rm -f .github/workflows/one-shot-controlled-engine-loader.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Record deterministic engine loader path diagnosis"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
