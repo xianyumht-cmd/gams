@@ -1,17 +1,23 @@
-name: Build GG client and V2 manager APKs
+name: Build GG 2.0.0 formal client release
 
 on:
   push:
     branches:
-      - v2-server-authoritative
+      - main
     paths:
-      - v2/android/**
+      - v2/android/client/**
+      - v2/android/build.gradle.kts
+      - v2/android/settings.gradle.kts
+      - v2/android/gradle.properties
       - .github/workflows/v2-build-apks.yml
   pull_request:
     branches:
-      - v2-server-authoritative
+      - main
     paths:
-      - v2/android/**
+      - v2/android/client/**
+      - v2/android/build.gradle.kts
+      - v2/android/settings.gradle.kts
+      - v2/android/gradle.properties
       - .github/workflows/v2-build-apks.yml
   workflow_dispatch:
 
@@ -19,7 +25,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-client:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -34,28 +40,25 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build release APKs
+      - name: Build formal release client
         working-directory: v2/android
-        run: gradle --no-daemon :client:clean :manager:clean :client:assembleRelease :manager:assembleRelease
+        run: gradle --no-daemon :client:clean :client:assembleRelease
 
-      - name: Verify packages and absence of core JavaScript
+      - name: Verify formal release package
         shell: bash
         run: |
           set -euo pipefail
           client="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
-          manager="$(find v2/android/manager/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
           test -n "$client" && test -s "$client"
-          test -n "$manager" && test -s "$manager"
 
           client_version="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' v2/android/client/build.gradle.kts | head -n1)"
-          manager_version="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' v2/android/manager/build.gradle.kts | head -n1)"
-          test -n "$client_version"
-          test -n "$manager_version"
+          client_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' v2/android/client/build.gradle.kts | head -n1)"
+          test "$client_version" = "2.0.0"
+          test "$client_code" = "9"
 
-          rm -rf /tmp/v2-client-apk /tmp/v2-manager-apk /tmp/v2-output
-          mkdir -p /tmp/v2-client-apk /tmp/v2-manager-apk /tmp/v2-output
-          unzip -q "$client" -d /tmp/v2-client-apk
-          unzip -q "$manager" -d /tmp/v2-manager-apk
+          rm -rf /tmp/gg-client-apk /tmp/gg-release
+          mkdir -p /tmp/gg-client-apk /tmp/gg-release
+          unzip -q "$client" -d /tmp/gg-client-apk
 
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
           aapt_bin="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
@@ -64,19 +67,14 @@ jobs:
           test -n "$apksigner_bin" && test -x "$apksigner_bin"
 
           client_badging="$($aapt_bin dump badging "$client")"
-          manager_badging="$($aapt_bin dump badging "$manager")"
-          printf '%s\n' "$client_badging" | tee /tmp/v2-output/CLIENT-BADGING.txt
-          printf '%s\n' "$manager_badging" | tee /tmp/v2-output/MANAGER-BADGING.txt
           printf '%s\n' "$client_badging" | grep -q "package: name='com.jinli.quickweb' versionCode='9' versionName='2.0.0'"
           printf '%s\n' "$client_badging" | grep -q "application-label:'GG'"
           printf '%s\n' "$client_badging" | grep -Eq "application-icon-|application: label='GG'.*icon="
-          printf '%s\n' "$manager_badging" | grep -q "package: name='com.jinli.ggsecure.manager'"
 
-          if "$apksigner_bin" verify "$client" >/tmp/client-signature.txt 2>&1; then
-            echo 'Production client must remain unsigned before hardening and final signing.'
+          if "$apksigner_bin" verify "$client" >/tmp/gg-client-signature.txt 2>&1; then
+            echo 'The pre-hardening package must remain unsigned so the production certificate can be applied after hardening.'
             exit 1
           fi
-          echo 'Production client is unsigned as required.' | tee /tmp/v2-output/CLIENT-SIGNING-STATUS.txt
 
           for marker in \
             webpackChunk_lodash_modules \
@@ -84,38 +82,31 @@ jobs:
             createBuyOrder \
             get_goods_list \
             '脚本加载完成~'; do
-            if grep -aR -F -q -- "$marker" /tmp/v2-client-apk; then
+            if grep -aR -F -q -- "$marker" /tmp/gg-client-apk; then
               echo "Core implementation marker found in client APK: $marker"
               exit 1
             fi
           done
 
-          if find /tmp/v2-client-apk -type f \( -name '*.js' -o -name 'game.js' -o -name 'noname.js' \) | grep -q .; then
+          if find /tmp/gg-client-apk -type f \( -name '*.js' -o -name 'game.js' -o -name 'noname.js' \) | grep -q .; then
             echo 'JavaScript file found inside client APK.'
             exit 1
           fi
 
-          cp "$client" "/tmp/v2-output/GG-${client_version}-code9-未签名加固前.apk"
-          cp "$manager" "/tmp/v2-output/GG-V2-管理器-${manager_version}.apk"
-          sha256sum /tmp/v2-output/*.apk | tee /tmp/v2-output/SHA256SUMS.txt
-          cat > /tmp/v2-output/SECURITY-CHECK.txt <<EOF
-          Client package: com.jinli.quickweb
-          Client version: ${client_version} / code 9
-          Client label and launcher icon: present
-          Client signing state: unsigned before hardening
-          Manager package: com.jinli.ggsecure.manager
-          Manager version: ${manager_version}
-          Core JavaScript assets: absent
-          Known plaintext core implementation markers in client APK: absent
-          Runtime mode: authenticated encrypted bundle, native memory decryption, WebView memory interception
-          Runtime network fallback: custom domain, normal Worker HTTPS, multi-DNS direct TLS with hostname verification
-          Upgrade target: GG 1.4.0 / code 8
-          Required final certificate SHA-256: F2:20:C5:D4:75:13:C7:44:CB:9B:5F:17:C0:F8:F3:9B:0C:10:9F:8F:7D:C8:92:98:97:13:EE:F3:3F:DB:E0:C4
+          cp "$client" "/tmp/gg-release/GG-${client_version}-code${client_code}-加固签名前.apk"
+          sha256sum /tmp/gg-release/*.apk > /tmp/gg-release/SHA256SUMS.txt
+          cat > /tmp/gg-release/RELEASE-INFO.txt <<EOF
+          GG ${client_version} 正式版
+          versionCode: ${client_code}
+          packageName: com.jinli.quickweb
+          applicationName: GG
+          当前文件用于正式加固和原证书签名，签名完成后再对外发布。
+          必须使用证书 SHA-256：F2:20:C5:D4:75:13:C7:44:CB:9B:5F:17:C0:F8:F3:9B:0C:10:9F:8F:7D:C8:92:98:97:13:EE:F3:3F:DB:E0:C4
           EOF
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-2.0.0-client-and-v2-manager
-          path: /tmp/v2-output/*
-          retention-days: 30
+          name: GG-2.0.0-formal-client-release-input
+          path: /tmp/gg-release/*
+          retention-days: 90
           if-no-files-found: error
