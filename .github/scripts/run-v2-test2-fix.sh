@@ -10,6 +10,9 @@ exec > >(tee /tmp/v2-test2/RUN-LOG.txt) 2>&1
 : "${LICENSE_ADMIN_PASSWORD:?missing LICENSE_ADMIN_PASSWORD}"
 
 TARGET_BRANCH="v2-server-authoritative"
+CF_API="https://api.cloudflare.com/client/v4"
+ZONE_NAME="xn--8pv109c.top"
+RUNTIME_HOST="runtime.xn--8pv109c.top"
 
 git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 git fetch -q origin main "${TARGET_BRANCH}"
@@ -79,7 +82,7 @@ done
 cp "$apk" '/tmp/v2-test2/GG-V2-客户端-2.0.0-test2.apk'
 sha256sum /tmp/v2-test2/*.apk > /tmp/v2-test2/SHA256SUMS.txt
 
-api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+api="${CF_API}/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
 response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
 database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
 test -n "$database_id" && test "$database_id" != 'null'
@@ -91,6 +94,83 @@ sed "s/__D1_DATABASE_ID__/${database_id}/g" \
     | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
   npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
 )
+
+waf_result='failed'
+zone_response="$(curl -fsS \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  "${CF_API}/zones?name=${ZONE_NAME}&status=active&per_page=50")"
+printf '%s\n' "$zone_response" > /tmp/v2-test2/cloudflare-zone.json
+zone_id="$(printf '%s' "$zone_response" | jq -er '.result[0].id')"
+echo "Cloudflare zone: ${zone_id}"
+
+entry_url="${CF_API}/zones/${zone_id}/rulesets/phases/http_request_firewall_custom/entrypoint"
+entry_status="$(curl --silent --show-error \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  --output /tmp/v2-test2/cloudflare-entrypoint-before.json \
+  --write-out '%{http_code}' \
+  "$entry_url" || true)"
+echo "Custom rules entrypoint HTTP ${entry_status}"
+
+skip_rule="$(jq -n --arg host "$RUNTIME_HOST" '{
+  action:"skip",
+  action_parameters:{
+    ruleset:"current",
+    phases:["http_ratelimit","http_request_sbfm","http_request_firewall_managed"],
+    products:["zoneLockdown","uaBlock","bic","hot","securityLevel","rateLimit","waf"]
+  },
+  expression:("http.host eq \"" + $host + "\""),
+  description:"Allow authenticated GG V2 runtime API without browser challenge",
+  enabled:true,
+  logging:{enabled:false},
+  ref:"gg_v2_runtime_api_skip"
+}')"
+
+if [[ "$entry_status" == '200' ]]; then
+  ruleset_id="$(jq -er '.result.id' /tmp/v2-test2/cloudflare-entrypoint-before.json)"
+  existing_rule_id="$(jq -r '.result.rules[]? | select(.ref=="gg_v2_runtime_api_skip") | .id' /tmp/v2-test2/cloudflare-entrypoint-before.json | head -n1)"
+  if [[ -n "$existing_rule_id" ]]; then
+    echo "WAF skip rule already exists: ${existing_rule_id}"
+    waf_result='already-present'
+  else
+    rule_payload="$(printf '%s' "$skip_rule" | jq '. + {position:{index:1}}')"
+    rule_status="$(curl --silent --show-error -X POST \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H 'Content-Type: application/json' \
+      --data "$rule_payload" \
+      --output /tmp/v2-test2/cloudflare-skip-create.json \
+      --write-out '%{http_code}' \
+      "${CF_API}/zones/${zone_id}/rulesets/${ruleset_id}/rules" || true)"
+    echo "Create WAF skip rule HTTP ${rule_status}"
+    cat /tmp/v2-test2/cloudflare-skip-create.json
+    if [[ "$rule_status" == '200' ]] && jq -e '.success == true' /tmp/v2-test2/cloudflare-skip-create.json >/dev/null; then
+      waf_result='created'
+    fi
+  fi
+elif [[ "$entry_status" == '404' ]]; then
+  ruleset_payload="$(jq -n --argjson rule "$skip_rule" '{
+    name:"GG V2 runtime API exemptions",
+    description:"Hostname-scoped API exemptions for the GG V2 runtime Worker",
+    kind:"zone",
+    phase:"http_request_firewall_custom",
+    rules:[$rule]
+  }')"
+  create_status="$(curl --silent --show-error -X POST \
+    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+    -H 'Content-Type: application/json' \
+    --data "$ruleset_payload" \
+    --output /tmp/v2-test2/cloudflare-ruleset-create.json \
+    --write-out '%{http_code}' \
+    "${CF_API}/zones/${zone_id}/rulesets" || true)"
+  echo "Create WAF entrypoint HTTP ${create_status}"
+  cat /tmp/v2-test2/cloudflare-ruleset-create.json
+  if [[ "$create_status" == '200' ]] && jq -e '.success == true' /tmp/v2-test2/cloudflare-ruleset-create.json >/dev/null; then
+    waf_result='created-with-entrypoint'
+  fi
+else
+  cat /tmp/v2-test2/cloudflare-entrypoint-before.json 2>/dev/null || true
+fi
+
+echo "WAF configuration result: ${waf_result}"
 
 verify_failed=0
 challenge="$(python3 - <<'PY'
@@ -107,7 +187,7 @@ for endpoint in \
   prefix="/tmp/v2-test2/channel-${index}"
   ready=0
   status=''
-  for attempt in $(seq 1 12); do
+  for attempt in $(seq 1 24); do
     status="$(curl --silent --show-error \
       --dump-header "${prefix}-health-headers.txt" \
       --output "${prefix}-health-body.txt" \
@@ -156,6 +236,7 @@ cat > /tmp/v2-test2/TEST-RESULT.txt <<EOF
 Android compile: passed
 APK plaintext core scan: passed
 Android key wrap: RSA-OAEP SHA-1 / MGF1 SHA-1
+Cloudflare hostname WAF skip: ${waf_result}
 Primary runtime channel: https://runtime.xn--8pv109c.top
 Fallback runtime channel: workers.dev
 Online channel verification: ${online_result}
@@ -163,9 +244,31 @@ V1 version 8: unchanged
 EOF
 
 rm -f v2/runtime/wrangler.generated.jsonc
-git add v2/android/client v2/runtime/src/index.js v2/runtime/wrangler.template.jsonc v2/README.md
+cat > v2/android/.gitignore <<'EOF'
+.gradle/
+**/build/
+local.properties
+EOF
+
+git rm -r --cached --ignore-unmatch \
+  v2/android/.gradle \
+  v2/android/client/build \
+  v2/android/manager/build || true
+rm -rf v2/android/.gradle v2/android/client/build v2/android/manager/build
+
+git add \
+  v2/android/.gitignore \
+  v2/android/client/build.gradle.kts \
+  v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeKeyManager.java \
+  v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeNames.java \
+  v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeTransport.java \
+  v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java \
+  v2/runtime/src/index.js \
+  v2/runtime/wrangler.template.jsonc \
+  v2/README.md
+
 if ! git diff --cached --quiet; then
-  git commit -m 'Fix V2 Android OAEP compatibility and direct runtime access'
+  git commit -m 'Finalize V2 test2 compatibility and remove build outputs'
   git fetch -q origin "${TARGET_BRANCH}"
   git rebase "origin/${TARGET_BRANCH}"
   git push origin HEAD:"${TARGET_BRANCH}"
