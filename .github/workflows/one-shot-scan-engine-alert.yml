@@ -1,0 +1,147 @@
+name: Scan exact engine alert source
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-shot-scan-engine-alert.yml
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan current page scripts and repository releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import html
+          import json
+          import re
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          target = 'https://m.66rpg.com/h5/1690283?ohp=v3&quality=32'
+          needle = '脚本加载完成~'.encode('utf-8')
+          headers = {'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36'}
+
+          def get(url, maximum=24*1024*1024):
+              request = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(request, timeout=45) as response:
+                  body = response.read(maximum + 1)
+                  if len(body) > maximum:
+                      raise RuntimeError(f'too large: {url}')
+                  return body, response.geturl(), dict(response.headers)
+
+          page, final_page, page_headers = get(target, 2*1024*1024)
+          text = page.decode('utf-8', errors='replace')
+          srcs = re.findall(r'<script\b[^>]*\bsrc\s*=\s*["\']([^"\']+)["\']', text, flags=re.I)
+          urls = []
+          for src in srcs:
+              url = urllib.parse.urljoin(final_page, html.unescape(src))
+              if url not in urls:
+                  urls.append(url)
+
+          # Include the effective official CDN URL previously observed and both engine routes.
+          extras = [
+              'https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001',
+              'https://gams-script-edge.2320006072.workers.dev/engine/stable.js',
+              'https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/game-1.0.3.js',
+          ]
+          for url in extras:
+              if url not in urls:
+                  urls.append(url)
+
+          def apk_match(url):
+              lower = url.lower()
+              return lower == 'https://ggv2.local/runtime/game.js' or \
+                  'gams-script-edge.2320006072.workers.dev/engine/stable.js' in lower or \
+                  'space-z.ai/game.js' in lower
+
+          results = []
+          for url in urls:
+              item = {'requestedUrl': url, 'apkIntercepts': apk_match(url)}
+              try:
+                  body, final, response_headers = get(url)
+                  item.update({
+                      'finalUrl': final,
+                      'status': 200,
+                      'size': len(body),
+                      'sha256': hashlib.sha256(body).hexdigest(),
+                      'containsExactAlert': needle in body,
+                      'alertOffsets': [m.start() for m in re.finditer(re.escape(needle), body)][:10],
+                      'tail': body[-300:].decode('utf-8', errors='replace'),
+                      'cacheControl': response_headers.get('Cache-Control', ''),
+                  })
+              except Exception as error:
+                  item['error'] = repr(error)
+              results.append(item)
+
+          local_files = []
+          for path in [
+              Path('game-engine/release/game-1.0.2.js'),
+              Path('game-engine/release/game-1.0.3.js'),
+              Path('remote-script/src/noname.js'),
+          ]:
+              body = path.read_bytes()
+              local_files.append({
+                  'path': str(path),
+                  'size': len(body),
+                  'sha256': hashlib.sha256(body).hexdigest(),
+                  'containsExactAlert': needle in body,
+                  'alertOffsets': [m.start() for m in re.finditer(re.escape(needle), body)][:10],
+                  'tail': body[-300:].decode('utf-8', errors='replace'),
+              })
+
+          report = {
+              'target': target,
+              'finalPage': final_page,
+              'pageSha256': hashlib.sha256(page).hexdigest(),
+              'scriptCount': len(urls),
+              'scripts': results,
+              'localFiles': local_files,
+          }
+          Path('docs/diagnostics').mkdir(parents=True, exist_ok=True)
+          Path('docs/diagnostics/engine-alert-exact-source-20260723.json').write_text(
+              json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          hits = [x for x in results if x.get('containsExactAlert')]
+          local_hits = [x for x in local_files if x.get('containsExactAlert')]
+          unmatched_engines = [x for x in results if re.search(r'game\.js|engine/stable', x['requestedUrl'], re.I) and not x['apkIntercepts']]
+          lines = [
+              '# Exact engine alert source scan', '',
+              f'- Page: `{final_page}`',
+              f'- Downloaded scripts: `{len(results)}`',
+              f'- Remote scripts containing exact alert: `{len(hits)}`',
+              f'- Local files containing exact alert: `{len(local_hits)}`',
+              f'- Engine URLs missed by APK matcher: `{len(unmatched_engines)}`', '',
+              '## Remote exact hits', ''
+          ]
+          lines += [f"- `{x['finalUrl']}` — SHA-256 `{x['sha256']}`, offset `{x['alertOffsets']}`" for x in hits] or ['- None']
+          lines += ['', '## Local exact hits', '']
+          lines += [f"- `{x['path']}` — SHA-256 `{x['sha256']}`, offset `{x['alertOffsets']}`" for x in local_hits] or ['- None']
+          lines += ['', '## Engine requests missed by APK interception', '']
+          lines += [f"- `{x.get('finalUrl', x['requestedUrl'])}` — containsExactAlert=`{x.get('containsExactAlert')}`" for x in unmatched_engines] or ['- None']
+          Path('docs/diagnostics/engine-alert-exact-source-20260723.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print(json.dumps({'remoteHits': hits, 'localHits': local_hits, 'unmatchedEngines': unmatched_engines}, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Commit report and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/one-shot-scan-engine-alert.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Record exact engine alert source scan"
+          git push origin HEAD:main
