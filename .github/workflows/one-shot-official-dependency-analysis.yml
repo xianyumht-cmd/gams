@@ -8,6 +8,7 @@ on:
       - tools/js_maintenance/capture_official_dependencies.py
       - tools/js_maintenance/resolve_dynamic_chunks.py
       - tools/js_maintenance/browser_dependency_probe.mjs
+      - tools/js_maintenance/webpack_registry_probe.mjs
       - game-engine/upstream-baseline.json
       - .github/workflows/one-shot-official-dependency-analysis.yml
 
@@ -18,7 +19,7 @@ jobs:
   capture:
     if: github.head_ref == 'analysis/js-maintenance-knowledgebase'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - name: Check out analysis branch
         uses: actions/checkout@v4
@@ -50,7 +51,7 @@ jobs:
           npm install --no-save playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Observe runtime script and Webpack registration
+      - name: Observe runtime scripts and Webpack registry
         shell: bash
         run: |
           set -euo pipefail
@@ -59,6 +60,10 @@ jobs:
             "$page_url" \
             docs/js-maintenance/official-current/browser-probe.json \
             | tee /tmp/browser-probe-summary.json
+          node tools/js_maintenance/webpack_registry_probe.mjs \
+            "$page_url" \
+            docs/js-maintenance/official-current/webpack-registry-probe.json \
+            | tee /tmp/webpack-registry-summary.json
           test -s docs/js-maintenance/official-current/snapshot.json
           test -s docs/js-maintenance/official-current/resource-inventory.json
           test -s docs/js-maintenance/official-current/dependency-module-map.json
@@ -66,6 +71,7 @@ jobs:
           test -s docs/js-maintenance/official-current/inline-page-anchors.json
           test -s docs/js-maintenance/official-current/dynamic-chunks.md
           test -s docs/js-maintenance/official-current/browser-probe.json
+          test -s docs/js-maintenance/official-current/webpack-registry-probe.json
           test -s docs/js-maintenance/official-current/README.md
 
       - name: Commit metadata reports
@@ -79,7 +85,7 @@ jobs:
             echo 'No official dependency changes.'
             exit 0
           fi
-          git commit -m 'Observe current official Webpack dependencies'
+          git commit -m 'Inspect current official Webpack registry'
           git push origin HEAD:analysis/js-maintenance-knowledgebase
 
       - name: Upload capture summaries
@@ -91,5 +97,6 @@ jobs:
             /tmp/official-dependency-summary.json
             /tmp/dynamic-chunk-summary.json
             /tmp/browser-probe-summary.json
+            /tmp/webpack-registry-summary.json
           retention-days: 7
           if-no-files-found: warn
