@@ -85,7 +85,7 @@ public final class MainActivity extends Activity {
     private void initializeV2(@Nullable Bundle savedInstanceState) {
         browserVisible = false;
         releaseRuntime();
-        showLoading("正在建立安全运行环境…");
+        showLoading("正在启动…");
         licenseManager.initializeSavedAsync(result -> {
             if (isFinishing() || isDestroyed()) {
                 if (result.payload != null) result.payload.wipe();
@@ -115,7 +115,7 @@ public final class MainActivity extends Activity {
         root.addView(loading, new LinearLayout.LayoutParams(dp(56), dp(56)));
 
         TextView title = new TextView(this);
-        title.setText("GG V2");
+        title.setText("GG");
         title.setTextSize(29);
         title.setTextColor(Color.WHITE);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -159,7 +159,7 @@ public final class MainActivity extends Activity {
         root.addView(title, matchWrap(dp(10)));
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("核心运行数据仅在内存中解密，不保存到APK、WebView缓存或本地脚本文件。");
+        subtitle.setText("请输入激活码后启动");
         subtitle.setTextSize(14);
         subtitle.setTextColor(Color.rgb(75, 85, 99));
         subtitle.setGravity(Gravity.CENTER);
@@ -211,7 +211,7 @@ public final class MainActivity extends Activity {
             activate.setEnabled(false);
             paste.setEnabled(false);
             status.setTextColor(Color.rgb(55, 65, 81));
-            status.setText("正在鉴权并解密运行包…");
+            status.setText("正在验证，请稍候…");
             licenseManager.activateAsync(key, result -> {
                 if (isFinishing() || isDestroyed()) {
                     if (result.payload != null) result.payload.wipe();
@@ -466,7 +466,7 @@ public final class MainActivity extends Activity {
                 "window.__GG_V2_CONTROL_LOADED__=true;" +
                 "try{\n" + source + "\n}catch(e){" +
                 "window.__GG_V2_CONTROL_LOADED__=false;" +
-                "console.error('[GG V2]',e);}" +
+                "console.error('[GG]',e);}" +
                 "})();";
     }
 
@@ -495,7 +495,7 @@ public final class MainActivity extends Activity {
     private void resetWebData() {
         new AlertDialog.Builder(this)
                 .setTitle("重置网页数据")
-                .setMessage("清除网页缓存、Cookie和本地网页设置，不影响V2激活状态。")
+                .setMessage("清除网页缓存、Cookie和本地网页设置，不会影响账号授权。")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("确认", (dialog, which) -> {
                     CookieManager.getInstance().removeAllCookies(value -> {
@@ -515,7 +515,7 @@ public final class MainActivity extends Activity {
 
     private void showServiceDialog() {
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("V2服务信息")
+                .setTitle("服务信息")
                 .setMessage(licenseManager.getStatusSummary())
                 .setNegativeButton("关闭", null)
                 .setNeutralButton("更换设备", null)
@@ -528,11 +528,11 @@ public final class MainActivity extends Activity {
                 dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
                         new AlertDialog.Builder(this)
                                 .setTitle("确认更换设备")
-                                .setMessage("当前V2设备会立即退出，是否继续？")
+                                .setMessage("当前设备会立即退出账号，是否继续？")
                                 .setNegativeButton("取消", null)
                                 .setPositiveButton("确认", (confirm, which) -> {
                                     dialog.dismiss();
-                                    showLoading("正在解除V2设备绑定…");
+                                    showLoading("正在解除设备绑定…");
                                     licenseManager.selfUnbindAsync(result -> {
                                         Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
                                         if (result.success) showLicenseScreen("");
@@ -545,9 +545,9 @@ public final class MainActivity extends Activity {
 
     private void showUpdateDialog(String message, String url, boolean required) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle(required ? "需要更新V2" : "发现V2更新")
+                .setTitle(required ? "需要更新" : "发现更新")
                 .setMessage(message == null || message.trim().isEmpty()
-                        ? "发现新的V2客户端" : message)
+                        ? "发现新版本" : message)
                 .setNegativeButton(required ? "关闭" : "稍后", null);
         if (url != null && !url.trim().isEmpty()) {
             builder.setPositiveButton("下载更新", (dialog, which) -> {

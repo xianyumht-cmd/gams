@@ -76,13 +76,13 @@ final class V2LicenseManager {
                 }
                 saveAuth(key, auth);
                 RuntimePayload payload = loadRuntime(auth.token);
-                deliver(callback, RuntimeResult.valid(payload, auth, "V2安全运行环境已就绪"));
+                deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
             } catch (java.io.IOException error) {
-                deliver(callback, RuntimeResult.invalid("需要联网启动V2，请检查网络后重试"));
+                deliver(callback, RuntimeResult.invalid("需要联网启动，请检查网络后重试"));
             } catch (ApiException error) {
                 deliver(callback, RuntimeResult.invalid(userMessage(error)));
             } catch (Exception error) {
-                deliver(callback, RuntimeResult.invalid("V2初始化失败：" + safeMessage(error)));
+                deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
             }
         });
     }
@@ -98,13 +98,13 @@ final class V2LicenseManager {
                 AuthResult auth = activate(key);
                 saveAuth(key, auth);
                 RuntimePayload payload = loadRuntime(auth.token);
-                deliver(callback, RuntimeResult.valid(payload, auth, "V2启动成功"));
+                deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
             } catch (java.io.IOException error) {
                 deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"));
             } catch (ApiException error) {
                 deliver(callback, RuntimeResult.invalid(userMessage(error)));
             } catch (Exception error) {
-                deliver(callback, RuntimeResult.invalid("V2启动失败：" + safeMessage(error)));
+                deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
             }
         });
     }
@@ -126,7 +126,7 @@ final class V2LicenseManager {
                 if (error instanceof ApiException) {
                     deliver(callback, SimpleResult.failure(userMessage((ApiException) error)));
                 } else {
-                    deliver(callback, SimpleResult.failure("更换设备失败：" + safeMessage(error)));
+                    deliver(callback, SimpleResult.failure("更换设备失败，请重试"));
                 }
             }
         });
@@ -137,8 +137,7 @@ final class V2LicenseManager {
         boolean permanent = state.optBoolean("permanent", false);
         long expiresAt = state.optLong("licenseExpiresAt", 0L);
         String validity = permanent ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
-        return "正式通道\n有效期：" + validity +
-                "\n运行核心：仅内存加载\n离线启动：已禁用\n客户端：2.0.0";
+        return "有效期：" + validity + "\n版本：2.0.0";
     }
 
     void clear() {
@@ -384,9 +383,16 @@ final class V2LicenseManager {
         if ("license_disabled".equals(error.code)) return "服务已暂停，请联系支持";
         if ("device_limit".equals(error.code)) return "激活码已绑定其他设备";
         if ("bad_session".equals(error.code)) return "授权会话已失效";
-        if ("runtime_paused".equals(error.code)) return "V2运行服务维护中";
-        if ("upgrade_required".equals(error.code)) return "V2客户端需要更新";
+        if ("runtime_paused".equals(error.code)) return "服务维护中";
+        if ("upgrade_required".equals(error.code)) return "客户端需要更新";
         if ("too_many_requests".equals(error.code)) return "操作过于频繁，请稍后再试";
+        if ("server_error".equals(error.code)
+                || "runtime_unavailable".equals(error.code)
+                || "runtime_invalid".equals(error.code)
+                || "bad_runtime_key".equals(error.code)
+                || "runtime_key_mismatch".equals(error.code)) {
+            return "服务暂时不可用，请稍后重试";
+        }
         String message = error.getMessage();
         return message == null || message.trim().isEmpty()
                 ? "操作失败，请重试" : message;
@@ -463,7 +469,7 @@ final class V2LicenseManager {
                     required ? null : payload,
                     auth.permanent,
                     auth.licenseExpiresAt,
-                    required ? "需要更新V2客户端" : message,
+                    required ? "需要更新客户端" : message,
                     required,
                     auth.updateUrl,
                     auth.updateMessage);
