@@ -1,0 +1,216 @@
+{
+  "generatedAt": "2026-07-22T04:51:50+00:00",
+  "anchors": {
+    "/website/hfplayer/": {
+      "nonameCount": 1,
+      "gameCount": 0
+    },
+    "/official/game.js": {
+      "nonameCount": 0,
+      "gameCount": 0
+    },
+    "space-z.ai/game.js": {
+      "nonameCount": 0,
+      "gameCount": 0
+    },
+    "gams-script-edge.2320006072.workers.dev/engine/stable.js": {
+      "nonameCount": 1,
+      "gameCount": 0
+    },
+    "orange_feature_switch": {
+      "nonameCount": 0,
+      "gameCount": 0
+    },
+    "SAL_Login": {
+      "nonameCount": 0,
+      "gameCount": 8
+    },
+    "SAL_getUserData": {
+      "nonameCount": 0,
+      "gameCount": 3
+    },
+    "mallViewData": {
+      "nonameCount": 0,
+      "gameCount": 0
+    },
+    "userData": {
+      "nonameCount": 0,
+      "gameCount": 0
+    },
+    "createBuyOrder": {
+      "nonameCount": 0,
+      "gameCount": 0
+    },
+    "get_goods_list": {
+      "nonameCount": 1,
+      "gameCount": 0
+    },
+    "itemPrice": {
+      "nonameCount": 1,
+      "gameCount": 0
+    },
+    "showLocal": {
+      "nonameCount": 1,
+      "gameCount": 0
+    }
+  },
+  "knownNonameSymbols": {
+    "STy4gr": {
+      "description": "PC/H5 入口适配",
+      "count": 36,
+      "firstLine": 5330
+    },
+    "MInyap": {
+      "description": "运行环境初始化",
+      "count": 21,
+      "firstLine": 5882
+    },
+    "DjkL_Q": {
+      "description": "game.js 识别与替换",
+      "count": 21,
+      "firstLine": 6117
+    },
+    "zjEv2f": {
+      "description": "页面数据和请求适配",
+      "count": 38,
+      "firstLine": 4624
+    },
+    "PwDi7Ry": {
+      "description": "用户状态适配",
+      "count": 13,
+      "firstLine": 6116
+    },
+    "pXBC4W": {
+      "description": "G 菜单与交互界面",
+      "count": 18,
+      "firstLine": 6115
+    }
+  },
+  "salIdentifiers": [
+    "SAL_Login",
+    "SAL_Recorder",
+    "SAL_VideoFinish",
+    "SAL_addClick",
+    "SAL_addElement",
+    "SAL_addRightClick",
+    "SAL_addRightTouchDown",
+    "SAL_addRightTouchUp",
+    "SAL_addTouchCancel",
+    "SAL_addTouchDown",
+    "SAL_addTouchEnter",
+    "SAL_addTouchMove",
+    "SAL_addTouchUp",
+    "SAL_alert",
+    "SAL_audioSeekTo",
+    "SAL_callInput",
+    "SAL_checkSRCPreloaded",
+    "SAL_checkSession",
+    "SAL_clearInterval",
+    "SAL_clearStorage",
+    "SAL_clearTimeout",
+    "SAL_collect",
+    "SAL_destroyElement",
+    "SAL_exit",
+    "SAL_exitOrFullScreen",
+    "SAL_getAudioInfo",
+    "SAL_getCanvas",
+    "SAL_getCapture",
+    "SAL_getCurrency",
+    "SAL_getElementCount",
+    "SAL_getElementCurHeight",
+    "SAL_getElementCurWidth",
+    "SAL_getElementHeight",
+    "SAL_getElementPosX",
+    "SAL_getElementPosY",
+    "SAL_getElementWidth",
+    "SAL_getGameInfo",
+    "SAL_getGlobalZoomRatio",
+    "SAL_getHTTPProtocol",
+    "SAL_getScreenState",
+    "SAL_getSign",
+    "SAL_getStorage",
+    "SAL_getStorageInfo",
+    "SAL_getTextSize",
+    "SAL_getUserData",
+    "SAL_getVideoTimeInfo",
+    "SAL_globalUpdate",
+    "SAL_log",
+    "SAL_manualGC",
+    "SAL_mouseWheel",
+    "SAL_ninePartDivide",
+    "SAL_openDebugger",
+    "SAL_openMenu",
+    "SAL_openShareMenu",
+    "SAL_openWebView",
+    "SAL_pauseAudio",
+    "SAL_pauseVideo",
+    "SAL_payMoney",
+    "SAL_playAudio",
+    "SAL_playVideo",
+    "SAL_preload",
+    "SAL_recharge",
+    "SAL_removeClick",
+    "SAL_removeElement",
+    "SAL_removeRightClick",
+    "SAL_removeRightTouchDown",
+    "SAL_removeRightTouchUp",
+    "SAL_removeStorage",
+    "SAL_removeTouchCancel",
+    "SAL_removeTouchDown",
+    "SAL_removeTouchEnter",
+    "SAL_removeTouchMove",
+    "SAL_removeTouchUp",
+    "SAL_request",
+    "SAL_resetElement",
+    "SAL_resetElementClip",
+    "SAL_resumeAudio",
+    "SAL_resumeVideo",
+    "SAL_runAction",
+    "SAL_sendMessage",
+    "SAL_setAnimationPlay",
+    "SAL_setAudioPlayRate",
+    "SAL_setAudioVolume",
+    "SAL_setBitmapFont",
+    "SAL_setCanvas",
+    "SAL_setContainerOffset",
+    "SAL_setElementAnchor",
+    "SAL_setElementBlockTouch",
+    "SAL_setElementClip",
+    "SAL_setElementIndex",
+    "SAL_setElementListInfo",
+    "SAL_setElementMirrorType",
+    "SAL_setElementMouseEnable",
+    "SAL_setElementOpacity",
+    "SAL_setElementScale",
+    "SAL_setElementSize",
+    "SAL_setElementVisible",
+    "SAL_setFPS",
+    "SAL_setInterval",
+    "SAL_setMask",
+    "SAL_setPosition",
+    "SAL_setRotate",
+    "SAL_setStorage",
+    "SAL_setTextColor",
+    "SAL_setTextFont",
+    "SAL_setTextFontSize",
+    "SAL_setTextStyle",
+    "SAL_setTimeout",
+    "SAL_setTransparencyFiltering",
+    "SAL_setVideoLoop",
+    "SAL_setVideoVolume",
+    "SAL_setVisibleChangeListener",
+    "SAL_share",
+    "SAL_showADVideo",
+    "SAL_stopAudio",
+    "SAL_stopElementAction",
+    "SAL_stopVideo",
+    "SAL_toolFunc",
+    "SAL_updateUserInfoCoin",
+    "SAL_uploadImage",
+    "SAL_videoFinish",
+    "SAL_videoSeekTo"
+  ],
+  "webpackModuleIds": [
+    71269
+  ]
+}

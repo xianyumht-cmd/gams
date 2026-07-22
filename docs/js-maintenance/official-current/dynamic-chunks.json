@@ -1,0 +1,1200 @@
+{
+  "schemaVersion": 1,
+  "page": {
+    "requestedUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+    "finalUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+    "status": 200,
+    "size": 17377,
+    "sha256": "d5379b421354a6dae8f7d872b41f2a3f23b7f2d02c5902b4b1b6b194cb8d2cd2",
+    "error": ""
+  },
+  "inlineScripts": [
+    {
+      "index": 1,
+      "size": 4300,
+      "sha256": "1b012c39d0bb70e8efd2db28fc9680b528523d8d743ae1085168d557b53b6d00",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "index": 9,
+      "size": 1238,
+      "sha256": "dc9471e05102e68480486e21322626d0c7c06ed1fde8ef04e2c6d571c1aa030a",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "index": 13,
+      "size": 4643,
+      "sha256": "8aafa3972cff812e1109a6629526c34515a03706e351816e6078c59366f10aa8",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [
+        "https://m.66rpg.com/h5/bin/official/game.js"
+      ],
+      "anchorSnippets": []
+    },
+    {
+      "index": 15,
+      "size": 61,
+      "sha256": "2afef89a82bd44d3ef67ac976d5d3fe586985f27f0efb53136054651902135af",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    }
+  ],
+  "resources": [
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 15372213,
+      "sha256": "baae434801689407444132888f944ef6f3b99235337a3cbfa97271ab8581e40c",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f271c-ea8fb5\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:28 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": true,
+          "useCount": 1,
+          "useOffsets": [
+            5450
+          ]
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": true,
+          "useCount": 1,
+          "useOffsets": [
+            5459
+          ]
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": true,
+          "useCount": 1,
+          "useOffsets": [
+            5467
+          ]
+        }
+      },
+      "discoveredJs": [
+        "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.3/sensorsdata.min.js",
+        "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.user.js",
+        "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/Data/LmCode/dist/index.js",
+        "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/on.js"
+      ],
+      "anchorSnippets": [
+        {
+          "term": "webpackChunk_lodash_modules",
+          "offset": 6,
+          "snippet": "(self.webpackChunk_lodash_modules=self.webpackChunk_lodash_modules||[]).push([['ondemand.s'],{71269:(n,W,t)=>{function CW(c"
+        },
+        {
+          "term": "webpackChunk_lodash_modules",
+          "offset": 39,
+          "snippet": "(self.webpackChunk_lodash_modules=self.webpackChunk_lodash_modules||[]).push([['ondemand.s'],{71269:(n,W,t)=>{function CW(c,n){const o=r();return(CW=functio"
+        },
+        {
+          "term": "__webpack_require__",
+          "offset": 13111358,
+          "snippet": "3['de'+'fa'+'ul'+'t']=_0x5b532b;},2434:function _0x1936f7(__unused_webpack_module,exports,__webpack_require__){'use strict';var _0x9f7c7f={nsVAp:'Qa'+'Bb'+'N',GIMrO:function(_0x2d953c,_0x274d80){retu"
+        },
+        {
+          "term": "__webpack_require__",
+          "offset": 13143298,
+          "snippet": "+-3657)});var _0x40d885=_0x4c2231['Qm'+'aH'+'B'](__importDefault,_0x4c2231['HW'+'qG'+'V'](__webpack_require__,-6015+1*8297+1512)),_0x45958c=_0x4c2231['HP'+'BP'+'m'](__importDefault,_0x4c2231['ug'+'FJ"
+        },
+        {
+          "term": "__webpack_require__",
+          "offset": 13143414,
+          "snippet": "1*8297+1512)),_0x45958c=_0x4c2231['HP'+'BP'+'m'](__importDefault,_0x4c2231['ug'+'FJ'+'q'](__webpack_require__,139*9+-7394*1+11941)),_0x58c933=_0x4c2231['Ms'+'Wh'+'s'](__webpack_require__,-2040*3+-11*"
+        },
+        {
+          "term": "__webpack_require__",
+          "offset": 13143491,
+          "snippet": "g'+'FJ'+'q'](__webpack_require__,139*9+-7394*1+11941)),_0x58c933=_0x4c2231['Ms'+'Wh'+'s'](__webpack_require__,-2040*3+-11*199+17061),_0x48b98f=_0x4c2231['vB'+'wO'+'Y'](__webpack_require__,-18132+-178"
+        },
+        {
+          "term": "36728",
+          "offset": 5452,
+          "snippet": "return CW(t- -176,r);}function u(n,W){return CW(n-282,W);}t.r(W),t.d(W,{default:()=>d}),t(36728),t(6886),t(75640);for(var e=r();;)try{if(435763==-parseInt(u(708,'kvMj'))+-parseInt(u(480"
+        },
+        {
+          "term": "6886",
+          "offset": 5461,
+          "snippet": "(t- -176,r);}function u(n,W){return CW(n-282,W);}t.r(W),t.d(W,{default:()=>d}),t(36728),t(6886),t(75640);for(var e=r();;)try{if(435763==-parseInt(u(708,'kvMj'))+-parseInt(u(480,'&d$m')"
+        },
+        {
+          "term": "6886",
+          "offset": 1084609,
+          "snippet": "446e38),_0x3e7f28=_0x446e38==_0x47d231-(4*-619+411+2066)?_0x58845a:5647+-112+-41*135,_0x3d6886=4639*-2+-1*6736+37*433;_0x4b7e41['vL'+'IY'+'c'](_0x3e7f28,_0x3d6886);--_0x3d6886)_0x3765d"
+        },
+        {
+          "term": "6886",
+          "offset": 1084677,
+          "snippet": "647+-112+-41*135,_0x3d6886=4639*-2+-1*6736+37*433;_0x4b7e41['vL'+'IY'+'c'](_0x3e7f28,_0x3d6886);--_0x3d6886)_0x3765db+=_0x295450>>_0x3d6886&-2237+-3855+6093?'1':'0';if(_0x3765db['le'+'"
+        },
+        {
+          "term": "6886",
+          "offset": 1084690,
+          "snippet": "135,_0x3d6886=4639*-2+-1*6736+37*433;_0x4b7e41['vL'+'IY'+'c'](_0x3e7f28,_0x3d6886);--_0x3d6886)_0x3765db+=_0x295450>>_0x3d6886&-2237+-3855+6093?'1':'0';if(_0x3765db['le'+'ng'+'th']>_0x"
+        },
+        {
+          "term": "75640",
+          "offset": 5469,
+          "snippet": ",r);}function u(n,W){return CW(n-282,W);}t.r(W),t.d(W,{default:()=>d}),t(36728),t(6886),t(75640);for(var e=r();;)try{if(435763==-parseInt(u(708,'kvMj'))+-parseInt(u(480,'&d$m'))/2+-pars"
+        }
+      ]
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/SALInterface.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/SALInterface.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 18608,
+      "sha256": "bf0ac297deb72bce2ac416a839c7e706ef474221552c786e9ed134d81e9da271",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f271f-48b0\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:31 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 262518,
+      "sha256": "ee0dcc10b025b94beb9753023438e4589eb73c847b431fd09c0f9092ec8a5b6e",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f271f-40176\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:31 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 81164,
+      "sha256": "453594d8aedd27ec4cd5fd8d943f5121517d61b1500115e24953052560d6b79c",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-13d0c\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 773,
+      "sha256": "e9749bb8b62a6664c2e81420249d98cf1a6eef0c00b310b545754d9b57fea34d",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5dc494-305\"",
+      "lastModified": "Mon, 20 Jul 2026 06:47:48 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 1274,
+      "sha256": "e4771bba7a45408a635c982b02de0c1bc0760c1fc38cce09df25f186e747ec7a",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-4fa\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/OrgWeb.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/OrgWeb.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 1168,
+      "sha256": "ff357e314a37b674dd3b650677c5e8bccc11ace0bf82b1b8587bb55318d73842",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-490\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/eruda.min.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/eruda.min.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 311049,
+      "sha256": "f226a92e566affa5af54177892045bc5466155dc1f9d6fb945c45315220deb75",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-4bf09\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": [
+        {
+          "term": ".p=",
+          "offset": 743,
+          "snippet": "turn t.d(n,\"a\",n),n},t.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},t.p=\"/assets/\",t(t.s=196)}([function(e,t){e.exports=function(){var e={},t=e.last=function(){fu"
+        },
+        {
+          "term": ".p=",
+          "offset": 27414,
+          "snippet": "urn e[r].call(a.exports,a,a.exports,t),a.loaded=!0,a.exports}var n={};return t.m=e,t.c=n,t.p=\"\",t(0)}([function(e,t,n){\"use strict\";function r(){var e=new s.HandlebarsEnvironment;retu"
+        }
+      ]
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 92605,
+      "sha256": "cec143edd6b7a21f762ae051518d7ea6872c1c1e6bfc50ef073f369e99dbc7f7",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-169bd\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/spine-core.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/spine-core.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 392337,
+      "sha256": "b31b04a1e23032e0b5459f6f86ebbc74b53d62842f101d40531803419fbda560",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-5fc91\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 3615,
+      "sha256": "9bc64f2182be3cf33c3dfba40914be193ed74fd1af4968fb7d3140c4c848fd91",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-e1f\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [
+        "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/game.js",
+        "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/gameV.js",
+        "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/lmcode.js",
+        "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js"
+      ],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
+      "finalUrl": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 200,
+      "size": 15468,
+      "sha256": "18c5c641ebcfabdd4fc96e02fed037cbe45a18dd6cfa8598a897583c0ec11bcc",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f2734-3c6c\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:52 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [
+        "https://c2.cgyouxi.com/website/orange/js/tipBox/errorBox.js?v=20251224"
+      ],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://m.66rpg.com/h5/bin/official/game.js",
+      "finalUrl": "https://m.66rpg.com/h5/bin/official/game.js",
+      "parentUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "depth": 0,
+      "status": 406,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 406",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.3/sensorsdata.min.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.3/sensorsdata.min.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "depth": 1,
+      "status": 404,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 404",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.user.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.user.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "depth": 1,
+      "status": 404,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 404",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/Data/LmCode/dist/index.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/Data/LmCode/dist/index.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "depth": 1,
+      "status": 404,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 404",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/on.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/on.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "depth": 1,
+      "status": 404,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 404",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/game.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/game.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "depth": 1,
+      "status": 404,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 404",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/gameV.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/gameV.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "depth": 1,
+      "status": 404,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 404",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/lmcode.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/lmcode.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "depth": 1,
+      "status": 404,
+      "size": 0,
+      "sha256": "",
+      "contentType": "",
+      "etag": "",
+      "lastModified": "",
+      "error": "HTTP 404",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js",
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js",
+      "parentUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "depth": 1,
+      "status": 200,
+      "size": 92605,
+      "sha256": "cec143edd6b7a21f762ae051518d7ea6872c1c1e6bfc50ef073f369e99dbc7f7",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f272f-169bd\"",
+      "lastModified": "Tue, 21 Jul 2026 08:00:47 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/orange/js/tipBox/errorBox.js?v=20251224",
+      "finalUrl": "https://c2.cgyouxi.com/website/orange/js/tipBox/errorBox.js?v=20251224",
+      "parentUrl": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
+      "depth": 1,
+      "status": 200,
+      "size": 3844,
+      "sha256": "6a3387a538283405122b9cff27b497daddccdbfd05d4a1c464dce0b398ff51a8",
+      "contentType": "application/javascript; charset=utf-8",
+      "etag": "\"6a5f2755-f04\"",
+      "lastModified": "Tue, 21 Jul 2026 08:01:25 GMT",
+      "error": "",
+      "targetModules": {
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "definitionOffsets": [],
+          "used": false,
+          "useCount": 0,
+          "useOffsets": []
+        }
+      },
+      "discoveredJs": [],
+      "anchorSnippets": []
+    }
+  ],
+  "allDiscoveredUrls": [
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.3/sensorsdata.min.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/.user.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/Data/LmCode/dist/index.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/SALInterface.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/on.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/common/OrgWeb.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/game.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/gameV.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/bin/official/lmcode.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/eruda.min.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/spine-core.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
+    "https://c2.cgyouxi.com/website/orange/js/tipBox/errorBox.js?v=20251224",
+    "https://m.66rpg.com/h5/bin/official/game.js"
+  ],
+  "targetModuleMap": {
+    "36728": {
+      "externalDefinitions": [],
+      "externalUses": [
+        "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001"
+      ],
+      "inlineDefinitions": [],
+      "inlineUses": [],
+      "conclusion": "仍只有引用；定义不在当前可见资源图中"
+    },
+    "6886": {
+      "externalDefinitions": [],
+      "externalUses": [
+        "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001"
+      ],
+      "inlineDefinitions": [],
+      "inlineUses": [],
+      "conclusion": "仍只有引用；定义不在当前可见资源图中"
+    },
+    "75640": {
+      "externalDefinitions": [],
+      "externalUses": [
+        "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001"
+      ],
+      "inlineDefinitions": [],
+      "inlineUses": [],
+      "conclusion": "仍只有引用；定义不在当前可见资源图中"
+    }
+  },
+  "maintenanceConclusions": [
+    "当前官方 game.js 与修改版 game.js 都引用相同的三个模块，说明它们属于播放器公共构建依赖，而非 V2 新增逻辑。",
+    "页面显式脚本、内联脚本和递归发现资源应分别保存哈希，后续更新时可快速定位变化层。",
+    "递归扫描后仍未找到模块定义；高度可能由 Webpack 运行时预置、浏览器缓存的公共基础包、或按运行条件动态注入的未公开 chunk 提供。",
+    "下一步应在真实浏览器中记录 performance.getEntriesByType('resource') 与 webpack 模块注册表，而不是继续猜文件名。"
+  ]
+}
