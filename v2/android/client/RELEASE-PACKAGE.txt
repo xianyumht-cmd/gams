@@ -1,0 +1,7 @@
+GG 2.0.0 production package identity
+Package: com.jinli.quickweb
+Version code: 9
+Version name: 2.0.0
+Label: GG
+Launcher icon: original GG blue-purple artwork from 1.4.0
+Signing: unsigned build; final signing must use the GG 1.4.0 production key
