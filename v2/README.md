@@ -29,8 +29,8 @@ This blocks the direct APK, ordinary traffic and cache extraction paths. A roote
 - Package-name verification passed.
 - APK scan found no JavaScript assets or known plaintext core implementation markers.
 - Encrypted release scan found no known plaintext core markers.
-- Cloudflare V2 runtime Worker is deployed.
-- Hostname-scoped Cloudflare challenge exemption and final no-VPN verification started.
+- Cloudflare V2 runtime Worker is deployed with Android-compatible RSA-OAEP key wrapping.
+- Test3 resilient DNS and direct-TLS runtime client build started.
 - V1 version 8 remains unchanged during testing.
 
 ## Test2 compatibility fix
