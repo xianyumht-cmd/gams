@@ -1,0 +1,29 @@
+name: Fetch GG 2.0.1 failed log
+on:
+  push:
+    branches: [diag/fixed-jks-inventory]
+    paths: [.github/workflows/fetch-gg-2.0.1-failed-log.yml]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download job log tail
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/jobs/89001614316/logs" > /tmp/job.log
+          mkdir -p diagnostics
+          tail -n 160 /tmp/job.log > diagnostics/gg-2.0.1-publish-failure-tail.txt
+      - name: Commit log
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add diagnostics/gg-2.0.1-publish-failure-tail.txt
+          git commit -m "Record GG 2.0.1 publish failure tail"
+          git push
