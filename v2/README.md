@@ -21,7 +21,7 @@ They can be installed beside the V1 applications.
 8. The control script is installed from native memory and the engine request is served from native memory through WebView interception.
 9. The client never writes the plaintext control script or engine to APK assets, WebView cache, SharedPreferences or local files.
 
-This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
+This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe plaintext in process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
 
 ## Current status
 
@@ -30,4 +30,5 @@ This blocks the direct APK, ordinary traffic and cache extraction paths. A roote
 - APK scan found no JavaScript assets or known plaintext core implementation markers.
 - Encrypted release scan found no known plaintext core markers.
 - Cloudflare V2 runtime Worker is deployed and its online health check passed.
+- Test2 compatibility rebuild started for Android MGF1 support and direct runtime-domain access.
 - V2 is awaiting manual Android testing before any change to V1 version 8.
