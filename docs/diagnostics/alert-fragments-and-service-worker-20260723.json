@@ -1,0 +1,32 @@
+{
+  "target": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+  "result": [
+    {
+      "kind": "script",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+      "size": 262518,
+      "hits": {
+        "createObjectURL": 2
+      }
+    },
+    {
+      "kind": "script",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "size": 15372213,
+      "hits": {
+        "脚本": 6,
+        "加载": 24,
+        "完成": 8
+      }
+    },
+    {
+      "kind": "script",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/eruda.min.js?v=202607090001",
+      "size": 311049,
+      "hits": {
+        "serviceWorker": 1,
+        "createObjectURL": 1
+      }
+    }
+  ]
+}
