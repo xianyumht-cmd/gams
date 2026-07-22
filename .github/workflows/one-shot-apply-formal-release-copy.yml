@@ -103,3 +103,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Use formal user-facing release copy'
           git push origin HEAD:release/gg-2.0.0-v9
+
+# trigger: formal-release-copy-2
