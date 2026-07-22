@@ -138,23 +138,23 @@
     },
     {
       "type": "warning",
-      "text": "[GroupMarkerNotSet(crbug.com/242999)!:A0B01B00FC3E0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content."
+      "text": "[GroupMarkerNotSet(crbug.com/242999)!:A0B01B00EC110000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content."
     },
     {
       "type": "warning",
-      "text": "[.WebGL-0x349c00578600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x2484005d2200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "type": "warning",
-      "text": "[.WebGL-0x349c00578600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x2484005d2200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "type": "warning",
-      "text": "[.WebGL-0x349c00578600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x2484005d2200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "type": "warning",
-      "text": "[.WebGL-0x349c00578600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+      "text": "[.WebGL-0x2484005d2200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
     },
     {
       "type": "warning",
