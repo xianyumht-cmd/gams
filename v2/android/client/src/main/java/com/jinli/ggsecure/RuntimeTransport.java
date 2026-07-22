@@ -6,28 +6,73 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 import javax.net.ssl.HttpsURLConnection;
 
 final class RuntimeTransport {
     private static final int CONNECT_TIMEOUT_MS = 8000;
     private static final int READ_TIMEOUT_MS = 30000;
+    private static final String[] HOSTS = {
+            RuntimeNames.runtimeCustomHost(),
+            RuntimeNames.runtimeWorkerHost()
+    };
 
     private RuntimeTransport() { }
 
     static Response postJson(String path, String json, int maximumBytes) throws IOException {
-        return request("POST", path, json.getBytes(StandardCharsets.UTF_8), "", maximumBytes);
+        return requestAcrossHosts(
+                "POST", path, json.getBytes(StandardCharsets.UTF_8), "", maximumBytes, true);
     }
 
     static byte[] getBytes(String path, String authorization, int maximumBytes) throws IOException {
-        Response response = request("GET", path, null, authorization, maximumBytes);
+        Response response = requestAcrossHosts(
+                "GET", path, null, authorization, maximumBytes, false);
         if (response.status < 200 || response.status >= 300) {
             throw new IOException("运行服务返回 HTTP " + response.status);
         }
         return response.body;
     }
 
-    private static Response request(
+    private static Response requestAcrossHosts(
+            String method,
+            String path,
+            byte[] requestBody,
+            String authorization,
+            int maximumBytes,
+            boolean expectJson
+    ) throws IOException {
+        List<String> failures = new ArrayList<>();
+        for (String host : HOSTS) {
+            try {
+                Response response = requestHost(
+                        host, method, path, requestBody, authorization, maximumBytes);
+                if (isExpectedResponse(response, expectJson)) return response;
+                failures.add(host + ": HTTP " + response.status + " 类型 " + response.contentType);
+            } catch (IOException error) {
+                failures.add(host + ": " + shortMessage(error));
+            }
+        }
+        throw new IOException("运行服务器连接失败：" + String.join("；", failures));
+    }
+
+    private static boolean isExpectedResponse(Response response, boolean expectJson) {
+        String type = response.contentType.toLowerCase(Locale.ROOT);
+        if (expectJson) {
+            if (!type.contains("application/json")) return false;
+            String text = response.bodyText().trim();
+            return text.startsWith("{") && text.endsWith("}");
+        }
+        if (response.status >= 200 && response.status < 300) {
+            return type.contains("application/octet-stream");
+        }
+        return type.contains("application/json");
+    }
+
+    private static Response requestHost(
+            String host,
             String method,
             String path,
             byte[] requestBody,
@@ -35,7 +80,7 @@ final class RuntimeTransport {
             int maximumBytes
     ) throws IOException {
         HttpsURLConnection connection = (HttpsURLConnection) new URL(
-                "https://" + RuntimeNames.runtimeHost() + path).openConnection();
+                "https://" + host + path).openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
         connection.setRequestMethod(method);
@@ -45,7 +90,7 @@ final class RuntimeTransport {
         connection.setRequestProperty("Accept", "application/json, application/octet-stream");
         connection.setRequestProperty("Cache-Control", "no-store, no-cache, max-age=0");
         connection.setRequestProperty("Pragma", "no-cache");
-        connection.setRequestProperty("User-Agent", "GG-V2/1 Android");
+        connection.setRequestProperty("User-Agent", "GG-V2/2 Android");
         if (authorization != null && !authorization.isEmpty()) {
             connection.setRequestProperty("Authorization", authorization);
         }
@@ -80,6 +125,12 @@ final class RuntimeTransport {
             }
             return output.toByteArray();
         }
+    }
+
+    private static String shortMessage(Throwable error) {
+        String message = error.getMessage();
+        if (message == null || message.trim().isEmpty()) return error.getClass().getSimpleName();
+        return message.length() > 100 ? message.substring(0, 100) : message;
     }
 
     static final class Response {
