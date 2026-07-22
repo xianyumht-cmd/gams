@@ -1,0 +1,107 @@
+name: Build GG 2.0.0 unsigned release candidate
+
+on:
+  push:
+    branches:
+      - release/gg-2.0.0-production-package
+    paths:
+      - v2/android/client/**
+      - .github/workflows/release-gg-2.0.0-candidate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Build unsigned release APK
+        working-directory: v2/android
+        run: gradle --no-daemon :client:clean :client:assembleRelease
+
+      - name: Verify release identity, icon and security properties
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -n "$apk" && test -s "$apk"
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          aapt_bin="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          apksigner_bin="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$aapt_bin"
+          test -x "$apksigner_bin"
+
+          badging="$($aapt_bin dump badging "$apk")"
+          printf '%s\n' "$badging" | tee /tmp/BADGING.txt
+          printf '%s\n' "$badging" | grep -q "package: name='com.jinli.quickweb' versionCode='9' versionName='2.0.0'"
+          printf '%s\n' "$badging" | grep -q "application-label:'GG'"
+          printf '%s\n' "$badging" | grep -Eq "application-icon-|application: label='GG'.*icon="
+
+          if "$apksigner_bin" verify "$apk" >/tmp/signature-check.txt 2>&1; then
+            echo 'Release candidate was unexpectedly signed.'
+            cat /tmp/signature-check.txt
+            exit 1
+          fi
+          echo 'Unsigned release candidate confirmed.' | tee /tmp/SIGNING-STATUS.txt
+
+          rm -rf /tmp/gg-release-apk /tmp/gg-release-output
+          mkdir -p /tmp/gg-release-apk /tmp/gg-release-output
+          unzip -q "$apk" -d /tmp/gg-release-apk
+
+          for marker in \
+            webpackChunk_lodash_modules \
+            SAL_getUserData \
+            createBuyOrder \
+            get_goods_list \
+            '脚本加载完成~'; do
+            if grep -aR -F -q -- "$marker" /tmp/gg-release-apk; then
+              echo "Core implementation marker found in release APK: $marker"
+              exit 1
+            fi
+          done
+
+          if find /tmp/gg-release-apk -type f \( -name '*.js' -o -name 'game.js' -o -name 'noname.js' \) | grep -q .; then
+            echo 'JavaScript file found inside release APK.'
+            exit 1
+          fi
+
+          cp "$apk" /tmp/gg-release-output/GG-2.0.0-code9-unsigned-prehardening.apk
+          cp /tmp/BADGING.txt /tmp/gg-release-output/BADGING.txt
+          cp /tmp/SIGNING-STATUS.txt /tmp/gg-release-output/SIGNING-STATUS.txt
+          sha256sum /tmp/gg-release-output/*.apk | tee /tmp/gg-release-output/SHA256SUMS.txt
+          cat > /tmp/gg-release-output/RELEASE-NOTES.txt <<'EOF'
+          GG 2.0.0 production package release candidate
+          Package: com.jinli.quickweb
+          Version code: 9
+          Version name: 2.0.0
+          App label: GG
+          Launcher icon: present; same GG blue-purple vector artwork as 1.4.0
+          Signing: unsigned by design
+          Upgrade target: GG 1.4.0 versionCode 8
+          Required final signing certificate SHA-256:
+          F2:20:C5:D4:75:13:C7:44:CB:9B:5F:17:C0:F8:F3:9B:0C:10:9F:8F:7D:C8:92:98:97:13:EE:F3:3F:DB:E0:C4
+          Core JavaScript files in APK: absent
+          Runtime architecture: authenticated encrypted bundle, native memory decryption, WebView memory execution
+          Next step: harden, then sign with the exact production key used for GG 1.4.0.
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GG-2.0.0-unsigned-prehardening
+          path: /tmp/gg-release-output/*
+          retention-days: 30
+          if-no-files-found: error
