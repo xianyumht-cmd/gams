@@ -1,4 +1,4 @@
-name: Export installable GG 2.0.0 APK
+name: Export GG 2.0.0 APK
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
         working-directory: v2/android
         run: gradle --no-daemon :client:clean :client:assembleRelease
 
-      - name: Sign and verify formal APK
+      - name: Prepare downloadable APK
         id: prepare
         shell: bash
         env:
@@ -45,59 +45,59 @@ jobs:
           client="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
           test -n "$client" && test -s "$client"
 
-          if [[ -z "${GG_RELEASE_KEYSTORE_BASE64:-}" || -z "${GG_RELEASE_KEYSTORE_PASSWORD:-}" ]]; then
-            cat > release-download/latest-build.json <<EOF
-          {"ok":false,"run_id":${GITHUB_RUN_ID},"reason":"missing_release_signing_secrets"}
-          EOF
-            echo "signed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          keystore="$RUNNER_TEMP/GG-release.jks"
-          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
-          chmod 600 "$keystore"
-          keytool -list -keystore "$keystore" -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release >/dev/null
-
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
           apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
           aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
           test -x "$apksigner" && test -x "$aapt"
 
-          output="direct-download/GG-2.0.0.apk"
-          "$apksigner" sign \
-            --ks "$keystore" \
-            --ks-key-alias gg-release \
-            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
-            --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --v3-signing-enabled true \
-            --v4-signing-enabled false \
-            --out "$output" \
-            "$client"
-          rm -f "$keystore"
-
-          "$apksigner" verify --verbose --print-certs "$output" | tee /tmp/gg-signature.txt
-          expected="F220C5D47513C744CB9B5F17C0F8F39B0C109F8F7DC892989713EEF33FDBE0C4"
-          actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/gg-signature.txt | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          test "$actual" = "$expected"
-
-          badging="$($aapt dump badging "$output")"
+          badging="$($aapt dump badging "$client")"
           printf '%s\n' "$badging" | grep -q "package: name='com.jinli.quickweb' versionCode='9' versionName='2.0.0'"
           printf '%s\n' "$badging" | grep -q "application-label:'GG'"
 
-          sha256="$(sha256sum "$output" | awk '{print $1}')"
-          printf '%s  %s\n' "$sha256" "GG-2.0.0.apk" > direct-download/SHA256SUMS.txt
-          cat > release-download/latest-build.json <<EOF
-          {"ok":true,"run_id":${GITHUB_RUN_ID},"artifact_name":"GG-2.0.0-direct-download","file":"GG-2.0.0.apk","sha256":"${sha256}","certificate_sha256":"${expected}"}
-          EOF
-          echo "signed=true" >> "$GITHUB_OUTPUT"
+          output="direct-download/GG-2.0.0-未签名.apk"
+          cp "$client" "$output"
+          signed=false
+          cert=""
 
-      - name: Upload directly downloadable APK
-        if: steps.prepare.outputs.signed == 'true'
+          if [[ -n "${GG_RELEASE_KEYSTORE_BASE64:-}" && -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}" ]]; then
+            keystore="$RUNNER_TEMP/GG-release.jks"
+            printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+            chmod 600 "$keystore"
+            keytool -list -keystore "$keystore" -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release >/dev/null
+            signed_output="direct-download/GG-2.0.0.apk"
+            "$apksigner" sign \
+              --ks "$keystore" \
+              --ks-key-alias gg-release \
+              --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --v1-signing-enabled true \
+              --v2-signing-enabled true \
+              --v3-signing-enabled true \
+              --v4-signing-enabled false \
+              --out "$signed_output" \
+              "$client"
+            rm -f "$keystore"
+            "$apksigner" verify --verbose --print-certs "$signed_output" | tee /tmp/gg-signature.txt
+            expected="F220C5D47513C744CB9B5F17C0F8F39B0C109F8F7DC892989713EEF33FDBE0C4"
+            actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/gg-signature.txt | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+            test "$actual" = "$expected"
+            output="$signed_output"
+            signed=true
+            cert="$expected"
+            rm -f direct-download/GG-2.0.0-未签名.apk
+          fi
+
+          filename="$(basename "$output")"
+          sha256="$(sha256sum "$output" | awk '{print $1}')"
+          printf '%s  %s\n' "$sha256" "$filename" > direct-download/SHA256SUMS.txt
+          cat > release-download/latest-build.json <<EOF
+          {"ok":true,"run_id":${GITHUB_RUN_ID},"artifact_name":"GG-2.0.0-download","file":"${filename}","sha256":"${sha256}","signed":${signed},"certificate_sha256":"${cert}"}
+          EOF
+
+      - name: Upload downloadable APK
         uses: actions/upload-artifact@v4
         with:
-          name: GG-2.0.0-direct-download
+          name: GG-2.0.0-download
           path: direct-download/*
           retention-days: 30
           if-no-files-found: error
