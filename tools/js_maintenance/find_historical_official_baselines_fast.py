@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Fast bounded public-archive search for historical official game.js baselines.
+"""Find and rank historical official game.js baselines by structural similarity.
 
-Every network operation has a short timeout. Only archive metadata and structural
-fingerprints are committed; retrieved third-party bytes remain transient.
+The self-hosted version name 1.0.2 is a local release label, not assumed to be an
+official engine version. Public archive candidates are ranked by bundle structure,
+SAL surface, entry dependencies, field density and size. Full third-party source
+remains transient and is never committed.
 """
 
 from __future__ import annotations
 
 import argparse
-import gzip
 import hashlib
 import json
+import math
 import re
 import ssl
 import urllib.error
@@ -20,27 +22,32 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
-USER_AGENT = "Mozilla/5.0 (compatible; GG-Maintenance-History-Finder/1.1)"
-TIMEOUT = 12
-MAX_PAGE = 6 * 1024 * 1024
+USER_AGENT = "Mozilla/5.0 (compatible; GG-Maintenance-History-Finder/2.0)"
+TIMEOUT = 15
 MAX_SCRIPT = 32 * 1024 * 1024
+MAX_SELECTED_RECORDS = 22
 SAL_RE = re.compile(r"\bSAL_[A-Za-z0-9_]+\b")
 VERSION_RE = re.compile(r"^/\*\s*([^*]{1,80})\s*\*/")
 LOGIC_RE = re.compile(r"logic\s+version\s*[:=]\s*([0-9A-Za-z_.-]{1,40})", re.I)
-GAME_URL_RE = re.compile(r"https?://(?:c1|c2)\.cgyouxi\.com/website/hfplayer/v3/bin/official/game\.js(?:\?[^\s'\"<>]*)?", re.I)
 PAIR_RE = re.compile(r"(['\"])([^'\"\\\n]{0,180})\1\s*\+\s*(['\"])([^'\"\\\n]{0,180})\3")
+FIELD_MARKERS = (
+    "uid", "guid", "pver", "isLogin", "userData", "totalFlower", "freshFlower",
+    "wildFlower", "tempFlower", "realFlower", "haveFlower", "mallViewData",
+    "itemPrice", "goods", "goods_id", "order_id", "buy_num", "createBuyOrder",
+    "get_goods_list", "saveData", "SaveData", "showLocal", "localStorage",
+    "sessionStorage", "requestAnimationFrame", "XMLHttpRequest", "JSONP",
+    "SAL_Login", "SAL_getUserData", "SAL_getStorage", "SAL_setStorage",
+)
+TARGET_DEPENDENCIES = (36728, 6886, 75640)
 
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def get(url: str, maximum: int, headers: dict[str, str] | None = None) -> tuple[int, bytes, str]:
-    merged = {"User-Agent": USER_AGENT, "Accept": "*/*"}
-    if headers:
-        merged.update(headers)
+def get(url: str, maximum: int) -> tuple[int, bytes, str]:
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
     try:
-        request = urllib.request.Request(url, headers=merged)
         with urllib.request.urlopen(request, timeout=TIMEOUT, context=ssl.create_default_context()) as response:
             chunks: list[bytes] = []
             total = 0
@@ -86,13 +93,13 @@ def cdx(original: str) -> tuple[list[dict[str, Any]], str]:
     return [dict(zip(header, row)) for row in payload[1:] if len(row) == len(header)], ""
 
 
-def wayback_body(record: dict[str, Any], maximum: int) -> tuple[bytes, str]:
+def wayback_body(record: dict[str, Any]) -> tuple[bytes, str]:
     url = f"https://web.archive.org/web/{record.get('timestamp', '')}id_/{record.get('original', '')}"
-    status, body, error = get(url, maximum)
+    status, body, error = get(url, MAX_SCRIPT)
     return (body, "") if status == 200 and body else (b"", error or f"HTTP {status}")
 
 
-def join_literals(text: str, rounds: int = 8) -> tuple[str, int]:
+def join_literals(text: str, rounds: int = 12) -> tuple[str, int]:
     current = text
     total = 0
     for _ in range(rounds):
@@ -109,32 +116,67 @@ def join_literals(text: str, rounds: int = 8) -> tuple[str, int]:
     return current, total
 
 
+def dependency_order(text: str) -> list[int]:
+    positions = [(text.find(str(module_id)), module_id) for module_id in TARGET_DEPENDENCIES]
+    if any(position < 0 for position, _ in positions):
+        return []
+    return [module_id for _, module_id in sorted(positions)]
+
+
+def official_version_from_url(source: str) -> str:
+    try:
+        return urllib.parse.parse_qs(urllib.parse.urlsplit(source).query).get("v", [""])[0]
+    except Exception:
+        return ""
+
+
+def architecture_label(chunk_globals: list[str], sal_count: int, entry: bool) -> str:
+    if "webpackChunk_lodash_modules" in chunk_globals and sal_count >= 140 and entry:
+        return "modern-ondemand-webpack"
+    if chunk_globals and sal_count >= 120:
+        return "webpack-transition"
+    if sal_count <= 100:
+        return "legacy-player"
+    return "intermediate-player"
+
+
 def fingerprint(data: bytes, archive: str, timestamp: str, source: str) -> dict[str, Any]:
     raw = data.decode("utf-8", errors="replace")
     joined, joins = join_literals(raw)
     version = VERSION_RE.search(raw[:300])
+    sal = sorted(set(SAL_RE.findall(joined)))
+    chunk_globals = sorted(set(re.findall(r"webpackChunk[A-Za-z0-9_$]+", joined)))
+    chunk_names = sorted(set(re.findall(r"\.push\(\[\s*\[\s*['\"]([^'\"]{1,100})['\"]", joined)))
+    entry = bool(re.search(r"(?<!\d)71269\s*:", joined))
+    order = dependency_order(joined)
+    fields = {marker: joined.count(marker) for marker in FIELD_MARKERS}
     return {
         "archive": archive,
         "timestamp": timestamp,
         "source": source,
+        "officialVersion": official_version_from_url(source),
         "size": len(data),
         "sha256": sha256(data),
         "versionHeader": version.group(1).strip() if version else "",
         "logicVersions": sorted(set(LOGIC_RE.findall(joined))),
         "directSalCount": len(set(SAL_RE.findall(raw))),
-        "reconstructedSalCount": len(set(SAL_RE.findall(joined))),
+        "reconstructedSalCount": len(sal),
+        "salIdentifiers": sal,
         "joinedLiteralPairs": joins,
-        "chunkGlobals": sorted(set(re.findall(r"webpackChunk[A-Za-z0-9_$]+", joined))),
-        "chunkNames": sorted(set(re.findall(r"\.push\(\[\s*\[\s*['\"]([^'\"]{1,100})['\"]", joined))),
-        "entry71269Present": bool(re.search(r"(?<!\d)71269\s*:", joined)),
+        "chunkGlobals": chunk_globals,
+        "chunkNames": chunk_names,
+        "entry71269Present": entry,
+        "targetDependencyOrder": order,
+        "fieldCounts": fields,
+        "architecture": architecture_label(chunk_globals, len(sal), entry),
     }
 
 
 def unique(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen = set()
     result = []
-    for item in records:
-        key = item.get("digest") or (item.get("timestamp"), item.get("original") or item.get("url"))
+    for item in sorted(records, key=lambda value: value.get("timestamp", "")):
+        key = item.get("digest") or (item.get("timestamp"), item.get("original"))
         if key in seen:
             continue
         seen.add(key)
@@ -142,105 +184,133 @@ def unique(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
-def commoncrawl_indexes() -> tuple[list[dict[str, Any]], str]:
-    payload, error = json_get("https://index.commoncrawl.org/collinfo.json", 3 * 1024 * 1024)
-    if not isinstance(payload, list):
-        return [], error
-    selected = []
-    years = set()
-    for item in payload:
-        match = re.search(r"CC-MAIN-(20\d{2})", str(item.get("id", "")))
-        if not match:
-            continue
-        year = int(match.group(1))
-        if year < 2021 or year > 2026 or year in years:
-            continue
-        selected.append(item)
-        years.add(year)
-        if len(selected) >= 6:
-            break
-    return selected, ""
+def select_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prioritize recent builds, annual representatives and compressed-size transitions."""
+    if not records:
+        return []
+    chosen: dict[str, dict[str, Any]] = {}
+    def add(record: dict[str, Any]) -> None:
+        key = record.get("digest") or f"{record.get('timestamp')}:{record.get('original')}"
+        chosen[key] = record
 
+    # Recent versions matter most because the modified bundle uses the modern architecture.
+    for record in records[-14:]:
+        add(record)
 
-def cc_records(index: dict[str, Any], original: str) -> tuple[list[dict[str, Any]], str]:
-    endpoint = index.get("cdx-api")
-    if not endpoint:
-        return [], "missing cdx-api"
-    params = urllib.parse.urlencode({"url": original, "output": "json", "filter": "status:200", "collapse": "digest"})
-    status, body, error = get(endpoint + "?" + params, 5 * 1024 * 1024)
-    if status != 200 or not body:
-        return [], error or f"HTTP {status}"
-    rows = []
-    for line in body.decode("utf-8", errors="replace").splitlines():
+    # One latest representative for every year keeps architecture evolution visible.
+    by_year: dict[str, dict[str, Any]] = {}
+    for record in records:
+        year = str(record.get("timestamp", ""))[:4]
+        if year:
+            by_year[year] = record
+    for record in by_year.values():
+        add(record)
+
+    # Capture the largest compressed-length transitions, which often mark bundler changes.
+    transitions = []
+    for previous, current in zip(records, records[1:]):
         try:
-            row = json.loads(line)
-            row["indexId"] = index.get("id", "")
-            rows.append(row)
+            delta = abs(int(current.get("length", 0)) - int(previous.get("length", 0)))
         except Exception:
-            pass
-    return rows, ""
+            delta = 0
+        transitions.append((delta, previous, current))
+    for _, previous, current in sorted(transitions, key=lambda item: item[0], reverse=True)[:5]:
+        add(previous)
+        add(current)
+
+    selected = sorted(chosen.values(), key=lambda value: value.get("timestamp", ""), reverse=True)
+    return selected[:MAX_SELECTED_RECORDS]
 
 
-def cc_body(record: dict[str, Any]) -> tuple[bytes, str]:
-    try:
-        start = int(record["offset"])
-        length = int(record["length"])
-        filename = record["filename"]
-    except Exception:
-        return b"", "missing WARC location"
-    if length > MAX_SCRIPT + 2 * 1024 * 1024:
-        return b"", "WARC record too large"
-    status, compressed, error = get(
-        "https://data.commoncrawl.org/" + filename,
-        length + 1024,
-        {"Range": f"bytes={start}-{start + length - 1}"},
+def jaccard(left: list[str], right: list[str]) -> float:
+    a, b = set(left), set(right)
+    if not a and not b:
+        return 1.0
+    return len(a & b) / max(1, len(a | b))
+
+
+def cosine_counts(left: dict[str, int], right: dict[str, int]) -> float:
+    keys = sorted(set(left) | set(right))
+    dot = sum(left.get(key, 0) * right.get(key, 0) for key in keys)
+    left_norm = math.sqrt(sum(left.get(key, 0) ** 2 for key in keys))
+    right_norm = math.sqrt(sum(right.get(key, 0) ** 2 for key in keys))
+    if not left_norm or not right_norm:
+        return 0.0
+    return dot / (left_norm * right_norm)
+
+
+def rank_candidate(candidate: dict[str, Any], modified: dict[str, Any]) -> dict[str, Any]:
+    sal_similarity = jaccard(candidate["salIdentifiers"], modified["salIdentifiers"])
+    field_similarity = cosine_counts(candidate["fieldCounts"], modified["fieldCounts"])
+    size_similarity = min(candidate["size"], modified["size"]) / max(candidate["size"], modified["size"])
+    chunk_global_match = candidate["chunkGlobals"] == modified["chunkGlobals"]
+    chunk_name_match = candidate["chunkNames"] == modified["chunkNames"]
+    entry_match = candidate["entry71269Present"] == modified["entry71269Present"] and candidate["entry71269Present"]
+    dependency_match = candidate["targetDependencyOrder"] == modified["targetDependencyOrder"] and bool(candidate["targetDependencyOrder"])
+    score = (
+        (20 if chunk_global_match else 0)
+        + (15 if chunk_name_match else 0)
+        + (15 if entry_match else 0)
+        + (10 if dependency_match else 0)
+        + 20 * sal_similarity
+        + 10 * field_similarity
+        + 10 * size_similarity
     )
-    if status not in (200, 206) or not compressed:
-        return b"", error or f"HTTP {status}"
-    try:
-        decoded = gzip.decompress(compressed)
-    except Exception as exc:
-        return b"", f"gzip: {exc}"
-    marker = decoded.find(b"\r\n\r\nHTTP/")
-    http = decoded[marker + 4:] if marker >= 0 else decoded
-    split = http.find(b"\r\n\r\n")
-    if split < 0:
-        return b"", "HTTP body missing"
-    body = http[split + 4:]
-    if len(body) > MAX_SCRIPT:
-        return b"", "payload too large"
-    return body, ""
+    ranked = dict(candidate)
+    ranked["similarity"] = {
+        "score": round(score, 3),
+        "salJaccard": round(sal_similarity, 5),
+        "fieldCosine": round(field_similarity, 5),
+        "sizeRatio": round(size_similarity, 5),
+        "chunkGlobalMatch": chunk_global_match,
+        "chunkNameMatch": chunk_name_match,
+        "entryMatch": entry_match,
+        "dependencyOrderMatch": dependency_match,
+    }
+    return ranked
 
 
 def render(result: dict[str, Any]) -> str:
-    candidates = result["candidates"]
-    exact = [x for x in candidates if x["versionHeader"] == "1.0.2" or "1.0.2" in x["logicVersions"]]
+    candidates = result["rankedCandidates"]
     lines = [
-        "# 历史官方基线快速检索", "",
-        "检索范围：Wayback Machine 与每年一个 Common Crawl 索引。所有请求均有短超时。", "",
-        f"- Wayback 页面记录：`{len(result['wayback']['pageRecords'])}`",
-        f"- Wayback 脚本记录：`{len(result['wayback']['scriptRecords'])}`",
-        f"- Common Crawl 记录：`{len(result['commonCrawl']['records'])}`",
-        f"- 可读取的唯一脚本候选：`{len(candidates)}`",
-        f"- 明确标记 1.0.2 的候选：`{len(exact)}`", "",
-        "| 归档 | 时间 | 版本头 | logic version | 大小 | SHA-256 | SAL |",
-        "|---|---|---|---|---:|---|---:|",
+        "# 历史官方基线结构相似度检索", "",
+        "`1.0.2` 是自托管修改版的发布标签，不被当作官方历史版本号。候选按运行结构相似度排名。", "",
+        f"- Wayback 唯一记录：`{len(result['waybackRecords'])}`",
+        f"- 本轮选择下载：`{len(result['selectedRecords'])}`",
+        f"- 成功读取候选：`{len(candidates)}`",
+        f"- 当前最佳结构候选：`{candidates[0]['officialVersion'] if candidates else '无'}`", "",
+        "| 排名 | 官方版本参数 | 归档时间 | 架构 | 得分 | 大小 | SAL | 字段相似 | SHA-256 |",
+        "|---:|---|---|---|---:|---:|---:|---:|---|",
     ]
-    for item in candidates:
+    for index, item in enumerate(candidates[:20], 1):
+        sim = item["similarity"]
         lines.append(
-            f"| {item['archive']} | {item['timestamp']} | `{item['versionHeader'] or '-'}` | "
-            f"`{', '.join(item['logicVersions']) or '-'}` | {item['size']} | `{item['sha256']}` | {item['reconstructedSalCount']} |"
+            f"| {index} | `{item['officialVersion'] or '-'}` | {item['timestamp']} | {item['architecture']} | "
+            f"{sim['score']:.3f} | {item['size']} | {item['reconstructedSalCount']} | "
+            f"{sim['fieldCosine']:.5f} | `{item['sha256']}` |"
         )
     if not candidates:
-        lines.append("| - | - | - | - | - | - | - |")
+        lines.append("| - | - | - | - | - | - | - | - | - |")
+
     lines += ["", "## 结论", ""]
-    if exact:
-        lines.append("已找到明确的 1.0.2 历史候选，下一步应进行同版本完整性确认和差异分析。")
-    elif candidates:
-        lines.append("存在历史候选，但没有候选明确标记为 1.0.2；不能将其当作同版本官方基线。")
+    if candidates:
+        best = candidates[0]
+        sim = best["similarity"]
+        if best["architecture"] == "modern-ondemand-webpack" and sim["salJaccard"] == 1.0:
+            lines.append(
+                f"最接近修改版结构的公共归档候选是官方版本参数 `{best['officialVersion']}`（归档于 {best['timestamp']}）。"
+            )
+            lines.append(
+                "它可以作为后续人工差异分析的优先候选，但在没有来源链或同日期证据前，仍不能断言它就是修改版的原始母版。"
+            )
+        else:
+            lines.append("归档候选尚未进入与修改版相同的现代 Webpack/SAL 架构，不能作为直接母版。")
     else:
-        lines.append("本轮公共归档没有提供可读取的历史官方 game.js；同版本官方基线仍缺失。")
-    lines.append("归档无结果不等于文件从未存在。下一优先来源是旧设备缓存、旧 APK 数据备份和开发者本地下载目录。")
+        lines.append("公共归档没有返回可读取候选。")
+    lines += [
+        "", "相似度由 chunk 全局、chunk 名称、入口模块、依赖顺序、SAL 集合、关键字段密度和文件大小共同计算。",
+        "得分只用于排序候选，不是源码同源证明。",
+    ]
     return "\n".join(lines)
 
 
@@ -252,14 +322,15 @@ def main() -> None:
     root = Path(args.repo_root).resolve()
     out = (root / args.output_dir).resolve()
     upstream = json.loads((root / "game-engine/upstream-baseline.json").read_text(encoding="utf-8"))
-    official = upstream["resources"]["officialGame"]["url"].split("?", 1)[0]
-    page = upstream["pageUrl"].split("?", 1)[0]
-    script_urls = sorted({official, official.replace("https://c2.", "https://c1.")})
+    manifest = json.loads((root / "game-engine/release/manifest.json").read_text(encoding="utf-8"))
+    modified_path = root / "game-engine/release" / manifest["file"]
+    modified = fingerprint(modified_path.read_bytes(), "local", "", str(modified_path.relative_to(root)))
 
-    page_records, page_error = cdx(page + "*")
-    script_record_groups: list[dict[str, Any]] = []
-    wayback_errors = {}
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    official = upstream["resources"]["officialGame"]["url"].split("?", 1)[0]
+    script_urls = sorted({official, official.replace("https://c2.", "https://c1.")})
+    groups: list[dict[str, Any]] = []
+    errors: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=2) as pool:
         future_map = {pool.submit(cdx, url + "*"): url for url in script_urls}
         for future in as_completed(future_map):
             url = future_map[future]
@@ -267,78 +338,60 @@ def main() -> None:
                 rows, error = future.result()
             except Exception as exc:
                 rows, error = [], str(exc)
-            script_record_groups.extend(rows)
+            groups.extend(rows)
             if error:
-                wayback_errors[url] = error
+                errors[url] = error
 
-    discovered = set(script_urls)
-    page_fingerprints = []
-    for record in unique(page_records)[:3]:
-        body, error = wayback_body(record, MAX_PAGE)
-        urls = sorted(set(GAME_URL_RE.findall(body.decode("utf-8", errors="replace")))) if body else []
-        discovered.update(value.split("?", 1)[0] for value in urls)
-        page_fingerprints.append({"record": record, "size": len(body), "sha256": sha256(body) if body else "", "gameUrls": urls, "error": error})
-
+    records = unique(groups)
+    selected = select_records(records)
     candidates = []
     candidate_errors = []
-    wayback_records = unique(script_record_groups)
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        future_map = {pool.submit(wayback_body, record, MAX_SCRIPT): record for record in wayback_records[:8]}
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        future_map = {pool.submit(wayback_body, record): record for record in selected}
         for future in as_completed(future_map):
             record = future_map[future]
-            body, error = future.result()
+            try:
+                body, error = future.result()
+            except Exception as exc:
+                body, error = b"", str(exc)
             if body:
                 candidates.append(fingerprint(body, "wayback", record.get("timestamp", ""), record.get("original", "")))
             else:
-                candidate_errors.append({"archive": "wayback", "timestamp": record.get("timestamp"), "error": error})
+                candidate_errors.append({
+                    "timestamp": record.get("timestamp"),
+                    "officialVersion": official_version_from_url(record.get("original", "")),
+                    "error": error,
+                })
 
-    indexes, index_error = commoncrawl_indexes()
-    cc_all = []
-    cc_errors = {}
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        future_map = {pool.submit(cc_records, index, official): index for index in indexes}
-        for future in as_completed(future_map):
-            index = future_map[future]
-            try:
-                rows, error = future.result()
-            except Exception as exc:
-                rows, error = [], str(exc)
-            cc_all.extend(rows)
-            if error:
-                cc_errors[index.get("id", "")] = error
-    cc_unique = unique(cc_all)
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        future_map = {pool.submit(cc_body, record): record for record in cc_unique[:8]}
-        for future in as_completed(future_map):
-            record = future_map[future]
-            body, error = future.result()
-            if body:
-                candidates.append(fingerprint(body, "commoncrawl", record.get("timestamp", ""), record.get("url", "")))
-            else:
-                candidate_errors.append({"archive": "commoncrawl", "timestamp": record.get("timestamp"), "error": error})
-
-    unique_candidates = []
-    hashes = set()
-    for item in sorted(candidates, key=lambda value: (value["timestamp"], value["sha256"])):
-        if item["sha256"] in hashes:
-            continue
-        hashes.add(item["sha256"])
-        unique_candidates.append(item)
-
+    ranked = sorted((rank_candidate(item, modified) for item in candidates), key=lambda item: item["similarity"]["score"], reverse=True)
     result = {
-        "schemaVersion": 2,
-        "boundedSearch": {"timeoutSeconds": TIMEOUT, "commonCrawlIndexes": len(indexes), "maxWaybackBodies": 8, "maxCommonCrawlBodies": 8},
-        "searchedUrls": sorted(discovered),
-        "wayback": {"pageRecords": page_records, "pageFingerprints": page_fingerprints, "pageError": page_error, "scriptRecords": wayback_records, "errors": wayback_errors},
-        "commonCrawl": {"indexes": [{"id": x.get("id"), "name": x.get("name")} for x in indexes], "indexError": index_error, "records": cc_unique, "errors": cc_errors},
-        "candidates": unique_candidates,
+        "schemaVersion": 3,
+        "method": {
+            "timeoutSeconds": TIMEOUT,
+            "maxSelectedRecords": MAX_SELECTED_RECORDS,
+            "selection": "recent + annual representatives + largest compressed-size transitions",
+            "scoreMaximum": 100,
+            "warning": "Similarity ranking is not proof of source lineage.",
+        },
+        "modifiedBaseline": modified,
+        "searchedUrls": script_urls,
+        "waybackRecords": records,
+        "selectedRecords": selected,
+        "rankedCandidates": ranked,
         "candidateErrors": candidate_errors,
+        "indexErrors": errors,
     }
     out.mkdir(parents=True, exist_ok=True)
     (out / "historical-search.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out / "README.md").write_text(render(result) + "\n", encoding="utf-8")
-    exact = [x for x in unique_candidates if x["versionHeader"] == "1.0.2" or "1.0.2" in x["logicVersions"]]
-    print(json.dumps({"waybackPageRecords": len(page_records), "waybackScriptRecords": len(wayback_records), "commonCrawlRecords": len(cc_unique), "candidates": len(unique_candidates), "exact102Candidates": len(exact), "output": str(out)}, ensure_ascii=False, indent=2))
+    print(json.dumps({
+        "waybackRecords": len(records),
+        "selectedRecords": len(selected),
+        "readableCandidates": len(ranked),
+        "bestCandidate": ranked[0]["officialVersion"] if ranked else "",
+        "bestScore": ranked[0]["similarity"]["score"] if ranked else 0,
+        "output": str(out),
+    }, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
