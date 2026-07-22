@@ -1,1 +1,136 @@
-[]
+[
+  {
+    "index": 1,
+    "size": 4300,
+    "sha256": "5da477f8d2728ec6964210bfba0b37754132939558d2b6deeefd5103988e214b",
+    "targetModules": {
+      "36728": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "6886": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "75640": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      }
+    },
+    "discoveredJs": [],
+    "anchorSnippets": []
+  },
+  {
+    "index": 9,
+    "size": 1238,
+    "sha256": "dc9471e05102e68480486e21322626d0c7c06ed1fde8ef04e2c6d571c1aa030a",
+    "targetModules": {
+      "36728": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "6886": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "75640": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      }
+    },
+    "discoveredJs": [],
+    "anchorSnippets": []
+  },
+  {
+    "index": 13,
+    "size": 4643,
+    "sha256": "8aafa3972cff812e1109a6629526c34515a03706e351816e6078c59366f10aa8",
+    "targetModules": {
+      "36728": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "6886": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "75640": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      }
+    },
+    "discoveredJs": [
+      "https://m.66rpg.com/h5/bin/official/game.js"
+    ],
+    "anchorSnippets": []
+  },
+  {
+    "index": 15,
+    "size": 61,
+    "sha256": "2afef89a82bd44d3ef67ac976d5d3fe586985f27f0efb53136054651902135af",
+    "targetModules": {
+      "36728": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "6886": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      },
+      "75640": {
+        "defined": false,
+        "definitionCount": 0,
+        "definitionOffsets": [],
+        "used": false,
+        "useCount": 0,
+        "useOffsets": []
+      }
+    },
+    "discoveredJs": [],
+    "anchorSnippets": []
+  }
+]

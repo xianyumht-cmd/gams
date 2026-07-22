@@ -5,11 +5,11 @@
 ## 页面抓取
 
 - 页面：`https://m.66rpg.com/h5/1690283?ohp=v3&quality=32`
-- HTTP：`0`
+- HTTP：`200`
 - 最终地址：`https://m.66rpg.com/h5/1690283?ohp=v3&quality=32`
-- 页面大小：`0` 字节
-- 页面 SHA-256：`未获取`
-- 脚本资源数：`4`
+- 页面大小：`17377` 字节
+- 页面 SHA-256：`4fc63140795c7eab5c17be37d465ba7f42c8858bd4dc94ca6d9f2bca382eb6e5`
+- 脚本资源数：`12`
 
 ## 目标 Webpack 模块归属
 
