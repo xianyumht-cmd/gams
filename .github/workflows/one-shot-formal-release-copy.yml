@@ -1,6 +1,13 @@
 name: One-shot formal release copy cleanup
 
 on:
+  push:
+    branches:
+      - release/gg-2.0.0-v9
+    paths:
+      - .github/workflows/one-shot-formal-release-copy.yml
+      - v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+      - v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
   pull_request:
     branches:
       - v2-server-authoritative
@@ -15,7 +22,7 @@ permissions:
 
 jobs:
   update-copy:
-    if: github.head_ref == 'release/gg-2.0.0-v9'
+    if: github.ref_name == 'release/gg-2.0.0-v9' || github.head_ref == 'release/gg-2.0.0-v9'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -39,7 +46,7 @@ jobs:
               'title.setText("GG V2");': 'title.setText("GG");',
               'subtitle.setText("核心运行数据仅在内存中解密，不保存到APK、WebView缓存或本地脚本文件。");': 'subtitle.setText("请输入激活码后启动");',
               'status.setText("正在鉴权并解密运行包…");': 'status.setText("正在验证，请稍候…");',
-              'console.error(\'[GG V2]\',e);': 'console.error(\'[GG]\',e);',
+              "console.error('[GG V2]',e);": "console.error('[GG]',e);",
               '.setMessage("清除网页缓存、Cookie和本地网页设置，不影响V2激活状态。")': '.setMessage("清除网页缓存、Cookie和本地网页设置，不会影响账号授权。")',
               '.setTitle("V2服务信息")': '.setTitle("服务信息")',
               '.setMessage("当前V2设备会立即退出，是否继续？")': '.setMessage("当前设备会立即退出账号，是否继续？")',
@@ -87,11 +94,11 @@ jobs:
           manager.write_text(text, encoding='utf-8')
           PY
 
-          grep -R -n -E 'GG V2|V2测试|V2服务信息|内存中解密|WebView缓存|运行核心|加密运行包|正在鉴权|需要更新V2|发现V2更新' \
-            v2/android/client/src/main/java && {
-              echo 'Developer-facing release copy remains.'
-              exit 1
-            } || true
+          if grep -R -n -E 'GG V2|V2测试|V2服务信息|内存中解密|WebView缓存|运行核心|加密运行包|正在鉴权|需要更新V2|发现V2更新' \
+            v2/android/client/src/main/java; then
+            echo 'Developer-facing release copy remains.'
+            exit 1
+          fi
 
           git add v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
                   v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
