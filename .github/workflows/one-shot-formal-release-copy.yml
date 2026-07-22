@@ -94,7 +94,7 @@ jobs:
           manager.write_text(text, encoding='utf-8')
           PY
 
-          if grep -R -n -E 'GG V2|V2测试|V2服务信息|内存中解密|WebView缓存|运行核心|加密运行包|正在鉴权|需要更新V2|发现V2更新' \
+          if grep -R -n -E 'GG V2|V2测试通道|V2服务信息|核心运行数据仅在内存中解密|正在鉴权并解密运行包|运行核心：仅内存加载|需要联网启动V2|V2初始化失败|V2启动成功|V2启动失败|V2运行服务维护中|V2客户端需要更新|需要更新V2客户端|发现新的V2客户端|发现V2更新' \
             v2/android/client/src/main/java; then
             echo 'Developer-facing release copy remains.'
             exit 1
