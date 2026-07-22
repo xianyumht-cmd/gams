@@ -1,0 +1,204 @@
+{
+  "target": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+  "finalPage": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+  "pageSha256": "ceac8757c9e4c170304fedc9d2db5e89b923865e6fa700051b5fbb0230064ccd",
+  "scriptCount": 14,
+  "scripts": [
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/utfx.min.js?v=202607090001",
+      "status": 200,
+      "size": 3615,
+      "sha256": "9bc64f2182be3cf33c3dfba40914be193ed74fd1af4968fb7d3140c4c848fd91",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "}),c.querySelectorAll(\"script[src]\").forEach(y),new MutationObserver(function(e){e.forEach(function(e){e.addedNodes.forEach(function(e){\"SCRIPT\"===e.tagName&&e.src&&y(e)})})}).observe(c.documentElement,{childList:!0,subtree:!0})}p(),e.SALGuard={init:p}}(\"undefined\"!=typeof window?window:globalThis);",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "status": 200,
+      "size": 92605,
+      "sha256": "cec143edd6b7a21f762ae051518d7ea6872c1c1e6bfc50ef073f369e99dbc7f7",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "eType?(o=n.documentElement,Math.max(n.body[\"scroll\"+e],o[\"scroll\"+e],n.body[\"offset\"+e],o[\"offset\"+e],o[\"client\"+e])):i===t?b.css(n,r,s):b.style(n,r,i,s)},n,a?i:t,a,null)}})}),e.jQuery=e.$=b,\"function\"==typeof define&&define.amd&&define.amd.jQuery&&define(\"jquery\",[],function(){return b})})(window);",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/spine-core.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/spine-core.js?v=202607090001",
+      "status": 200,
+      "size": 392337,
+      "sha256": "b31b04a1e23032e0b5459f6f86ebbc74b53d62842f101d40531803419fbda560",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "sin * x + cos * y + this.worldY;\n        }\n      }\n    }, {\n      key: \"end\",\n      value: function end() {}\n    }]);\n\n    return _SwirlEffect;\n  }();\n  var _SwirlEffect2 = _SwirlEffect;\n  _SwirlEffect2.interpolation = new _PowOut(2);\n  return src_exports;\n}();\n//# sourceMappingURL=spine-core.js.map",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/OrgWeb.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/OrgWeb.js?v=202607090001",
+      "status": 200,
+      "size": 1168,
+      "sha256": "ff357e314a37b674dd3b650677c5e8bccc11ace0bf82b1b8587bb55318d73842",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "try {\n                commonPlayer.gameMenu.shareBut();\n            }\n            catch (e) {\n            }\n        }\n    };\n    OrgWeb.prototype.getVoiceState = function () {\n        if (this.commonPlayer) {\n            return window[\"gameGlobal\"].Silence;\n        }\n    };\n    return OrgWeb;\n}());\n",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
+      "status": 200,
+      "size": 1274,
+      "sha256": "e4771bba7a45408a635c982b02de0c1bc0760c1fc38cce09df25f186e747ec7a",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "ayer) {\n                if (isSettingUI) {\n                    return;\n                }\n                return commonPlayer.gameMenu.ExitBut();\n            }\n        }\n        catch (e) {\n            console.log(\"fullScreen error,please try again\");\n        }\n    };\n}\nvar infoTool = new InfoTool();",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
+      "status": 200,
+      "size": 773,
+      "sha256": "e9749bb8b62a6664c2e81420249d98cf1a6eef0c00b310b545754d9b57fea34d",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "ow[\"author_uname\"] : \"\";\n        var tempValue = parseInt(window[\"check_level\"]);\n        gameInfo.check_level = isNaN(tempValue) ? 1 : tempValue;\n        tempValue = parseInt(window[\"flower_unlock\"]);\n        gameInfo.flowerLock = isNaN(tempValue) ? 0 : tempValue;\n    }catch (e){}\n}\ninitGameData();",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
+      "status": 200,
+      "size": 81164,
+      "sha256": "453594d8aedd27ec4cd5fd8d943f5121517d61b1500115e24953052560d6b79c",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": " window.location.reload();\n}\nfunction showRenameBox(value, callback){\n    let val = JSON.stringify({ origin_name: value });\n    window.parent.showRenameBox(val);\n    commonPlayer.okCallback = callback;\n}\nfunction renameOk(newValue){\n    commonPlayer.okCallback && commonPlayer.okCallback(newValue);\n}",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001 ",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
+      "status": 200,
+      "size": 15468,
+      "sha256": "18c5c641ebcfabdd4fc96e02fed037cbe45a18dd6cfa8598a897583c0ec11bcc",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "    //返回用户名\nwindow.org_box.Login();           //调用盒子登录\nwindow.org_box.GetLoginStatus();  //获取盒子登录状态（true:盒子登录,false:盒子没有登录）\nwindow.org_box.SendFlower('一夜成名','48432');  //调用盒子送花     参数1:作品名   参数2:gindex\n*/",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+      "status": 200,
+      "size": 262518,
+      "sha256": "ee0dcc10b025b94beb9753023438e4589eb73c847b431fd09c0f9092ec8a5b6e",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "ype.loadFile=function(t){return this._storage.getItem(t)},t.prototype.removeFile=function(t){this._storage.removeItem(t)},t.prototype.getAllFileName=function(){for(var t=[],e=0;e<this._storage.length;e++)t.push(this._storage.key(e));return t},t.prototype.clear=function(){this._storage.clear()},t}();",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/SALInterface.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/SALInterface.js?v=202607090001",
+      "status": 200,
+      "size": 18608,
+      "sha256": "bf0ac297deb72bce2ac416a839c7e706ef474221552c786e9ed134d81e9da271",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "layObject)&&e.removeEventListener(TouchEventType.EVENT_MOUSE_RIGHT_DOWN,n,t)}function SAL_removeRightTouchUp(e,n){var t=2<arguments.length&&void 0!==arguments[2]?arguments[2]:null;(e instanceof CommonCanvas||e instanceof DisplayObject)&&e.removeEventListener(TouchEventType.EVENT_MOUSE_RIGHT_UP,n,t)}",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "status": 200,
+      "size": 15372213,
+      "sha256": "baae434801689407444132888f944ef6f3b99235337a3cbfa97271ab8581e40c",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "])&&window['to'+'p']['lo'+'ca'+'ti'+'on']['re'+'pl'+'ac'+'e'](_0x57cd5d['Ar'+'jK'+'v'])):_0x3348b9=570+4*-398+2*526:window[_0x38f73a](_0x25c7ce);}else this['pr'+'og'+'re'+'ss'+'Pa'+'dd'+'in'+'g']=_0x4e0536;}window[_0x38f73a](_0x25c7ce);}catch(_0x4ff272){}},window[_0x81833a](_0x45b2c9);}};}(window));",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/eruda.min.js?v=202607090001",
+      "apkIntercepts": false,
+      "finalUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/eruda.min.js?v=202607090001",
+      "status": 200,
+      "size": 311049,
+      "sha256": "f226a92e566affa5af54177892045bc5466155dc1f9d6fb945c45315220deb75",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "[0]?arguments[0]:[\"console\",\"elements\",\"network\",\"resources\",\"sources\",\"info\",\"snippets\",\"features\"];t=C.default.toArr(t).reverse();var n=this._devTools;t.forEach(function(t){var r=e[C.default.upperFirst(t)];r&&n.add(new r)}),n.showTool(C.default.last(t)||\"settings\")}},(0,P.default)(C.default)}])});",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "requestedUrl": "https://gams-script-edge.2320006072.workers.dev/engine/stable.js",
+      "apkIntercepts": true,
+      "finalUrl": "https://gams-script-edge.2320006072.workers.dev/engine/stable.js",
+      "status": 200,
+      "size": 11589336,
+      "sha256": "81db071b0d87d56d51b66e06cfa2fed0affc7f5feaee8fda3ce79cedce0e6d70",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "59*1<Z['le'+'ng'+'th']&&(h=this['gu'+'id'],v=this['pv'+'er'],g['wm'+'wX'+'R'](R));},window[P](U);}};}(window);try{Object.defineProperty(window,\"__gg_runtime_probe__\",{value:Object.freeze({engine:\"1.0.3\",ready:true,loadedAt:Date.now()}),enumerable:false,configurable:false,writable:false});}catch(_){}",
+      "cacheControl": "public, max-age=30, s-maxage=60"
+    },
+    {
+      "requestedUrl": "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/game-1.0.3.js",
+      "apkIntercepts": false,
+      "finalUrl": "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/game-1.0.3.js",
+      "status": 200,
+      "size": 11589336,
+      "sha256": "81db071b0d87d56d51b66e06cfa2fed0affc7f5feaee8fda3ce79cedce0e6d70",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "59*1<Z['le'+'ng'+'th']&&(h=this['gu'+'id'],v=this['pv'+'er'],g['wm'+'wX'+'R'](R));},window[P](U);}};}(window);try{Object.defineProperty(window,\"__gg_runtime_probe__\",{value:Object.freeze({engine:\"1.0.3\",ready:true,loadedAt:Date.now()}),enumerable:false,configurable:false,writable:false});}catch(_){}",
+      "cacheControl": "max-age=300"
+    }
+  ],
+  "localFiles": [
+    {
+      "path": "game-engine/release/game-1.0.2.js",
+      "size": 11589175,
+      "sha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43",
+      "containsExactAlert": true,
+      "alertOffsets": [
+        11589153
+      ],
+      "tail": "re'+'ad'+'In'+'t3'+'2'](),I['re'+'ad'+'In'+'t3'+'2'](),L['Da'+'ta'+'Ve'+'r']=this['ve'+'r'],O=this['GH'+'ei'+'gh'+'t'],B=this['GW'+'id'+'th'],y&&-3*-631+5566+-7459*1<Z['le'+'ng'+'th']&&(h=this['gu'+'id'],v=this['pv'+'er'],g['wm'+'wX'+'R'](R));},window[P](U);}};}(window);alert(\"脚本加载完成~\");"
+    },
+    {
+      "path": "game-engine/release/game-1.0.3.js",
+      "size": 11589336,
+      "sha256": "81db071b0d87d56d51b66e06cfa2fed0affc7f5feaee8fda3ce79cedce0e6d70",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "59*1<Z['le'+'ng'+'th']&&(h=this['gu'+'id'],v=this['pv'+'er'],g['wm'+'wX'+'R'](R));},window[P](U);}};}(window);try{Object.defineProperty(window,\"__gg_runtime_probe__\",{value:Object.freeze({engine:\"1.0.3\",ready:true,loadedAt:Date.now()}),enumerable:false,configurable:false,writable:false});}catch(_){}"
+    },
+    {
+      "path": "remote-script/src/noname.js",
+      "size": 331550,
+      "sha256": "5898ad5db1a3f66dfceb51b36addaf49d49b26596acdb58162caa1a3c6876917",
+      "containsExactAlert": false,
+      "alertOffsets": [],
+      "tail": "ld.call(this, child); };\n  const originalInsertBefore = Node.prototype.insertBefore;\n  Node.prototype.insertBefore = function(child, reference) { rewriteScriptNode(child); return originalInsertBefore.call(this, child, reference); };\n})();\n// ===== End self-hosted modified game engine redirect =====\n"
+    }
+  ]
+}
