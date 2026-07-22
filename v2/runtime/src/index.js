@@ -19,7 +19,8 @@ export default {
         return json({
           ok: true,
           service: "gams-runtime-v2",
-          version: 1,
+          version: 2,
+          keyWrap: "RSA-OAEP-SHA1",
           minAppVersion: MIN_V2_APP_VERSION,
           encryptedRuntime: true,
         });
@@ -126,7 +127,7 @@ async function runtimeAccess(request, env) {
     const runtimeKey = await crypto.subtle.importKey(
       "spki",
       runtimePublicBytes,
-      { name: "RSA-OAEP", hash: "SHA-256" },
+      { name: "RSA-OAEP", hash: "SHA-1" },
       false,
       ["encrypt"]
     );

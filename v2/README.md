@@ -32,3 +32,10 @@ This blocks the direct APK, ordinary traffic and cache extraction paths. A roote
 - Cloudflare V2 runtime Worker is deployed.
 - Test2 channel diagnostics started for Android MGF1 compatibility and direct no-VPN runtime access.
 - V1 version 8 remains unchanged during testing.
+
+
+## Test2 compatibility fix
+
+- Android RSA-OAEP key wrapping uses SHA-1/MGF1-SHA1 for older Android Keystore compatibility.
+- Runtime traffic prefers `runtime.xn--8pv109c.top` and falls back to `workers.dev`.
+- V1 version 8 remains unchanged.

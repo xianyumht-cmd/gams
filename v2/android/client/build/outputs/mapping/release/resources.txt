@@ -1,0 +1,665 @@
+Marking id:tag_unhandled_key_event_manager:2131034173 reachable: referenced from in_memory_r8_base_classes0.dex
+Marking id:tag_unhandled_key_listeners:2131034174 reachable: referenced from in_memory_r8_base_classes0.dex
+android.content.res.Resources#getIdentifier present: false
+Web content present: true
+Referenced Strings:
+gameSha256
+运行服务响应过大
+sha256
+WARM_UP_RENDERER_PROCESS
+/system/app/Superuser.apk
+noname.js
+deviceId
+CONFIGURE_PARTITIONED_COOKIES
+com.saurik.substrate.MS$2
+OFF_SCREEN_PRERASTER
+8.8.8.8
+EXTRA_HEADER_FOR_ORIGINS
+V2已就绪
+ORIGIN_MATCHED_HEADERS
+PAYMENT_REQUEST
+SAFE_BROWSING_RESPONSE_SHOW_INTERSTITIAL
+ALGORITHMIC_DARKENING
+androidx.lifecycle.LifecycleDispatche...
+DELETE_BROWSING_DATA
+加密运行包完整性校验失败
+SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST
+Cookie
+RSA
+licenseExpiresAt
+WEB_MESSAGE_LISTENER
+更换设备
+服务器响应提前结束
+test_keys
+device_limit
+ADD_QUIC_HINTS
+WEBVIEW_BUILDER_EXPERIMENTAL_V1
+gg_v2_state_aes_1
+ON_ANY
+WEBVIEW_BUILDER_EXPERIMENTAL_V2
+forceUpdate
+license_disabled
+下载更新
+POST_WEB_MESSAGE
+SPECULATIVE_LOADING_CONFIG_V2
+没有应用签名
+ON_PAUSE
+size
+license_expired
+updateUrl
+服务器状态行无效
+onMenuKeyEvent
+服务状态已失效
+runtimeKeyFingerprint
+Blocked
+SERVICE_WORKER_BASIC_USAGE
+WEB_MESSAGE_PORT_POST_MESSAGE
+GET_WEB_VIEW_CLIENT
+getResPackage
+SAFE_BROWSING_WHITELIST
+WEBVIEW_INTEGRITY_API_STATUS
+DISABLED_ACTION_MODE_MENU_ITEMS
+运行数据已清除
+too_many_requests
+PAGE_GET_URL
+V2启动成功
+/v2/runtime/challenge
+DOCUMENT_START_SCRIPT
+createWebViewProviderFactory
+AndroidKeyStore
+ASYNC_WEBVIEW_STARTUP_ASYNC_STARTUP_L...
+LifecycleRegistry
+刷新
+NoPadding
+application/javascript
+timestamp
+RESOURCE
+https://ggv2.local/runtime/game.js
+%02x
+OAEPPadding
+WEB_RESOURCE_ERROR_GET_CODE
+getFactory
+licenseKey
+DATA_DIRECTORY_BASE_PATH
+SAFE_BROWSING_ALLOWLIST
+加密运行包大小校验失败
+/data/local/xbin/su
+取消
+引擎层
+x
+运行包大小无效
+PROXY_OVERRIDE
+无法创建运行密钥
+POST
+debugger
+USER_AGENT_METADATA_FORM_FACTORS
+MUTE_AUDIO
+/v1/activate
+V2客户端需要更新
+versionName
+BanParcelableUsage
+/v2/runtime/bundle
+授权会话已失效
+PROVIDER_WEAKLY_REF_WEBVIEW
+getLoadedPackageInfo
+game.js
+/system/bin/su
+等待验证
+payload
+WEB_MESSAGE_PORT_SET_MESSAGE_CALLBACK
+SAVE_STATE
+服务器响应格式无效
+ON_START
+WEB_VIEW_RENDERER_CLIENT_BASIC_USAGE
+EC
+无法保存服务状态
+BACK_FORWARD_CACHE_SETTINGS
+runtime_paused
+bad_session
+check
+/v1/device/unbind
+de.robv.android.xposed.XposedBridge
+AES
+upgrade_required
+HTTP/
+http
+RECEIVE_HTTP_ERROR
+DEFAULT_TRAFFICSTATS_TAGGING
+V2运行服务维护中
+IMPLEMENTATION_ONLY_FEATURE
+FORCE_DARK
+request_failed
+keyFingerprint
+ON_DESTROY
+BACK_FORWARD_CACHE_SETTINGS_V4
+deviceLabel
+SAFE_BROWSING_PRIVACY_POLICY_URL
+BACK_FORWARD_CACHE_SETTINGS_V3
+运行清单摘要无效
+关闭
+https://
+lastSuccessAt
+CREATED
+HTTPS
+PRERENDER_URL_V2
+PRERENDER_URL_V3
+COOKIE_INTERCEPT
+root
+TRACING_CONTROLLER_BASIC_USAGE
+keyCipher
+服务器响应过大
+无法打开此链接
+WEB_STORAGE_DELETE_BROWSING_DATA
+text/plain
+DATA_DIRECTORY_SUFFIX
+eng
+BITMAP_MASKABLE
+START_SAFE_BROWSING
+完整性校验失败
+ENTERPRISE_AUTHENTICATION_APP_LINK_PO...
+/v2/runtime/access
+MULTI_PROCESS
+V2服务信息
+BACK_FORWARD_CACHE_SETTINGS_EXPERIMEN...
+IconCompat
+分块响应终止符无效
+BACK_FORWARD_CACHE_SETTINGS_EXPERIMEN...
+download_
+chunked
+org.chromium.support_lib_glue.Support...
+FORCE_DARK_BEHAVIOR
+message
+JS_INJECTION_IN_FRAME_AND_WORLD
+runtimePublicKey
+GCM
+SHA256withECDSA
+www.66rpg.com
+PRECONNECT
+ASYNC_WEBVIEW_STARTUP
+android.intent.action.VIEW
+确认
+gg_v2_runtime_rsa_oaep_sha1_2
+SERVICE_WORKER_BLOCK_NETWORK_LOADS
+NAVIGATION_GET_WEB_RESOURCE_ERROR
+SAFE_BROWSING_RESPONSE_PROCEED
+SERVICE_WORKER_CACHE_MODE
+BACK_FORWARD_CACHE
+appVersion
+nonameSize
+PREFETCH_CACHE_V1
+publicKey
+没有可用连接通道
+clipboard
+WEB_MESSAGE_PORT_CLOSE
+响应行过长
+hook
+m.66rpg.com
+userdebug
+GET_WEB_CHROME_CLIENT
+https://www.66rpg.com
+GET_VARIATIONS_HEADER
+https
+riskFlags
+device_unbound
+write
+wrappedKey
+1.1.1.1
+application/json
+secp256r1
+SERVICE_WORKER_CONTENT_ACCESS
+ADD_QUIC_HINTS_V1
+nonameSha256
+/system/xbin/su
+iv
+运行服务响应无效
+确认更换设备
+控制层
+getResId
+GET
+服务
+分块响应提前结束
+运行包内容不完整
+状态格式无效
+updateMessage
+SAFE_BROWSING_HIT
+WEB_RESOURCE_ERROR_GET_DESCRIPTION
+MULTI_PROCESS_QUERY
+需要更新V2客户端
+FORCE_DARK_STRATEGY
+signature
+永久有效
+UI_THREAD_STARTUP_MODE
+PREFETCH_URL_V5
+android.webkit.WebViewFactory
+https://m.66rpg.com
+运行密钥无效
+URI
+bad_response
+Authorization
+/data/local/bin/su
+nosniff
+file
+重置
+INITIALIZED
+SET_MAX_PRERENDERS_V1
+WEB_MESSAGE_ARRAY_BUFFER
+GET_WEB_VIEW_RENDERER
+ASYNC_WEBVIEW_STARTUP_V2
+CUSTOM_REQUEST_HEADERS
+CACHE_DIRECTORY_BASE_PATH
+激活码格式错误
+无法创建设备密钥
+org.lsposed.lspd.core.Main
+重置网页数据
+PROXY_OVERRIDE_REVERSE_BYPASS
+大小校验失败
+服务器状态码无效
+需要更新V2
+USER_AGENT_METADATA
+WEBVIEW_MEDIA_INTEGRITY_API_STATUS
+REQUESTED_WITH_HEADER_ALLOW_LIST
+HYPERLINK_CONTEXT_MENU_ITEMS
+token
+https://m.66rpg.com/h5/
+CREATE_WEB_MESSAGE_CHANNEL
+permanent
+debuggable
+授权服务响应无效
+/sbin/su
+DESTROYED
+223.5.5.5
+ON_CREATE
+:dev
+RESUMED
+VISUAL_STATE_CALLBACK
+页面加载失败
+操作失败
+ON_RESUME
+payloadHash
+分块长度无效
+服务已到期
+首页
+download
+运行清单签名算法无效
+粘贴
+运行包条目过大
+V2安全运行环境已就绪
+serverTime
+返回
+签名格式无效
+gameSize
+read
+Accept
+publishedAt
+发现新的V2客户端
+WEBVIEW_BUILDER_V2
+已开始下载
+runtime
+Pragma
+WEBVIEW_BUILDER_V1
+nonce
+installId
+DOCUMENT_START_SCRIPT:1
+WEB_VIEW_RENDERER_TERMINATE
+SHOULD_OVERRIDE_WITH_REDIRECTS
+退出账号
+/v1/challenge
+MULTI_PROFILE
+PROXY_OVERRIDE:3
+unbind
+DATA
+activate
+SAFE_BROWSING_ENABLE
+SPECULATIVE_LOADING_STATUS
+运行清单签名校验失败
+code
+certificateDigest
+响应头提前结束
+purpose
+请输入32位激活码
+GET_COOKIE_INFO
+激活码已绑定其他设备
+SERVICE_WORKER_FILE_ACCESS
+latestAppVersion
+SAFE_BROWSING_RESPONSE_BACK_TO_SAFETY
+启动V2
+gg_v2_state
+bundlePath
+RECEIVE_WEB_RESOURCE_ERROR
+NAVIGATION_LISTENER
+STARTED
+请输入激活码
+ok
+ATTRIBUTION_REGISTRATION_BEHAVIOR
+OK
+MGF1
+schemaVersion
+gg_device_ec_v1
+BITMAP
+manifest
+0x%08x
+/v1/check
+无法打开更新地址
+ON_STOP
+Parcelizer
+signatureAlgorithm
+当前设备已解除绑定
+WEB_AUTHENTICATION
+/data/adb/magisk
+未知
+下载失败
+challenge
+WEB_RESOURCE_REQUEST_IS_REDIRECT
+ATTRIBUTION_BEHAVIOR
+WEB_MESSAGE_CALLBACK_ON_MESSAGE
+UNKNOWN
+SPECULATIVE_LOADING
+android_id
+运行清单版本无效
+AES/GCM/NoPadding
+keyIv
+@com.jinli.ggsecure:attr/alpha : reachable=false
+@com.jinli.ggsecure:attr/font : reachable=false
+@com.jinli.ggsecure:attr/fontProviderAuthority : reachable=false
+@com.jinli.ggsecure:attr/fontProviderCerts : reachable=false
+@com.jinli.ggsecure:attr/fontProviderFetchStrategy : reachable=false
+@com.jinli.ggsecure:attr/fontProviderFetchTimeout : reachable=false
+@com.jinli.ggsecure:attr/fontProviderPackage : reachable=false
+@com.jinli.ggsecure:attr/fontProviderQuery : reachable=false
+@com.jinli.ggsecure:attr/fontStyle : reachable=false
+@com.jinli.ggsecure:attr/fontVariationSettings : reachable=false
+@com.jinli.ggsecure:attr/fontWeight : reachable=false
+@com.jinli.ggsecure:attr/ttcIndex : reachable=false
+@com.jinli.ggsecure:color/notification_action_color_filter : reachable=false
+    @com.jinli.ggsecure:color/secondary_text_default_material_light
+@com.jinli.ggsecure:color/notification_icon_bg_color : reachable=false
+@com.jinli.ggsecure:color/ripple_material_light : reachable=false
+@com.jinli.ggsecure:color/secondary_text_default_material_light : reachable=false
+@com.jinli.ggsecure:dimen/compat_button_inset_horizontal_material : reachable=false
+@com.jinli.ggsecure:dimen/compat_button_inset_vertical_material : reachable=false
+@com.jinli.ggsecure:dimen/compat_button_padding_horizontal_material : reachable=false
+@com.jinli.ggsecure:dimen/compat_button_padding_vertical_material : reachable=false
+@com.jinli.ggsecure:dimen/compat_control_corner_material : reachable=false
+@com.jinli.ggsecure:dimen/compat_notification_large_icon_max_height : reachable=false
+@com.jinli.ggsecure:dimen/compat_notification_large_icon_max_width : reachable=false
+@com.jinli.ggsecure:dimen/notification_action_icon_size : reachable=false
+@com.jinli.ggsecure:dimen/notification_action_text_size : reachable=false
+@com.jinli.ggsecure:dimen/notification_big_circle_margin : reachable=false
+@com.jinli.ggsecure:dimen/notification_content_margin_start : reachable=false
+@com.jinli.ggsecure:dimen/notification_large_icon_height : reachable=false
+@com.jinli.ggsecure:dimen/notification_large_icon_width : reachable=false
+@com.jinli.ggsecure:dimen/notification_main_column_padding_top : reachable=false
+@com.jinli.ggsecure:dimen/notification_media_narrow_margin : reachable=false
+@com.jinli.ggsecure:dimen/notification_right_icon_size : reachable=false
+@com.jinli.ggsecure:dimen/notification_right_side_padding_top : reachable=false
+@com.jinli.ggsecure:dimen/notification_small_icon_background_padding : reachable=false
+@com.jinli.ggsecure:dimen/notification_small_icon_size_as_large : reachable=false
+@com.jinli.ggsecure:dimen/notification_subtext_size : reachable=false
+@com.jinli.ggsecure:dimen/notification_top_pad : reachable=false
+@com.jinli.ggsecure:dimen/notification_top_pad_large_text : reachable=false
+@com.jinli.ggsecure:drawable/gg_icon_background : reachable=false
+@com.jinli.ggsecure:drawable/ic_launcher_foreground : reachable=false
+@com.jinli.ggsecure:drawable/notification_action_background : reachable=false
+    @com.jinli.ggsecure:color/ripple_material_light
+    @com.jinli.ggsecure:dimen/compat_button_inset_horizontal_material
+    @com.jinli.ggsecure:dimen/compat_button_inset_vertical_material
+    @com.jinli.ggsecure:dimen/compat_control_corner_material
+    @com.jinli.ggsecure:dimen/compat_button_padding_vertical_material
+    @com.jinli.ggsecure:dimen/compat_button_padding_horizontal_material
+@com.jinli.ggsecure:drawable/notification_bg : reachable=false
+    @com.jinli.ggsecure:drawable/notification_bg_normal_pressed
+    @com.jinli.ggsecure:drawable/notification_bg_normal
+@com.jinli.ggsecure:drawable/notification_bg_low : reachable=false
+    @com.jinli.ggsecure:drawable/notification_bg_low_pressed
+    @com.jinli.ggsecure:drawable/notification_bg_low_normal
+@com.jinli.ggsecure:drawable/notification_bg_low_normal : reachable=false
+@com.jinli.ggsecure:drawable/notification_bg_low_pressed : reachable=false
+@com.jinli.ggsecure:drawable/notification_bg_normal : reachable=false
+@com.jinli.ggsecure:drawable/notification_bg_normal_pressed : reachable=false
+@com.jinli.ggsecure:drawable/notification_icon_background : reachable=false
+    @com.jinli.ggsecure:color/notification_icon_bg_color
+@com.jinli.ggsecure:drawable/notification_template_icon_bg : reachable=false
+@com.jinli.ggsecure:drawable/notification_template_icon_low_bg : reachable=false
+@com.jinli.ggsecure:drawable/notification_tile_bg : reachable=false
+    @com.jinli.ggsecure:drawable/notify_panel_notification_icon_bg
+@com.jinli.ggsecure:drawable/notify_panel_notification_icon_bg : reachable=false
+@com.jinli.ggsecure:id/accessibility_action_clickable_span : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_0 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_1 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_10 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_11 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_12 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_13 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_14 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_15 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_16 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_17 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_18 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_19 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_2 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_20 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_21 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_22 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_23 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_24 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_25 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_26 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_27 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_28 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_29 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_3 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_30 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_31 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_4 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_5 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_6 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_7 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_8 : reachable=false
+@com.jinli.ggsecure:id/accessibility_custom_action_9 : reachable=false
+@com.jinli.ggsecure:id/action_container : reachable=false
+@com.jinli.ggsecure:id/action_divider : reachable=false
+@com.jinli.ggsecure:id/action_image : reachable=false
+@com.jinli.ggsecure:id/action_text : reachable=false
+@com.jinli.ggsecure:id/actions : reachable=false
+@com.jinli.ggsecure:id/async : reachable=false
+@com.jinli.ggsecure:id/blocking : reachable=false
+@com.jinli.ggsecure:id/chronometer : reachable=false
+@com.jinli.ggsecure:id/dialog_button : reachable=false
+@com.jinli.ggsecure:id/forever : reachable=false
+@com.jinli.ggsecure:id/icon : reachable=false
+@com.jinli.ggsecure:id/icon_group : reachable=false
+@com.jinli.ggsecure:id/info : reachable=false
+@com.jinli.ggsecure:id/italic : reachable=false
+@com.jinli.ggsecure:id/line1 : reachable=false
+@com.jinli.ggsecure:id/line3 : reachable=false
+@com.jinli.ggsecure:id/normal : reachable=false
+@com.jinli.ggsecure:id/notification_background : reachable=false
+@com.jinli.ggsecure:id/notification_main_column : reachable=false
+@com.jinli.ggsecure:id/notification_main_column_container : reachable=false
+@com.jinli.ggsecure:id/right_icon : reachable=false
+@com.jinli.ggsecure:id/right_side : reachable=false
+@com.jinli.ggsecure:id/tag_accessibility_actions : reachable=false
+@com.jinli.ggsecure:id/tag_accessibility_clickable_spans : reachable=false
+@com.jinli.ggsecure:id/tag_accessibility_heading : reachable=false
+@com.jinli.ggsecure:id/tag_accessibility_pane_title : reachable=false
+@com.jinli.ggsecure:id/tag_screen_reader_focusable : reachable=false
+@com.jinli.ggsecure:id/tag_transition_group : reachable=false
+@com.jinli.ggsecure:id/tag_unhandled_key_event_manager : reachable=true
+@com.jinli.ggsecure:id/tag_unhandled_key_listeners : reachable=true
+@com.jinli.ggsecure:id/text : reachable=false
+@com.jinli.ggsecure:id/text2 : reachable=false
+@com.jinli.ggsecure:id/time : reachable=false
+@com.jinli.ggsecure:id/title : reachable=false
+@com.jinli.ggsecure:integer/status_bar_notification_info_maxnum : reachable=false
+@com.jinli.ggsecure:layout/custom_dialog : reachable=false
+@com.jinli.ggsecure:layout/notification_action : reachable=false
+    @com.jinli.ggsecure:style/Widget_Compat_NotificationActionContainer
+    @com.jinli.ggsecure:dimen/notification_action_icon_size
+    @com.jinli.ggsecure:style/Widget_Compat_NotificationActionText
+@com.jinli.ggsecure:layout/notification_action_tombstone : reachable=false
+    @com.jinli.ggsecure:style/Widget_Compat_NotificationActionContainer
+    @com.jinli.ggsecure:dimen/notification_action_icon_size
+    @com.jinli.ggsecure:style/Widget_Compat_NotificationActionText
+@com.jinli.ggsecure:layout/notification_template_custom_big : reachable=false
+    @com.jinli.ggsecure:layout/notification_template_icon_group
+    @com.jinli.ggsecure:dimen/notification_large_icon_width
+    @com.jinli.ggsecure:dimen/notification_large_icon_height
+    @com.jinli.ggsecure:dimen/notification_right_side_padding_top
+    @com.jinli.ggsecure:layout/notification_template_part_time
+    @com.jinli.ggsecure:layout/notification_template_part_chronometer
+    @com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Info
+@com.jinli.ggsecure:layout/notification_template_icon_group : reachable=false
+    @com.jinli.ggsecure:dimen/notification_large_icon_width
+    @com.jinli.ggsecure:dimen/notification_large_icon_height
+    @com.jinli.ggsecure:dimen/notification_big_circle_margin
+    @com.jinli.ggsecure:dimen/notification_right_icon_size
+@com.jinli.ggsecure:layout/notification_template_part_chronometer : reachable=false
+    @com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Time
+@com.jinli.ggsecure:layout/notification_template_part_time : reachable=false
+    @com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Time
+@com.jinli.ggsecure:mipmap/ic_launcher : reachable=false
+    @com.jinli.ggsecure:drawable/gg_icon_background
+    @com.jinli.ggsecure:drawable/ic_launcher_foreground
+@com.jinli.ggsecure:mipmap/ic_launcher_round : reachable=false
+    @com.jinli.ggsecure:drawable/gg_icon_background
+    @com.jinli.ggsecure:drawable/ic_launcher_foreground
+@com.jinli.ggsecure:string/status_bar_notification_info_overflow : reachable=false
+@com.jinli.ggsecure:style/TextAppearance_Compat_Notification : reachable=false
+@com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Info : reachable=false
+@com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Line2 : reachable=false
+    @com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Info
+@com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Time : reachable=false
+@com.jinli.ggsecure:style/TextAppearance_Compat_Notification_Title : reachable=false
+@com.jinli.ggsecure:style/Widget_Compat_NotificationActionContainer : reachable=false
+    @com.jinli.ggsecure:drawable/notification_action_background
+@com.jinli.ggsecure:style/Widget_Compat_NotificationActionText : reachable=false
+    @com.jinli.ggsecure:color/secondary_text_default_material_light
+    @com.jinli.ggsecure:dimen/notification_action_text_size
+
+The root reachable resources are:
+ id:tag_unhandled_key_event_manager:2131034173
+ id:tag_unhandled_key_listeners:2131034174
+Unused resources are: 
+ color:notification_action_color_filter:2130837504
+ color:notification_icon_bg_color:2130837505
+ color:ripple_material_light:2130837506
+ color:secondary_text_default_material_light:2130837507
+ dimen:compat_button_inset_horizontal_material:2130903040
+ dimen:compat_button_inset_vertical_material:2130903041
+ dimen:compat_button_padding_horizontal_material:2130903042
+ dimen:compat_button_padding_vertical_material:2130903043
+ dimen:compat_control_corner_material:2130903044
+ dimen:compat_notification_large_icon_max_height:2130903045
+ dimen:compat_notification_large_icon_max_width:2130903046
+ dimen:notification_action_icon_size:2130903047
+ dimen:notification_action_text_size:2130903048
+ dimen:notification_big_circle_margin:2130903049
+ dimen:notification_content_margin_start:2130903050
+ dimen:notification_large_icon_height:2130903051
+ dimen:notification_large_icon_width:2130903052
+ dimen:notification_main_column_padding_top:2130903053
+ dimen:notification_media_narrow_margin:2130903054
+ dimen:notification_right_icon_size:2130903055
+ dimen:notification_right_side_padding_top:2130903056
+ dimen:notification_small_icon_background_padding:2130903057
+ dimen:notification_small_icon_size_as_large:2130903058
+ dimen:notification_subtext_size:2130903059
+ dimen:notification_top_pad:2130903060
+ dimen:notification_top_pad_large_text:2130903061
+ drawable:gg_icon_background:2130968576
+ drawable:ic_launcher_foreground:2130968577
+ drawable:notification_action_background:2130968578
+ drawable:notification_bg:2130968579
+ drawable:notification_bg_low:2130968580
+ drawable:notification_bg_low_normal:2130968581
+ drawable:notification_bg_low_pressed:2130968582
+ drawable:notification_bg_normal:2130968583
+ drawable:notification_bg_normal_pressed:2130968584
+ drawable:notification_icon_background:2130968585
+ drawable:notification_template_icon_bg:2130968586
+ drawable:notification_template_icon_low_bg:2130968587
+ drawable:notification_tile_bg:2130968588
+ drawable:notify_panel_notification_icon_bg:2130968589
+ id:accessibility_action_clickable_span:2131034112
+ id:accessibility_custom_action_0:2131034113
+ id:accessibility_custom_action_1:2131034114
+ id:accessibility_custom_action_10:2131034115
+ id:accessibility_custom_action_11:2131034116
+ id:accessibility_custom_action_12:2131034117
+ id:accessibility_custom_action_13:2131034118
+ id:accessibility_custom_action_14:2131034119
+ id:accessibility_custom_action_15:2131034120
+ id:accessibility_custom_action_16:2131034121
+ id:accessibility_custom_action_17:2131034122
+ id:accessibility_custom_action_18:2131034123
+ id:accessibility_custom_action_19:2131034124
+ id:accessibility_custom_action_2:2131034125
+ id:accessibility_custom_action_20:2131034126
+ id:accessibility_custom_action_21:2131034127
+ id:accessibility_custom_action_22:2131034128
+ id:accessibility_custom_action_23:2131034129
+ id:accessibility_custom_action_24:2131034130
+ id:accessibility_custom_action_25:2131034131
+ id:accessibility_custom_action_26:2131034132
+ id:accessibility_custom_action_27:2131034133
+ id:accessibility_custom_action_28:2131034134
+ id:accessibility_custom_action_29:2131034135
+ id:accessibility_custom_action_3:2131034136
+ id:accessibility_custom_action_30:2131034137
+ id:accessibility_custom_action_31:2131034138
+ id:accessibility_custom_action_4:2131034139
+ id:accessibility_custom_action_5:2131034140
+ id:accessibility_custom_action_6:2131034141
+ id:accessibility_custom_action_7:2131034142
+ id:accessibility_custom_action_8:2131034143
+ id:accessibility_custom_action_9:2131034144
+ id:action_container:2131034145
+ id:action_divider:2131034146
+ id:action_image:2131034147
+ id:action_text:2131034148
+ id:actions:2131034149
+ id:async:2131034150
+ id:blocking:2131034151
+ id:chronometer:2131034152
+ id:dialog_button:2131034153
+ id:forever:2131034154
+ id:icon:2131034155
+ id:icon_group:2131034156
+ id:info:2131034157
+ id:italic:2131034158
+ id:line1:2131034159
+ id:line3:2131034160
+ id:normal:2131034161
+ id:notification_background:2131034162
+ id:notification_main_column:2131034163
+ id:notification_main_column_container:2131034164
+ id:right_icon:2131034165
+ id:right_side:2131034166
+ id:tag_accessibility_actions:2131034167
+ id:tag_accessibility_clickable_spans:2131034168
+ id:tag_accessibility_heading:2131034169
+ id:tag_accessibility_pane_title:2131034170
+ id:tag_screen_reader_focusable:2131034171
+ id:tag_transition_group:2131034172
+ id:text:2131034175
+ id:text2:2131034176
+ id:time:2131034177
+ id:title:2131034178
+ integer:status_bar_notification_info_maxnum:2131099648
+ layout:custom_dialog:2131165184
+ layout:notification_action:2131165185
+ layout:notification_action_tombstone:2131165186
+ layout:notification_template_custom_big:2131165187
+ layout:notification_template_icon_group:2131165188
+ layout:notification_template_part_chronometer:2131165189
+ layout:notification_template_part_time:2131165190
+ mipmap:ic_launcher:2131230720
+ mipmap:ic_launcher_round:2131230721
+ string:status_bar_notification_info_overflow:2131296256
+ style:TextAppearance_Compat_Notification:2131361792
+ style:TextAppearance_Compat_Notification_Info:2131361793
+ style:TextAppearance_Compat_Notification_Line2:2131361794
+ style:TextAppearance_Compat_Notification_Time:2131361795
+ style:TextAppearance_Compat_Notification_Title:2131361796
+ style:Widget_Compat_NotificationActionContainer:2131361797
+ style:Widget_Compat_NotificationActionText:2131361798
