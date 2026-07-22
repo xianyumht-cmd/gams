@@ -1,0 +1,57 @@
+{
+  "target": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+  "finalUrl": "about:blank",
+  "navigationError": "",
+  "alerts": [],
+  "dialogs": [],
+  "engineRequests": [
+    {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "type": "script",
+      "intercepted": false
+    },
+    {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "type": "script",
+      "intercepted": false
+    },
+    {
+      "url": "https://ggv2.local/runtime/game.js",
+      "type": "script",
+      "intercepted": false
+    },
+    {
+      "url": "https://ggv2.local/runtime/game.js",
+      "type": "script",
+      "intercepted": false
+    },
+    {
+      "url": "https://ggv2.local/runtime/game.js",
+      "type": "script",
+      "intercepted": true
+    }
+  ],
+  "pageErrors": [],
+  "responses": [
+    {
+      "url": "https://ggv2.local/runtime/game.js",
+      "status": 200,
+      "type": "script"
+    },
+    {
+      "url": "https://ggv2.local/runtime/game.js",
+      "status": 200,
+      "type": "script"
+    },
+    {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "status": 200,
+      "type": "script"
+    },
+    {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001",
+      "status": 200,
+      "type": "script"
+    }
+  ]
+}
