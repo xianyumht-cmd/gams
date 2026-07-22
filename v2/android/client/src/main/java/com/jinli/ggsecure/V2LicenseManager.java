@@ -138,7 +138,7 @@ final class V2LicenseManager {
         long expiresAt = state.optLong("licenseExpiresAt", 0L);
         String validity = permanent ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
         return "V2测试通道\n有效期：" + validity +
-                "\n运行核心：仅内存加载\n离线启动：已禁用\n客户端：2.0.0-test2";
+                "\n运行核心：仅内存加载\n离线启动：已禁用\n客户端：2.0.0-test3";
     }
 
     void clear() {
