@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": 10002,
-  "versionName": "1.0.2",
-  "file": "game-1.0.2.js",
-  "sha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43",
-  "size": 11589175,
-  "sourceUrl": "https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js",
+  "version": 10003,
+  "versionName": "1.0.3",
+  "file": "game-1.0.3.js",
+  "sha256": "81db071b0d87d56d51b66e06cfa2fed0affc7f5feaee8fda3ce79cedce0e6d70",
+  "size": 11589336,
+  "sourceUrl": "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/game-1.0.3.js",
   "minNonameVersion": "1.1.1",
-  "publishedAt": "2026-07-21T17:31:24Z",
+  "publishedAt": "2026-07-22T16:01:34Z",
   "signatureAlgorithm": "SHA256withECDSA",
-  "signature": "MEUCIA4Z9YoxB/LoYrhjSvJaS6GrfK6iKVdWhee/+xeJ62Q5AiEAwBjCJ2otf4Yu+Ooxcj0/Y9b0Q3SRx/dnc6+V2vTDT+U="
+  "signature": "MEYCIQC9bVV2vLpyGXsTefpMAJCrhQrvEPJwWPf/c/0neobiqAIhAMtmFyw9n1JmlbiktE5BZOSrztlZgd4VyoCP9IUob4zK"
 }

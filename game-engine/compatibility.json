@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "stable": {
     "nonameVersion": "1.1.1",
-    "engineVersion": "1.0.2",
+    "engineVersion": "1.0.3",
     "officialPageVersion": "202607090001",
     "appMinVersion": 8,
     "testedPages": [
