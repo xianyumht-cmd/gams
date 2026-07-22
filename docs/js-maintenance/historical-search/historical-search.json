@@ -1,0 +1,526 @@
+{
+  "schemaVersion": 2,
+  "boundedSearch": {
+    "timeoutSeconds": 12,
+    "commonCrawlIndexes": 6,
+    "maxWaybackBodies": 8,
+    "maxCommonCrawlBodies": 8
+  },
+  "searchedUrls": [
+    "https://c1.cgyouxi.com/website/hfplayer/v3/bin/official/game.js",
+    "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js"
+  ],
+  "wayback": {
+    "pageRecords": [],
+    "pageFingerprints": [],
+    "pageError": "",
+    "scriptRecords": [
+      {
+        "timestamp": "20200511134233",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20200424002",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "4QEV5RN3N2OIPZ3FAWW3HXS4K4AVBWBK",
+        "length": "98891"
+      },
+      {
+        "timestamp": "20200914171933",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20200901001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "NEYIYPLNMGAEYWMDY6HWYBD67CPGJ2YB",
+        "length": "88351"
+      },
+      {
+        "timestamp": "20201022033005",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201016003",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "VT46NGRVRZ6GTJLVHXCOSWDPGRREQB56",
+        "length": "105532"
+      },
+      {
+        "timestamp": "20201214063253",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201104002",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "VDIPO7MWNM3ULR5TLGZ2ADP65U2PB4M4",
+        "length": "108708"
+      },
+      {
+        "timestamp": "20201118155058",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201109001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "WUCRC6EEBWNSBVJ3BMWO6DGMCRSUUZFZ",
+        "length": "107731"
+      },
+      {
+        "timestamp": "20210107052834",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201228001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "GPN65IZJF4QOJ5G4DDDXB62NVJHEKCK3",
+        "length": "109410"
+      },
+      {
+        "timestamp": "20210315073527",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210209002",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "UQB2FFQQKQ5T5YUXW7BLFB5BMLVWOHBO",
+        "length": "103864"
+      },
+      {
+        "timestamp": "20210401085823",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210316001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "5WA4HCCZBHUFJM5E26PRFS77F4FNRS7A",
+        "length": "103910"
+      },
+      {
+        "timestamp": "20210423043120",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210421001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "CMOSBECRSLOQGH2PJQEAJJ2HNQQGC4FW",
+        "length": "110928"
+      },
+      {
+        "timestamp": "20210607004530",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210604001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "ICUQHXTNKTOSZKIMHKU4HBWAUE63DOMD",
+        "length": "111311"
+      },
+      {
+        "timestamp": "20210716101609",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210712001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "BQGGLCKQPBTVRBEO5CIHBXW6BC45TTFM",
+        "length": "111708"
+      },
+      {
+        "timestamp": "20210728183009",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210723001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "23Q4BI2OA3FAKXPBMXJ67XZZ2X7Z7DCZ",
+        "length": "117850"
+      },
+      {
+        "timestamp": "20210827141000",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210825001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "VXODBR2NJ5PFUWFRZAVBIV4BYLBVHTFJ",
+        "length": "118519"
+      },
+      {
+        "timestamp": "20211017035205",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210929002",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "SW5LAGARHI7TU4NDGEULHJXP4LGM7A3A",
+        "length": "122090"
+      },
+      {
+        "timestamp": "20220517031043",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20220302001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "DCP4D6PFUD5WU5FKWLRH4HV4FTSLSQS5",
+        "length": "132922"
+      },
+      {
+        "timestamp": "20220713063945",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20220620009",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "FHV34SB7DHEBQ7PPD3AIG2OB27BXEV2U",
+        "length": "623992"
+      },
+      {
+        "timestamp": "20220814075547",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20220802007",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "OSTTE2N3EGUA3Z5HLNHWCVKBHW2R46Q7",
+        "length": "629700"
+      },
+      {
+        "timestamp": "20220815124345",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20220802007",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "TOX7BGET34T3BKPQVGTJDI2LHAVTTCGE",
+        "length": "630421"
+      },
+      {
+        "timestamp": "20220820155030",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20220802007",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "6NPYHLK3MX3NCT2DSABZYOPKCPRSSWAP",
+        "length": "629875"
+      },
+      {
+        "timestamp": "20220920074018",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20220830001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "XWFRMOD7CP66SCBXQSZBJRFUXIX5DKHI",
+        "length": "627900"
+      },
+      {
+        "timestamp": "20221021151252",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20221014001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "INE263HR5NRZD6LINA7TXYEE2A5DVIQN",
+        "length": "641315"
+      },
+      {
+        "timestamp": "20230218104414",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230112003",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "B4YQTEDR5PSPXETBY6FEVS7SWU2GWQYC",
+        "length": "675862"
+      },
+      {
+        "timestamp": "20230419045237",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230412001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "433BUGTCY2GS6JPJPTUC5LB3H4HGYRHT",
+        "length": "734187"
+      },
+      {
+        "timestamp": "20230419055219",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230412001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "VKFRUCM4Z3LQJ5UYHGVJB2EZBVQ2UUBJ",
+        "length": "733911"
+      },
+      {
+        "timestamp": "20230524070711",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230519005",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "BYDBKVAKQALRIIFIVFA5FPY6HJYQE6H6",
+        "length": "647800"
+      },
+      {
+        "timestamp": "20230704185323",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230530010",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "HFMTIRQHQSLQURKDNM2HLXOFIL5E6X7J",
+        "length": "649590"
+      },
+      {
+        "timestamp": "20230812184411",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230810001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "NGZ2KOGRRV5E55RXJEHEHU3EGZIAS3QH",
+        "length": "709672"
+      },
+      {
+        "timestamp": "20230815043330",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230810001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "4GVMBOOGFGUEL65TYZIOLB2XBMYYNEHR",
+        "length": "712313"
+      },
+      {
+        "timestamp": "20231015005022",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20230927004",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "H63NOB2HRRDTQQFGCTXLEGCFQ37K7V2M",
+        "length": "717398"
+      },
+      {
+        "timestamp": "20231119031956",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20231024001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "JQS3W5VEMFMLZHZHES7SLTQ45LWX7NBE",
+        "length": "681568"
+      },
+      {
+        "timestamp": "20240207041426",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20240206001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "JRK42OVXRBYFLPZCY4WRSBKYMAPFKY7O",
+        "length": "1405978"
+      },
+      {
+        "timestamp": "20240216211327",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20240206001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "S3LJBVH6E7EG5753743JAVYCFANMR5XA",
+        "length": "1405685"
+      },
+      {
+        "timestamp": "20240324225653",
+        "original": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20240319001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "WF3ORM3LKU3BF2GI2O3QCPQXY67EDJQC",
+        "length": "623350"
+      },
+      {
+        "timestamp": "20240413132754",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20240327001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "BHWS5RPIYDNYI53OYRJT4JHFGLIDEE4F",
+        "length": "626069"
+      },
+      {
+        "timestamp": "20240514042109",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20240416002",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "DTA4U2GEOKDC47GJEVQKRQXM3XIZ5NJ4",
+        "length": "620310"
+      },
+      {
+        "timestamp": "20250210022314",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202502070003",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "YMQLNHXU6UCSKI6QZ2MT3CA54TU3TFB6",
+        "length": "3317909"
+      },
+      {
+        "timestamp": "20250807162545",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202508060003",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "ECELDBMEAHBIAGN6W2LTLCSPV4YA2JN2",
+        "length": "3655051"
+      },
+      {
+        "timestamp": "20250822020427",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202508200001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "IJKFKS2WE22BFVDC6CRSJBDYNSVLVM7X",
+        "length": "3704078"
+      },
+      {
+        "timestamp": "20250911034030",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202509100001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "HUP4JLQH4TBEBSEILGBEGAPBX3DD6HEM",
+        "length": "3753720"
+      },
+      {
+        "timestamp": "20250918064605",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202509180001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "EAVCMIQIOY75ZIRTFPIDB425T47UGWAG",
+        "length": "3739524"
+      },
+      {
+        "timestamp": "20251018023403",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202510170003",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "OQDV2ULQRUWVEJN4XHFZAQSGAWZZR6PT",
+        "length": "3708288"
+      },
+      {
+        "timestamp": "20260216002202",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202602100001",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "6AAABYHZ72424HMLFBZIEMIVQJQRXE6K",
+        "length": "4242531"
+      },
+      {
+        "timestamp": "20260704102906",
+        "original": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202606170002",
+        "statuscode": "200",
+        "mimetype": "application/javascript",
+        "digest": "SHA57OHHEYZZYHPR24NYD77SQDQMKBJF",
+        "length": "5559907"
+      }
+    ],
+    "errors": {}
+  },
+  "commonCrawl": {
+    "indexes": [
+      {
+        "id": "CC-MAIN-2026-25",
+        "name": "June 2026 Index"
+      },
+      {
+        "id": "CC-MAIN-2025-51",
+        "name": "December 2025 Index"
+      },
+      {
+        "id": "CC-MAIN-2024-51",
+        "name": "December 2024 Index"
+      },
+      {
+        "id": "CC-MAIN-2023-50",
+        "name": "November/December 2023 Index"
+      },
+      {
+        "id": "CC-MAIN-2022-49",
+        "name": "November/December 2022 Index"
+      },
+      {
+        "id": "CC-MAIN-2021-49",
+        "name": "November/December 2021 Index"
+      }
+    ],
+    "indexError": "",
+    "records": [],
+    "errors": {
+      "CC-MAIN-2023-50": "HTTP 503",
+      "CC-MAIN-2024-51": "HTTP 503",
+      "CC-MAIN-2021-49": "HTTP 503",
+      "CC-MAIN-2022-49": "HTTP 503",
+      "CC-MAIN-2025-51": "HTTP 503",
+      "CC-MAIN-2026-25": "HTTP 404"
+    }
+  },
+  "candidates": [
+    {
+      "archive": "wayback",
+      "timestamp": "20200511134233",
+      "source": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20200424002",
+      "size": 97799,
+      "sha256": "6db93af004ca78cc6c8beeb35b1618de18113d3bb005aa4b57dfa8b714a5ba1b",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 0,
+      "reconstructedSalCount": 0,
+      "joinedLiteralPairs": 0,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    },
+    {
+      "archive": "wayback",
+      "timestamp": "20200914171933",
+      "source": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20200901001",
+      "size": 243642,
+      "sha256": "829dcd516c7d40c7dfcdd985df903b61c22c9aaa13305e3e1d0960c744a27fd9",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 86,
+      "reconstructedSalCount": 86,
+      "joinedLiteralPairs": 6,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    },
+    {
+      "archive": "wayback",
+      "timestamp": "20201022033005",
+      "source": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201016003",
+      "size": 486317,
+      "sha256": "f1c7f6abcd9ea9c63da847f5eb1752b7f1de54670c99c96ddd15bbd79ec9d832",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 86,
+      "reconstructedSalCount": 86,
+      "joinedLiteralPairs": 6,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    },
+    {
+      "archive": "wayback",
+      "timestamp": "20201118155058",
+      "source": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201109001",
+      "size": 495095,
+      "sha256": "323a5863cf61c2094ee5b71120e6eeba3ede3751af1960d39368135bf2c41d4f",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 86,
+      "reconstructedSalCount": 86,
+      "joinedLiteralPairs": 6,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    },
+    {
+      "archive": "wayback",
+      "timestamp": "20201214063253",
+      "source": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201104002",
+      "size": 498729,
+      "sha256": "b290e8b602de30da393a1d187a32b0e27c8e6b05c347a2ac281982e5a7dc2599",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 86,
+      "reconstructedSalCount": 86,
+      "joinedLiteralPairs": 6,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    },
+    {
+      "archive": "wayback",
+      "timestamp": "20210107052834",
+      "source": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20201228001",
+      "size": 501918,
+      "sha256": "4943f3eaebab0521c7768e7c4fbf1b346aa962a48291bd705de4a99038b46f32",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 86,
+      "reconstructedSalCount": 86,
+      "joinedLiteralPairs": 6,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    },
+    {
+      "archive": "wayback",
+      "timestamp": "20210315073527",
+      "source": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210209002",
+      "size": 442529,
+      "sha256": "1c9c2b3884c570e694176080741aca492adb1c85126762180563736f6de9d28d",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 86,
+      "reconstructedSalCount": 86,
+      "joinedLiteralPairs": 7,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    },
+    {
+      "archive": "wayback",
+      "timestamp": "20210401085823",
+      "source": "http://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=20210316001",
+      "size": 442646,
+      "sha256": "00da5cea8e7e3f52e4fb15e6b291d82de967216006130f55a36c71e7f9cef86a",
+      "versionHeader": "",
+      "logicVersions": [],
+      "directSalCount": 86,
+      "reconstructedSalCount": 86,
+      "joinedLiteralPairs": 7,
+      "chunkGlobals": [],
+      "chunkNames": [],
+      "entry71269Present": false
+    }
+  ],
+  "candidateErrors": []
+}
