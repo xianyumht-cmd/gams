@@ -1,0 +1,9 @@
+{
+  "repositoryJksCandidates": [],
+  "propertyFiles": [],
+  "actionsSecretKeystorePresent": false,
+  "actionsSecretPasswordPresent": false,
+  "effectivePasswordAvailable": false,
+  "effectivePasswordSource": "",
+  "validFixedCertificate": null
+}
