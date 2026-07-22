@@ -1,0 +1,85 @@
+name: Deploy GG V2 encrypted runtime service
+
+on:
+  push:
+    branches:
+      - v2-server-authoritative
+    paths:
+      - v2/runtime/src/**
+      - v2/runtime/wrangler.template.jsonc
+      - v2/runtime/release/**
+      - .github/workflows/v2-deploy-runtime.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${LICENSE_ADMIN_PASSWORD:-}"
+
+      - name: Locate shared license D1 database
+        id: d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != "null"
+          echo "database_id=$database_id" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Wrangler configuration
+        working-directory: v2/runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed "s/__D1_DATABASE_ID__/${{ steps.d1.outputs.database_id }}/g" \
+            wrangler.template.jsonc > wrangler.generated.jsonc
+
+      - name: Configure runtime master secret
+        working-directory: v2/runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$LICENSE_ADMIN_PASSWORD" \
+            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+
+      - name: Deploy V2 runtime Worker
+        working-directory: v2/runtime
+        run: npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
+
+      - name: Verify encrypted runtime endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://gams-runtime-v2.2320006072.workers.dev"
+          for attempt in $(seq 1 24); do
+            status="$(curl --silent --show-error --output /tmp/v2-health.json --write-out '%{http_code}' "$endpoint/health" || true)"
+            if [[ "$status" == "200" ]] && jq -e '.ok == true and .service == "gams-runtime-v2" and .encryptedRuntime == true' /tmp/v2-health.json >/dev/null; then
+              echo "V2 runtime is ready"
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/v2-health.json 2>/dev/null || true
+          exit 1

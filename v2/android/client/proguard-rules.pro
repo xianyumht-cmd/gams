@@ -1,0 +1,6 @@
+-allowaccessmodification
+-repackageclasses g
+-renamesourcefileattribute SourceFile
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keep public class * extends android.app.Activity
+-dontwarn org.json.**

@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gams-runtime-v2",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-21",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "routes": [
+    {
+      "pattern": "runtime.xn--8pv109c.top",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gams-license-db",
+      "database_id": "__D1_DATABASE_ID__"
+    }
+  ]
+}

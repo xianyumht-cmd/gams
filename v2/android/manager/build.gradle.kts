@@ -1,0 +1,26 @@
+plugins { id("com.android.application") }
+android {
+    namespace = "com.jinli.ggsecure.manager"
+    compileSdk = 35
+    defaultConfig {
+        applicationId = "com.jinli.ggsecure.manager"
+        minSdk = 24
+        targetSdk = 35
+        versionCode = 1
+        versionName = "2.0.0-test1"
+    }
+    buildTypes {
+        debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    lint { abortOnError = true; lintConfig = file("lint.xml") }
+}
