@@ -1,48 +1,34 @@
-# V2 encrypted runtime test channel
+# GG 2.0.0 正式版
 
-V1 version 8 remains active and unchanged.
+GG V2 客户端测试已完成，当前正式发布版本为：
 
-## Android packages
+- 应用名称：`GG`
+- 包名：`com.jinli.quickweb`
+- 版本名称：`2.0.0`
+- 版本代码：`9`
+- 升级来源：`GG 1.4.0 / versionCode 8`
 
-- Client: `com.jinli.ggsecure`
-- Manager: `com.jinli.ggsecure.manager`
+## 发布状态
 
-They can be installed beside the V1 applications.
+- 客户端界面已移除测试版、V2 技术架构、内存解密和开发调试类说明。
+- 激活、启动、更新、服务信息和错误提示均使用普通用户可理解的文案。
+- 正式客户端使用原应用包名，可直接覆盖升级旧版。
+- 客户端 APK 不包含核心 JavaScript 文件或已知明文核心标记。
+- 加密运行服务已经部署并通过健康检查。
+- 正式构建产物只包含客户端，不再把管理器混入用户发布包。
 
-## Runtime security model
+## 正式发布流程
 
-1. The release workflow packages the current control script and modified engine into one ZIP.
-2. The ZIP is encrypted with a random AES-256-GCM content key.
-3. Only the encrypted bundle and an encrypted content-key envelope are committed.
-4. The V2 client authenticates through the existing license service.
-5. The runtime Worker validates the session, bound EC device key, APK certificate digest, nonce and request signature.
-6. The Worker wraps the content key to a device-local Android Keystore RSA key.
-7. The APK downloads ciphertext with caching disabled, unwraps and decrypts only in memory.
-8. The control script is installed from native memory and the engine request is served from native memory through WebView interception.
-9. The client never writes the plaintext control script or engine to APK assets, WebView cache, SharedPreferences or local files.
+1. GitHub Actions 从 `main` 分支构建 `GG 2.0.0 / code 9` Release APK。
+2. 构建流程验证应用名称、包名、版本、图标和核心文件泄露情况。
+3. 产出的 APK 保持未签名状态，用于后续加固。
+4. 加固完成后，必须使用旧版 GG 相同的正式证书签名。
+5. 验证证书、覆盖安装和在线激活正常后，再将最终 APK 提供给用户。
 
-This blocks the direct APK, ordinary traffic and cache extraction paths. A rooted device with runtime instrumentation can still observe plaintext in process or renderer memory; V2 does not claim to defeat a fully controlled endpoint.
+正式签名证书 SHA-256：
 
-## Current status
+`F2:20:C5:D4:75:13:C7:44:CB:9B:5F:17:C0:F8:F3:9B:0C:10:9F:8F:7D:C8:92:98:97:13:EE:F3:3F:DB:E0:C4`
 
-- Client and manager release APKs compile successfully.
-- Package-name verification passed.
-- APK scan found no JavaScript assets or known plaintext core implementation markers.
-- Encrypted release scan found no known plaintext core markers.
-- Cloudflare V2 runtime Worker is deployed with Android-compatible RSA-OAEP key wrapping.
-- Test3 resilient DNS and direct-TLS runtime client build started.
-- V1 version 8 remains unchanged during testing.
+## 管理端
 
-## Test2 compatibility fix
-
-- Android RSA-OAEP key wrapping uses SHA-1/MGF1-SHA1 for older Android Keystore compatibility.
-- Runtime traffic prefers `runtime.xn--8pv109c.top` and falls back to `workers.dev`.
-- V1 version 8 remains unchanged.
-
-
-## Test3 resilient transport
-
-- Adds multi-resolver DNS recovery for the V2 runtime Worker.
-- Adds direct Cloudflare-IP TLS transport while preserving Worker SNI and hostname verification.
-- Keeps the custom domain and normal Worker HTTPS paths ahead of the direct fallback.
-- V1 version 8 remains unchanged.
+管理器包名保持为 `com.jinli.ggsecure.manager`，仅供管理人员使用，不属于用户客户端发布物。
