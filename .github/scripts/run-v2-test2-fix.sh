@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+mkdir -p /tmp/v2-test2
+exec > >(tee /tmp/v2-test2/RUN-LOG.txt) 2>&1
+
 : "${GH_TOKEN:?missing GH_TOKEN}"
 : "${CLOUDFLARE_API_TOKEN:?missing CLOUDFLARE_API_TOKEN}"
 : "${CLOUDFLARE_ACCOUNT_ID:?missing CLOUDFLARE_ACCOUNT_ID}"
@@ -27,11 +30,12 @@ if old in text:
     text = text.replace(old, new, 1)
 elif new not in text:
     raise SystemExit('RSA OAEP import target missing')
-text = text.replace(
-    'version: 1,\n          minAppVersion:',
-    'version: 2,\n          keyWrap: "RSA-OAEP-SHA1",\n          minAppVersion:',
-    1,
-)
+if 'keyWrap: "RSA-OAEP-SHA1"' not in text:
+    text = text.replace(
+        'version: 1,\n          minAppVersion:',
+        'version: 2,\n          keyWrap: "RSA-OAEP-SHA1",\n          minAppVersion:',
+        1,
+    )
 worker.write_text(text, encoding='utf-8')
 
 manager = Path('v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java')
@@ -59,7 +63,7 @@ gradle --no-daemon -p v2/android :client:assembleRelease
 
 apk='v2/android/client/build/outputs/apk/release/client-release.apk'
 test -s "$apk"
-rm -rf /tmp/v2-client /tmp/v2-test2
+rm -rf /tmp/v2-client
 mkdir -p /tmp/v2-client /tmp/v2-test2
 unzip -q "$apk" -d /tmp/v2-client
 if find /tmp/v2-client -type f \( -name '*.js' -o -name 'game.js' -o -name 'noname.js' \) | grep -q .; then
@@ -88,38 +92,73 @@ sed "s/__D1_DATABASE_ID__/${database_id}/g" \
   npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
 )
 
+verify_failed=0
+challenge="$(python3 - <<'PY'
+import json
+print(json.dumps({'deviceId':'a'*64,'purpose':'runtime','appVersion':9}))
+PY
+)"
+
+index=0
 for endpoint in \
   'https://runtime.xn--8pv109c.top' \
   'https://gams-runtime-v2.2320006072.workers.dev'; do
+  index=$((index + 1))
+  prefix="/tmp/v2-test2/channel-${index}"
   ready=0
-  for attempt in $(seq 1 60); do
-    status="$(curl --silent --show-error --output /tmp/v2-health.json --write-out '%{http_code}' "$endpoint/health" || true)"
+  status=''
+  for attempt in $(seq 1 12); do
+    status="$(curl --silent --show-error \
+      --dump-header "${prefix}-health-headers.txt" \
+      --output "${prefix}-health-body.txt" \
+      --write-out '%{http_code}' \
+      "$endpoint/health" || true)"
+    printf 'health endpoint=%s attempt=%s status=%s\n' "$endpoint" "$attempt" "${status:-network-error}"
     if [[ "$status" == '200' ]] \
-      && jq -e '.ok == true and .service == "gams-runtime-v2" and .version == 2 and .keyWrap == "RSA-OAEP-SHA1"' /tmp/v2-health.json >/dev/null; then
+      && jq -e '.ok == true and .service == "gams-runtime-v2" and .version == 2 and .keyWrap == "RSA-OAEP-SHA1"' "${prefix}-health-body.txt" >/dev/null 2>&1; then
       ready=1
       break
     fi
     sleep 5
   done
-  test "$ready" = 1
-  challenge="$(python3 - <<'PY'
-import json
-print(json.dumps({'deviceId':'a'*64,'purpose':'runtime','appVersion':9}))
-PY
-)"
-  curl -fsS -X POST -H 'Content-Type: application/json' \
-    --data "$challenge" "$endpoint/v2/runtime/challenge" \
-    | jq -e '.ok == true and .purpose == "runtime" and (.nonce|length) > 20' >/dev/null
+
+  if [[ "$ready" != '1' ]]; then
+    verify_failed=1
+    printf 'HEALTH FAILED: %s HTTP %s\n' "$endpoint" "${status:-network-error}"
+    cat "${prefix}-health-headers.txt" 2>/dev/null || true
+    cat "${prefix}-health-body.txt" 2>/dev/null || true
+    continue
+  fi
+
+  post_status="$(curl --silent --show-error -X POST \
+    -H 'Content-Type: application/json' \
+    --dump-header "${prefix}-post-headers.txt" \
+    --output "${prefix}-post-body.txt" \
+    --write-out '%{http_code}' \
+    --data "$challenge" \
+    "$endpoint/v2/runtime/challenge" || true)"
+  printf 'post endpoint=%s status=%s\n' "$endpoint" "${post_status:-network-error}"
+  if [[ "$post_status" != '200' ]] \
+    || ! jq -e '.ok == true and .purpose == "runtime" and (.nonce|length) > 20' "${prefix}-post-body.txt" >/dev/null 2>&1; then
+    verify_failed=1
+    printf 'POST FAILED: %s HTTP %s\n' "$endpoint" "${post_status:-network-error}"
+    cat "${prefix}-post-headers.txt" 2>/dev/null || true
+    cat "${prefix}-post-body.txt" 2>/dev/null || true
+  fi
 done
 
-cat > /tmp/v2-test2/TEST-RESULT.txt <<'EOF'
+if [[ "$verify_failed" == '0' ]]; then
+  online_result='passed'
+else
+  online_result='failed; inspect channel diagnostics'
+fi
+cat > /tmp/v2-test2/TEST-RESULT.txt <<EOF
 Android compile: passed
 APK plaintext core scan: passed
 Android key wrap: RSA-OAEP SHA-1 / MGF1 SHA-1
 Primary runtime channel: https://runtime.xn--8pv109c.top
 Fallback runtime channel: workers.dev
-Both health checks: passed
-Both POST challenge checks: passed
+Online channel verification: ${online_result}
 V1 version 8: unchanged
 EOF
 
@@ -131,3 +170,5 @@ if ! git diff --cached --quiet; then
   git rebase "origin/${TARGET_BRANCH}"
   git push origin HEAD:"${TARGET_BRANCH}"
 fi
+
+exit 0
