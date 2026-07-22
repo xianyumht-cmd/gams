@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.1.1
+// @version      1.1.2
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start
@@ -23,7 +23,7 @@ const USER_PANEL_CONFIG = {
     "不要点击橙光按钮",
     "商城一次只购买一个商品，可以重复购买"
   ],
-  subtitle: "状态：2026年7月22日正常使用",
+  subtitle: "状态：2026年7月23日正常使用",
   maintainerText: "请先查看说明，有问题请联系客服",
   metaText: "iOS 风格主题",
   footerText: "全部设置和存档保存在本机，刷新页面后仍会保留。清理手机垃圾或点击重置可能导致存档丢失。",
@@ -4681,7 +4681,7 @@ function hwyqahb() {
   yWpiJH="66rpg."+"com/h5"+"/",
   Epe456s="/website/hfplayer/",
   XBbHBMQ="/offic"+"ial/ga"+"me.js",
-  Oftxw5="https://pre"+"view-chat-1"+"b176371-f9a"+"b-4760-b15c"+"-b9d70ed59d"+"23.space-z."+"ai/game.js",
+  Oftxw5="https://gams-script-edge.2320006072.workers.dev/engine/stable.js",
   l3DSDc=["uid",
   "isLogi"+"n",
   "totalF"+"lower",

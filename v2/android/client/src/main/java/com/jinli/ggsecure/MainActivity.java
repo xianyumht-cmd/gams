@@ -348,6 +348,7 @@ public final class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(
                     WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
                 if (isEngineRequest(url)) return memoryGameResponse();
                 if (isForbiddenCoreRequest(url)) {
                     return new WebResourceResponse(
@@ -434,6 +435,25 @@ public final class MainActivity extends Activity {
         return new WebResourceResponse(
                 "application/javascript", "UTF-8", 200, "OK",
                 headers, payload.openGameStream());
+    }
+
+    private WebResourceResponse emptyOfficialEngineResponse() {
+        byte[] body = "window.__gg_official_engine_blocked__=true;".getBytes(
+                java.nio.charset.StandardCharsets.UTF_8);
+        Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("Cache-Control", "no-store, no-cache, max-age=0");
+        headers.put("Pragma", "no-cache");
+        headers.put("X-Content-Type-Options", "nosniff");
+        headers.put("Content-Length", String.valueOf(body.length));
+        return new WebResourceResponse(
+                "application/javascript", "UTF-8", 200, "OK",
+                headers, new ByteArrayInputStream(body));
+    }
+
+    private boolean isOfficialEngineRequest(String url) {
+        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
+        return lower.contains("c2.cgyouxi.com/website/hfplayer/")
+                && lower.contains("/bin/official/game.js");
     }
 
     private boolean isEngineRequest(String url) {

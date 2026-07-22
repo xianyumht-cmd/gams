@@ -26,7 +26,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 final class V2LicenseManager {
-    private static final int PROTOCOL_APP_VERSION = 9;
+    private static final int PROTOCOL_APP_VERSION = 10;
     private static final int MAX_JSON_BYTES = 256 * 1024;
     private static final int MAX_BUNDLE_BYTES = 18 * 1024 * 1024;
     private static final String RELEASE_PUBLIC_KEY_DER_BASE64 =
@@ -137,7 +137,7 @@ final class V2LicenseManager {
         boolean permanent = state.optBoolean("permanent", false);
         long expiresAt = state.optLong("licenseExpiresAt", 0L);
         String validity = permanent ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
-        return "有效期：" + validity + "\n版本：2.0.0";
+        return "有效期：" + validity + "\n版本：2.0.1";
     }
 
     void clear() {
