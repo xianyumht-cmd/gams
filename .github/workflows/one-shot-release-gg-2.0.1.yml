@@ -1,0 +1,490 @@
+name: Release GG 2.0.1 with fixed certificate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-shot-release-gg-2.0.1.yml
+
+permissions:
+  contents: write
+
+env:
+  APP_VERSION_NAME: "2.0.1"
+  APP_VERSION_CODE: "10"
+  NONAME_VERSION: "1.1.2"
+  ENGINE_VERSION: "1.0.4"
+  ENGINE_VERSION_CODE: "10004"
+  RUNTIME_VERSION: "2.0.1-r1"
+  EXPECTED_CERT_SHA256: "F220C5D47513C744CB9B5F17C0F8F39B0C109F8F7DC892989713EEF33FDBE0C4"
+  LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+  GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+  GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Update app and JavaScript release sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${LICENSE_ADMIN_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
+          python -m pip install --quiet cryptography
+
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          app_version = os.environ["APP_VERSION_NAME"]
+          app_code = os.environ["APP_VERSION_CODE"]
+          noname_version = os.environ["NONAME_VERSION"]
+          engine_version = os.environ["ENGINE_VERSION"]
+          engine_code = int(os.environ["ENGINE_VERSION_CODE"])
+
+          def replace_exact(path, old, new, count=1):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              actual = text.count(old)
+              if actual != count:
+                  raise SystemExit(f"{path}: expected {count} occurrence(s) of {old!r}, found {actual}")
+              file.write_text(text.replace(old, new), encoding="utf-8")
+
+          # Android package version and runtime protocol version.
+          gradle = Path("v2/android/client/build.gradle.kts")
+          gradle_text = gradle.read_text(encoding="utf-8")
+          gradle_text, n1 = re.subn(r'versionCode\s*=\s*9\b', f'versionCode = {app_code}', gradle_text, count=1)
+          gradle_text, n2 = re.subn(r'versionName\s*=\s*"2\.0\.0"', f'versionName = "{app_version}"', gradle_text, count=1)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit("Android version fields were not updated exactly once")
+          gradle.write_text(gradle_text, encoding="utf-8")
+
+          manager = Path("v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java")
+          manager_text = manager.read_text(encoding="utf-8")
+          manager_text, n1 = re.subn(r'PROTOCOL_APP_VERSION\s*=\s*9;', f'PROTOCOL_APP_VERSION = {app_code};', manager_text, count=1)
+          manager_text, n2 = re.subn(r'版本：2\.0\.0', f'版本：{app_version}', manager_text, count=1)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit("V2LicenseManager version fields were not updated exactly once")
+          manager.write_text(manager_text, encoding="utf-8")
+
+          # Block the official engine response and only serve the memory engine on the virtual route.
+          activity = Path("v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java")
+          activity_text = activity.read_text(encoding="utf-8")
+          old_intercept = '''                String url = request.getUrl().toString();
+                  if (isEngineRequest(url)) return memoryGameResponse();'''
+          if old_intercept not in activity_text:
+              old_intercept = '''                String url = request.getUrl().toString();
+                if (isEngineRequest(url)) return memoryGameResponse();'''
+          new_intercept = '''                String url = request.getUrl().toString();
+                if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
+                if (isEngineRequest(url)) return memoryGameResponse();'''
+          if activity_text.count(old_intercept) != 1:
+              raise SystemExit("MainActivity request interception anchor not found exactly once")
+          activity_text = activity_text.replace(old_intercept, new_intercept)
+
+          anchor = '''    private boolean isEngineRequest(String url) {
+        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
+        return lower.equals(RuntimeNames.virtualGameUrl().toLowerCase(Locale.ROOT))
+                || lower.contains("gams-script-edge.2320006072.workers.dev/engine/stable.js")
+                || lower.contains("space-z.ai/game.js");
+    }
+'''
+          replacement = '''    private WebResourceResponse emptyOfficialEngineResponse() {
+        byte[] body = "window.__gg_official_engine_blocked__=true;".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("Cache-Control", "no-store, no-cache, max-age=0");
+        headers.put("Pragma", "no-cache");
+        headers.put("X-Content-Type-Options", "nosniff");
+        headers.put("Content-Length", String.valueOf(body.length));
+        return new WebResourceResponse(
+                "application/javascript", "UTF-8", 200, "OK",
+                headers, new ByteArrayInputStream(body));
+    }
+
+    private boolean isOfficialEngineRequest(String url) {
+        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
+        return lower.contains("c2.cgyouxi.com/website/hfplayer/")
+                && lower.contains("/bin/official/game.js");
+    }
+
+    private boolean isEngineRequest(String url) {
+        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
+        return lower.equals(RuntimeNames.virtualGameUrl().toLowerCase(Locale.ROOT))
+                || lower.contains("gams-script-edge.2320006072.workers.dev/engine/stable.js")
+                || lower.contains("space-z.ai/game.js");
+    }
+'''
+          if activity_text.count(anchor) != 1:
+              raise SystemExit("MainActivity engine method anchor not found exactly once")
+          activity.write_text(activity_text.replace(anchor, replacement), encoding="utf-8")
+
+          # Runtime service rejects old protocol clients after the fixed app release.
+          runtime_worker = Path("v2/runtime/src/index.js")
+          worker_text = runtime_worker.read_text(encoding="utf-8")
+          worker_text, count = re.subn(r'const MIN_V2_APP_VERSION = 9;', f'const MIN_V2_APP_VERSION = {app_code};', worker_text, count=1)
+          if count != 1:
+              raise SystemExit("runtime minimum app version was not updated")
+          runtime_worker.write_text(worker_text, encoding="utf-8")
+
+          # Keep permanent Android CI aligned with the new release.
+          ci = Path(".github/workflows/v2-build-apks.yml")
+          ci_text = ci.read_text(encoding="utf-8")
+          ci_text = ci_text.replace("Build GG 2.0.0 formal client release", f"Build GG {app_version} formal client release")
+          ci_text = ci_text.replace('test "$client_version" = "2.0.0"', f'test "$client_version" = "{app_version}"')
+          ci_text = ci_text.replace('test "$client_code" = "9"', f'test "$client_code" = "{app_code}"')
+          ci_text = ci_text.replace("versionCode='9' versionName='2.0.0'", f"versionCode='{app_code}' versionName='{app_version}'")
+          ci_text = ci_text.replace("name: GG-2.0.0-formal-client-release-input", f"name: GG-{app_version}-formal-client-release-input")
+          if "2.0.0" in ci_text or 'test "$client_code" = "9"' in ci_text:
+              raise SystemExit("stale Android CI version remains")
+          ci.write_text(ci_text, encoding="utf-8")
+
+          # Update noname version and make the legacy target a direct stable URL so V2 rewriting is deterministic.
+          noname_path = Path("remote-script/src/noname.js")
+          noname = noname_path.read_text(encoding="utf-8")
+          noname, version_count = re.subn(r'// @version\s+1\.1\.1', f'// @version      {noname_version}', noname, count=1)
+          if version_count != 1:
+              raise SystemExit("noname userscript version was not updated")
+          noname = noname.replace("状态：2026年7月22日正常使用", "状态：2026年7月23日正常使用")
+          fragmented = '"https://pre"+"view-chat-1"+"b176371-f9a"+"b-4760-b15c"+"-b9d70ed59d"+"23.space-z."+"ai/game.js"'
+          stable_literal = '"https://gams-script-edge.2320006072.workers.dev/engine/stable.js"'
+          if noname.count(fragmented) != 1:
+              raise SystemExit("fragmented legacy engine target not found exactly once")
+          noname = noname.replace(fragmented, stable_literal)
+          if "preview-chat-1b176371" in noname:
+              raise SystemExit("legacy preview engine target remains in noname.js")
+          noname_path.write_text(noname, encoding="utf-8")
+
+          # Produce game 1.0.4 from immutable 1.0.3 with a once-only execution guard.
+          source = Path("game-engine/release/game-1.0.3.js")
+          target = Path(f"game-engine/release/game-{engine_version}.js")
+          if target.exists():
+              raise SystemExit(f"target engine already exists: {target}")
+          data = source.read_bytes()
+          old_header = b"/*1.0.3*/"
+          old_probe = (
+              'try{Object.defineProperty(window,"__gg_runtime_probe__",'
+              '{value:Object.freeze({engine:"1.0.3",ready:true,loadedAt:Date.now()}),'
+              'enumerable:false,configurable:false,writable:false});}catch(_){}'
+          ).encode("utf-8")
+          if not data.startswith(old_header) or not data.endswith(old_probe):
+              raise SystemExit("unexpected game-1.0.3 structure")
+          body = data[len(old_header):-len(old_probe)]
+          guard_start = (
+              '/*1.0.4*/(function(){'
+              'if(window.__gg_engine_load_state__==="ready"||window.__gg_engine_load_state__==="loading")return;'
+              'window.__gg_engine_load_state__="loading";try{'
+          ).encode("utf-8")
+          probe = (
+              'try{Object.defineProperty(window,"__gg_runtime_probe__",'
+              '{value:Object.freeze({engine:"1.0.4",ready:true,loadedAt:Date.now()}),'
+              'enumerable:false,configurable:false,writable:false});}catch(_){}'
+          ).encode("utf-8")
+          guard_end = (
+              'window.__gg_engine_load_state__="ready";'
+              '}catch(e){window.__gg_engine_load_state__="";throw e;}})();'
+          ).encode("utf-8")
+          updated = guard_start + body + probe + guard_end
+          if '脚本加载完成~'.encode("utf-8") in updated:
+              raise SystemExit("visible loading alert remains in new engine")
+          if updated.count(b"__gg_runtime_probe__") != 1:
+              raise SystemExit("engine probe count is invalid")
+          if updated.count(b"__gg_engine_load_state__") < 4:
+              raise SystemExit("engine once-only guard is missing")
+          target.write_bytes(updated)
+
+          published = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+          import hashlib
+          digest = hashlib.sha256(updated).hexdigest()
+          manifest = {
+              "schemaVersion": 1,
+              "channel": "stable",
+              "version": engine_code,
+              "versionName": engine_version,
+              "file": target.name,
+              "sha256": digest,
+              "size": len(updated),
+              "sourceUrl": f"https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/{target.name}",
+              "minNonameVersion": noname_version,
+              "publishedAt": published,
+          }
+          keys = (
+              "schemaVersion", "channel", "version", "versionName", "file",
+              "sha256", "size", "sourceUrl", "minNonameVersion", "publishedAt",
+          )
+          Path("/tmp/engine-canonical.txt").write_text(
+              "".join(f"{key}={manifest[key]}\n" for key in keys),
+              encoding="utf-8", newline="\n"
+          )
+          Path("/tmp/engine-unsigned.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+
+          compatibility_path = Path("game-engine/compatibility.json")
+          compatibility = json.loads(compatibility_path.read_text(encoding="utf-8"))
+          compatibility["stable"]["engineVersion"] = engine_version
+          compatibility["stable"]["nonameVersion"] = noname_version
+          compatibility["stable"]["appMinVersion"] = int(app_code)
+          compatibility_path.write_text(
+              json.dumps(compatibility, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+
+      - name: Sign engine and build signed encrypted runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/release-private.pem \
+            -pass env:LICENSE_ADMIN_PASSWORD
+          chmod 600 /tmp/release-private.pem
+
+          openssl dgst -sha256 -sign /tmp/release-private.pem \
+            -out /tmp/engine.sig /tmp/engine-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/engine.sig /tmp/engine-canonical.txt
+
+          python3 - <<'PY'
+          import base64, json
+          from pathlib import Path
+          manifest = json.loads(Path("/tmp/engine-unsigned.json").read_text(encoding="utf-8"))
+          manifest["signatureAlgorithm"] = "SHA256withECDSA"
+          manifest["signature"] = base64.b64encode(Path("/tmp/engine.sig").read_bytes()).decode("ascii")
+          Path("game-engine/release/manifest.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+
+          python3 v2/runtime/tools/build_release.py \
+            remote-script/src/noname.js \
+            "game-engine/release/game-${ENGINE_VERSION}.js" \
+            "$RUNTIME_VERSION" \
+            "$LICENSE_ADMIN_PASSWORD" \
+            v2/runtime/release
+
+          openssl dgst -sha256 -sign /tmp/release-private.pem \
+            -out /tmp/runtime.sig /tmp/v2-runtime-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/runtime.sig /tmp/v2-runtime-canonical.txt
+
+          python3 - <<'PY'
+          import base64, json
+          from pathlib import Path
+          manifest = json.loads(Path("/tmp/v2-runtime-unsigned.json").read_text(encoding="utf-8"))
+          manifest["signatureAlgorithm"] = "SHA256withECDSA"
+          manifest["signature"] = base64.b64encode(Path("/tmp/runtime.sig").read_bytes()).decode("ascii")
+          Path("v2/runtime/release/manifest.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+
+      - name: Build release APK
+        working-directory: v2/android
+        run: gradle --no-daemon :client:clean :client:assembleRelease
+
+      - name: Resolve fixed JKS, sign and verify APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          password="${GG_RELEASE_KEYSTORE_PASSWORD:-}"
+          if [[ -z "$password" ]]; then
+            for props in $(find . -type f \( -iname 'keystore.properties' -o -iname 'key.properties' -o -iname '*signing*.properties' \) -not -path './.git/*'); do
+              candidate="$(sed -n 's/^[[:space:]]*storePassword[[:space:]]*=[[:space:]]*//p' "$props" | head -n1 | tr -d '\r')"
+              [[ -n "$candidate" ]] && password="$candidate" && break
+            done
+          fi
+          test -n "$password" || { echo "Fixed JKS password is unavailable"; exit 1; }
+
+          keystore=""
+          source_label=""
+          while IFS= read -r candidate; do
+            if keytool -list -keystore "$candidate" -storepass "$password" -alias gg-release >/dev/null 2>&1; then
+              keystore="$candidate"
+              source_label="$candidate"
+              break
+            fi
+          done < <(find . -type f \( -iname '*.jks' -o -iname '*.keystore' \) -not -path './.git/*' | sort)
+
+          if [[ -z "$keystore" && -n "${GG_RELEASE_KEYSTORE_BASE64:-}" ]]; then
+            keystore="$RUNNER_TEMP/GG-release.jks"
+            printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+            chmod 600 "$keystore"
+            keytool -list -keystore "$keystore" -storepass "$password" -alias gg-release >/dev/null
+            source_label="GitHub Actions fixed JKS secret"
+          fi
+          test -n "$keystore" || { echo "No repository fixed JKS with alias gg-release was found"; exit 1; }
+
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -n "$unsigned" && test -s "$unsigned"
+          mkdir -p release-download /tmp/gg-release
+          signed="release-download/GG-${APP_VERSION_NAME}.apk"
+          rm -f "$signed"
+
+          "$apksigner" sign \
+            --ks "$keystore" \
+            --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD_EFFECTIVE \
+            --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD_EFFECTIVE \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out "$signed" \
+            "$unsigned"
+        env:
+          GG_RELEASE_KEYSTORE_PASSWORD_EFFECTIVE: ${{ env.GG_RELEASE_KEYSTORE_PASSWORD }}
+
+      - name: Verify and publish signed APK metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          signed="release-download/GG-${APP_VERSION_NAME}.apk"
+          test -s "$signed"
+
+          "$apksigner" verify --verbose --print-certs "$signed" | tee /tmp/gg-signature.txt
+          actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/gg-signature.txt | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          test "$actual" = "$EXPECTED_CERT_SHA256"
+
+          badging="$($aapt dump badging "$signed")"
+          printf '%s\n' "$badging" | grep -q "package: name='com.jinli.quickweb' versionCode='${APP_VERSION_CODE}' versionName='${APP_VERSION_NAME}'"
+          printf '%s\n' "$badging" | grep -q "application-label:'GG'"
+
+          sha256="$(sha256sum "$signed" | awk '{print $1}')"
+          size="$(stat -c %s "$signed")"
+          cp "$signed" "/tmp/gg-release/GG-${APP_VERSION_NAME}.apk"
+          printf '%s  %s\n' "$sha256" "GG-${APP_VERSION_NAME}.apk" > /tmp/gg-release/SHA256SUMS.txt
+
+          python3 - <<PY
+          import json
+          from pathlib import Path
+          data = {
+              "ok": True,
+              "run_id": ${GITHUB_RUN_ID},
+              "artifact_name": "GG-${APP_VERSION_NAME}-fixed-signed",
+              "file": "GG-${APP_VERSION_NAME}.apk",
+              "versionName": "${APP_VERSION_NAME}",
+              "versionCode": ${APP_VERSION_CODE},
+              "nonameVersion": "${NONAME_VERSION}",
+              "engineVersion": "${ENGINE_VERSION}",
+              "runtimeVersion": "${RUNTIME_VERSION}",
+              "sha256": "${sha256}",
+              "size": ${size},
+              "signed": True,
+              "certificate_sha256": "${EXPECTED_CERT_SHA256}",
+          }
+          Path("release-download/latest-build.json").write_text(
+              json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          Path("/tmp/gg-release/RELEASE-INFO.txt").write_text(
+              "GG ${APP_VERSION_NAME}\n"
+              "versionCode: ${APP_VERSION_CODE}\n"
+              "noname.js: ${NONAME_VERSION}\n"
+              "game.js: ${ENGINE_VERSION}\n"
+              "runtime: ${RUNTIME_VERSION}\n"
+              "certificate SHA-256: ${EXPECTED_CERT_SHA256}\n"
+              "APK SHA-256: ${sha256}\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Full-chain consistency check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+
+          app_version = os.environ["APP_VERSION_NAME"]
+          app_code = int(os.environ["APP_VERSION_CODE"])
+          noname_version = os.environ["NONAME_VERSION"]
+          engine_version = os.environ["ENGINE_VERSION"]
+          runtime_version = os.environ["RUNTIME_VERSION"]
+
+          noname = Path("remote-script/src/noname.js").read_bytes()
+          engine = Path(f"game-engine/release/game-{engine_version}.js").read_bytes()
+          engine_manifest = json.loads(Path("game-engine/release/manifest.json").read_text(encoding="utf-8"))
+          runtime_manifest = json.loads(Path("v2/runtime/release/manifest.json").read_text(encoding="utf-8"))
+          runtime_bundle = Path("v2/runtime/release") / runtime_manifest["file"]
+          latest = json.loads(Path("release-download/latest-build.json").read_text(encoding="utf-8"))
+
+          assert f"@version      {noname_version}".encode() in noname
+          assert b"preview-chat-1b176371" not in noname
+          assert b"脚本加载完成~" not in engine
+          assert engine.count(b"__gg_runtime_probe__") == 1
+          assert b'engine:"1.0.4"' in engine
+          assert engine_manifest["versionName"] == engine_version
+          assert engine_manifest["minNonameVersion"] == noname_version
+          assert engine_manifest["sha256"] == hashlib.sha256(engine).hexdigest()
+          assert runtime_manifest["versionName"] == runtime_version
+          assert runtime_manifest["gameSha256"] == hashlib.sha256(engine).hexdigest()
+          assert runtime_bundle.stat().st_size == runtime_manifest["size"]
+          assert hashlib.sha256(runtime_bundle.read_bytes()).hexdigest() == runtime_manifest["sha256"]
+          assert latest["versionName"] == app_version
+          assert latest["versionCode"] == app_code
+          assert latest["signed"] is True
+          assert Path(f"release-download/GG-{app_version}.apk").is_file()
+          print(json.dumps({
+              "app": app_version,
+              "versionCode": app_code,
+              "noname": noname_version,
+              "engine": engine_version,
+              "runtime": runtime_version,
+              "apkSha256": latest["sha256"],
+              "certificate": latest["certificate_sha256"],
+          }, ensure_ascii=False))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GG-${{ env.APP_VERSION_NAME }}-fixed-signed
+          path: /tmp/gg-release/*
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Commit formal release and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/one-shot-release-gg-2.0.1.yml
+          rm -f .github/workflows/one-shot-export-gg-2.0.0.yml
+          rm -f /tmp/release-private.pem /tmp/engine.sig /tmp/runtime.sig \
+            /tmp/engine-canonical.txt /tmp/engine-unsigned.json \
+            /tmp/v2-runtime-canonical.txt /tmp/v2-runtime-unsigned.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Release GG 2.0.1 with fixed certificate and JS 1.1.2/1.0.4"
+          git push origin HEAD:main
