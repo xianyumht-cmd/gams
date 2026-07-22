@@ -1,0 +1,61 @@
+name: One-shot JavaScript maintenance analysis
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    if: github.head_ref == 'analysis/js-maintenance-knowledgebase'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out analysis branch
+        uses: actions/checkout@v4
+        with:
+          ref: analysis/js-maintenance-knowledgebase
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Generate maintenance knowledge base
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/js_maintenance/analyze_runtime.py analyze \
+            --repo-root . \
+            --output-dir docs/js-maintenance/generated \
+            | tee /tmp/js-maintenance-summary.json
+          python3 -m py_compile tools/js_maintenance/analyze_runtime.py
+          test -s docs/js-maintenance/generated/baseline.json
+          test -s docs/js-maintenance/generated/README.md
+          test -s docs/js-maintenance/generated/noname-map.md
+          test -s docs/js-maintenance/generated/game-map.md
+          test -s docs/js-maintenance/generated/network-and-data.md
+          test -s docs/js-maintenance/generated/update-runbook.md
+
+      - name: Commit generated reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/js-maintenance/generated
+          if git diff --cached --quiet; then
+            echo 'No generated changes.'
+            exit 0
+          fi
+          git commit -m 'Generate JavaScript maintenance knowledge base'
+          git push origin HEAD:analysis/js-maintenance-knowledgebase
+
+      - name: Upload analysis summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-maintenance-analysis-summary
+          path: /tmp/js-maintenance-summary.json
+          retention-days: 7
+          if-no-files-found: warn
