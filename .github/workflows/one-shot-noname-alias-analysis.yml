@@ -1,0 +1,64 @@
+name: One-shot noname computed-method analysis
+
+on:
+  pull_request:
+    branches: [v2-server-authoritative]
+    types: [synchronize]
+    paths:
+      - tools/js_maintenance/refine_noname_ast_aliases.mjs
+      - .github/workflows/one-shot-noname-alias-analysis.yml
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    if: github.head_ref == 'analysis/js-maintenance-knowledgebase'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out analysis branch
+        uses: actions/checkout@v4
+        with:
+          ref: analysis/js-maintenance-knowledgebase
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Install parser
+        run: npm install --no-save acorn@8.15.0 acorn-walk@8.3.4
+
+      - name: Resolve computed object methods
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/js_maintenance/refine_noname_ast_aliases.mjs \
+            remote-script/src/noname.js \
+            docs/js-maintenance/noname-ast/noname-function-graph.json \
+            docs/js-maintenance/noname-ast \
+            | tee /tmp/noname-alias-summary.json
+          test -s docs/js-maintenance/noname-ast/noname-resolved-methods.json
+          test -s docs/js-maintenance/noname-ast/resolved-methods.md
+
+      - name: Commit refined reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/js-maintenance/noname-ast/noname-resolved-methods.json \
+                  docs/js-maintenance/noname-ast/resolved-methods.md
+          if git diff --cached --quiet; then
+            echo 'No refined analysis changes.'
+            exit 0
+          fi
+          git commit -m 'Resolve noname computed object methods'
+          git push origin HEAD:analysis/js-maintenance-knowledgebase
+
+      - name: Upload summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: noname-computed-method-analysis
+          path: /tmp/noname-alias-summary.json
+          retention-days: 7
+          if-no-files-found: warn
