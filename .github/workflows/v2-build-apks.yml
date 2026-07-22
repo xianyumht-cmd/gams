@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -24,93 +24,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-          token: ${{ github.token }}
-
-      - name: Apply formal release copy on production branch
-        if: github.head_ref == 'release/gg-2.0.0-v9'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          files = {
-              Path('v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java'): {
-                  'showLoading("正在建立安全运行环境…");': 'showLoading("正在启动…");',
-                  'title.setText("GG V2");': 'title.setText("GG");',
-                  'subtitle.setText("核心运行数据仅在内存中解密，不保存到APK、WebView缓存或本地脚本文件。");': 'subtitle.setText("请输入激活码后启动");',
-                  'status.setText("正在鉴权并解密运行包…");': 'status.setText("正在验证，请稍候…");',
-                  "console.error('[GG V2]',e);": "console.error('[GG]',e);",
-                  '.setMessage("清除网页缓存、Cookie和本地网页设置，不影响V2激活状态。")': '.setMessage("清除网页缓存、Cookie和本地网页设置，不会影响账号授权。")',
-                  '.setTitle("V2服务信息")': '.setTitle("服务信息")',
-                  '.setMessage("当前V2设备会立即退出，是否继续？")': '.setMessage("当前设备会立即退出账号，是否继续？")',
-                  'showLoading("正在解除V2设备绑定…");': 'showLoading("正在解除设备绑定…");',
-                  '.setTitle(required ? "需要更新V2" : "发现V2更新")': '.setTitle(required ? "需要更新" : "发现更新")',
-                  '? "发现新的V2客户端" : message)': '? "发现新版本" : message)',
-              },
-              Path('v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java'): {
-                  'RuntimeResult.valid(payload, auth, "V2安全运行环境已就绪")': 'RuntimeResult.valid(payload, auth, "启动成功")',
-                  'RuntimeResult.invalid("需要联网启动V2，请检查网络后重试")': 'RuntimeResult.invalid("需要联网启动，请检查网络后重试")',
-                  'RuntimeResult.invalid("V2初始化失败：" + safeMessage(error))': 'RuntimeResult.invalid("启动失败，请重试")',
-                  'RuntimeResult.valid(payload, auth, "V2启动成功")': 'RuntimeResult.valid(payload, auth, "启动成功")',
-                  'RuntimeResult.invalid("V2启动失败：" + safeMessage(error))': 'RuntimeResult.invalid("启动失败，请重试")',
-                  'SimpleResult.failure("更换设备失败：" + safeMessage(error))': 'SimpleResult.failure("更换设备失败，请重试")',
-                  'return "正式通道\\n有效期：" + validity +\n                "\\n运行核心：仅内存加载\\n离线启动：已禁用\\n客户端：2.0.0";': 'return "有效期：" + validity + "\\n版本：2.0.0";',
-                  'return "V2运行服务维护中";': 'return "服务维护中";',
-                  'return "V2客户端需要更新";': 'return "客户端需要更新";',
-                  'required ? "需要更新V2客户端" : message,': 'required ? "需要更新客户端" : message,',
-              },
-          }
-
-          changed = False
-          for path, replacements in files.items():
-              text = path.read_text(encoding='utf-8')
-              original = text
-              for old, new in replacements.items():
-                  text = text.replace(old, new)
-              if path.name == 'V2LicenseManager.java' and '"server_error".equals(error.code)' not in text:
-                  anchor = '        if ("too_many_requests".equals(error.code)) return "操作过于频繁，请稍后再试";\n'
-                  block = '''        if ("server_error".equals(error.code)
-                  || "runtime_unavailable".equals(error.code)
-                  || "runtime_invalid".equals(error.code)
-                  || "bad_runtime_key".equals(error.code)
-                  || "runtime_key_mismatch".equals(error.code)) {
-              return "服务暂时不可用，请稍后重试";
-          }
-'''
-                  if anchor not in text:
-                      raise SystemExit('Missing user message anchor')
-                  text = text.replace(anchor, anchor + block)
-              if text != original:
-                  path.write_text(text, encoding='utf-8')
-                  changed = True
-
-          forbidden = (
-              'GG V2', 'V2测试通道', 'V2服务信息', '核心运行数据仅在内存中解密',
-              '正在鉴权并解密运行包', '运行核心：仅内存加载', '需要联网启动V2',
-              'V2初始化失败', 'V2启动成功', 'V2启动失败', 'V2运行服务维护中',
-              'V2客户端需要更新', '需要更新V2客户端', '发现新的V2客户端', '发现V2更新'
-          )
-          for path in files:
-              text = path.read_text(encoding='utf-8')
-              found = [value for value in forbidden if value in text]
-              if found:
-                  raise SystemExit(f'Developer-facing copy remains in {path}: {found}')
-          print('changed=' + str(changed).lower())
-          PY
-
-          if ! git diff --quiet -- v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
-                                 v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java; then
-            git add v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
-                    v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'Use formal user-facing release copy'
-            git push origin HEAD:release/gg-2.0.0-v9
-          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -165,7 +78,12 @@ jobs:
           fi
           echo 'Production client is unsigned as required.' | tee /tmp/v2-output/CLIENT-SIGNING-STATUS.txt
 
-          for marker in webpackChunk_lodash_modules SAL_getUserData createBuyOrder get_goods_list '脚本加载完成~'; do
+          for marker in \
+            webpackChunk_lodash_modules \
+            SAL_getUserData \
+            createBuyOrder \
+            get_goods_list \
+            '脚本加载完成~'; do
             if grep -aR -F -q -- "$marker" /tmp/v2-client-apk; then
               echo "Core implementation marker found in client APK: $marker"
               exit 1
@@ -189,6 +107,8 @@ jobs:
           Manager version: ${manager_version}
           Core JavaScript assets: absent
           Known plaintext core implementation markers in client APK: absent
+          Runtime mode: authenticated encrypted bundle, native memory decryption, WebView memory interception
+          Runtime network fallback: custom domain, normal Worker HTTPS, multi-DNS direct TLS with hostname verification
           Upgrade target: GG 1.4.0 / code 8
           Required final certificate SHA-256: F2:20:C5:D4:75:13:C7:44:CB:9B:5F:17:C0:F8:F3:9B:0C:10:9F:8F:7D:C8:92:98:97:13:EE:F3:3F:DB:E0:C4
           EOF
