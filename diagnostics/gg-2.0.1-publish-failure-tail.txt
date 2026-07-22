@@ -1,0 +1,160 @@
+2026-07-22T17:37:01.1253698Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-22T17:37:01.1254538Z env:
+2026-07-22T17:37:01.1255243Z   LICENSE_ADMIN_PASSWORD: ***
+2026-07-22T17:37:01.1255879Z   ENGINE_VERSION: 1.0.4
+2026-07-22T17:37:01.1256943Z   RUNTIME_VERSION: 2.0.1-r1
+2026-07-22T17:37:01.1257678Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:01.1258714Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-07-22T17:37:01.1259716Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:01.1260673Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:01.1261579Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:01.1262495Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-07-22T17:37:01.1263305Z ##[endgroup]
+2026-07-22T17:37:02.9031315Z {"app": "2.0.1", "versionCode": 10, "noname": "1.1.2", "engine": "1.0.4", "runtime": "2.0.1-r1"}
+2026-07-22T17:37:02.9127928Z ##[group]Run set -euo pipefail
+2026-07-22T17:37:02.9128348Z [36;1mset -euo pipefail[0m
+2026-07-22T17:37:02.9128686Z [36;1mopenssl enc -d -aes-256-cbc -pbkdf2 \[0m
+2026-07-22T17:37:02.9129096Z [36;1m  -in remote-script/keys/private.pem.enc \[0m
+2026-07-22T17:37:02.9129515Z [36;1m  -out /tmp/release-private.pem \[0m
+2026-07-22T17:37:02.9129887Z [36;1m  -pass env:LICENSE_ADMIN_PASSWORD[0m
+2026-07-22T17:37:02.9130245Z [36;1mchmod 600 /tmp/release-private.pem[0m
+2026-07-22T17:37:02.9130561Z [36;1m[0m
+2026-07-22T17:37:02.9130874Z [36;1mopenssl dgst -sha256 -sign /tmp/release-private.pem \[0m
+2026-07-22T17:37:02.9131336Z [36;1m  -out /tmp/engine.sig /tmp/engine-canonical.txt[0m
+2026-07-22T17:37:02.9131794Z [36;1mopenssl dgst -sha256 -verify remote-script/keys/public.pem \[0m
+2026-07-22T17:37:02.9132274Z [36;1m  -signature /tmp/engine.sig /tmp/engine-canonical.txt[0m
+2026-07-22T17:37:02.9132650Z [36;1m[0m
+2026-07-22T17:37:02.9132900Z [36;1mpython3 - <<'PY'[0m
+2026-07-22T17:37:02.9133221Z [36;1mimport base64, json[0m
+2026-07-22T17:37:02.9133519Z [36;1mfrom pathlib import Path[0m
+2026-07-22T17:37:02.9133996Z [36;1mmanifest = json.loads(Path('/tmp/engine-unsigned.json').read_text(encoding='utf-8'))[0m
+2026-07-22T17:37:02.9134816Z [36;1mmanifest['signatureAlgorithm'] = 'SHA256withECDSA'[0m
+2026-07-22T17:37:02.9135411Z [36;1mmanifest['signature'] = base64.b64encode(Path('/tmp/engine.sig').read_bytes()).decode('ascii')[0m
+2026-07-22T17:37:02.9136304Z [36;1mPath('game-engine/release/manifest.json').write_text([0m
+2026-07-22T17:37:02.9136903Z [36;1m    json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')[0m
+2026-07-22T17:37:02.9137383Z [36;1mPY[0m
+2026-07-22T17:37:02.9137632Z [36;1m[0m
+2026-07-22T17:37:02.9137913Z [36;1mpython3 v2/runtime/tools/build_release.py \[0m
+2026-07-22T17:37:02.9138296Z [36;1m  remote-script/src/noname.js \[0m
+2026-07-22T17:37:02.9138682Z [36;1m  "game-engine/release/game-${ENGINE_VERSION}.js" \[0m
+2026-07-22T17:37:02.9139070Z [36;1m  "$RUNTIME_VERSION" \[0m
+2026-07-22T17:37:02.9139371Z [36;1m  "$LICENSE_ADMIN_PASSWORD" \[0m
+2026-07-22T17:37:02.9139703Z [36;1m  v2/runtime/release[0m
+2026-07-22T17:37:02.9140016Z [36;1m[0m
+2026-07-22T17:37:02.9140343Z [36;1mopenssl dgst -sha256 -sign /tmp/release-private.pem \[0m
+2026-07-22T17:37:02.9140802Z [36;1m  -out /tmp/runtime.sig /tmp/v2-runtime-canonical.txt[0m
+2026-07-22T17:37:02.9141274Z [36;1mopenssl dgst -sha256 -verify remote-script/keys/public.pem \[0m
+2026-07-22T17:37:02.9141774Z [36;1m  -signature /tmp/runtime.sig /tmp/v2-runtime-canonical.txt[0m
+2026-07-22T17:37:02.9142168Z [36;1m[0m
+2026-07-22T17:37:02.9142402Z [36;1mpython3 - <<'PY'[0m
+2026-07-22T17:37:02.9142701Z [36;1mimport base64, json[0m
+2026-07-22T17:37:02.9142994Z [36;1mfrom pathlib import Path[0m
+2026-07-22T17:37:02.9143495Z [36;1mmanifest = json.loads(Path('/tmp/v2-runtime-unsigned.json').read_text(encoding='utf-8'))[0m
+2026-07-22T17:37:02.9144078Z [36;1mmanifest['signatureAlgorithm'] = 'SHA256withECDSA'[0m
+2026-07-22T17:37:02.9144657Z [36;1mmanifest['signature'] = base64.b64encode(Path('/tmp/runtime.sig').read_bytes()).decode('ascii')[0m
+2026-07-22T17:37:02.9145250Z [36;1mPath('v2/runtime/release/manifest.json').write_text([0m
+2026-07-22T17:37:02.9145780Z [36;1m    json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')[0m
+2026-07-22T17:37:02.9146450Z [36;1mPY[0m
+2026-07-22T17:37:02.9208401Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-22T17:37:02.9208803Z env:
+2026-07-22T17:37:02.9209258Z   LICENSE_ADMIN_PASSWORD: ***
+2026-07-22T17:37:02.9209572Z   ENGINE_VERSION: 1.0.4
+2026-07-22T17:37:02.9209847Z   RUNTIME_VERSION: 2.0.1-r1
+2026-07-22T17:37:02.9210202Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:02.9210679Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-07-22T17:37:02.9211157Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:02.9211806Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:02.9212271Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:02.9212709Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-07-22T17:37:02.9213093Z ##[endgroup]
+2026-07-22T17:37:02.9472105Z Verified OK
+2026-07-22T17:37:05.0507369Z {"version": "2.0.1-r1", "file": "bundle-2.0.1-r1.bin", "size": 3904878, "sha256": "b6c1a37cdee39df08eae8b01435701c7d13624bab6928cccdbfebb9b96ce406c", "nonameSize": 331460, "gameSize": 11589590}
+2026-07-22T17:37:05.0669899Z Verified OK
+2026-07-22T17:37:05.0976903Z ##[group]Run set -euo pipefail
+2026-07-22T17:37:05.0977265Z [36;1mset -euo pipefail[0m
+2026-07-22T17:37:05.0977515Z [36;1mpython3 - <<'PY'[0m
+2026-07-22T17:37:05.0977760Z [36;1mimport hashlib, json[0m
+2026-07-22T17:37:05.0978014Z [36;1mfrom pathlib import Path[0m
+2026-07-22T17:37:05.0978364Z [36;1mnoname = Path('remote-script/src/noname.js').read_bytes()[0m
+2026-07-22T17:37:05.0978823Z [36;1mengine = Path('game-engine/release/game-1.0.4.js').read_bytes()[0m
+2026-07-22T17:37:05.0979371Z [36;1mem = json.loads(Path('game-engine/release/manifest.json').read_text(encoding='utf-8'))[0m
+2026-07-22T17:37:05.0979980Z [36;1mrm = json.loads(Path('v2/runtime/release/manifest.json').read_text(encoding='utf-8'))[0m
+2026-07-22T17:37:05.0980641Z [36;1mbundle = Path('v2/runtime/release') / rm['file'][0m
+2026-07-22T17:37:05.0980984Z [36;1massert b'@version      1.1.2' in noname[0m
+2026-07-22T17:37:05.0981315Z [36;1massert b'preview-chat-1b176371' not in noname[0m
+2026-07-22T17:37:05.0981697Z [36;1massert '脚本加载完成~'.encode() not in engine[0m
+2026-07-22T17:37:05.0982049Z [36;1massert engine.count(b'__gg_runtime_probe__') == 1[0m
+2026-07-22T17:37:05.0982384Z [36;1massert em['versionName'] == '1.0.4'[0m
+2026-07-22T17:37:05.0982726Z [36;1massert em['sha256'] == hashlib.sha256(engine).hexdigest()[0m
+2026-07-22T17:37:05.0983089Z [36;1massert rm['versionName'] == '2.0.1-r1'[0m
+2026-07-22T17:37:05.0983454Z [36;1massert rm['gameSha256'] == hashlib.sha256(engine).hexdigest()[0m
+2026-07-22T17:37:05.0983839Z [36;1massert bundle.stat().st_size == rm['size'][0m
+2026-07-22T17:37:05.0984255Z [36;1massert hashlib.sha256(bundle.read_bytes()).hexdigest() == rm['sha256'][0m
+2026-07-22T17:37:05.0984642Z [36;1mPY[0m
+2026-07-22T17:37:05.1044185Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-22T17:37:05.1044536Z env:
+2026-07-22T17:37:05.1044852Z   LICENSE_ADMIN_PASSWORD: ***
+2026-07-22T17:37:05.1045112Z   ENGINE_VERSION: 1.0.4
+2026-07-22T17:37:05.1045355Z   RUNTIME_VERSION: 2.0.1-r1
+2026-07-22T17:37:05.1045665Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1046393Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-07-22T17:37:05.1046861Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1047272Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1047687Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1048095Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-07-22T17:37:05.1048448Z ##[endgroup]
+2026-07-22T17:37:05.1707553Z ##[group]Run set -euo pipefail
+2026-07-22T17:37:05.1707904Z [36;1mset -euo pipefail[0m
+2026-07-22T17:37:05.1708259Z [36;1mrm -f .github/workflows/one-shot-release-gg-2.0.1-source.yml[0m
+2026-07-22T17:37:05.1708758Z [36;1mrm -f .github/workflows/one-shot-export-gg-2.0.0.yml[0m
+2026-07-22T17:37:05.1709222Z [36;1mrm -f /tmp/release-private.pem /tmp/engine.sig /tmp/runtime.sig \[0m
+2026-07-22T17:37:05.1709717Z [36;1m  /tmp/engine-canonical.txt /tmp/engine-unsigned.json \[0m
+2026-07-22T17:37:05.1710169Z [36;1m  /tmp/v2-runtime-canonical.txt /tmp/v2-runtime-unsigned.json[0m
+2026-07-22T17:37:05.1710572Z [36;1mgit config user.name github-actions[bot][0m
+2026-07-22T17:37:05.1711019Z [36;1mgit config user.email 41898282+github-actions[bot]@users.noreply.github.com[0m
+2026-07-22T17:37:05.1711441Z [36;1mgit add -A[0m
+2026-07-22T17:37:05.1711746Z [36;1mgit commit -m "Release GG 2.0.1 with JS 1.1.2 and engine 1.0.4"[0m
+2026-07-22T17:37:05.1712155Z [36;1mgit pull --rebase origin main[0m
+2026-07-22T17:37:05.1712433Z [36;1mgit push origin HEAD:main[0m
+2026-07-22T17:37:05.1772022Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-22T17:37:05.1772434Z env:
+2026-07-22T17:37:05.1772776Z   LICENSE_ADMIN_PASSWORD: ***
+2026-07-22T17:37:05.1773069Z   ENGINE_VERSION: 1.0.4
+2026-07-22T17:37:05.1773337Z   RUNTIME_VERSION: 2.0.1-r1
+2026-07-22T17:37:05.1773698Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1774218Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-07-22T17:37:05.1774727Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1775181Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1775647Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-07-22T17:37:05.1776344Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-07-22T17:37:05.1776741Z ##[endgroup]
+2026-07-22T17:37:05.6798782Z [main 884e33e] Release GG 2.0.1 with JS 1.1.2 and engine 1.0.4
+2026-07-22T17:37:05.6799755Z  12 files changed, 73 insertions(+), 274 deletions(-)
+2026-07-22T17:37:05.6800877Z  delete mode 100644 .github/workflows/one-shot-export-gg-2.0.0.yml
+2026-07-22T17:37:05.6801757Z  delete mode 100644 .github/workflows/one-shot-release-gg-2.0.1-source.yml
+2026-07-22T17:37:05.6802463Z  create mode 100644 game-engine/release/game-1.0.4.js
+2026-07-22T17:37:05.6802850Z  create mode 100644 v2/runtime/release/bundle-2.0.1-r1.bin
+2026-07-22T17:37:06.0529466Z From https://github.com/xianyumht-cmd/gams
+2026-07-22T17:37:06.0530124Z  * branch            main       -> FETCH_HEAD
+2026-07-22T17:37:06.0646422Z Current branch main is up to date.
+2026-07-22T17:37:08.9183204Z To https://github.com/xianyumht-cmd/gams
+2026-07-22T17:37:08.9185388Z  ! [remote rejected] HEAD -> main (refusing to allow a GitHub App to create or update workflow `.github/workflows/v2-build-apks.yml` without `workflows` permission)
+2026-07-22T17:37:08.9188096Z error: failed to push some refs to 'https://github.com/xianyumht-cmd/gams'
+2026-07-22T17:37:08.9215443Z ##[error]Process completed with exit code 1.
+2026-07-22T17:37:08.9361536Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-07-22T17:37:08.9362782Z Post job cleanup.
+2026-07-22T17:37:09.0193930Z [command]/usr/bin/git version
+2026-07-22T17:37:09.0247902Z git version 2.54.0
+2026-07-22T17:37:09.0293708Z Temporarily overriding HOME='/home/runner/work/_temp/f3b70b67-74b3-4e6a-9d35-f14f6e5aed9c' before making global git config changes
+2026-07-22T17:37:09.0295241Z Adding repository directory to the temporary git global config as a safe directory
+2026-07-22T17:37:09.0298895Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/gams/gams
+2026-07-22T17:37:09.0345372Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-07-22T17:37:09.0390972Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-07-22T17:37:09.0656288Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-07-22T17:37:09.0685065Z http.https://github.com/.extraheader
+2026-07-22T17:37:09.0698337Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-07-22T17:37:09.0746692Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-07-22T17:37:09.1053463Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-22T17:37:09.1099879Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-07-22T17:37:09.1523300Z Cleaning up orphan processes
+2026-07-22T17:37:09.1794404Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
