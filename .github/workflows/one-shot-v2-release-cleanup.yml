@@ -1,0 +1,41 @@
+name: One-shot V2 release cleanup
+
+on:
+  pull_request:
+    branches:
+      - v2-server-authoritative
+    types: [synchronize]
+    paths:
+      - v2/audit/**
+      - v2/runtime/tools/__pycache__/**
+      - .github/workflows/one-shot-v2-release-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.head_ref == 'release/gg-2.0.0-v9'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/gg-2.0.0-v9
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Remove one-time audit copies and generated Python cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -r --ignore-unmatch v2/audit
+          git rm -r --ignore-unmatch v2/runtime/tools/__pycache__
+          if git diff --cached --quiet; then
+            echo 'No release cleanup changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Remove temporary V2 audit artifacts'
+          git push origin HEAD:release/gg-2.0.0-v9
