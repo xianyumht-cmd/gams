@@ -6,6 +6,7 @@ on:
     types: [synchronize]
     paths:
       - tools/js_maintenance/capture_official_dependencies.py
+      - tools/js_maintenance/resolve_dynamic_chunks.py
       - game-engine/upstream-baseline.json
       - .github/workflows/one-shot-official-dependency-analysis.yml
 
@@ -16,7 +17,7 @@ jobs:
   capture:
     if: github.head_ref == 'analysis/js-maintenance-knowledgebase'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out analysis branch
         uses: actions/checkout@v4
@@ -33,10 +34,19 @@ jobs:
             --repo-root . \
             --output-dir docs/js-maintenance/official-current \
             | tee /tmp/official-dependency-summary.json
-          python3 -m py_compile tools/js_maintenance/capture_official_dependencies.py
+          python3 tools/js_maintenance/resolve_dynamic_chunks.py \
+            --repo-root . \
+            --output-dir docs/js-maintenance/official-current \
+            | tee /tmp/dynamic-chunk-summary.json
+          python3 -m py_compile \
+            tools/js_maintenance/capture_official_dependencies.py \
+            tools/js_maintenance/resolve_dynamic_chunks.py
           test -s docs/js-maintenance/official-current/snapshot.json
           test -s docs/js-maintenance/official-current/resource-inventory.json
           test -s docs/js-maintenance/official-current/dependency-module-map.json
+          test -s docs/js-maintenance/official-current/dynamic-chunks.json
+          test -s docs/js-maintenance/official-current/inline-page-anchors.json
+          test -s docs/js-maintenance/official-current/dynamic-chunks.md
           test -s docs/js-maintenance/official-current/README.md
 
       - name: Commit metadata reports
@@ -50,14 +60,16 @@ jobs:
             echo 'No official dependency changes.'
             exit 0
           fi
-          git commit -m 'Capture current official dependency graph'
+          git commit -m 'Resolve current official dynamic chunks'
           git push origin HEAD:analysis/js-maintenance-knowledgebase
 
-      - name: Upload capture summary
+      - name: Upload capture summaries
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: official-dependency-analysis-summary
-          path: /tmp/official-dependency-summary.json
+          path: |
+            /tmp/official-dependency-summary.json
+            /tmp/dynamic-chunk-summary.json
           retention-days: 7
           if-no-files-found: warn
