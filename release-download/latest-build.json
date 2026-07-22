@@ -1,1 +1,1 @@
-{"ok":false,"run_id":29927054429,"reason":"missing_release_signing_secrets"}
+{"ok":true,"run_id":29927227091,"artifact_name":"GG-2.0.0-download","file":"GG-2.0.0-未签名.apk","sha256":"c54f27adc55781a96b7249dd6c8b77e6e445018612fcd9ed5e8a1986e3b8030b","signed":false,"certificate_sha256":""}
