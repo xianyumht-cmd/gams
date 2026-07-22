@@ -3,11 +3,11 @@ android {
     namespace = "com.jinli.ggsecure"
     compileSdk = 35
     defaultConfig {
-        applicationId = "com.jinli.ggsecure"
+        applicationId = "com.jinli.quickweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.0.0-test3"
+        versionCode = 9
+        versionName = "2.0.0"
     }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }

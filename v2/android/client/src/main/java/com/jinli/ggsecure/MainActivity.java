@@ -85,7 +85,7 @@ public final class MainActivity extends Activity {
     private void initializeV2(@Nullable Bundle savedInstanceState) {
         browserVisible = false;
         releaseRuntime();
-        showLoading("正在建立V2安全运行环境…");
+        showLoading("正在建立安全运行环境…");
         licenseManager.initializeSavedAsync(result -> {
             if (isFinishing() || isDestroyed()) {
                 if (result.payload != null) result.payload.wipe();
@@ -151,7 +151,7 @@ public final class MainActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView title = new TextView(this);
-        title.setText("GG V2 测试版");
+        title.setText("GG");
         title.setTextSize(27);
         title.setTextColor(Color.rgb(17, 24, 39));
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -159,7 +159,7 @@ public final class MainActivity extends Activity {
         root.addView(title, matchWrap(dp(10)));
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("核心运行数据仅在内存中解密，不保存到APK、WebView缓存或本地脚本文件。\nV1可继续同时安装。");
+        subtitle.setText("核心运行数据仅在内存中解密，不保存到APK、WebView缓存或本地脚本文件。");
         subtitle.setTextSize(14);
         subtitle.setTextColor(Color.rgb(75, 85, 99));
         subtitle.setGravity(Gravity.CENTER);
@@ -178,7 +178,7 @@ public final class MainActivity extends Activity {
         actions.setOrientation(LinearLayout.HORIZONTAL);
 
         Button paste = actionButton("粘贴", false);
-        Button activate = actionButton("启动V2", true);
+        Button activate = actionButton("启动", true);
         actions.addView(paste, new LinearLayout.LayoutParams(0, dp(52), 1));
         LinearLayout.LayoutParams activateParams = new LinearLayout.LayoutParams(0, dp(52), 2);
         activateParams.setMargins(dp(10), 0, 0, 0);
@@ -260,7 +260,7 @@ public final class MainActivity extends Activity {
         Button service = toolbarButton("服务");
 
         statusText = new TextView(this);
-        statusText.setText("V2加载中…");
+        statusText.setText("加载中…");
         statusText.setTextColor(Color.WHITE);
         statusText.setTextSize(11);
         statusText.setSingleLine(true);
@@ -328,7 +328,7 @@ public final class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                statusText.setText("V2加载中…");
+                statusText.setText("加载中…");
                 progressBar.setVisibility(View.VISIBLE);
                 if (!nativeDocumentStartEnabled && isTargetPage(url)) {
                     view.evaluateJavascript(wrappedControlScript, null);
@@ -337,7 +337,7 @@ public final class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                statusText.setText("V2已就绪");
+                statusText.setText("已就绪");
                 CookieManager.getInstance().flush();
                 if (!nativeDocumentStartEnabled && isTargetPage(url)) {
                     view.evaluateJavascript(wrappedControlScript, null);
