@@ -25,11 +25,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/js_maintenance/analyze_runtime.py analyze \
+          python3 tools/js_maintenance/analyze_runtime_fast.py analyze \
             --repo-root . \
             --output-dir docs/js-maintenance/generated \
             | tee /tmp/js-maintenance-summary.json
-          python3 -m py_compile tools/js_maintenance/analyze_runtime.py
+          python3 -m py_compile tools/js_maintenance/analyze_runtime_fast.py
           test -s docs/js-maintenance/generated/baseline.json
           test -s docs/js-maintenance/generated/README.md
           test -s docs/js-maintenance/generated/noname-map.md
