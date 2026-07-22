@@ -2,7 +2,7 @@ const MIN_V2_APP_VERSION = 9;
 const CHALLENGE_SECONDS = 90;
 const MAX_BODY_BYTES = 96 * 1024;
 const RELEASE_BASE =
-  "https://raw.githubusercontent.com/xianyumht-cmd/gams/v2-server-authoritative/v2/runtime/release/";
+  "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/v2/runtime/release/";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -40,7 +40,7 @@ export default {
         return json({ ok: false, code: error.code, message: error.message }, error.status);
       }
       console.error("runtime-v2 error", error);
-      return json({ ok: false, code: "server_error", message: "V2运行服务暂时不可用" }, 500);
+      return json({ ok: false, code: "server_error", message: "服务暂时不可用" }, 500);
     }
   },
 };
@@ -49,12 +49,12 @@ async function issueChallenge(request, env) {
   const body = await readJson(request);
   const appVersion = appVersionOf(body);
   if (appVersion < MIN_V2_APP_VERSION) {
-    throw new HttpError(426, "upgrade_required", "V2客户端版本过低");
+    throw new HttpError(426, "upgrade_required", "客户端版本过低");
   }
   const deviceHash = normalizeHex64(body.deviceId);
   const purpose = text(body.purpose, 24);
   if (!deviceHash || purpose !== "runtime") {
-    throw new HttpError(400, "bad_request", "V2设备验证信息无效");
+    throw new HttpError(400, "bad_request", "设备验证信息无效");
   }
   const rateKey = `v2-challenge:${deviceHash.slice(0, 20)}:${await requestIpHash(request)}`;
   if (!(await allowRate(env, rateKey, 60, 60))) {
@@ -82,7 +82,7 @@ async function runtimeAccess(request, env) {
   const body = await readJson(request);
   const appVersion = appVersionOf(body);
   if (appVersion < MIN_V2_APP_VERSION) {
-    throw new HttpError(426, "upgrade_required", "V2客户端版本过低");
+    throw new HttpError(426, "upgrade_required", "客户端版本过低");
   }
 
   const tokenText = text(body.token, 4096);
@@ -96,13 +96,13 @@ async function runtimeAccess(request, env) {
   const runtimePublicKey = text(body.runtimePublicKey, 8192);
   const runtimeFingerprint = normalizeHex64(body.runtimeKeyFingerprint);
   if (!runtimePublicKey || !runtimeFingerprint) {
-    throw new HttpError(400, "bad_runtime_key", "V2运行密钥无效");
+    throw new HttpError(400, "bad_runtime_key", "运行密钥无效");
   }
 
   const runtimePublicBytes = base64Decode(runtimePublicKey);
   const actualRuntimeFingerprint = await sha256HexBytes(runtimePublicBytes);
   if (!(await constantTimeTextEqual(actualRuntimeFingerprint, runtimeFingerprint))) {
-    throw new HttpError(401, "runtime_key_mismatch", "V2运行密钥校验失败");
+    throw new HttpError(401, "runtime_key_mismatch", "运行密钥校验失败");
   }
 
   const expectedPayloadHash = await sha256Hex(`${tokenText}|${runtimeFingerprint}`);
@@ -117,7 +117,7 @@ async function runtimeAccess(request, env) {
 
   const rateKey = `v2-access:${license.id}:${device.id}`;
   if (!(await allowRate(env, rateKey, 12, 60))) {
-    throw new HttpError(429, "too_many_requests", "V2初始化过于频繁");
+    throw new HttpError(429, "too_many_requests", "启动过于频繁");
   }
 
   const manifest = await loadReleaseManifest();
@@ -157,7 +157,7 @@ async function runtimeAccess(request, env) {
 async function runtimeBundle(request, env) {
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) {
-    throw new HttpError(401, "unauthorized", "缺少V2授权会话");
+    throw new HttpError(401, "unauthorized", "登录状态已失效");
   }
   const tokenText = authorization.slice(7);
   const session = await verifyToken(tokenText, env, "session");
@@ -168,25 +168,25 @@ async function runtimeBundle(request, env) {
   const manifest = await loadReleaseManifest();
   const requestedVersion = new URL(request.url).searchParams.get("version") || "";
   if (requestedVersion !== manifest.versionName) {
-    throw new HttpError(409, "runtime_version_changed", "V2运行版本已更新，请重新初始化");
+    throw new HttpError(409, "runtime_version_changed", "服务已更新，请重新启动");
   }
 
   const rateKey = `v2-bundle:${license.id}:${device.id}`;
   if (!(await allowRate(env, rateKey, 20, 60))) {
-    throw new HttpError(429, "too_many_requests", "V2运行包请求过于频繁");
+    throw new HttpError(429, "too_many_requests", "请求过于频繁，请稍后重试");
   }
 
   const upstream = await githubFetch(`${RELEASE_BASE}${manifest.file}`);
   if (!upstream.ok) {
-    throw new HttpError(503, "runtime_unavailable", "V2加密运行包暂时不可用");
+    throw new HttpError(503, "runtime_unavailable", "服务资源暂时不可用");
   }
   const bytes = new Uint8Array(await upstream.arrayBuffer());
   if (bytes.length !== Number(manifest.size)) {
-    throw new HttpError(503, "runtime_invalid", "V2加密运行包大小校验失败");
+    throw new HttpError(503, "runtime_invalid", "服务资源校验失败");
   }
   const digest = await sha256HexBytes(bytes);
   if (!(await constantTimeTextEqual(digest, String(manifest.sha256).toLowerCase()))) {
-    throw new HttpError(503, "runtime_invalid", "V2加密运行包完整性校验失败");
+    throw new HttpError(503, "runtime_invalid", "服务资源校验失败");
   }
 
   await touch(env, license.id, device.id);
@@ -218,7 +218,7 @@ async function requireActiveDevice(env, session, deviceHash) {
     "SELECT * FROM devices WHERE license_id=? AND device_hash=? AND revoked_at IS NULL"
   ).bind(license.id, deviceHash).first();
   if (!device || !device.public_key || !device.key_fingerprint) {
-    throw new HttpError(401, "device_unbound", "当前设备未绑定V2安全身份");
+    throw new HttpError(401, "device_unbound", "当前设备未完成授权");
   }
   if (session.kid !== device.key_fingerprint ||
       Number(session.sv) !== Number(device.session_version)) {
@@ -244,20 +244,20 @@ async function verifySignedRequest(
   const payloadHash = normalizeHex64(body.payloadHash);
   const signature = text(body.signature, 1024);
   if (!deviceHash || purpose !== expectedPurpose || !nonce || !Number.isFinite(timestamp)) {
-    throw new HttpError(400, "bad_signature_request", "V2签名请求无效");
+    throw new HttpError(400, "bad_signature_request", "设备验证信息无效");
   }
   if (Math.abs(nowSeconds() - timestamp) > 120) {
-    throw new HttpError(401, "stale_request", "V2请求已过期");
+    throw new HttpError(401, "stale_request", "验证请求已过期");
   }
   if (!(await constantTimeTextEqual(payloadHash, expectedPayloadHash))) {
-    throw new HttpError(401, "payload_mismatch", "V2请求摘要不匹配");
+    throw new HttpError(401, "payload_mismatch", "设备验证失败");
   }
   if (storedDevice.key_fingerprint !== keyFingerprint) {
     throw new HttpError(401, "key_mismatch", "设备密钥不匹配");
   }
   if (storedDevice.certificate_digest &&
       storedDevice.certificate_digest !== certificateDigest) {
-    throw new HttpError(401, "certificate_changed", "V2客户端签名发生变化");
+    throw new HttpError(401, "certificate_changed", "客户端校验失败");
   }
 
   const consumed = await env.DB.prepare(
@@ -265,7 +265,7 @@ async function verifySignedRequest(
     "AND used_at IS NULL AND expires_at>=?"
   ).bind(nowSeconds(), nonce, deviceHash, purpose, nowSeconds()).run();
   if (Number(consumed.meta?.changes || 0) !== 1) {
-    throw new HttpError(401, "bad_nonce", "V2验证请求已失效");
+    throw new HttpError(401, "bad_nonce", "验证请求已失效");
   }
 
   const publicBytes = base64Decode(publicKeyBase64);
@@ -296,7 +296,7 @@ async function verifySignedRequest(
     base64Decode(signature),
     encoder.encode(canonical)
   );
-  if (!ok) throw new HttpError(401, "bad_signature", "V2设备签名校验失败");
+  if (!ok) throw new HttpError(401, "bad_signature", "设备验证失败");
 }
 
 async function loadReleaseManifest() {
@@ -304,24 +304,24 @@ async function loadReleaseManifest() {
   if (releaseCache && releaseCache.expiresAt > now) return releaseCache.manifest;
   const response = await githubFetch(`${RELEASE_BASE}manifest.json`);
   if (!response.ok) {
-    throw new HttpError(503, "runtime_unavailable", "V2运行清单暂时不可用");
+    throw new HttpError(503, "runtime_unavailable", "服务配置暂时不可用");
   }
   const textBody = await response.text();
   if (textBody.length > 128 * 1024) {
-    throw new HttpError(503, "runtime_invalid", "V2运行清单异常");
+    throw new HttpError(503, "runtime_invalid", "服务配置异常");
   }
   let manifest;
   try {
     manifest = JSON.parse(textBody);
   } catch {
-    throw new HttpError(503, "runtime_invalid", "V2运行清单格式无效");
+    throw new HttpError(503, "runtime_invalid", "服务配置异常");
   }
   if (manifest.schemaVersion !== 2 ||
       !/^[A-Za-z0-9._-]+\.bin$/.test(String(manifest.file || "")) ||
       !/^[0-9a-f]{64}$/.test(String(manifest.sha256 || "")) ||
       Number(manifest.size || 0) <= 0 ||
       Number(manifest.size || 0) > 18 * 1024 * 1024) {
-    throw new HttpError(503, "runtime_invalid", "V2运行清单内容无效");
+    throw new HttpError(503, "runtime_invalid", "服务配置异常");
   }
   releaseCache = { manifest, expiresAt: now + 30_000 };
   return manifest;
@@ -353,7 +353,7 @@ async function decryptContentKey(manifest, env) {
     const bytes = new Uint8Array(plain);
     if (bytes.length !== 32) {
       bytes.fill(0);
-      throw new HttpError(503, "runtime_invalid", "V2运行密钥无效");
+      throw new HttpError(503, "runtime_invalid", "运行密钥无效");
     }
     return bytes;
   } finally {
