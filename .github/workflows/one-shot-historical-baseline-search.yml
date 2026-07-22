@@ -5,7 +5,7 @@ on:
     branches: [v2-server-authoritative]
     types: [synchronize]
     paths:
-      - tools/js_maintenance/find_historical_official_baselines_fast.py
+      - tools/js_maintenance/compare_historical_candidates_deep.py
       - .github/workflows/one-shot-historical-baseline-search.yml
 
 permissions:
@@ -15,7 +15,7 @@ jobs:
   search:
     if: github.head_ref == 'analysis/js-maintenance-knowledgebase'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - name: Check out analysis branch
         uses: actions/checkout@v4
@@ -24,37 +24,39 @@ jobs:
           fetch-depth: 0
           token: ${{ github.token }}
 
-      - name: Query bounded public historical archives
+      - name: Compare top historical official candidates
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/js_maintenance/find_historical_official_baselines_fast.py \
+          python3 tools/js_maintenance/compare_historical_candidates_deep.py \
             --repo-root . \
+            --input docs/js-maintenance/historical-search/historical-search.json \
             --output-dir docs/js-maintenance/historical-search \
-            | tee /tmp/historical-baseline-summary.json
-          python3 -m py_compile tools/js_maintenance/find_historical_official_baselines_fast.py
-          test -s docs/js-maintenance/historical-search/historical-search.json
-          test -s docs/js-maintenance/historical-search/README.md
+            | tee /tmp/historical-deep-comparison-summary.json
+          python3 -m py_compile tools/js_maintenance/compare_historical_candidates_deep.py
+          test -s docs/js-maintenance/historical-search/historical-deep-comparison.json
+          test -s docs/js-maintenance/historical-search/historical-deep-comparison.md
 
-      - name: Commit archive metadata
+      - name: Commit deep comparison metadata
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/js-maintenance/historical-search
+          git add docs/js-maintenance/historical-search/historical-deep-comparison.json \
+                  docs/js-maintenance/historical-search/historical-deep-comparison.md
           if git diff --cached --quiet; then
-            echo 'No historical metadata changes.'
+            echo 'No deep comparison changes.'
             exit 0
           fi
-          git commit -m 'Record bounded historical official baseline search'
+          git commit -m 'Compare closest historical official candidates'
           git push origin HEAD:analysis/js-maintenance-knowledgebase
 
-      - name: Upload search summary
+      - name: Upload comparison summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: historical-official-baseline-search
-          path: /tmp/historical-baseline-summary.json
+          name: historical-official-deep-comparison
+          path: /tmp/historical-deep-comparison-summary.json
           retention-days: 7
           if-no-files-found: warn
