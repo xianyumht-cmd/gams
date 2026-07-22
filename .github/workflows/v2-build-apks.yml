@@ -41,6 +41,12 @@ jobs:
           test -s "$client"
           test -s "$manager"
 
+          client_version="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' v2/android/client/build.gradle.kts | head -n1)"
+          manager_version="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' v2/android/manager/build.gradle.kts | head -n1)"
+          test -n "$client_version"
+          test -n "$manager_version"
+
+          rm -rf /tmp/v2-client-apk /tmp/v2-manager-apk /tmp/v2-output
           mkdir -p /tmp/v2-client-apk /tmp/v2-manager-apk /tmp/v2-output
           unzip -q "$client" -d /tmp/v2-client-apk
           unzip -q "$manager" -d /tmp/v2-manager-apk
@@ -69,21 +75,24 @@ jobs:
             exit 1
           fi
 
-          cp "$client" /tmp/v2-output/GG-V2-客户端-2.0.0-test1.apk
-          cp "$manager" /tmp/v2-output/GG-V2-管理器-2.0.0-test1.apk
+          cp "$client" "/tmp/v2-output/GG-V2-客户端-${client_version}.apk"
+          cp "$manager" "/tmp/v2-output/GG-V2-管理器-${manager_version}.apk"
           sha256sum /tmp/v2-output/*.apk | tee /tmp/v2-output/SHA256SUMS.txt
-          cat > /tmp/v2-output/SECURITY-CHECK.txt <<'EOF'
+          cat > /tmp/v2-output/SECURITY-CHECK.txt <<EOF
           V2 client package: com.jinli.ggsecure
+          V2 client version: ${client_version}
           V2 manager package: com.jinli.ggsecure.manager
+          V2 manager version: ${manager_version}
           Core JavaScript assets: absent
           Known plaintext core implementation markers in APK: absent
           Runtime mode: authenticated encrypted bundle, native memory decryption, WebView memory interception
+          Runtime network fallback: custom domain, normal Worker HTTPS, multi-DNS direct TLS with hostname verification
           V1 version 8: unchanged and still active
           EOF
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-V2-client-and-manager-2.0.0-test1
+          name: GG-V2-client-and-manager-current
           path: /tmp/v2-output/*
           retention-days: 30
           if-no-files-found: error
