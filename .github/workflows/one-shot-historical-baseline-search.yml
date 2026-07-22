@@ -5,7 +5,7 @@ on:
     branches: [v2-server-authoritative]
     types: [synchronize]
     paths:
-      - tools/js_maintenance/find_historical_official_baselines.py
+      - tools/js_maintenance/find_historical_official_baselines_fast.py
       - .github/workflows/one-shot-historical-baseline-search.yml
 
 permissions:
@@ -15,7 +15,7 @@ jobs:
   search:
     if: github.head_ref == 'analysis/js-maintenance-knowledgebase'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 8
     steps:
       - name: Check out analysis branch
         uses: actions/checkout@v4
@@ -24,15 +24,15 @@ jobs:
           fetch-depth: 0
           token: ${{ github.token }}
 
-      - name: Query public historical archives
+      - name: Query bounded public historical archives
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/js_maintenance/find_historical_official_baselines.py \
+          python3 tools/js_maintenance/find_historical_official_baselines_fast.py \
             --repo-root . \
             --output-dir docs/js-maintenance/historical-search \
             | tee /tmp/historical-baseline-summary.json
-          python3 -m py_compile tools/js_maintenance/find_historical_official_baselines.py
+          python3 -m py_compile tools/js_maintenance/find_historical_official_baselines_fast.py
           test -s docs/js-maintenance/historical-search/historical-search.json
           test -s docs/js-maintenance/historical-search/README.md
 
@@ -47,7 +47,7 @@ jobs:
             echo 'No historical metadata changes.'
             exit 0
           fi
-          git commit -m 'Record historical official baseline search'
+          git commit -m 'Record bounded historical official baseline search'
           git push origin HEAD:analysis/js-maintenance-knowledgebase
 
       - name: Upload search summary
