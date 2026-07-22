@@ -1,0 +1,22 @@
+{
+  "url": "https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js",
+  "httpStatus": "502",
+  "size": 1364,
+  "sha256": "69ac4662d01fb623c74e5709642411e6560f083a93af5f27825f1990a0c9cc42",
+  "containsExactAlert": false,
+  "tail": "   object-fit: contain; /* object-contain */\n            opacity: 0.9;\n        }\n    </style>\n    <script>\n\t\tsetTimeout(() => {\n            window.location.href = window.location.href;\n        }, 5000);\n    </script>\n</head>\n\n<body>\n    <div class='container'>\n        <div class='logo-wrap'>\n            <img src='/logo.svg' alt='Z.ai Logo' class='logo' />\n        </div>\n    </div>\n</body>\n\n</html>",
+  "references": [
+    {
+      "path": "game-engine/release/game-1.0.2.js",
+      "size": 11589175,
+      "sha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43",
+      "sameAsResponse": false
+    },
+    {
+      "path": "game-engine/release/game-1.0.3.js",
+      "size": 11589336,
+      "sha256": "81db071b0d87d56d51b66e06cfa2fed0affc7f5feaee8fda3ce79cedce0e6d70",
+      "sameAsResponse": false
+    }
+  ]
+}
