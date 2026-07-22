@@ -1,0 +1,34 @@
+name: Read main tree for APK publish
+on:
+  push:
+    branches: [diag/fixed-jks-inventory]
+    paths: [.github/workflows/read-main-tree-for-apk.yml]
+permissions:
+  contents: write
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read main commit and tree
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          commit=37e2d10369e987d59b0e8ca0781ccc83f8d0bf9c
+          curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/commits/${commit}" > /tmp/commit.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('/tmp/commit.json').read_text())
+          result={'commit_sha':d['sha'],'tree_sha':d['tree']['sha']}
+          Path('diagnostics/main-tree-for-apk.json').parent.mkdir(parents=True,exist_ok=True)
+          Path('diagnostics/main-tree-for-apk.json').write_text(json.dumps(result,indent=2)+'\n')
+          PY
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add diagnostics/main-tree-for-apk.json
+          git commit -m "Record main tree for signed APK publish"
+          git push
