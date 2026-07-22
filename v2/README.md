@@ -30,5 +30,5 @@ This blocks the direct APK, ordinary traffic and cache extraction paths. A roote
 - APK scan found no JavaScript assets or known plaintext core implementation markers.
 - Encrypted release scan found no known plaintext core markers.
 - Cloudflare V2 runtime Worker is deployed and its online health check passed.
-- Test2 compatibility rebuild started for Android MGF1 support and direct runtime-domain access.
-- V2 is awaiting manual Android testing before any change to V1 version 8.
+- Test2 compatibility rebuild is queued for Android MGF1 support and direct runtime-domain access.
+- V1 version 8 remains unchanged during testing.
