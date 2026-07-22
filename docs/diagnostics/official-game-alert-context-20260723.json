@@ -1,0 +1,212 @@
+{
+  "terms": {
+    "脚本": 6,
+    "加载": 24,
+    "完成": 8,
+    "alert": 5,
+    "SAL_alert": 4,
+    "脚本加载完成~": 0
+  },
+  "contexts": {
+    "脚本": [
+      {
+        "offset": 2647772,
+        "context": "turn _0x27bc83===_0x423ea0;},qjyuJ:_0x4b7e41['ap'+'VF'+'L'],hVYAq:_0x4b7e41['xs'+'SH'+'S'],yfUbp:function(_0x150fc7,_0x194d9b,_0x5db052){return _0x4b7e41['CB'+'aE'+'Q'](_0x150fc7,_0x194d9b,_0x5db052);}};_0x4b7e41['Sv'+'Hc'+'H'](_0x4b7e41['av'+'eV'+'c'],'Bo'+'qi'+'j')?_0x2f421f?(_0x299072['lo'+'g']('脚本'+'加载'+'完成'),_0x421703['Yf'+'bB'+'P'](_0x3f98c3,null)):(_0x502125['lo'+'g']('脚本'+'加载'+'失败'),_0x421703['or'+'fP'+'e'](_0xc5d76e,null)):_0x463e5c['se'+'nd'+'Ge'+'tA'+'ja'+'xJ'+'SO'+'N'](_0x2760db,function(_0x3c318d){if(_0x29f210['Tk'+'kk'+'k'](_0x29f210['qj'+'yu'+'J'],_0x29f210['hV'+'YA'+'q'])){null=="
+      },
+      {
+        "offset": 2647851,
+        "context": "'+'SH'+'S'],yfUbp:function(_0x150fc7,_0x194d9b,_0x5db052){return _0x4b7e41['CB'+'aE'+'Q'](_0x150fc7,_0x194d9b,_0x5db052);}};_0x4b7e41['Sv'+'Hc'+'H'](_0x4b7e41['av'+'eV'+'c'],'Bo'+'qi'+'j')?_0x2f421f?(_0x299072['lo'+'g']('脚本'+'加载'+'完成'),_0x421703['Yf'+'bB'+'P'](_0x3f98c3,null)):(_0x502125['lo'+'g']('脚本'+'加载'+'失败'),_0x421703['or'+'fP'+'e'](_0xc5d76e,null)):_0x463e5c['se'+'nd'+'Ge'+'tA'+'ja'+'xJ'+'SO'+'N'](_0x2760db,function(_0x3c318d){if(_0x29f210['Tk'+'kk'+'k'](_0x29f210['qj'+'yu'+'J'],_0x29f210['hV'+'YA'+'q'])){null==_0x2f97b4&&(_0x15f185=_0x29f210['sJ'+'QN'+'t'](_0x49bc6a));var _0x18bf3b=_0x29f"
+      },
+      {
+        "offset": 5831118,
+        "context": "af!==_0x140c40;},SJxum:'HP'+'sz'+'X',beAZW:'RB'+'XJ'+'c',UtetI:'SJ'+'vG'+'k',CStFa:'oN'+'Gp'+'L',wOpyF:function(_0x24740b,_0x539c22){return _0x24740b+_0x539c22;},mzOBh:function(_0x21215c,_0xf3a42a){return _0x21215c(_0xf3a42a);},qjvEa:function(_0xd6cc56,_0x595ab8){return _0xd6cc56-_0x595ab8;},IlcjX:'脚本'+'加载'+'完成',BeLvj:function(_0x28b2ce,_0xab2b1c){return _0x28b2ce===_0xab2b1c;},fDGWM:'CV'+'gE'+'A',WvHAn:'DY'+'oA'+'u',LUXVv:'/m'+'on'+'th'+'ly'+'/t'+'_1'+'07'+'/Z'+'hB'+'w1'+'pV'+'D4'+'19'+'3.'+'sh'+'tm'+'l',WNEeL:function(_0x1c811f,_0xc54aa6){return _0x1c811f==_0xc54aa6;},yJwiW:'查看'+'获取'+'详情',UhWT"
+      },
+      {
+        "offset": 6396631,
+        "context": "4c2231['hz'+'TS'+'y'](_0x402ea2,_0x5ed4ef);},NXANc:function(_0x2c5a28,_0x1ca142){return _0x2c5a28!=_0x1ca142;},GxTti:function(_0x5a09fc,_0x1d688b){return _0x4c2231['YO'+'Ao'+'O'](_0x5a09fc,_0x1d688b);},BCVts:function(_0x12bf78,_0x565175){return _0x4c2231['Ma'+'Nk'+'z'](_0x12bf78,_0x565175);},adHQr:'脚本'+'加载'+'完成',nGjqy:'脚本'+'加载'+'失败',fXPHz:function(_0x1d51a0,_0x2e1876,_0x30b759){return _0x4c2231['Tl'+'kK'+'q'](_0x1d51a0,_0x2e1876,_0x30b759);},GbsSh:function(_0x572d07,_0x49bcbe){return _0x4c2231['mC'+'fZ'+'d'](_0x572d07,_0x49bcbe);},vuJjw:'Pq'+'vT'+'B',tflmr:'Gr'+'ap'+'hi'+'cs'+'/B'+'on'+'es',XtKV"
+      },
+      {
+        "offset": 6396652,
+        "context": "(_0x402ea2,_0x5ed4ef);},NXANc:function(_0x2c5a28,_0x1ca142){return _0x2c5a28!=_0x1ca142;},GxTti:function(_0x5a09fc,_0x1d688b){return _0x4c2231['YO'+'Ao'+'O'](_0x5a09fc,_0x1d688b);},BCVts:function(_0x12bf78,_0x565175){return _0x4c2231['Ma'+'Nk'+'z'](_0x12bf78,_0x565175);},adHQr:'脚本'+'加载'+'完成',nGjqy:'脚本'+'加载'+'失败',fXPHz:function(_0x1d51a0,_0x2e1876,_0x30b759){return _0x4c2231['Tl'+'kK'+'q'](_0x1d51a0,_0x2e1876,_0x30b759);},GbsSh:function(_0x572d07,_0x49bcbe){return _0x4c2231['mC'+'fZ'+'d'](_0x572d07,_0x49bcbe);},vuJjw:'Pq'+'vT'+'B',tflmr:'Gr'+'ap'+'hi'+'cs'+'/B'+'on'+'es',XtKVj:function(_0x2a7bfa,"
+      },
+      {
+        "offset": 14570870,
+        "context": "+'at'+'St'+'r']=function(_0x47af4a){var _0x32c239=this;_0x47af4a['re'+'pl'+'ac'+'e'](_0x41ef09['re'+'g1'],function(_0x453e47,_0x31af6d,_0x50d740,_0x289d4e){var _0x118e7a={MvMbb:_0x3de118['fo'+'uB'+'E'],rzAXB:function(_0x3cc1f6,_0xe8b74f){return _0x3de118['GO'+'zy'+'X'](_0x3cc1f6,_0xe8b74f);},GQMdu:'脚本'+'加载'+'失败',DhWxL:function(_0x16ec8b,_0xa6e422,_0x3c1330){return _0x3de118['ap'+'ot'+'B'](_0x16ec8b,_0xa6e422,_0x3c1330);},nnbzD:_0x3de118['Sq'+'qJ'+'N'],DkGMR:function(_0x4e0b0c,_0x2eb2bc){return _0x3de118['zo'+'jr'+'b'](_0x4e0b0c,_0x2eb2bc);}};if(_0x3de118['jo'+'hg'+'e']===_0x3de118['jo'+'hg'+'e']"
+      }
+    ],
+    "加载": [
+      {
+        "offset": 367709,
+        "context": "'+'/o'+'pe'+'n.'+'pn'+'g',wNotU:'ma'+'ll'+'/w'+'zI'+'co'+'n.'+'pn'+'g',OdkeA:'cl'+'ou'+'d/'+'ne'+'wS'+'av'+'eM'+'ar'+'kN'+'ew'+'.p'+'ng',gSOSb:'优质'+'内容'+'即将'+'呈现'+'\\uFF0C请'+'耐心'+'等待'+'~',BaDNl:'好作'+'品需'+'要时'+'间打'+'磨\\uFF0C'+'请稍'+'候.'+'..',BoYkr:'作者'+'正在'+'奋笔'+'疾书'+'\\uFF0C请'+'稍候'+'..'+'.',YXqaX:'丸漫'+'加载'+'增速'+'口诀'+'\\uFF1A急'+'急如'+'律令'+'\\uFF01快'+'快打'+'开~',ofDxA:'丸漫'+'正在'+'奋力'+'冲刺'+'啦\\uFF01',vPQLe:'遇到'+'心仪'+'的作'+'品记'+'得收'+'藏哦'+'~',XDTBW:'在限'+'免广'+'场兑'+'换限'+'免券'+'\\uFF0C爽'+'读优'+'质作'+'品',TJHfa:'丸漫'+'小t'+'ip'+'s\\uFF1A'+'遇到'+'喜欢'+'的角'+'色\\uFF0C'+'不要'+'忘记'+'对T'+'a表'+'白哦'+'~',UoynB:'丸漫'+'小t'+'ip'+'s\\uFF1A'+'"
+      },
+      {
+        "offset": 407050,
+        "context": "_0x4ca48a;},yooWK:function(_0x34b80c,_0x2abe07){return _0x34b80c+_0x2abe07;},ZthML:'Yy'+'wt'+'f',kfEtU:'pm'+'Pk'+'p',Htpnr:function(_0x977163,_0x310c5c){return _0x977163 instanceof _0x310c5c;},bTFpA:function(_0x4c62da,_0x1eedac){return _0x4c62da>_0x1eedac;},PUQac:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e',SgfZL:function(_0x4b9326,_0x3dc7a4){return _0x4b9326!==_0x3dc7a4;},OJlsj:'Xn'+'qA'+'q',kLPeI:'zY'+'SU'+'S',KCfPH:function(_0x1bc9cc,_0x43ba4b){return _0x1bc9cc+_0x43ba4b;},XWePG:'fo'+'nt'+'/f'+'on'+'t.'+'li'+'st',JpxXY:'sg'+'kW'+'l',IDFeJ:function(_0x1c9464,_0x33e7cb){return _0x1c946"
+      },
+      {
+        "offset": 454641,
+        "context": "{return _0x4a0d4f(_0x3901dd);},GxdSO:'#8'+'08'+'08'+'0',jVtmz:function(_0x44fe74,_0x5b6339){return _0x44fe74+_0x5b6339;},aTcWg:function(_0x5d9bd6,_0x81f8fd){return _0x5d9bd6<_0x81f8fd;},LTpAK:'rb'+'kF'+'O',kczeO:function(_0x5b28a8){return _0x5b28a8();},nuWNh:'网络'+'异常'+'3\\uFF0C'+'请检'+'查网'+'络后'+'重新'+'加载'+'游玩'+'此段'+'剧情',DvgYm:'LY'+'dX'+'r',qglAF:function(_0x5ec940,_0x291918){return _0x5ec940+_0x291918;},zyizQ:function(_0x207588,_0x5b3f9d){return _0x207588+_0x5b3f9d;},VSAqq:function(_0x29e0b0,_0x13cb00){return _0x29e0b0+_0x13cb00;},fmTse:function(_0x389f6b,_0x28d6ea){return _0x389f6b+_0x28d6ea;},aHQ"
+      },
+      {
+        "offset": 474630,
+        "context": "unction(_0x117731,_0x37c406){return _0x117731*_0x37c406;},CPVbJ:function(_0x38c8b2,_0x42314b){return _0x38c8b2*_0x42314b;},AhAjk:'qj'+'Gv'+'Z',EWrCM:'Nb'+'aP'+'X',WUtuK:function(_0x68cd62,_0x4e9ffd){return _0x68cd62/_0x4e9ffd;},rdVbr:function(_0x2cd763,_0x97e728){return _0x2cd763+_0x97e728;},rFpBe:'加载'+'中.'+'..',klwQI:function(_0x1eef80,_0x1aa258){return _0x1eef80-_0x1aa258;},Bmmhr:function(_0x28a673,_0x289800){return _0x28a673>>_0x289800;},EymXS:function(_0xc79919,_0x4015ac){return _0xc79919(_0x4015ac);},WZRgs:function(_0x497f5c,_0x236083){return _0x497f5c!==_0x236083;},fYaeV:'VA'+'Md'+'c',woPf"
+      },
+      {
+        "offset": 810116,
+        "context": "0-_0x46d758;},WmIwc:function(_0x201869,_0x13b960){return _0x201869!==_0x13b960;},YQSvv:function(_0x413d3b,_0x478ec1){return _0x413d3b!==_0x478ec1;},dErlm:'dX'+'aM'+'j',CBxSX:'KQ'+'om'+'j',iTAzH:function(_0x28fba0,_0x27be84){return _0x28fba0<_0x27be84;},RNyLg:'网络'+'异常'+'1\\uFF0C'+'请检'+'查网'+'络后'+'重新'+'加载'+'游玩'+'此段'+'剧情',JvLEC:'Ud'+'Fr'+'l',jfBMJ:'ke'+'vG'+'y',kTWwj:function(_0x13cd57,_0x73d966){return _0x13cd57(_0x73d966);},FtGtZ:'an'+'TP'+'j',aqWuR:'Gj'+'PI'+'h',HUUpV:function(_0x1ab529,_0x8e0da4){return _0x1ab529(_0x8e0da4);},YRcpH:function(_0x43342b,_0xece20d){return _0x43342b-_0xece20d;},jrjXF:"
+      },
+      {
+        "offset": 891500,
+        "context": "z:function(_0x27dfca,_0x216bfb){return _0x27dfca<_0x216bfb;},jrsHb:function(_0x1da15b,_0x328f98){return _0x1da15b<=_0x328f98;},sMwhL:function(_0x5f57f8,_0x236b67){return _0x5f57f8<_0x236b67;},KLnNY:function(_0xc77bc9,_0x311753,_0x107171){return _0xc77bc9(_0x311753,_0x107171);},oHRAl:'橙娘'+'正在'+'努力'+'加载'+'作品'+'in'+'g.'+'..',jImoH:'橙娘'+'正在'+'打开'+'作品'+'\\uFF0C请'+'耐心'+'等待'+'~',vJQDG:'恭喜'+'你发'+'现宝'+'藏作'+'品\\uFF0C'+'等待'+'挖掘'+'中.'+'..',mcfbM:'作者'+'正在'+'勤奋'+'码字'+'in'+'g\\uFF0C'+'请耐'+'心等'+'待~',QKhZJ:'橙娘'+'加速'+'口诀'+'\\uFF1A急'+'急如'+'律令'+'\\uFF01快'+'快打'+'开~',pvDBX:'橙娘'+'正在'+'奋力'+'冲刺'+'啦\\uFF01',zWcUo:'马上'+'就好'+'\\u"
+      },
+      {
+        "offset": 1436514,
+        "context": "97fe72);},vDlpV:function(_0xa37cf9,_0xad1348){return _0x3bb379['vo'+'Me'+'X'](_0xa37cf9,_0xad1348);},WvAgW:function(_0x87f74,_0x3ca513){return _0x3bb379['TY'+'CI'+'z'](_0x87f74,_0x3ca513);},lSCls:function(_0x3689d5,_0x41df32){return _0x3689d5!==_0x41df32;},ojyII:_0x3bb379['dl'+'MG'+'Y'],OACyk:'文字'+'加载'+'异常'+'!',EvquQ:function(_0x24b93d,_0x34cc6c){return _0x3bb379['Ah'+'DV'+'Z'](_0x24b93d,_0x34cc6c);},Yrvii:function(_0x42ea0b,_0x3009f2,_0x54b473,_0x460c20,_0x1a7580){return _0x3bb379['BI'+'lW'+'b'](_0x42ea0b,_0x3009f2,_0x54b473,_0x460c20,_0x1a7580);},qXxeR:_0x3bb379['OZ'+'gH'+'d'],whhBc:function(_"
+      },
+      {
+        "offset": 1978957,
+        "context": "](),_0x52722b['de'+'fa'+'ul'+'t']['in'+'st'+'an'+'ce']['cl'+'os'+'eA'+'ll'+'UI']();}else{var _0x23aa37={ZYxVt:function(_0x31a598,_0x341f9){return _0x31a598+_0x341f9;},vIQVl:function(_0xbb3c81,_0x29faa2){return _0x1dfdc6['AZ'+'lN'+'F'](_0xbb3c81,_0x29faa2);},cDOtd:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e '+'ca'+'ll'+'ba'+'ck',anwRl:function(_0xad3ce1){return _0xad3ce1();}},_0x4d1df8=[this['_a'+'tl'+'as'],this['_j'+'so'+'n']];this['_t'+'ex'+'tu'+'re']&&(this['_t'+'ex'+'tu'+'re']instanceof _0x8b1a5b&&_0x1dfdc6['JN'+'SY'+'p'](this['_t'+'ex'+'tu'+'re']['le'+'ng'+'th'],1*7283+7325*1+2*-730"
+      },
+      {
+        "offset": 1979826,
+        "context": ");_0x218bfd++)_0xf1756b['lo'+'g'](_0x1dfdc6['vy'+'xK'+'h']('[l'+'og'+'ic'+' s'+'pi'+'ne'+'] ',_0x4d1df8[_0x218bfd]));_0x1dfdc6['eS'+'Nj'+'u'](_0x429bd6,_0x4fd7ba['ga'+'me']['ca'+'nv'+'as'],_0x4d1df8,function(_0x4dccf4){_0x57e884['lo'+'g'](_0x23aa37['ZY'+'xV'+'t']('[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e ',_0x4dccf4)),_0x23aa37['vI'+'QV'+'l'](4971+-2129+-2841,_0x4dccf4)&&(_0x45a749['lo'+'g'](_0x23aa37['cD'+'Ot'+'d']),_0x503eca&&_0x23aa37['an'+'wR'+'l'](_0x415dce));});}},this['cl'+'ea'+'r']=function(){for(var _0x2708ea=-163*-2+-1*-2206+-2532;_0x2708ea<this['ch'+'il'+'dL'+'is'+'t']['le'"
+      },
+      {
+        "offset": 2647777,
+        "context": "_0x27bc83===_0x423ea0;},qjyuJ:_0x4b7e41['ap'+'VF'+'L'],hVYAq:_0x4b7e41['xs'+'SH'+'S'],yfUbp:function(_0x150fc7,_0x194d9b,_0x5db052){return _0x4b7e41['CB'+'aE'+'Q'](_0x150fc7,_0x194d9b,_0x5db052);}};_0x4b7e41['Sv'+'Hc'+'H'](_0x4b7e41['av'+'eV'+'c'],'Bo'+'qi'+'j')?_0x2f421f?(_0x299072['lo'+'g']('脚本'+'加载'+'完成'),_0x421703['Yf'+'bB'+'P'](_0x3f98c3,null)):(_0x502125['lo'+'g']('脚本'+'加载'+'失败'),_0x421703['or'+'fP'+'e'](_0xc5d76e,null)):_0x463e5c['se'+'nd'+'Ge'+'tA'+'ja'+'xJ'+'SO'+'N'](_0x2760db,function(_0x3c318d){if(_0x29f210['Tk'+'kk'+'k'](_0x29f210['qj'+'yu'+'J'],_0x29f210['hV'+'YA'+'q'])){null==_0x2f"
+      },
+      {
+        "offset": 2647856,
+        "context": "'+'S'],yfUbp:function(_0x150fc7,_0x194d9b,_0x5db052){return _0x4b7e41['CB'+'aE'+'Q'](_0x150fc7,_0x194d9b,_0x5db052);}};_0x4b7e41['Sv'+'Hc'+'H'](_0x4b7e41['av'+'eV'+'c'],'Bo'+'qi'+'j')?_0x2f421f?(_0x299072['lo'+'g']('脚本'+'加载'+'完成'),_0x421703['Yf'+'bB'+'P'](_0x3f98c3,null)):(_0x502125['lo'+'g']('脚本'+'加载'+'失败'),_0x421703['or'+'fP'+'e'](_0xc5d76e,null)):_0x463e5c['se'+'nd'+'Ge'+'tA'+'ja'+'xJ'+'SO'+'N'](_0x2760db,function(_0x3c318d){if(_0x29f210['Tk'+'kk'+'k'](_0x29f210['qj'+'yu'+'J'],_0x29f210['hV'+'YA'+'q'])){null==_0x2f97b4&&(_0x15f185=_0x29f210['sJ'+'QN'+'t'](_0x49bc6a));var _0x18bf3b=_0x29f210['"
+      },
+      {
+        "offset": 4054857,
+        "context": "ction(_0x5c0d1c,_0x50de6b){return _0x4b7e41['Oj'+'qQ'+'y'](_0x5c0d1c,_0x50de6b);},jPgPV:function(_0x1caf95,_0xdae3c7,_0x30c35f,_0x3d52f5){return _0x4b7e41['Rt'+'fA'+'W'](_0x1caf95,_0xdae3c7,_0x30c35f,_0x3d52f5);},vQcDM:function(_0x5ee448,_0xdb0488){return _0x5ee448>_0xdb0488;},BXXJj:'特效'+'资源'+'尚未'+'加载'+'完成'+'\\uFF0C无'+'法播'+'放特'+'效',GxRvF:_0x4b7e41['Kz'+'kr'+'M'],ocKhJ:function(_0x5a7238,_0x50155c){return _0x4b7e41['zw'+'OD'+'g'](_0x5a7238,_0x50155c);},mWqiD:_0x4b7e41['VE'+'yv'+'I'],ySOiL:function(_0x585daf,_0x22f9c5){return _0x4b7e41['Ge'+'fz'+'W'](_0x585daf,_0x22f9c5);},sjMCO:function(_0x40d421,"
+      },
+      {
+        "offset": 5040271,
+        "context": "'+'a'](_0x245dbe,function(_0x1d756c){_0x3199bc['hi'+'de'+'Ma'+'sk'](),_0x1b0617=!(-265*17+1*-329+4834),_0x1d756c||_0x2b07e7['se'+'tH'+'in'+'t'](_0x233ee7['XT'+'oV'+'J']);}));},function(){_0x35ed8c['tH'+'Cq'+'O']==='ke'+'vG'+'y'?(_0x2b07e7['se'+'tH'+'in'+'t']('网络'+'异常'+'2\\uFF0C'+'请检'+'查网'+'络后'+'重新'+'加载'+'游玩'+'此段'+'剧情'),_0x3199bc['hi'+'de'+'Ma'+'sk'](),_0x1b0617=!(1*7583+-1405*-1+-8988)):this['_m'+'ed'+'ia'+'to'+'r']=_0x5a477f;})):(_0x1b0617=!(-976+-3335+4311),_0x4a6522['De'+'Pa'+'rs'+'eF'+'ra'+'me'+'In'+'fo'](_0xf8712c))):_0x4e31a8['DI'+'uq'+'G']('1',_0x2b9763['Ar'+'gv'][-3*-1741+-8521+3298])&&(_"
+      },
+      {
+        "offset": 5246704,
+        "context": "(SAL_checkSRCPreloaded,_0x4ca965,_0x296d43)?(this['in'+'it'+'Ca'+'ll'+'ba'+'ck'](),this['is'+'Fi'+'ni'+'sh']=_0xf89736['PV'+'KK'+'I'](-726+5983*1+-5255,_0x1e1ae7['Ar'+'gv'][-1154*4+4441+188])):(_0x520c7e=_0xf89736['sA'+'EW'+'G'](SAL_setTimeout,function(){(_0x1cb1c2=new _0x22b225())['in'+'it']('视频'+'加载'+'中\\uFF0C'+'双击'+'屏幕'+'可跳'+'过此'+'视频'),_0x1cb1c2['do'+'ub'+'le'+'Cl'+'ic'+'k'](function(){_0x1cb1c2['di'+'sp'+'os'+'e'](),_0x1c6c58['is'+'Fi'+'ni'+'sh']=!(596+-344+28*-9);});},-1*4291+-4702*1+11993),_0x29e630=function(){var _0x9237fa={HNBTB:function(_0x1a328d,_0x2bd7fd){return _0x1a328d==_0x2bd7fd;},"
+      },
+      {
+        "offset": 5678809,
+        "context": "8>_0x3b6e21;},xRKcd:'4|'+'7|'+'5|'+'1|'+'2|'+'3|'+'6|'+'0',THJSq:function(_0x4705a8,_0x46ba93){return _0x4705a8===_0x46ba93;},RzDfL:'Aj'+'vw'+'w',srEsW:function(_0x2be033,_0x1fa972){return _0x2be033!==_0x1fa972;},MSYud:function(_0x3ba0e0,_0x4b8584){return _0x3ba0e0>_0x4b8584;},HeSfZ:'特效'+'资源'+'尚未'+'加载'+'完成'+'\\uFF0C无'+'法播'+'放特'+'效',eJqKZ:'nB'+'GR'+'H',HzcqX:function(_0x2236f3,_0x2d98cc){return _0x2236f3===_0x2d98cc;},lJhhS:'wj'+'uH'+'B',TAKmg:function(_0x2903f5,_0xb00d3f){return _0x2903f5<_0xb00d3f;},qIYPf:function(_0x3faa8e,_0x185e88){return _0x3faa8e===_0x185e88;},EtPmg:'bw'+'HE'+'P',Ukrbr:func"
+      },
+      {
+        "offset": 5802994,
+        "context": ",_0x37dbc9){return _0x20d592+_0x37dbc9;},uSugV:function(_0xecc78b,_0xfa68b1){return _0xecc78b-_0xfa68b1;},FqCEz:function(_0x15b06e,_0x4bb0c4){return _0x15b06e-_0x4bb0c4;},KpyCK:function(_0x449517,_0x410498){return _0x449517===_0x410498;},yFSTh:'BV'+'aV'+'N',jdYcA:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e ',jKArX:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e '+'ca'+'ll'+'ba'+'ck',oOlJg:'kF'+'ua'+'g',Srtkx:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] ',KHZPx:function(_0x28ee81,_0x332696,_0x17f6a3,_0x7d4703){return _0x28ee81(_0x332696,_0x17f6a3,_0x7d4703);},ormNA:'fV'+'eu'+'b',BmWCI:'5|'+'2|'"
+      },
+      {
+        "offset": 5803055,
+        "context": "c78b,_0xfa68b1){return _0xecc78b-_0xfa68b1;},FqCEz:function(_0x15b06e,_0x4bb0c4){return _0x15b06e-_0x4bb0c4;},KpyCK:function(_0x449517,_0x410498){return _0x449517===_0x410498;},yFSTh:'BV'+'aV'+'N',jdYcA:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e ',jKArX:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e '+'ca'+'ll'+'ba'+'ck',oOlJg:'kF'+'ua'+'g',Srtkx:'[l'+'og'+'ic'+' s'+'pi'+'ne'+'] ',KHZPx:function(_0x28ee81,_0x332696,_0x17f6a3,_0x7d4703){return _0x28ee81(_0x332696,_0x17f6a3,_0x7d4703);},ormNA:'fV'+'eu'+'b',BmWCI:'5|'+'2|'+'7|'+'1|'+'3|'+'9|'+'6|'+'4|'+'0|'+'8',iVnEE:function(_0x4c0"
+      },
+      {
+        "offset": 5831123,
+        "context": "_0x140c40;},SJxum:'HP'+'sz'+'X',beAZW:'RB'+'XJ'+'c',UtetI:'SJ'+'vG'+'k',CStFa:'oN'+'Gp'+'L',wOpyF:function(_0x24740b,_0x539c22){return _0x24740b+_0x539c22;},mzOBh:function(_0x21215c,_0xf3a42a){return _0x21215c(_0xf3a42a);},qjvEa:function(_0xd6cc56,_0x595ab8){return _0xd6cc56-_0x595ab8;},IlcjX:'脚本'+'加载'+'完成',BeLvj:function(_0x28b2ce,_0xab2b1c){return _0x28b2ce===_0xab2b1c;},fDGWM:'CV'+'gE'+'A',WvHAn:'DY'+'oA'+'u',LUXVv:'/m'+'on'+'th'+'ly'+'/t'+'_1'+'07'+'/Z'+'hB'+'w1'+'pV'+'D4'+'19'+'3.'+'sh'+'tm'+'l',WNEeL:function(_0x1c811f,_0xc54aa6){return _0x1c811f==_0xc54aa6;},yJwiW:'查看'+'获取'+'详情',UhWTz:'#F"
+      },
+      {
+        "offset": 5916856,
+        "context": "e'+'co'+'nd'+'ar'+'y '+'ve'+'ri'+'fi'+'ca'+'ti'+'on'+' f'+'ai'+'ld'+'.',FvaVD:'ay'+'fx'+'a',pdmpl:'kg'+'JZ'+'T',UiPZW:'pa'+'ck'+'_n'+'am'+'e',HFdOs:'[检'+'测u'+'rl'+'地址'+'是否'+'合法'+']',Undrj:'[展'+'示系'+'统s'+'ce'+'ne'+'回调'+']',yoCBz:function(_0x3d0200,_0x6be72e){return _0x3d0200<=_0x6be72e;},OWNFc:'[预'+'加载'+'资源'+']',hPyAq:'20'+'22'+'07'+'29',Whben:'jK'+'WH'+'b',cOpYy:'Pj'+'zr'+'x',VBPgQ:'dJ'+'XE'+'T',OFmwp:'关闭'+'所有'+'UI',twdcR:'音频'+'回调',fjqmZ:'un'+'BR'+'h',zaasb:'YH'+'Ha'+'b',Eqnaq:'设置'+'窗口'+'状态',DQvPA:'设置'+'音效'+'音量',XJCNO:'发送'+'埋点',AJUGj:'成就'+'解锁',uYKhl:function(_0x153401,_0x3854f5){return _0x153401"
+      },
+      {
+        "offset": 6396636,
+        "context": "1['hz'+'TS'+'y'](_0x402ea2,_0x5ed4ef);},NXANc:function(_0x2c5a28,_0x1ca142){return _0x2c5a28!=_0x1ca142;},GxTti:function(_0x5a09fc,_0x1d688b){return _0x4c2231['YO'+'Ao'+'O'](_0x5a09fc,_0x1d688b);},BCVts:function(_0x12bf78,_0x565175){return _0x4c2231['Ma'+'Nk'+'z'](_0x12bf78,_0x565175);},adHQr:'脚本'+'加载'+'完成',nGjqy:'脚本'+'加载'+'失败',fXPHz:function(_0x1d51a0,_0x2e1876,_0x30b759){return _0x4c2231['Tl'+'kK'+'q'](_0x1d51a0,_0x2e1876,_0x30b759);},GbsSh:function(_0x572d07,_0x49bcbe){return _0x4c2231['mC'+'fZ'+'d'](_0x572d07,_0x49bcbe);},vuJjw:'Pq'+'vT'+'B',tflmr:'Gr'+'ap'+'hi'+'cs'+'/B'+'on'+'es',XtKVj:fun"
+      },
+      {
+        "offset": 6396657,
+        "context": "02ea2,_0x5ed4ef);},NXANc:function(_0x2c5a28,_0x1ca142){return _0x2c5a28!=_0x1ca142;},GxTti:function(_0x5a09fc,_0x1d688b){return _0x4c2231['YO'+'Ao'+'O'](_0x5a09fc,_0x1d688b);},BCVts:function(_0x12bf78,_0x565175){return _0x4c2231['Ma'+'Nk'+'z'](_0x12bf78,_0x565175);},adHQr:'脚本'+'加载'+'完成',nGjqy:'脚本'+'加载'+'失败',fXPHz:function(_0x1d51a0,_0x2e1876,_0x30b759){return _0x4c2231['Tl'+'kK'+'q'](_0x1d51a0,_0x2e1876,_0x30b759);},GbsSh:function(_0x572d07,_0x49bcbe){return _0x4c2231['mC'+'fZ'+'d'](_0x572d07,_0x49bcbe);},vuJjw:'Pq'+'vT'+'B',tflmr:'Gr'+'ap'+'hi'+'cs'+'/B'+'on'+'es',XtKVj:function(_0x2a7bfa,_0x5a"
+      },
+      {
+        "offset": 13026454,
+        "context": "(_0x5191ea['eD'+'Qn'+'Z'](this['_t'+'ex'+'tu'+'re'],Array)&&this['_t'+'ex'+'tu'+'re']['le'+'ng'+'th']>-1*1133+3428+-135*17?_0x17af1e['pu'+'sh']['ap'+'pl'+'y'](_0x17af1e,this['_t'+'ex'+'tu'+'re']):_0x17af1e['pu'+'sh'](this['_t'+'ex'+'tu'+'re'])),printLog['lo'+'g']('[l'+'og'+'ic'+' s'+'pi'+'ne'+'] '+'加载'+'sp'+'in'+'e');for(var _0x181f9a=-1755+9617+-7862;_0x181f9a<_0x17af1e['le'+'ng'+'th'];_0x181f9a++)printLog['lo'+'g'](_0x5191ea['mu'+'sC'+'Y'](_0x5191ea['PU'+'jY'+'s'],_0x17af1e[_0x181f9a]));_0x5191ea['RR'+'OJ'+'g'](SAL_preload,_0x15d6dc['ga'+'me']['ca'+'nv'+'as'],_0x17af1e,function(_0x32b201){var "
+      },
+      {
+        "offset": 13870352,
+        "context": "'fl'+'oo'+'r'](_0x2e4212['ar'+'GA'+'S'](_0x3a68a9[_0x2e4212['cM'+'sh'+'o']],-7894*1+-16*118+-1*-10782))%_0xcdc15f;return _0x2e4212['uP'+'Ko'+'D'](_0xcdc15f,_0x58bef2);}function _0x30b17c(_0x211992,_0x1a0554,_0x4c80d2,_0x4f263c,_0x433293){var _0x10eec8={oBMut:'网络'+'异常'+'2\\uFF0C'+'请检'+'查网'+'络后'+'重新'+'加载'+'游玩'+'此段'+'剧情'};_0x26167a['oa'+'LP'+'N'](_0x4c80d2,void(-4658+-1*-8171+-3513))&&(_0x26167a['DI'+'CP'+'b']===_0x26167a['UA'+'tf'+'i']?(_0x370e60['se'+'tH'+'in'+'t'](_0x10eec8['oB'+'Mu'+'t']),_0x3cb4ed['hi'+'de'+'Ma'+'sk'](),_0x30df51=!(-8091+-5080+1*13171)):_0x4c80d2=-5519+3818+1731);_0x26167a['oa'"
+      },
+      {
+        "offset": 14570875,
+        "context": "+'St'+'r']=function(_0x47af4a){var _0x32c239=this;_0x47af4a['re'+'pl'+'ac'+'e'](_0x41ef09['re'+'g1'],function(_0x453e47,_0x31af6d,_0x50d740,_0x289d4e){var _0x118e7a={MvMbb:_0x3de118['fo'+'uB'+'E'],rzAXB:function(_0x3cc1f6,_0xe8b74f){return _0x3de118['GO'+'zy'+'X'](_0x3cc1f6,_0xe8b74f);},GQMdu:'脚本'+'加载'+'失败',DhWxL:function(_0x16ec8b,_0xa6e422,_0x3c1330){return _0x3de118['ap'+'ot'+'B'](_0x16ec8b,_0xa6e422,_0x3c1330);},nnbzD:_0x3de118['Sq'+'qJ'+'N'],DkGMR:function(_0x4e0b0c,_0x2eb2bc){return _0x3de118['zo'+'jr'+'b'](_0x4e0b0c,_0x2eb2bc);}};if(_0x3de118['jo'+'hg'+'e']===_0x3de118['jo'+'hg'+'e']){var"
+      }
+    ],
+    "完成": [
+      {
+        "offset": 650583,
+        "context": "fffc-_0x5aad18;},aiffc:function(_0x362ae2,_0x2d171b){return _0x362ae2(_0x2d171b);},OriQr:'cN'+'cz'+'G',RHwPx:function(_0x572827,_0x5c700f){return _0x572827+_0x5c700f;},jFIGd:function(_0x34947d,_0x5cfb66){return _0x34947d+_0x5cfb66;},MogDE:'绑定'+'手机'+'号',eDUMg:'* '+'您的'+'账号'+'未绑'+'定邮'+'箱\\uFF0C'+'请先'+'完成'+'绑定'+'以继'+'续验'+'证',qrkWD:'* '+'您的'+'账号'+'未绑'+'定手'+'机\\uFF0C'+'请先'+'完成'+'绑定'+'以继'+'续验'+'证',uqPph:function(_0x28eb13,_0x3bd5fa){return _0x28eb13-_0x3bd5fa;},LPHLp:function(_0x15e6f4,_0x26b06a){return _0x15e6f4 instanceof _0x26b06a;},dTgCk:'vg'+'wu'+'u',xsxCM:'hf'+'vN'+'T',IITtJ:'fP'+'Az'+'f',qudmm:fu"
+      },
+      {
+        "offset": 650653,
+        "context": "_0x2d171b);},OriQr:'cN'+'cz'+'G',RHwPx:function(_0x572827,_0x5c700f){return _0x572827+_0x5c700f;},jFIGd:function(_0x34947d,_0x5cfb66){return _0x34947d+_0x5cfb66;},MogDE:'绑定'+'手机'+'号',eDUMg:'* '+'您的'+'账号'+'未绑'+'定邮'+'箱\\uFF0C'+'请先'+'完成'+'绑定'+'以继'+'续验'+'证',qrkWD:'* '+'您的'+'账号'+'未绑'+'定手'+'机\\uFF0C'+'请先'+'完成'+'绑定'+'以继'+'续验'+'证',uqPph:function(_0x28eb13,_0x3bd5fa){return _0x28eb13-_0x3bd5fa;},LPHLp:function(_0x15e6f4,_0x26b06a){return _0x15e6f4 instanceof _0x26b06a;},dTgCk:'vg'+'wu'+'u',xsxCM:'hf'+'vN'+'T',IITtJ:'fP'+'Az'+'f',qudmm:function(_0x5bd3e5,_0x1c045f){return _0x5bd3e5<_0x1c045f;},kvwYT:functio"
+      },
+      {
+        "offset": 1716039,
+        "context": "b7e41['Mg'+'Ah'+'S'],_0x4b7e41['zf'+'Td'+'x'],'阅读'+'作品'+'时\\uFF0C'+'可以'+'为喜'+'爱的'+'剧情'+'点赞',_0x4b7e41['oW'+'uX'+'S'],'双击'+'AP'+'P底'+'部\\u2018'+'名场'+'面\\u2019'+'菜单'+'栏\\uFF0C'+'即可'+'切换'+'为\\u2018'+'Th'+'e '+'Be'+'st'+'\\u2019','购买'+'挂件'+'可以'+'选择'+'送入'+'作品'+'商城'+'或送'+'入卡'+'集',_0x4b7e41['po'+'Vg'+'e'],'每月'+'完成'+'了充'+'值任'+'务\\uFF0C'+'别忘'+'了免'+'费领'+'取福'+'利作'+'品哦',_0x4b7e41['zK'+'zf'+'G'],'举报'+'违规'+'评论'+'\\uFF0C可'+'以加'+'礼貌'+'值哦'+'~'],_0x2f76a3='个',_0xa2e024=_0x4b7e41['TW'+'iC'+'M']):_0x4b7e41['Mj'+'mi'+'L'](-2727*3+8676+1*-493,_0xdbe8b5)&&(_0x1f1bef=_0x39a1c3=_0x3c9b94=_0x4b7e41['uY'+'DC'+'t'](_0x1ae228,_0x4b"
+      },
+      {
+        "offset": 2647782,
+        "context": "bc83===_0x423ea0;},qjyuJ:_0x4b7e41['ap'+'VF'+'L'],hVYAq:_0x4b7e41['xs'+'SH'+'S'],yfUbp:function(_0x150fc7,_0x194d9b,_0x5db052){return _0x4b7e41['CB'+'aE'+'Q'](_0x150fc7,_0x194d9b,_0x5db052);}};_0x4b7e41['Sv'+'Hc'+'H'](_0x4b7e41['av'+'eV'+'c'],'Bo'+'qi'+'j')?_0x2f421f?(_0x299072['lo'+'g']('脚本'+'加载'+'完成'),_0x421703['Yf'+'bB'+'P'](_0x3f98c3,null)):(_0x502125['lo'+'g']('脚本'+'加载'+'失败'),_0x421703['or'+'fP'+'e'](_0xc5d76e,null)):_0x463e5c['se'+'nd'+'Ge'+'tA'+'ja'+'xJ'+'SO'+'N'](_0x2760db,function(_0x3c318d){if(_0x29f210['Tk'+'kk'+'k'](_0x29f210['qj'+'yu'+'J'],_0x29f210['hV'+'YA'+'q'])){null==_0x2f97b4&"
+      },
+      {
+        "offset": 4054862,
+        "context": "(_0x5c0d1c,_0x50de6b){return _0x4b7e41['Oj'+'qQ'+'y'](_0x5c0d1c,_0x50de6b);},jPgPV:function(_0x1caf95,_0xdae3c7,_0x30c35f,_0x3d52f5){return _0x4b7e41['Rt'+'fA'+'W'](_0x1caf95,_0xdae3c7,_0x30c35f,_0x3d52f5);},vQcDM:function(_0x5ee448,_0xdb0488){return _0x5ee448>_0xdb0488;},BXXJj:'特效'+'资源'+'尚未'+'加载'+'完成'+'\\uFF0C无'+'法播'+'放特'+'效',GxRvF:_0x4b7e41['Kz'+'kr'+'M'],ocKhJ:function(_0x5a7238,_0x50155c){return _0x4b7e41['zw'+'OD'+'g'](_0x5a7238,_0x50155c);},mWqiD:_0x4b7e41['VE'+'yv'+'I'],ySOiL:function(_0x585daf,_0x22f9c5){return _0x4b7e41['Ge'+'fz'+'W'](_0x585daf,_0x22f9c5);},sjMCO:function(_0x40d421,_0x1b"
+      },
+      {
+        "offset": 5678814,
+        "context": "3b6e21;},xRKcd:'4|'+'7|'+'5|'+'1|'+'2|'+'3|'+'6|'+'0',THJSq:function(_0x4705a8,_0x46ba93){return _0x4705a8===_0x46ba93;},RzDfL:'Aj'+'vw'+'w',srEsW:function(_0x2be033,_0x1fa972){return _0x2be033!==_0x1fa972;},MSYud:function(_0x3ba0e0,_0x4b8584){return _0x3ba0e0>_0x4b8584;},HeSfZ:'特效'+'资源'+'尚未'+'加载'+'完成'+'\\uFF0C无'+'法播'+'放特'+'效',eJqKZ:'nB'+'GR'+'H',HzcqX:function(_0x2236f3,_0x2d98cc){return _0x2236f3===_0x2d98cc;},lJhhS:'wj'+'uH'+'B',TAKmg:function(_0x2903f5,_0xb00d3f){return _0x2903f5<_0xb00d3f;},qIYPf:function(_0x3faa8e,_0x185e88){return _0x3faa8e===_0x185e88;},EtPmg:'bw'+'HE'+'P',Ukrbr:function("
+      },
+      {
+        "offset": 5831128,
+        "context": "0c40;},SJxum:'HP'+'sz'+'X',beAZW:'RB'+'XJ'+'c',UtetI:'SJ'+'vG'+'k',CStFa:'oN'+'Gp'+'L',wOpyF:function(_0x24740b,_0x539c22){return _0x24740b+_0x539c22;},mzOBh:function(_0x21215c,_0xf3a42a){return _0x21215c(_0xf3a42a);},qjvEa:function(_0xd6cc56,_0x595ab8){return _0xd6cc56-_0x595ab8;},IlcjX:'脚本'+'加载'+'完成',BeLvj:function(_0x28b2ce,_0xab2b1c){return _0x28b2ce===_0xab2b1c;},fDGWM:'CV'+'gE'+'A',WvHAn:'DY'+'oA'+'u',LUXVv:'/m'+'on'+'th'+'ly'+'/t'+'_1'+'07'+'/Z'+'hB'+'w1'+'pV'+'D4'+'19'+'3.'+'sh'+'tm'+'l',WNEeL:function(_0x1c811f,_0xc54aa6){return _0x1c811f==_0xc54aa6;},yJwiW:'查看'+'获取'+'详情',UhWTz:'#F'+'F7"
+      },
+      {
+        "offset": 6396641,
+        "context": "'+'TS'+'y'](_0x402ea2,_0x5ed4ef);},NXANc:function(_0x2c5a28,_0x1ca142){return _0x2c5a28!=_0x1ca142;},GxTti:function(_0x5a09fc,_0x1d688b){return _0x4c2231['YO'+'Ao'+'O'](_0x5a09fc,_0x1d688b);},BCVts:function(_0x12bf78,_0x565175){return _0x4c2231['Ma'+'Nk'+'z'](_0x12bf78,_0x565175);},adHQr:'脚本'+'加载'+'完成',nGjqy:'脚本'+'加载'+'失败',fXPHz:function(_0x1d51a0,_0x2e1876,_0x30b759){return _0x4c2231['Tl'+'kK'+'q'](_0x1d51a0,_0x2e1876,_0x30b759);},GbsSh:function(_0x572d07,_0x49bcbe){return _0x4c2231['mC'+'fZ'+'d'](_0x572d07,_0x49bcbe);},vuJjw:'Pq'+'vT'+'B',tflmr:'Gr'+'ap'+'hi'+'cs'+'/B'+'on'+'es',XtKVj:function"
+      }
+    ],
+    "alert": [
+      {
+        "offset": 2094308,
+        "context": "e'+'rM'+'ap']))?_0x1c3e69['ca'+'nv'+'as']['in'+'it'+'Fi'+'lt'+'er'+'In'+'fo']():_0x128fd6['ca'+'nv'+'as']['re'+'se'+'tF'+'il'+'te'+'rI'+'nf'+'o'](),_0x1667be['ca'+'nv'+'as']['se'+'tF'+'il'+'te'+'rI'+'nf'+'o'](_0x251aa5,_0xe31049),_0x288e96['ca'+'nv'+'as']['re'+'nd'+'er'+'Fi'+'lt'+'er']());}else SAL_alert(_0x4651fa['VU'+'gJ'+'w'](_0x4651fa['VU'+'gJ'+'w']('资源'+'载入'+'失败'+',尝'+'试重'+'新加'+'载\\uFF0C'+'第',_0x2c4525),'次')),new _0x43e592(_0x3b45ed,_0x22a4a8);},-14*659+3745+7981):(_0x4b7e41['YP'+'Xl'+'K'](SAL_log,_0x4b7e41['VP'+'aM'+'W'](_0x4b7e41['rn'+'At'+'j'],_0x3b45ed)),_0x4b7e41['Dv'+'LW'+'c'](_0x22a4a8,_"
+      },
+      {
+        "offset": 5404095,
+        "context": "L_setTimeout,function(){_0x1cb1c9['jy'+'Fs'+'R'](SAL_log,_0x1cb1c9['ir'+'Dg'+'S'](_0x1cb1c9['YR'+'JH'+'g'],_0x2f2503['er'+'rN'+'um'])+'次'),_0x3ec71b['ge'+'tM'+'ap'+'Bi'+'n'](_0x2f2503['ge'+'tM'+'ap'+'Ca'+'ll'+'ba'+'ck']['bi'+'nd'](_0x2f2503));},1*-4870+1*-3998+-2*-5934):_0x1cb1c9['KQ'+'bi'+'h'](SAL_alert,'获取'+'ma'+'pB'+'in'+'失败'+'!');}else _0x1d16c7['re'+'ad'+'In'+'t3'+'2'](),_0x4fe518=new _0x2d7023(_0x20c374),_0x3d8072['st'+'or'+'ie'+'s'][_0x51dbb8]=_0x4ece71,_0x169a9e['st'+'or'+'ie'+'s'][_0x11bc0e]['si'+'ze']=_0x37ebbd,_0x12679f['ge'+'tO'+'AF'+'2D'+'at'+'a'](_0xf2f365);else{var _0x36233f=_0x37989"
+      },
+      {
+        "offset": 11066818,
+        "context": "eturn _0x1a6bf7['ga'+'me']['i1'+'8n'+'Da'+'ta']['ge'+'tL'+'an'+'g'](_0x1e25e5)['ma'+'te']||'';},refreshLanguageResource:function _0x5f1d1c(){_0x31db15['de'+'fa'+'ul'+'t']['in'+'st'+'an'+'ce']['re'+'se'+'t'](),_0x1a6bf7['ga'+'me']['i1'+'8n'+'Da'+'ta']['re'+'fr'+'es'+'hR'+'es'+'ou'+'rc'+'e']();},show_alert:function _0x29f541(_0x254ba3){_0x4b1ed2['Fk'+'aT'+'x'](_0x4b1ed2['NM'+'Lu'+'G'],_0x4b1ed2['NM'+'Lu'+'G'])?_0x31db15['de'+'fa'+'ul'+'t']['in'+'st'+'an'+'ce']['sh'+'ow'+'Al'+'er'+'t'](_0x254ba3):this['ow'+'ne'+'r']['cl'+'ea'+'rM'+'as'+'k'](!(9120+-1754+58*-127));},ImgView:_0x1e494d['de'+'fa'+'ul'+'t'"
+      },
+      {
+        "offset": 14453825,
+        "context": "0x57aa28;},_0x1b0c17['ap'+'pl'+'y'](this,arguments);}},_0x5eb504['SA'+'L_'+'lo'+'g']=function(_0x9d91a2){return _0x3d3467['we'+'NW'+'A'](_0x3d3467['hS'+'SU'+'U'],_0x3d3467['hS'+'SU'+'U'])?SAL_log(_0x9d91a2):this['_t'+'yp'+'eI'+'d'];},_0x5eb504['SA'+'L_'+'al'+'er'+'t']=function(_0x51ee92){return SAL_alert(_0x51ee92);},_0x5eb504['SA'+'L_'+'se'+'tV'+'is'+'ib'+'le'+'Ch'+'an'+'ge'+'Li'+'st'+'en'+'er']=function(_0x98292d){return SAL_setVisibleChangeListener(_0x98292d);},_0x5eb504['SA'+'L_'+'pr'+'el'+'oa'+'d']=function(_0x466f0e,_0x53783c,_0x17520f,_0xaf4175){if(_0x43e2a8['zf'+'rX'+'z'](void(3984+-8126*-1"
+      },
+      {
+        "offset": 14481017,
+        "context": "ter:_0x295a24['SA'+'L_'+'re'+'mo'+'ve'+'To'+'uc'+'hE'+'nt'+'er'],SAL_uploadImage:_0x295a24['SA'+'L_'+'up'+'lo'+'ad'+'Im'+'ag'+'e'],SALVideo:_0x295a24['SA'+'LV'+'id'+'eo'],SAL_playVideo:_0x295a24['SA'+'L_'+'pl'+'ay'+'Vi'+'de'+'o'],SAL_videoFinish:_0x295a24['SA'+'L_'+'vi'+'de'+'oF'+'in'+'is'+'h'],SAL_alert:_0x295a24['SA'+'L_'+'al'+'er'+'t'],SAL_manualGC:_0x295a24['SA'+'L_'+'ma'+'nu'+'al'+'GC'],SAL_share:_0x295a24['SA'+'L_'+'sh'+'ar'+'e'],SAL_openShareMenu:_0x295a24['SA'+'L_'+'op'+'en'+'Sh'+'ar'+'eM'+'en'+'u'],SAL_showADVideo:_0x295a24['SA'+'L_'+'sh'+'ow'+'AD'+'Vi'+'de'+'o'],SAL_sendMessage:_0x295a24["
+      }
+    ],
+    "SAL_alert": [
+      {
+        "offset": 2094304,
+        "context": "'+'ye'+'rM'+'ap']))?_0x1c3e69['ca'+'nv'+'as']['in'+'it'+'Fi'+'lt'+'er'+'In'+'fo']():_0x128fd6['ca'+'nv'+'as']['re'+'se'+'tF'+'il'+'te'+'rI'+'nf'+'o'](),_0x1667be['ca'+'nv'+'as']['se'+'tF'+'il'+'te'+'rI'+'nf'+'o'](_0x251aa5,_0xe31049),_0x288e96['ca'+'nv'+'as']['re'+'nd'+'er'+'Fi'+'lt'+'er']());}else SAL_alert(_0x4651fa['VU'+'gJ'+'w'](_0x4651fa['VU'+'gJ'+'w']('资源'+'载入'+'失败'+',尝'+'试重'+'新加'+'载\\uFF0C'+'第',_0x2c4525),'次')),new _0x43e592(_0x3b45ed,_0x22a4a8);},-14*659+3745+7981):(_0x4b7e41['YP'+'Xl'+'K'](SAL_log,_0x4b7e41['VP'+'aM'+'W'](_0x4b7e41['rn'+'At'+'j'],_0x3b45ed)),_0x4b7e41['Dv'+'LW'+'c'](_0x22a4a8,_"
+      },
+      {
+        "offset": 5404091,
+        "context": "](SAL_setTimeout,function(){_0x1cb1c9['jy'+'Fs'+'R'](SAL_log,_0x1cb1c9['ir'+'Dg'+'S'](_0x1cb1c9['YR'+'JH'+'g'],_0x2f2503['er'+'rN'+'um'])+'次'),_0x3ec71b['ge'+'tM'+'ap'+'Bi'+'n'](_0x2f2503['ge'+'tM'+'ap'+'Ca'+'ll'+'ba'+'ck']['bi'+'nd'](_0x2f2503));},1*-4870+1*-3998+-2*-5934):_0x1cb1c9['KQ'+'bi'+'h'](SAL_alert,'获取'+'ma'+'pB'+'in'+'失败'+'!');}else _0x1d16c7['re'+'ad'+'In'+'t3'+'2'](),_0x4fe518=new _0x2d7023(_0x20c374),_0x3d8072['st'+'or'+'ie'+'s'][_0x51dbb8]=_0x4ece71,_0x169a9e['st'+'or'+'ie'+'s'][_0x11bc0e]['si'+'ze']=_0x37ebbd,_0x12679f['ge'+'tO'+'AF'+'2D'+'at'+'a'](_0xf2f365);else{var _0x36233f=_0x37989"
+      },
+      {
+        "offset": 14453821,
+        "context": "rn _0x57aa28;},_0x1b0c17['ap'+'pl'+'y'](this,arguments);}},_0x5eb504['SA'+'L_'+'lo'+'g']=function(_0x9d91a2){return _0x3d3467['we'+'NW'+'A'](_0x3d3467['hS'+'SU'+'U'],_0x3d3467['hS'+'SU'+'U'])?SAL_log(_0x9d91a2):this['_t'+'yp'+'eI'+'d'];},_0x5eb504['SA'+'L_'+'al'+'er'+'t']=function(_0x51ee92){return SAL_alert(_0x51ee92);},_0x5eb504['SA'+'L_'+'se'+'tV'+'is'+'ib'+'le'+'Ch'+'an'+'ge'+'Li'+'st'+'en'+'er']=function(_0x98292d){return SAL_setVisibleChangeListener(_0x98292d);},_0x5eb504['SA'+'L_'+'pr'+'el'+'oa'+'d']=function(_0x466f0e,_0x53783c,_0x17520f,_0xaf4175){if(_0x43e2a8['zf'+'rX'+'z'](void(3984+-8126*-1"
+      },
+      {
+        "offset": 14481013,
+        "context": "chEnter:_0x295a24['SA'+'L_'+'re'+'mo'+'ve'+'To'+'uc'+'hE'+'nt'+'er'],SAL_uploadImage:_0x295a24['SA'+'L_'+'up'+'lo'+'ad'+'Im'+'ag'+'e'],SALVideo:_0x295a24['SA'+'LV'+'id'+'eo'],SAL_playVideo:_0x295a24['SA'+'L_'+'pl'+'ay'+'Vi'+'de'+'o'],SAL_videoFinish:_0x295a24['SA'+'L_'+'vi'+'de'+'oF'+'in'+'is'+'h'],SAL_alert:_0x295a24['SA'+'L_'+'al'+'er'+'t'],SAL_manualGC:_0x295a24['SA'+'L_'+'ma'+'nu'+'al'+'GC'],SAL_share:_0x295a24['SA'+'L_'+'sh'+'ar'+'e'],SAL_openShareMenu:_0x295a24['SA'+'L_'+'op'+'en'+'Sh'+'ar'+'eM'+'en'+'u'],SAL_showADVideo:_0x295a24['SA'+'L_'+'sh'+'ow'+'AD'+'Vi'+'de'+'o'],SAL_sendMessage:_0x295a24["
+      }
+    ],
+    "脚本加载完成~": []
+  },
+  "alertAdjacentChinese": []
+}
