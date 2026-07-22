@@ -1,3 +1,0 @@
-plugins {
-    id("com.android.application") version "8.9.3" apply false
-}
