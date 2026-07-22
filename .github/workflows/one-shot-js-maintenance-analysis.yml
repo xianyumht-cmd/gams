@@ -29,13 +29,23 @@ jobs:
             --repo-root . \
             --output-dir docs/js-maintenance/generated \
             | tee /tmp/js-maintenance-summary.json
-          python3 -m py_compile tools/js_maintenance/analyze_runtime_fast.py
+          python3 tools/js_maintenance/refine_obfuscated_anchors.py \
+            --repo-root . \
+            --output-dir docs/js-maintenance/generated \
+            | tee /tmp/js-maintenance-refinement.json
+          python3 -m py_compile \
+            tools/js_maintenance/analyze_runtime_fast.py \
+            tools/js_maintenance/refine_obfuscated_anchors.py
           test -s docs/js-maintenance/generated/baseline.json
           test -s docs/js-maintenance/generated/README.md
           test -s docs/js-maintenance/generated/noname-map.md
           test -s docs/js-maintenance/generated/game-map.md
           test -s docs/js-maintenance/generated/network-and-data.md
           test -s docs/js-maintenance/generated/update-runbook.md
+          test -s docs/js-maintenance/generated/reconstructed-anchors.json
+          test -s docs/js-maintenance/generated/sal-catalog.md
+          test -s docs/js-maintenance/generated/architecture-notes.md
+          test -s docs/js-maintenance/generated/analysis-coverage.md
 
       - name: Commit generated reports
         shell: bash
@@ -48,7 +58,7 @@ jobs:
             echo 'No generated changes.'
             exit 0
           fi
-          git commit -m 'Generate JavaScript maintenance knowledge base'
+          git commit -m 'Refine JavaScript maintenance knowledge base'
           git push origin HEAD:analysis/js-maintenance-knowledgebase
 
       - name: Upload analysis summary
@@ -56,6 +66,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: js-maintenance-analysis-summary
-          path: /tmp/js-maintenance-summary.json
+          path: |
+            /tmp/js-maintenance-summary.json
+            /tmp/js-maintenance-refinement.json
           retention-days: 7
           if-no-files-found: warn
