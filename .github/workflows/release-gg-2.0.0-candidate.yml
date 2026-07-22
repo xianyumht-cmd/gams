@@ -7,6 +7,12 @@ on:
     paths:
       - v2/android/client/**
       - .github/workflows/release-gg-2.0.0-candidate.yml
+  pull_request:
+    branches:
+      - v2-server-authoritative
+    paths:
+      - v2/android/client/**
+      - .github/workflows/release-gg-2.0.0-candidate.yml
   workflow_dispatch:
 
 permissions:
