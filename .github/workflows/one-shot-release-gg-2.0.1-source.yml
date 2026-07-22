@@ -120,4 +120,5 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
           git commit -m "Release GG 2.0.1 with JS 1.1.2 and engine 1.0.4"
+          git pull --rebase origin main
           git push origin HEAD:main
