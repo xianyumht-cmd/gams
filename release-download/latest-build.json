@@ -1,1 +1,17 @@
-{"ok":true,"run_id":29927227091,"artifact_name":"GG-2.0.0-download","file":"GG-2.0.0-未签名.apk","sha256":"c54f27adc55781a96b7249dd6c8b77e6e445018612fcd9ed5e8a1986e3b8030b","signed":false,"certificate_sha256":""}
+{
+  "ok": true,
+  "source_run_id": 29943374722,
+  "source_artifact_name": "GG-2.0.1-formal-client-release-input",
+  "file": "GG-2.0.1.apk",
+  "versionName": "2.0.1",
+  "versionCode": 10,
+  "nonameVersion": "1.1.2",
+  "engineVersion": "1.0.4",
+  "runtimeVersion": "2.0.1-r1",
+  "sha256": "e21a8a34b75ba7d9af0283bbe3fb6e2a557011dbd933213b716803b61dd3589e",
+  "size": 88205,
+  "signed": true,
+  "certificate_sha256": "F220C5D47513C744CB9B5F17C0F8F39B0C109F8F7DC892989713EEF33FDBE0C4",
+  "repository_binary": false,
+  "library_path": "/gams/releases/GG-2.0.1.apk"
+}
