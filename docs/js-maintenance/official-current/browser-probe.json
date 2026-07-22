@@ -50,8 +50,8 @@
       "performanceResources": []
     }
   ],
-  "requestCount": 129,
-  "responseCount": 127,
+  "requestCount": 130,
+  "responseCount": 128,
   "requests": [
     {
       "pageUrl": "about:blank",
@@ -183,7 +183,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "script",
-      "url": "https://www.66rpg.com/ajax/user/getMobileUserInfo.json?&stamp;Wed%20Jul%2022%202026%2005:42:02%20GMT+0000%20(%E5%8D%8F%E8%B0%83%E4%B8%96%E7%95%8C%E6%97%B6)&jsonCallBack=jQuery19106174161954489641_1784698920876&_=1784698920877"
+      "url": "https://www.66rpg.com/ajax/user/getMobileUserInfo.json?&stamp;Wed%20Jul%2022%202026%2005:48:29%20GMT+0000%20(%E5%8D%8F%E8%B0%83%E4%B8%96%E7%95%8C%E6%97%B6)&jsonCallBack=jQuery19102456952426962271_1784699307606&_=1784699307607"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -195,13 +195,25 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "document",
+      "url": "https://passport.66rpg.com/user/crosscheck.shtml?fromurl=https%3A%2F%2Fm.66rpg.com%2Fsso%2Fminicheck&auth_callback=%2F%2Fwww.66rpg.com%2Fsso%2Fauth_callback&app=www&sign=15805b2cb0cbc96ecf1d760865d175e0&login_type=0"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "method": "GET",
+      "resourceType": "document",
+      "url": "https://m.66rpg.com/sso/minicheck?ssostatus=failed"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "method": "GET",
+      "resourceType": "document",
       "url": "https://m.66rpg.com/sso/minicheck"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/game_flower_by_me?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=jWSjZeFscEiBELD4GlXXz2Uhyz9o7AZxFop9WddXDBOqKOq9lMQORTZwEIymWOc-aY9DfzLIWCHgvlRIar-u3T9bJCZvX0z7AVe44EaW7vMs8vL-ijnYuSTbhSFm9m_p7MCht4WOHb22P3UkXsmW_37g2maekz3fAp57xeFM0_Swo0cjY7WjK0Ynh-aTiRfxFRzYCY0wOFupiUPQKEvI3sjdAKhTYpk24-zWiR6viIIjAFbaZ5ewLSIZ6nZdpXxwRBAw8GxYUeLFUxGqOn4jysqcCOGPWtVcZ8VmE1HBFxdFD9rDj0ttx5nOP_GiqQRuMGrHGPkGfCXmzAe__KufMg!!&evx=3&sign=0a9dc56ed51fa2e743f8901947db794a"
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/game_flower_by_me?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=B8yFYELdzfcX51NdBNr8cm8jKLZ5il3anVyJEwI3d8lnaDaOgdsgZN8Cu6TIOjMOveUKIfNGnyGAYaZPPp0rkC1TWWyXwuc2XojJgoq8-A6q9DVyQLagNoJGgCXZZTCcsyFZcV6DlTxgMosbFz-JTdNoT7uI2n43vizHjW1vXAis0iFoPhFHuYW5B7viNv6bId90qP1y4_ZZmrBtvU3nRPBHw9Uf4YEtNrAYFcrZHBS9xlQ7DElhLOXNskb3NNpHCNIZP-g94kQYk8x8bgAnna0ySQ_RbjSURbmbB-GvVknci8u8HPROu-NlboJv5nnwPVzWGVQ2oExaGBxSq0Xd8Q!!&evx=3&sign=8b5d971e43753a965ba56f6a3322c2a1"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -213,7 +225,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getMyAccountMoney?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=X-Ro1zAH3eB2V2JuFDK8U4CCZJnE2eyXFeFqXi7jqmKiGjYjQ13OMESd10in5XRqPgEG1gSM7e0jlRJoUl-UMrrA25iSYbt2w3KNNsQDyOkO2C0iY5Z7wSygHnoTR0GNJ4h8BdXRvSj_ZugwNMnA26c8vgAGVQ3N6ffUHgKOWLUIXVjrVAtRUjmxOEQ1Y60XPAtZlDqfypkQnPxl4wmQWWFzxew3cKBv3JywvpOyer6rtsp_gclfecb6GR_KpchkvSVX3iPK3fQ3jyms-8ZDKGYp1Zy0dUIOeG0HoV9pWQCobG_38NsOGfT84C9dBpyVJQsRVsX--UXaSSnAQuEuWw!!&evx=3&sign=fe178d3c5ae14c88224cd4fe82694827"
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getMyAccountMoney?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=QsIGIkxS4Dkak_BSpzo2lEFzHnxfj_NmU9G5i35_m4eH209pb4scnQemkAx_1QOaKyxiDZlLuHxn0wMR2E5DXU4lyODkQahvbfppVJRj_QmL8M0kujZZuOBOwMu2k6foQge3UE1Wg8niJni0k6F-sss2lIcWnEEJSSpV1DFzsy9WEZrzfUhhAvw57tlhz9W1Eq57Xb5oVrdxP4spYZpeHph0Cd7xFc0nXs1h7Ubwamarx6YTCjeqkxJqCROv1GEG6y6k4jqnSLajhIohEJzWnk6lWS36nu0MHtQ77luMBYPfeU1YOmdbc2t7djrSuBe_Qw9M8USEGihd6YDWih7Qrg!!&evx=3&sign=31b530116a22fa83fb287a711a17faa3"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -237,19 +249,19 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://c.66rpg.com/collect/v2/index/addiction_prevention_time?gindex=1690283&uid=0&token=&client_type=4&device_id=h5-web&r-key=amM5oI-OtrttLfr_rLAWsTUd2Z3nOd0Dst00ObwOoYY_X_xX25F8YX9wSwmKKlXDjoPECkJR9_MVvfZvKP1vms4QBSHcwhwdt9LbBeCLwlqBzz7-MY_W2Zt8GUkBON5EHuE7NrymAc5hEs9H67Ko9E6CaYTH_xWIvrvNq0GsbB94dNc-2I0J3Bz8j0CqazdKnwX4e7JIaMdPbx3s0_XkAHE1zcEyK8GTpcNSZMhYuI5BOnrNe0TR21UpeZJxopu95EzP8rbIYG_90t5kjuDnsEFUjyjygDu4_TapXMlhQpVQYVU-63-NB-JBHwWVlKKclPSDOsp4WssZBOKtF-hJng!!&evx=3&sign=4dcdbdf5bc5b12a910fe33a4bfcf7645"
+      "url": "https://c.66rpg.com/collect/v2/index/addiction_prevention_time?gindex=1690283&uid=0&token=&client_type=4&device_id=h5-web&r-key=Ej0oauCJrxPdCZXI4PLQF17HKGAkYTH6VWFhimIvp4D45wQ9zkKyfhqnnATIK2QtboHwrC72VIc8NUkkWncuUCYwtsOARVKrfv6OYlknVVdvGtGifK6QlgmCoSNGs-tacK8zGiICVaJpaQso9rCoxfPbJKqxLC9afXKiOzqEDEmF3T4GxJjV6INA87wW_vdfwc3B0uN9p-BFKWh5BJXpQYgTuXixQ7vQBJHbUoVHoWNOWAQpKgS8ibW5hOUQBSHYQd9tN0NsVPVvmG12tF7spdoyCZxonLZZmOuLXyVBPW8__Z-lEX61DSkrfhjkrvuWUe36uj3EpHUgtp8_TCsCjQ!!&evx=3&sign=d5cbac4cb147fd75960360302d5faef8"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/get_global_cfg?uid=0&gindex=1690283&token=&client_type=4&r-key=d7uwLUtoPsfyohRtZGBsaZmeIc70eFXzKjbPhv4UPToeJHUJG7cQ1ACRpaSzifMZRYg7it930HsPlHjC1UpFAG35Gezp_Aunrx8cgBYaX4HiM-GIvNVjAKkXjJHBej4PiJAQXxDhegVSiT8nhUUwR9cjFvRL2buqqNMb5N1io2njuyFMVsKaJsTlFdjHHrod4D4dv6H1Nmoh6r0Z3B_uyiCVan8bgbMFmHw3FulBQ3i5ZVwZ3TKz_ayDvnkxjsXu6DgizemnsAKQLCzf_BFQJFsFiq9n6yYRjJx5ui-SN_mAI2jGJQJY2TCG50wv5LpEFxiBVXbWHT31IOGKJLaXcQ!!&evx=3&sign=66c18d8abc9b6258c14a81d3948afc6a"
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/get_global_cfg?uid=0&gindex=1690283&token=&client_type=4&r-key=JtfY39lz-KniU662L-uGBadmML6-vVDTFq0TpdkG4YU6GGs0DlA9Ktccv9Nsq4-3gNLHQG48rE2V2kVLdS0wrkm_SOW5OObzRKC2fBpxMBejJTemYpVStiSXTXBk2FjqrrIselgcaenGiCOT0RQthjAq0W65R_QzpNecLNEpDv47np57q24hxO34k8kkd4QBoGrD9gtyVnb-RKtrCnwJqvOM3ddsD589NCPJcVi9Cf_dPhq8jhSFvNcQnvrtLyKEzKIEVwaNbVmvITTgRZlSyRvVienyCaOX1KXuBG8JtB3jw7yJOJ_THJrlQdHcBjy3yvcVzBKL6bqmfOedEpy4GA!!&evx=3&sign=391251398d865ce4f4428aab807ac0ce"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "script",
-      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_limit_free_status.json?jsonCallBack=jQuery19106174161954489641_1784698920876&gindex=1690283&token=&_=1784698920878"
+      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_limit_free_status.json?jsonCallBack=jQuery19102456952426962271_1784699307606&gindex=1690283&token=&_=1784699307608"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -283,12 +295,6 @@
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "method": "POST",
-      "resourceType": "xhr",
-      "url": "https://www.66rpg.com/ajax/report/report_user_data"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "document",
       "url": "https://passport.66rpg.com/user/crosscheck.shtml?fromurl=https%3A%2F%2Fm.66rpg.com%2Fsso%2Fminicheck&auth_callback=%2F%2Fwww.66rpg.com%2Fsso%2Fauth_callback&app=www&sign=15805b2cb0cbc96ecf1d760865d175e0&login_type=0"
@@ -302,8 +308,8 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
-      "resourceType": "fetch",
-      "url": "https://pic.cgyouxi.com/orange/upload/202607/119034690_c14070df72914dbd7ce7bb519dc8db43.jpg"
+      "resourceType": "xhr",
+      "url": "https://www.66rpg.com/api/tool?action=get_server_time&uid=0&token="
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -314,14 +320,14 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
-      "resourceType": "xhr",
-      "url": "https://www.66rpg.com/api/tool?action=get_server_time&uid=0&token="
+      "resourceType": "fetch",
+      "url": "https://pic.cgyouxi.com/orange/upload/202607/119034690_5e72d31fe319581696e4471bb80b03fb.jpg"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://cgv2.66rpg.com/api/oweb_log.php?status=0&op=5001&token=&gindex=1690283&guid=15a433e8018a70ec29253660b3072568&name=&channel_id=0&channel=&group_id=0&definition=2&engine=2&uid=0&platform=4&nonce=8957c4d5-0fef-45bb-80b9-c87fcc583318&timestamp=1784698924&sign=a7dd1e7c5cdeb9bcf1d4bf30cf01f127"
+      "url": "https://cgv2.66rpg.com/api/oweb_log.php?status=0&op=5001&token=&gindex=1690283&guid=15a433e8018a70ec29253660b3072568&name=&channel_id=0&channel=&group_id=0&definition=2&engine=2&uid=0&platform=4&nonce=85f37339-0006-4eff-be08-c8fae500405c&timestamp=1784699311&sign=6d09f6ba83414ccf4e9b8805198491c4"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -333,13 +339,13 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://cgv2.66rpg.com/api/v3/oapi_map.php?action=create_bin&guid=15a433e8018a70ec29253660b3072568&version=117&quality=32&r-key=R-9n1lC1-OfLfrcIii_kjSy0t2-qo8XGY1fCT-9fzvd1E47qv30yq-YiJsHfgQ-xDsIFlaUEXOBI9noQKw7O0P1xtcxBwBW35foLlX-ZxCcM5lsE5rqZcuNS6pW0aWAP1Fjoa_yd8lbVCY88wIlemy1syi2m67ieKh6I6XvDXwWxyUg586Kegq6oy4TNl1YViFUcWRiu6TGbhtmeY6PEcld1Ng9cb-kIBLuLk76pAVBCP_uzFvxCxNDwmy2GLFf7BwYDXJA75S3ZRGiUZOGDUiaPv1GRAaszAmJl_sHpxSr3twe_1floYk1JZyap-3dz1ahq19hei6TGesq6rBLmng!!&evx=3&sign=999c9026eeb5255608e12915ff0e629a"
+      "url": "https://cgv2.66rpg.com/api/v3/oapi_map.php?action=create_bin&guid=15a433e8018a70ec29253660b3072568&version=117&quality=32&r-key=SEmaF2ZYUUTMrMlxUwTC3-PQ7NW3ctvSlpa4t6-x4cMGGPAFX-0PDkXbH-Qs5skpc-lefcA13lub1MjOS9NMR6SDu8s2bkr9e9R-iLO0DOkTX9MKBUKdhMtTdMNbpkxk-aiyBS-1rRkF4HXQ7SAV52lGz2PfHwXKHemPaYz0sQowmiy3q52PCBIPG0ATH1Vh49Ch9EvqwM6GZDVtHS1ORxF5-6V8tHHlCd_2VKgQ00woLzdqR7Np4hWm_m2WNkr6gVcDg7lIUbFw1bXjFNfdgLK9YIovlGcl6MERTvovka0XgSBWy0CLQMyyrIVhmQ-1Qn6qmHJ8J1a8UnMYBHZTHQ!!&evx=3&sign=e5ec9943357cd5008ff771082fc61d7f"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://dlcdn1.cgyouxi.com/web/15a433e8018a70ec29253660b3072568/117/Game_mini.bin?v=1784698924671"
+      "url": "https://dlcdn1.cgyouxi.com/web/15a433e8018a70ec29253660b3072568/117/Game_mini.bin?v=1784699311975"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -422,6 +428,12 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
+      "resourceType": "image",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/f2/f26d7b02d8cc9b892abc2d7b7ebfa0b3"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "method": "GET",
       "resourceType": "fetch",
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/open_menu_2.png"
     },
@@ -451,33 +463,21 @@
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "method": "GET",
-      "resourceType": "image",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/f2/f26d7b02d8cc9b892abc2d7b7ebfa0b3"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "POST",
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/ajax/report/report_user_data"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "method": "POST",
-      "resourceType": "xhr",
-      "url": "https://c.66rpg.com/cloud/v4/index/cloud_load_ex?ts=1784698927&sign=6d250720b030281bef90babb4060cca7&client_type=7"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "method": "GET",
-      "resourceType": "image",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/bc/bc5486bf4e2aee60418009b59f93646f"
+      "url": "https://c.66rpg.com/cloud/v4/index/cloud_load_ex?ts=1784699314&sign=b919d670ecc30c2e06aacbb9808b19c1&client_type=7"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "fetch",
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/mobile_game_menu_pitch.png"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "method": "GET",
+      "resourceType": "image",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/bc/bc5486bf4e2aee60418009b59f93646f"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -524,12 +524,6 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
-      "resourceType": "image",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/80/8035883cd8bdd77317cdd5edb9dc0fc7"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "method": "GET",
       "resourceType": "fetch",
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/commonMessage/commonMessageBg.png"
     },
@@ -544,6 +538,12 @@
       "method": "GET",
       "resourceType": "fetch",
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/commonMessage/commonMessageLeftBtn.png"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "method": "GET",
+      "resourceType": "image",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/80/8035883cd8bdd77317cdd5edb9dc0fc7"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -580,6 +580,12 @@
       "method": "GET",
       "resourceType": "fetch",
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/commonMessage/commonMessageIconDog_new.png"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "method": "POST",
+      "resourceType": "xhr",
+      "url": "https://www.66rpg.com/ajax/report/report_user_data"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -789,7 +795,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "script",
-      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_orange_flower_color_status.json?jsonCallBack=jQuery19106174161954489641_1784698920876&gindex=1690283&token=&_=1784698920879"
+      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_orange_flower_color_status.json?jsonCallBack=jQuery19102456952426962271_1784699307606&gindex=1690283&token=&_=1784699307609"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -807,13 +813,13 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=XXEeypxC6Tmj2mOFHrmubMqHjixCE8CPiMHdhSGFqKqV1tWok77Xh0mQ6swFwNyn87Hk-ecWjkluh26gn3gqd14QjMhKYCewMEldSeGmylhNbSxZ0SZlbYGCvi44PLb7NmjAMrd0KBm12rY8D9-PL19Y8ZqghRX3YzVIsLG7R799cKllO94xo-klSmfDQspE1nwavTRTSXqv7evhXdM-ZCjrpCdthSwmYRS4zjeMJ2RDOtxG2qClFk_f5_EKd-kxFUx11ttlAnDFrcNbUs5MbAmkmOVSjN85ak9Dg_UsnYFD1pssgiw0C4hsiLOSQRoV7iSqXjVqGRfpC8iK3kB3dQ!!&evx=3&sign=1606993356443e1b4da75c4b84262d8b"
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=HaxHajxEYMODBwbI7UqbgDO8QKae-xuZNd6tiEcXYnyabaWXcvwrO77Z1qy9FAHalPJwOxO5H9NgriWchjh-e5K2pu56nWzsSWXVPMIqaOnRm9jJM64Z6LCgAWWoCfv-No3fVmWL04BJgLvQaVcoqbqSi35uxr78Y5Qqj_P35yZQw1BN-kSfVn3MgUuLZxLMiYfjojHn8sAjokd2u2x_uTu7mX1Ibs2RzjYGSfsIlrTXlJjnPJ72AM37II3BezE71FOrEOoxZaVyPGFbobPeh5oGsb4oOiDjoMTqpJvSPOhUFASFEQrS4eZ-pw3t-zybw3TJ5ikDbGZY0faXhcOj6Q!!&evx=3&sign=d667964f03a6b047a6a9a975c67adb2d"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=1&plat_id=0&client_channel=h5-web&r-key=BI4xnneINjTetckrfbhBGXEx65wvlDndHJpvTPWX1SQ9QfegF6w9hzNU0pb692dVEY5eiiRsWN6Mzg4FrNf3xinGjGjZzlh-XWUfED7J9C2an6EvSZ_Bqd3HoP3PdGDPpv9brlE8RC_e7wTF0Vd25QXodKUGszC2cJ_KuySrMLii5i5p7aaJf62eYk5RxsA-YikLmuPKliStrqaNU5pN8ZSKz59BxM6nk3CIlBWFu9ToBilNiatNLLgMDvMNaF9Rn0OYv0JZ-_FOw9XQ6L1uMEQiO1wYj2P9oa9ToNGCWK1DKQs7hjc8-vyd_TV-fXyGox2vYJYOpKoKd6uNJtJFJQ!!&evx=3&sign=e4ac4a22672355e9283451fd4fda3746"
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=1&plat_id=0&client_channel=h5-web&r-key=A4u72FRBNzGQc6YevB1Go7SaYWk_ckKbBfvAOmaDGSRBBLTwgSsbiF_k2mYn-epAHC6nw8uEMtfSZowUlt58FbD-iDPNT2hcczBkJ7C8388sg7x4ajk9q3YuynyW3MCmGLARisknM3tzZbbpAKR8w0QTYUWshDREyO5HbgQDXYUblxNeHXcjyvaFEx_tG9Qsk_t23_UR-Q6y5p5xWd9cKUmYN1n-aCTtJEBN9CH7b87oG-KZYVktJoCriON429Tw6Vdhghp0CfL-2Xke6U98NRt8mwDuHxFvs4HJBlFHOStgXFiW8qaNGqxaK7IZ0d04NtzgaqoC5lZpalQuCqNLAg!!&evx=3&sign=2b14862938ca80927647484706542cc1"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -825,7 +831,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "method": "GET",
       "resourceType": "image",
-      "url": "https://fx-it.66rpg.com:8206/sa.gif?data=eyJpZGVudGl0aWVzIjp7IiRpZGVudGl0eV9jb29raWVfaWQiOiIxOWY4ODU4NmEzZWU4NC0wZWMxZmJlZDJkNzBkZC00MDZlMWI0Zi0zNzY5ODAtMTlmODg1ODZhM2YxOTc3In0sImRpc3RpbmN0X2lkIjoiMTlmODg1ODZhM2VlODQtMGVjMWZiZWQyZDcwZGQtNDA2ZTFiNGYtMzc2OTgwLTE5Zjg4NTg2YTNmMTk3NyIsImxpYiI6eyIkbGliIjoianMiLCIkbGliX21ldGhvZCI6ImNvZGUiLCIkbGliX3ZlcnNpb24iOiIxLjI2LjMifSwicHJvcGVydGllcyI6eyIkdGltZXpvbmVfb2Zmc2V0IjowLCIkc2NyZWVuX2hlaWdodCI6OTE1LCIkc2NyZWVuX3dpZHRoIjo0MTIsIiR2aWV3cG9ydF9oZWlnaHQiOjkxNSwiJHZpZXdwb3J0X3dpZHRoIjo0MTIsIiRsaWIiOiJqcyIsIiRsaWJfdmVyc2lvbiI6IjEuMjYuMyIsIiRsYXRlc3RfdHJhZmZpY19zb3VyY2VfdHlwZSI6IuebtOaOpea1gemHjyIsIiRsYXRlc3Rfc2VhcmNoX2tleXdvcmQiOiLmnKrlj5bliLDlgLxf55u05o6l5omT5byAIiwiJGxhdGVzdF9yZWZlcnJlciI6IiIsIiR2aWV3cG9ydF9wb3NpdGlvbiI6MCwiJHVybCI6Imh0dHBzOi8vbS42NnJwZy5jb20vaDUvMTY5MDI4Mz9vaHA9djMmcXVhbGl0eT0zMiIsIiR0aXRsZSI6IuWQtOmSqemcnOihgOaYjiIsIiR1cmxfcGF0aCI6Ii9oNS8xNjkwMjgzIiwiZXZlbnRfZHVyYXRpb24iOjEyLjQwMSwiJGlzX2ZpcnN0X2RheSI6dHJ1ZX0sImFub255bW91c19pZCI6IjE5Zjg4NTg2YTNlZTg0LTBlYzFmYmVkMmQ3MGRkLTQwNmUxYjRmLTM3Njk4MC0xOWY4ODU4NmEzZjE5NzciLCJ0eXBlIjoidHJhY2siLCJldmVudCI6IiRXZWJTdGF5IiwidGltZSI6MTc4NDY5ODkzNTk4OSwiX3RyYWNrX2lkIjo3NjcxNTk5MCwiX2ZsdXNoX3RpbWUiOjE3ODQ2OTg5MzU5OTB9&ext=crc%3D-801025851"
+      "url": "https://fx-it.66rpg.com:8206/sa.gif?data=eyJpZGVudGl0aWVzIjp7IiRpZGVudGl0eV9jb29raWVfaWQiOiIxOWY4ODVlNTIxYWEyYi0wMmQ3OWRhYzZjMjhiYzQtNDA2ZTFiNGYtMzc2OTgwLTE5Zjg4NWU1MjFiMTU4NiJ9LCJkaXN0aW5jdF9pZCI6IjE5Zjg4NWU1MjFhYTJiLTAyZDc5ZGFjNmMyOGJjNC00MDZlMWI0Zi0zNzY5ODAtMTlmODg1ZTUyMWIxNTg2IiwibGliIjp7IiRsaWIiOiJqcyIsIiRsaWJfbWV0aG9kIjoiY29kZSIsIiRsaWJfdmVyc2lvbiI6IjEuMjYuMyJ9LCJwcm9wZXJ0aWVzIjp7IiR0aW1lem9uZV9vZmZzZXQiOjAsIiRzY3JlZW5faGVpZ2h0Ijo5MTUsIiRzY3JlZW5fd2lkdGgiOjQxMiwiJHZpZXdwb3J0X2hlaWdodCI6OTE1LCIkdmlld3BvcnRfd2lkdGgiOjQxMiwiJGxpYiI6ImpzIiwiJGxpYl92ZXJzaW9uIjoiMS4yNi4zIiwiJGxhdGVzdF90cmFmZmljX3NvdXJjZV90eXBlIjoi55u05o6l5rWB6YePIiwiJGxhdGVzdF9zZWFyY2hfa2V5d29yZCI6IuacquWPluWIsOWAvF%2Fnm7TmjqXmiZPlvIAiLCIkbGF0ZXN0X3JlZmVycmVyIjoiIiwiJHZpZXdwb3J0X3Bvc2l0aW9uIjowLCIkdXJsIjoiaHR0cHM6Ly9tLjY2cnBnLmNvbS9oNS8xNjkwMjgzP29ocD12MyZxdWFsaXR5PTMyIiwiJHRpdGxlIjoi5ZC06ZKp6Zyc6KGA5piOIiwiJHVybF9wYXRoIjoiL2g1LzE2OTAyODMiLCJldmVudF9kdXJhdGlvbiI6MTMuNTUzLCIkaXNfZmlyc3RfZGF5Ijp0cnVlfSwiYW5vbnltb3VzX2lkIjoiMTlmODg1ZTUyMWFhMmItMDJkNzlkYWM2YzI4YmM0LTQwNmUxYjRmLTM3Njk4MC0xOWY4ODVlNTIxYjE1ODYiLCJ0eXBlIjoidHJhY2siLCJldmVudCI6IiRXZWJTdGF5IiwidGltZSI6MTc4NDY5OTMyNDE4MCwiX3RyYWNrX2lkIjo0NDY4MDQxODEsIl9mbHVzaF90aW1lIjoxNzg0Njk5MzI0MTgxfQ%3D%3D&ext=crc%3D568591151"
     }
   ],
   "responses": [
@@ -860,15 +866,6 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "script",
-      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
-      "contentType": "application/javascript; charset=utf-8",
-      "contentLength": "451",
-      "cacheControl": "max-age=2592000"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "script",
       "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
       "contentType": "application/javascript; charset=utf-8",
       "contentLength": "773",
@@ -878,18 +875,9 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "script",
-      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
       "contentType": "application/javascript; charset=utf-8",
-      "contentLength": "36718",
-      "cacheControl": "max-age=2592000"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "script",
-      "url": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
-      "contentType": "application/javascript; charset=utf-8",
-      "contentLength": "5279",
+      "contentLength": "451",
       "cacheControl": "max-age=2592000"
     },
     {
@@ -905,18 +893,27 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "script",
-      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
+      "url": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
       "contentType": "application/javascript; charset=utf-8",
-      "contentLength": "18933",
+      "contentLength": "5279",
       "cacheControl": "max-age=2592000"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "stylesheet",
-      "url": "https://c3.cgyouxi.com/website/hfplayer/v2/bin/css/public.css?v=202607090001",
-      "contentType": "text/css",
-      "contentLength": "1991",
+      "resourceType": "script",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "contentType": "application/javascript; charset=utf-8",
+      "contentLength": "36718",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "script",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
+      "contentType": "application/javascript; charset=utf-8",
+      "contentLength": "18933",
       "cacheControl": "max-age=2592000"
     },
     {
@@ -931,19 +928,19 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "image",
-      "url": "https://c1.cgyouxi.com/website/orange/img/common/f3.png",
-      "contentType": "image/png",
-      "contentLength": "1431",
+      "resourceType": "script",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
+      "contentType": "application/javascript; charset=utf-8",
+      "contentLength": "64232",
       "cacheControl": "max-age=2592000"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "script",
-      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607090001",
-      "contentType": "application/javascript; charset=utf-8",
-      "contentLength": "64232",
+      "resourceType": "image",
+      "url": "https://c1.cgyouxi.com/website/orange/img/common/f3.png",
+      "contentType": "image/png",
+      "contentLength": "1431",
       "cacheControl": "max-age=2592000"
     },
     {
@@ -968,19 +965,28 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "image",
-      "url": "https://pic.cgyouxi.com/orange/common/list/icon_color_leaf.png",
-      "contentType": "image/webp",
-      "contentLength": "494",
-      "cacheControl": "max-age=3600"
+      "url": "https://c1.cgyouxi.com/website/orange/img/common/share/QQ.png",
+      "contentType": "image/png",
+      "contentLength": "1972",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "stylesheet",
+      "url": "https://c3.cgyouxi.com/website/hfplayer/v2/bin/css/public.css?v=202607090001",
+      "contentType": "text/css",
+      "contentLength": "1991",
+      "cacheControl": "max-age=2592000"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "image",
-      "url": "https://c1.cgyouxi.com/website/orange/img/common/share/QQ.png",
-      "contentType": "image/png",
-      "contentLength": "1972",
-      "cacheControl": "max-age=2592000"
+      "url": "https://pic.cgyouxi.com/orange/common/list/icon_color_leaf.png",
+      "contentType": "image/webp",
+      "contentLength": "494",
+      "cacheControl": "max-age=3600"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -1002,19 +1008,10 @@
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "script",
-      "url": "https://www.66rpg.com/ajax/user/getMobileUserInfo.json?&stamp;Wed%20Jul%2022%202026%2005:42:02%20GMT+0000%20(%E5%8D%8F%E8%B0%83%E4%B8%96%E7%95%8C%E6%97%B6)&jsonCallBack=jQuery19106174161954489641_1784698920876&_=1784698920877",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "script",
-      "url": "https://static.sensorsdata.cn/sdk/1.26.3/sensorsdata.min.js",
-      "contentType": "application/javascript",
+      "status": 302,
+      "resourceType": "document",
+      "url": "https://m.66rpg.com/sso/minicheck",
+      "contentType": "text/html",
       "contentLength": "",
       "cacheControl": ""
     },
@@ -1030,28 +1027,55 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/pbg.png",
-      "contentType": "image/png",
-      "contentLength": "673",
-      "cacheControl": "max-age=2592000"
+      "resourceType": "script",
+      "url": "https://static.sensorsdata.cn/sdk/1.26.3/sensorsdata.min.js",
+      "contentType": "application/javascript",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 302,
+      "resourceType": "document",
+      "url": "https://passport.66rpg.com/user/crosscheck.shtml?fromurl=https%3A%2F%2Fm.66rpg.com%2Fsso%2Fminicheck&auth_callback=%2F%2Fwww.66rpg.com%2Fsso%2Fauth_callback&app=www&sign=15805b2cb0cbc96ecf1d760865d175e0&login_type=0",
+      "contentType": "text/html",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "script",
+      "url": "https://www.66rpg.com/ajax/user/getMobileUserInfo.json?&stamp;Wed%20Jul%2022%202026%2005:48:29%20GMT+0000%20(%E5%8D%8F%E8%B0%83%E4%B8%96%E7%95%8C%E6%97%B6)&jsonCallBack=jQuery19102456952426962271_1784699307606&_=1784699307607",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 302,
+      "resourceType": "document",
+      "url": "https://m.66rpg.com/sso/minicheck",
+      "contentType": "text/html",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "xhr",
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/game_flower_by_me?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=B8yFYELdzfcX51NdBNr8cm8jKLZ5il3anVyJEwI3d8lnaDaOgdsgZN8Cu6TIOjMOveUKIfNGnyGAYaZPPp0rkC1TWWyXwuc2XojJgoq8-A6q9DVyQLagNoJGgCXZZTCcsyFZcV6DlTxgMosbFz-JTdNoT7uI2n43vizHjW1vXAis0iFoPhFHuYW5B7viNv6bId90qP1y4_ZZmrBtvU3nRPBHw9Uf4YEtNrAYFcrZHBS9xlQ7DElhLOXNskb3NNpHCNIZP-g94kQYk8x8bgAnna0ySQ_RbjSURbmbB-GvVknci8u8HPROu-NlboJv5nnwPVzWGVQ2oExaGBxSq0Xd8Q!!&evx=3&sign=8b5d971e43753a965ba56f6a3322c2a1",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
+      "cacheControl": ""
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/pf.png",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/bg.png",
       "contentType": "image/png",
-      "contentLength": "408",
-      "cacheControl": "max-age=2592000"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/ph.png",
-      "contentType": "image/png",
-      "contentLength": "2667",
+      "contentLength": "134893",
       "cacheControl": "max-age=2592000"
     },
     {
@@ -1067,28 +1091,28 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/bg.png",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/pf.png",
       "contentType": "image/png",
-      "contentLength": "134893",
+      "contentLength": "408",
       "cacheControl": "max-age=2592000"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 302,
-      "resourceType": "document",
-      "url": "https://m.66rpg.com/sso/minicheck",
-      "contentType": "text/html",
-      "contentLength": "",
-      "cacheControl": ""
+      "status": 200,
+      "resourceType": "fetch",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/pbg.png",
+      "contentType": "image/png",
+      "contentLength": "673",
+      "cacheControl": "max-age=2592000"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/game_flower_by_me?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=jWSjZeFscEiBELD4GlXXz2Uhyz9o7AZxFop9WddXDBOqKOq9lMQORTZwEIymWOc-aY9DfzLIWCHgvlRIar-u3T9bJCZvX0z7AVe44EaW7vMs8vL-ijnYuSTbhSFm9m_p7MCht4WOHb22P3UkXsmW_37g2maekz3fAp57xeFM0_Swo0cjY7WjK0Ynh-aTiRfxFRzYCY0wOFupiUPQKEvI3sjdAKhTYpk24-zWiR6viIIjAFbaZ5ewLSIZ6nZdpXxwRBAw8GxYUeLFUxGqOn4jysqcCOGPWtVcZ8VmE1HBFxdFD9rDj0ttx5nOP_GiqQRuMGrHGPkGfCXmzAe__KufMg!!&evx=3&sign=0a9dc56ed51fa2e743f8901947db794a",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
+      "resourceType": "fetch",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/newLoading/ph.png",
+      "contentType": "image/png",
+      "contentLength": "2667",
+      "cacheControl": "max-age=2592000"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -1103,34 +1127,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getMyAccountMoney?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=X-Ro1zAH3eB2V2JuFDK8U4CCZJnE2eyXFeFqXi7jqmKiGjYjQ13OMESd10in5XRqPgEG1gSM7e0jlRJoUl-UMrrA25iSYbt2w3KNNsQDyOkO2C0iY5Z7wSygHnoTR0GNJ4h8BdXRvSj_ZugwNMnA26c8vgAGVQ3N6ffUHgKOWLUIXVjrVAtRUjmxOEQ1Y60XPAtZlDqfypkQnPxl4wmQWWFzxew3cKBv3JywvpOyer6rtsp_gclfecb6GR_KpchkvSVX3iPK3fQ3jyms-8ZDKGYp1Zy0dUIOeG0HoV9pWQCobG_38NsOGfT84C9dBpyVJQsRVsX--UXaSSnAQuEuWw!!&evx=3&sign=fe178d3c5ae14c88224cd4fe82694827",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "script",
-      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_limit_free_status.json?jsonCallBack=jQuery19106174161954489641_1784698920876&gindex=1690283&token=&_=1784698920878",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "xhr",
-      "url": "https://www.66rpg.com/ajax/ad/new_get_game_ad_list.json?plat=4&gindex=1690283",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/get_global_cfg?uid=0&gindex=1690283&token=&client_type=4&r-key=d7uwLUtoPsfyohRtZGBsaZmeIc70eFXzKjbPhv4UPToeJHUJG7cQ1ACRpaSzifMZRYg7it930HsPlHjC1UpFAG35Gezp_Aunrx8cgBYaX4HiM-GIvNVjAKkXjJHBej4PiJAQXxDhegVSiT8nhUUwR9cjFvRL2buqqNMb5N1io2njuyFMVsKaJsTlFdjHHrod4D4dv6H1Nmoh6r0Z3B_uyiCVan8bgbMFmHw3FulBQ3i5ZVwZ3TKz_ayDvnkxjsXu6DgizemnsAKQLCzf_BFQJFsFiq9n6yYRjJx5ui-SN_mAI2jGJQJY2TCG50wv5LpEFxiBVXbWHT31IOGKJLaXcQ!!&evx=3&sign=66c18d8abc9b6258c14a81d3948afc6a",
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getMyAccountMoney?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=QsIGIkxS4Dkak_BSpzo2lEFzHnxfj_NmU9G5i35_m4eH209pb4scnQemkAx_1QOaKyxiDZlLuHxn0wMR2E5DXU4lyODkQahvbfppVJRj_QmL8M0kujZZuOBOwMu2k6foQge3UE1Wg8niJni0k6F-sss2lIcWnEEJSSpV1DFzsy9WEZrzfUhhAvw57tlhz9W1Eq57Xb5oVrdxP4spYZpeHph0Cd7xFc0nXs1h7Ubwamarx6YTCjeqkxJqCROv1GEG6y6k4jqnSLajhIohEJzWnk6lWS36nu0MHtQ77luMBYPfeU1YOmdbc2t7djrSuBe_Qw9M8USEGihd6YDWih7Qrg!!&evx=3&sign=31b530116a22fa83fb287a711a17faa3",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -1148,7 +1145,43 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/ajax/report/report_user_data",
+      "url": "https://www.66rpg.com/ajax/ad/new_get_game_ad_list.json?plat=4&gindex=1690283",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "xhr",
+      "url": "https://c.66rpg.com/collect/v1/index/check_runtime_is_new_rule?gindex=1690283",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "script",
+      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_limit_free_status.json?jsonCallBack=jQuery19102456952426962271_1784699307606&gindex=1690283&token=&_=1784699307608",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "xhr",
+      "url": "https://c.66rpg.com/collect/v2/index/addiction_prevention_time?gindex=1690283&uid=0&token=&client_type=4&device_id=h5-web&r-key=Ej0oauCJrxPdCZXI4PLQF17HKGAkYTH6VWFhimIvp4D45wQ9zkKyfhqnnATIK2QtboHwrC72VIc8NUkkWncuUCYwtsOARVKrfv6OYlknVVdvGtGifK6QlgmCoSNGs-tacK8zGiICVaJpaQso9rCoxfPbJKqxLC9afXKiOzqEDEmF3T4GxJjV6INA87wW_vdfwc3B0uN9p-BFKWh5BJXpQYgTuXixQ7vQBJHbUoVHoWNOWAQpKgS8ibW5hOUQBSHYQd9tN0NsVPVvmG12tF7spdoyCZxonLZZmOuLXyVBPW8__Z-lEX61DSkrfhjkrvuWUe36uj3EpHUgtp8_TCsCjQ!!&evx=3&sign=d5cbac4cb147fd75960360302d5faef8",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "xhr",
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/get_global_cfg?uid=0&gindex=1690283&token=&client_type=4&r-key=JtfY39lz-KniU662L-uGBadmML6-vVDTFq0TpdkG4YU6GGs0DlA9Ktccv9Nsq4-3gNLHQG48rE2V2kVLdS0wrkm_SOW5OObzRKC2fBpxMBejJTemYpVStiSXTXBk2FjqrrIselgcaenGiCOT0RQthjAq0W65R_QzpNecLNEpDv47np57q24hxO34k8kkd4QBoGrD9gtyVnb-RKtrCnwJqvOM3ddsD589NCPJcVi9Cf_dPhq8jhSFvNcQnvrtLyKEzKIEVwaNbVmvITTgRZlSyRvVienyCaOX1KXuBG8JtB3jw7yJOJ_THJrlQdHcBjy3yvcVzBKL6bqmfOedEpy4GA!!&evx=3&sign=391251398d865ce4f4428aab807ac0ce",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -1165,8 +1198,17 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
+      "resourceType": "fetch",
+      "url": "https://pic.cgyouxi.com/orange/upload/202607/119034690_5e72d31fe319581696e4471bb80b03fb.jpg",
+      "contentType": "image/jpeg",
+      "contentLength": "295318",
+      "cacheControl": "max-age=3600"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
       "resourceType": "xhr",
-      "url": "https://c.66rpg.com/collect/v1/index/check_runtime_is_new_rule?gindex=1690283",
+      "url": "https://iapi.66rpg.com/Game/v1/EngineNoAuth/engine_online_global_off",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -1174,17 +1216,8 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "fetch",
-      "url": "https://pic.cgyouxi.com/orange/upload/202607/119034690_c14070df72914dbd7ce7bb519dc8db43.jpg",
-      "contentType": "image/jpeg",
-      "contentLength": "306691",
-      "cacheControl": "max-age=3600"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
       "resourceType": "xhr",
-      "url": "https://c.66rpg.com/collect/v2/index/addiction_prevention_time?gindex=1690283&uid=0&token=&client_type=4&device_id=h5-web&r-key=amM5oI-OtrttLfr_rLAWsTUd2Z3nOd0Dst00ObwOoYY_X_xX25F8YX9wSwmKKlXDjoPECkJR9_MVvfZvKP1vms4QBSHcwhwdt9LbBeCLwlqBzz7-MY_W2Zt8GUkBON5EHuE7NrymAc5hEs9H67Ko9E6CaYTH_xWIvrvNq0GsbB94dNc-2I0J3Bz8j0CqazdKnwX4e7JIaMdPbx3s0_XkAHE1zcEyK8GTpcNSZMhYuI5BOnrNe0TR21UpeZJxopu95EzP8rbIYG_90t5kjuDnsEFUjyjygDu4_TapXMlhQpVQYVU-63-NB-JBHwWVlKKclPSDOsp4WssZBOKtF-hJng!!&evx=3&sign=4dcdbdf5bc5b12a910fe33a4bfcf7645",
+      "url": "https://www.66rpg.com/api/tool?action=get_server_time&uid=0&token=",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -1202,24 +1235,6 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/api/tool?action=get_server_time&uid=0&token=",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "xhr",
-      "url": "https://iapi.66rpg.com/Game/v1/EngineNoAuth/engine_online_global_off",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "xhr",
       "url": "https://c.66rpg.com/investigate/v1/investigate/get_investigate_image?gindex=1690283&version=117&uid=0",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
@@ -1229,16 +1244,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "xhr",
-      "url": "https://cgv2.66rpg.com/api/oweb_log.php?status=0&op=5001&token=&gindex=1690283&guid=15a433e8018a70ec29253660b3072568&name=&channel_id=0&channel=&group_id=0&definition=2&engine=2&uid=0&platform=4&nonce=8957c4d5-0fef-45bb-80b9-c87fcc583318&timestamp=1784698924&sign=a7dd1e7c5cdeb9bcf1d4bf30cf01f127",
-      "contentType": "text/html",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "xhr",
-      "url": "https://cgv2.66rpg.com/api/v3/oapi_map.php?action=create_bin&guid=15a433e8018a70ec29253660b3072568&version=117&quality=32&r-key=R-9n1lC1-OfLfrcIii_kjSy0t2-qo8XGY1fCT-9fzvd1E47qv30yq-YiJsHfgQ-xDsIFlaUEXOBI9noQKw7O0P1xtcxBwBW35foLlX-ZxCcM5lsE5rqZcuNS6pW0aWAP1Fjoa_yd8lbVCY88wIlemy1syi2m67ieKh6I6XvDXwWxyUg586Kegq6oy4TNl1YViFUcWRiu6TGbhtmeY6PEcld1Ng9cb-kIBLuLk76pAVBCP_uzFvxCxNDwmy2GLFf7BwYDXJA75S3ZRGiUZOGDUiaPv1GRAaszAmJl_sHpxSr3twe_1floYk1JZyap-3dz1ahq19hei6TGesq6rBLmng!!&evx=3&sign=999c9026eeb5255608e12915ff0e629a",
+      "url": "https://cgv2.66rpg.com/api/v3/oapi_map.php?action=create_bin&guid=15a433e8018a70ec29253660b3072568&version=117&quality=32&r-key=SEmaF2ZYUUTMrMlxUwTC3-PQ7NW3ctvSlpa4t6-x4cMGGPAFX-0PDkXbH-Qs5skpc-lefcA13lub1MjOS9NMR6SDu8s2bkr9e9R-iLO0DOkTX9MKBUKdhMtTdMNbpkxk-aiyBS-1rRkF4HXQ7SAV52lGz2PfHwXKHemPaYz0sQowmiy3q52PCBIPG0ATH1Vh49Ch9EvqwM6GZDVtHS1ORxF5-6V8tHHlCd_2VKgQ00woLzdqR7Np4hWm_m2WNkr6gVcDg7lIUbFw1bXjFNfdgLK9YIovlGcl6MERTvovka0XgSBWy0CLQMyyrIVhmQ-1Qn6qmHJ8J1a8UnMYBHZTHQ!!&evx=3&sign=e5ec9943357cd5008ff771082fc61d7f",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -1247,7 +1253,16 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "xhr",
-      "url": "https://dlcdn1.cgyouxi.com/web/15a433e8018a70ec29253660b3072568/117/Game_mini.bin?v=1784698924671",
+      "url": "https://cgv2.66rpg.com/api/oweb_log.php?status=0&op=5001&token=&gindex=1690283&guid=15a433e8018a70ec29253660b3072568&name=&channel_id=0&channel=&group_id=0&definition=2&engine=2&uid=0&platform=4&nonce=85f37339-0006-4eff-be08-c8fae500405c&timestamp=1784699311&sign=6d09f6ba83414ccf4e9b8805198491c4",
+      "contentType": "text/html",
+      "contentLength": "",
+      "cacheControl": ""
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "xhr",
+      "url": "https://dlcdn1.cgyouxi.com/web/15a433e8018a70ec29253660b3072568/117/Game_mini.bin?v=1784699311975",
       "contentType": "application/vnd.ms-office.vbaProject",
       "contentLength": "5879",
       "cacheControl": ""
@@ -1274,24 +1289,6 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/game_menu2.png",
-      "contentType": "image/png",
-      "contentLength": "2951",
-      "cacheControl": "max-age=2592000"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/game_menu2_pitch.png",
-      "contentType": "image/png",
-      "contentLength": "3293",
-      "cacheControl": "max-age=2592000"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "fetch",
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/game_menu3.png",
       "contentType": "image/png",
       "contentLength": "3116",
@@ -1304,6 +1301,24 @@
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/game_menu3_pitch.png",
       "contentType": "image/png",
       "contentLength": "3463",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "fetch",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/game_menu2.png",
+      "contentType": "image/png",
+      "contentLength": "2951",
+      "cacheControl": "max-age=2592000"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "fetch",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/game_menu2_pitch.png",
+      "contentType": "image/png",
+      "contentLength": "3293",
       "cacheControl": "max-age=2592000"
     },
     {
@@ -1372,15 +1387,6 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/open_menu_2.png",
-      "contentType": "image/png",
-      "contentLength": "2961",
-      "cacheControl": "max-age=2592000"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
       "resourceType": "image",
       "url": "https://dlcdn1.cgyouxi.com/shareres/f2/f26d7b02d8cc9b892abc2d7b7ebfa0b3",
       "contentType": "application/octet-stream",
@@ -1391,9 +1397,9 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "fetch",
-      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/mobile_menu.png",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/open_menu_2.png",
       "contentType": "image/png",
-      "contentLength": "4417",
+      "contentLength": "2961",
       "cacheControl": "max-age=2592000"
     },
     {
@@ -1426,11 +1432,11 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "image",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/bc/bc5486bf4e2aee60418009b59f93646f",
-      "contentType": "application/octet-stream",
-      "contentLength": "804666",
-      "cacheControl": ""
+      "resourceType": "fetch",
+      "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/menu/mobile_menu.png",
+      "contentType": "image/png",
+      "contentLength": "4417",
+      "cacheControl": "max-age=2592000"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -1440,6 +1446,15 @@
       "contentType": "image/png",
       "contentLength": "6383",
       "cacheControl": "max-age=2592000"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "image",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/bc/bc5486bf4e2aee60418009b59f93646f",
+      "contentType": "application/octet-stream",
+      "contentLength": "804666",
+      "cacheControl": ""
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -1480,19 +1495,19 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "image",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/81/817d48e99dcef1359867d891a8009612",
-      "contentType": "application/octet-stream",
-      "contentLength": "826026",
+      "resourceType": "xhr",
+      "url": "https://c.66rpg.com/cloud/v4/index/cloud_load_ex?ts=1784699314&sign=b919d670ecc30c2e06aacbb9808b19c1&client_type=7",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
       "cacheControl": ""
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "xhr",
-      "url": "https://www.66rpg.com/ajax/report/report_user_data",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
+      "resourceType": "image",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/81/817d48e99dcef1359867d891a8009612",
+      "contentType": "application/octet-stream",
+      "contentLength": "826026",
       "cacheControl": ""
     },
     {
@@ -1507,29 +1522,11 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
-      "resourceType": "xhr",
-      "url": "https://c.66rpg.com/cloud/v4/index/cloud_load_ex?ts=1784698927&sign=6d250720b030281bef90babb4060cca7&client_type=7",
-      "contentType": "application/json;charset=utf-8",
-      "contentLength": "",
-      "cacheControl": ""
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
       "resourceType": "fetch",
       "url": "https://c1.cgyouxi.com/website/hfplayer/v3/bin/res/autoSave/autoks.png",
       "contentType": "image/png",
       "contentLength": "1638",
       "cacheControl": "max-age=2592000"
-    },
-    {
-      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
-      "status": 200,
-      "resourceType": "image",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/80/8035883cd8bdd77317cdd5edb9dc0fc7",
-      "contentType": "application/octet-stream",
-      "contentLength": "96013",
-      "cacheControl": ""
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -1557,6 +1554,15 @@
       "contentType": "image/png",
       "contentLength": "694",
       "cacheControl": "max-age=2592000"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "image",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/80/8035883cd8bdd77317cdd5edb9dc0fc7",
+      "contentType": "application/octet-stream",
+      "contentLength": "96013",
+      "cacheControl": ""
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -1665,6 +1671,15 @@
       "contentType": "image/jpeg",
       "contentLength": "56435",
       "cacheControl": "max-age=2592000"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "status": 200,
+      "resourceType": "xhr",
+      "url": "https://www.66rpg.com/ajax/report/report_user_data",
+      "contentType": "application/json;charset=utf-8",
+      "contentLength": "",
+      "cacheControl": ""
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -1895,9 +1910,9 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "fetch",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/06/06f3736b2322817811700cfd460b8bb0",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/2e/2eb42aff32bfb6d6c408929a85782899",
       "contentType": "application/octet-stream",
-      "contentLength": "7898",
+      "contentLength": "92509",
       "cacheControl": ""
     },
     {
@@ -1913,9 +1928,9 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "fetch",
-      "url": "https://dlcdn1.cgyouxi.com/shareres/2e/2eb42aff32bfb6d6c408929a85782899",
+      "url": "https://dlcdn1.cgyouxi.com/shareres/06/06f3736b2322817811700cfd460b8bb0",
       "contentType": "application/octet-stream",
-      "contentLength": "92509",
+      "contentLength": "7898",
       "cacheControl": ""
     },
     {
@@ -1931,7 +1946,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "script",
-      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_orange_flower_color_status.json?jsonCallBack=jQuery19106174161954489641_1784698920876&gindex=1690283&token=&_=1784698920879",
+      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_orange_flower_color_status.json?jsonCallBack=jQuery19102456952426962271_1784699307606&gindex=1690283&token=&_=1784699307609",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -1958,7 +1973,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=XXEeypxC6Tmj2mOFHrmubMqHjixCE8CPiMHdhSGFqKqV1tWok77Xh0mQ6swFwNyn87Hk-ecWjkluh26gn3gqd14QjMhKYCewMEldSeGmylhNbSxZ0SZlbYGCvi44PLb7NmjAMrd0KBm12rY8D9-PL19Y8ZqghRX3YzVIsLG7R799cKllO94xo-klSmfDQspE1nwavTRTSXqv7evhXdM-ZCjrpCdthSwmYRS4zjeMJ2RDOtxG2qClFk_f5_EKd-kxFUx11ttlAnDFrcNbUs5MbAmkmOVSjN85ak9Dg_UsnYFD1pssgiw0C4hsiLOSQRoV7iSqXjVqGRfpC8iK3kB3dQ!!&evx=3&sign=1606993356443e1b4da75c4b84262d8b",
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=0&plat_id=0&client_channel=h5-web&r-key=HaxHajxEYMODBwbI7UqbgDO8QKae-xuZNd6tiEcXYnyabaWXcvwrO77Z1qy9FAHalPJwOxO5H9NgriWchjh-e5K2pu56nWzsSWXVPMIqaOnRm9jJM64Z6LCgAWWoCfv-No3fVmWL04BJgLvQaVcoqbqSi35uxr78Y5Qqj_P35yZQw1BN-kSfVn3MgUuLZxLMiYfjojHn8sAjokd2u2x_uTu7mX1Ibs2RzjYGSfsIlrTXlJjnPJ72AM37II3BezE71FOrEOoxZaVyPGFbobPeh5oGsb4oOiDjoMTqpJvSPOhUFASFEQrS4eZ-pw3t-zybw3TJ5ikDbGZY0faXhcOj6Q!!&evx=3&sign=d667964f03a6b047a6a9a975c67adb2d",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -1967,7 +1982,7 @@
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "status": 200,
       "resourceType": "xhr",
-      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=1&plat_id=0&client_channel=h5-web&r-key=BI4xnneINjTetckrfbhBGXEx65wvlDndHJpvTPWX1SQ9QfegF6w9hzNU0pb692dVEY5eiiRsWN6Mzg4FrNf3xinGjGjZzlh-XWUfED7J9C2an6EvSZ_Bqd3HoP3PdGDPpv9brlE8RC_e7wTF0Vd25QXodKUGszC2cJ_KuySrMLii5i5p7aaJf62eYk5RxsA-YikLmuPKliStrqaNU5pN8ZSKz59BxM6nk3CIlBWFu9ToBilNiatNLLgMDvMNaF9Rn0OYv0JZ-_FOw9XQ6L1uMEQiO1wYj2P9oa9ToNGCWK1DKQs7hjc8-vyd_TV-fXyGox2vYJYOpKoKd6uNJtJFJQ!!&evx=3&sign=e4ac4a22672355e9283451fd4fda3746",
+      "url": "https://www.66rpg.com/PropShop/engine/v5/user/getUserHaveAllPropNum?flower_place=1&gindex=1690283&goods_id=&buy_num=1&open_id=&uid=0&channel_id=0&channel_type=4&engine=H5&pmode=0&token=&rebate=0&shop_type=1&plat_id=0&client_channel=h5-web&r-key=A4u72FRBNzGQc6YevB1Go7SaYWk_ckKbBfvAOmaDGSRBBLTwgSsbiF_k2mYn-epAHC6nw8uEMtfSZowUlt58FbD-iDPNT2hcczBkJ7C8388sg7x4ajk9q3YuynyW3MCmGLARisknM3tzZbbpAKR8w0QTYUWshDREyO5HbgQDXYUblxNeHXcjyvaFEx_tG9Qsk_t23_UR-Q6y5p5xWd9cKUmYN1n-aCTtJEBN9CH7b87oG-KZYVktJoCriON429Tw6Vdhghp0CfL-2Xke6U98NRt8mwDuHxFvs4HJBlFHOStgXFiW8qaNGqxaK7IZ0d04NtzgaqoC5lZpalQuCqNLAg!!&evx=3&sign=2b14862938ca80927647484706542cc1",
       "contentType": "application/json;charset=utf-8",
       "contentLength": "",
       "cacheControl": ""
@@ -2031,34 +2046,6 @@
       "salIdentifierCount": 0
     },
     {
-      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
-      "skipped": false,
-      "size": 1274,
-      "sha256": "e4771bba7a45408a635c982b02de0c1bc0760c1fc38cce09df25f186e747ec7a",
-      "targetModules": {
-        "6886": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        },
-        "36728": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        },
-        "75640": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        }
-      },
-      "hasWebpackChunkGlobal": false,
-      "salIdentifierCount": 0
-    },
-    {
       "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/GameInfoData.js?v=202607090001",
       "skipped": false,
       "size": 773,
@@ -2087,38 +2074,10 @@
       "salIdentifierCount": 0
     },
     {
-      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/InfoTool.js?v=202607090001",
       "skipped": false,
-      "size": 92605,
-      "sha256": "cec143edd6b7a21f762ae051518d7ea6872c1c1e6bfc50ef073f369e99dbc7f7",
-      "targetModules": {
-        "6886": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        },
-        "36728": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        },
-        "75640": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        }
-      },
-      "hasWebpackChunkGlobal": false,
-      "salIdentifierCount": 0
-    },
-    {
-      "url": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
-      "skipped": false,
-      "size": 15468,
-      "sha256": "18c5c641ebcfabdd4fc96e02fed037cbe45a18dd6cfa8598a897583c0ec11bcc",
+      "size": 1274,
+      "sha256": "e4771bba7a45408a635c982b02de0c1bc0760c1fc38cce09df25f186e747ec7a",
       "targetModules": {
         "6886": {
           "defined": false,
@@ -2169,6 +2128,62 @@
       },
       "hasWebpackChunkGlobal": false,
       "salIdentifierCount": 118
+    },
+    {
+      "url": "https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607090001",
+      "skipped": false,
+      "size": 15468,
+      "sha256": "18c5c641ebcfabdd4fc96e02fed037cbe45a18dd6cfa8598a897583c0ec11bcc",
+      "targetModules": {
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        },
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        }
+      },
+      "hasWebpackChunkGlobal": false,
+      "salIdentifierCount": 0
+    },
+    {
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/lib/jquery-2.1.4.min.js?v=202607090001",
+      "skipped": false,
+      "size": 92605,
+      "sha256": "cec143edd6b7a21f762ae051518d7ea6872c1c1e6bfc50ef073f369e99dbc7f7",
+      "targetModules": {
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        },
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        }
+      },
+      "hasWebpackChunkGlobal": false,
+      "salIdentifierCount": 0
     },
     {
       "url": "https://c2.cgyouxi.com/website/hfplayer/v3/common/Common.js?v=202607090001",
@@ -2283,34 +2298,6 @@
       "salIdentifierCount": 148
     },
     {
-      "url": "https://www.66rpg.com/ajax/user/getMobileUserInfo.json?&stamp;Wed%20Jul%2022%202026%2005:42:02%20GMT+0000%20(%E5%8D%8F%E8%B0%83%E4%B8%96%E7%95%8C%E6%97%B6)&jsonCallBack=jQuery19106174161954489641_1784698920876&_=1784698920877",
-      "skipped": false,
-      "size": 134,
-      "sha256": "0ee184eaa56e3518a917f0584ab4f782f598408d2e4f07230d1c4e1d1944c1b0",
-      "targetModules": {
-        "6886": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        },
-        "36728": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        },
-        "75640": {
-          "defined": false,
-          "definitionCount": 0,
-          "used": false,
-          "useCount": 0
-        }
-      },
-      "hasWebpackChunkGlobal": false,
-      "salIdentifierCount": 0
-    },
-    {
       "url": "https://static.sensorsdata.cn/sdk/1.26.3/sensorsdata.min.js",
       "skipped": false,
       "size": 183695,
@@ -2339,10 +2326,10 @@
       "salIdentifierCount": 0
     },
     {
-      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_limit_free_status.json?jsonCallBack=jQuery19106174161954489641_1784698920876&gindex=1690283&token=&_=1784698920878",
+      "url": "https://www.66rpg.com/ajax/user/getMobileUserInfo.json?&stamp;Wed%20Jul%2022%202026%2005:48:29%20GMT+0000%20(%E5%8D%8F%E8%B0%83%E4%B8%96%E7%95%8C%E6%97%B6)&jsonCallBack=jQuery19102456952426962271_1784699307606&_=1784699307607",
       "skipped": false,
-      "size": 94,
-      "sha256": "8eff13f57c52921d63d2b5a3049cebce26ec7f50f51da965830bc5b738c8c232",
+      "size": 134,
+      "sha256": "c7767ba0e5c6e0f0c4d80ea3aab518e37b8998856966123f116cbe138d2c8130",
       "targetModules": {
         "6886": {
           "defined": false,
@@ -2367,10 +2354,38 @@
       "salIdentifierCount": 0
     },
     {
-      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_orange_flower_color_status.json?jsonCallBack=jQuery19106174161954489641_1784698920876&gindex=1690283&token=&_=1784698920879",
+      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_limit_free_status.json?jsonCallBack=jQuery19102456952426962271_1784699307606&gindex=1690283&token=&_=1784699307608",
+      "skipped": false,
+      "size": 94,
+      "sha256": "abce30d3a851adec5d3599f8e0549ecc2b78c8c73e4c71943ea87855be6d8e1f",
+      "targetModules": {
+        "6886": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        },
+        "36728": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        },
+        "75640": {
+          "defined": false,
+          "definitionCount": 0,
+          "used": false,
+          "useCount": 0
+        }
+      },
+      "hasWebpackChunkGlobal": false,
+      "salIdentifierCount": 0
+    },
+    {
+      "url": "https://www.66rpg.com/ajax/gameLimitFree/get_orange_flower_color_status.json?jsonCallBack=jQuery19102456952426962271_1784699307606&gindex=1690283&token=&_=1784699307609",
       "skipped": false,
       "size": 134,
-      "sha256": "46c56eb787ea356a072758c9c6cfc78ed39509ded1f905c17b5341de410bb5ae",
+      "sha256": "2530dcedc5940d10b0b2711aa88606d008f604406ad76c22bad29a5c68984769",
       "targetModules": {
         "6886": {
           "defined": false,
@@ -2432,27 +2447,27 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "type": "warning",
-      "text": "[GroupMarkerNotSet(crbug.com/242999)!:A0B01B00E4010000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content."
+      "text": "[GroupMarkerNotSet(crbug.com/242999)!:A0B01B0024110000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content."
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "type": "warning",
-      "text": "[.WebGL-0x37cc00578d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x32d400581b00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "type": "warning",
-      "text": "[.WebGL-0x37cc00578d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x32d400581b00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "type": "warning",
-      "text": "[.WebGL-0x37cc00578d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x32d400581b00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "type": "warning",
-      "text": "[.WebGL-0x37cc00578d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+      "text": "[.WebGL-0x32d400581b00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -2462,7 +2477,7 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "type": "log",
-      "text": "Wed Jul 22 2026 05:42:04 GMT+0000 (协调世界时)"
+      "text": "Wed Jul 22 2026 05:48:32 GMT+0000 (协调世界时)"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
@@ -2507,7 +2522,52 @@
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
       "type": "log",
-      "text": "Wed Jul 22 2026 05:42:04 GMT+0000 (协调世界时)"
+      "text": "Wed Jul 22 2026 05:48:32 GMT+0000 (协调世界时)"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "clear",
+      "text": "console.clear"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "log",
+      "text": "function(){}"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "clear",
+      "text": "console.clear"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "table",
+      "text": "[Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "log",
+      "text": "[Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "clear",
+      "text": "console.clear"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "clear",
+      "text": "console.clear"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "log",
+      "text": "JSHandle@node"
+    },
+    {
+      "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
+      "type": "log",
+      "text": "Wed Jul 22 2026 05:48:32 GMT+0000 (协调世界时)"
     },
     {
       "pageUrl": "https://m.66rpg.com/h5/1690283?ohp=v3&quality=32",
