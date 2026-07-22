@@ -11,7 +11,11 @@ final class RuntimeNames {
         return "gams-license-api." + "2320006072.workers.dev";
     }
 
-    static String runtimeHost() {
+    static String runtimeCustomHost() {
+        return "runtime." + "xn--8pv109c.top";
+    }
+
+    static String runtimeWorkerHost() {
         return "gams-runtime-v2." + "2320006072.workers.dev";
     }
 
