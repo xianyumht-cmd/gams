@@ -34,7 +34,9 @@ jobs:
           set -euo pipefail
           test -n "${LICENSE_ADMIN_PASSWORD:-}" || { echo "LICENSE_ADMIN_PASSWORD is missing"; exit 1; }
           python -m pip install --quiet cryptography
+          cp .github/workflows/v2-build-apks.yml /tmp/v2-build-apks.yml
           python3 tools/release/prepare_gg_2_0_1.py
+          cp /tmp/v2-build-apks.yml .github/workflows/v2-build-apks.yml
 
       - name: Sign engine manifest and build encrypted runtime
         shell: bash
@@ -111,14 +113,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .github/workflows/one-shot-release-gg-2.0.1-source.yml
-          rm -f .github/workflows/one-shot-export-gg-2.0.0.yml
           rm -f /tmp/release-private.pem /tmp/engine.sig /tmp/runtime.sig \
             /tmp/engine-canonical.txt /tmp/engine-unsigned.json \
             /tmp/v2-runtime-canonical.txt /tmp/v2-runtime-unsigned.json
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
+          git add v2/android/client remote-script/src/noname.js game-engine v2/runtime/release
           git commit -m "Release GG 2.0.1 with JS 1.1.2 and engine 1.0.4"
           git pull --rebase origin main
           git push origin HEAD:main
