@@ -1,0 +1,23 @@
+{
+  "36728": {
+    "definedIn": [],
+    "usedIn": [
+      "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001"
+    ],
+    "conclusion": "只找到引用；定义可能在未加载的公共 chunk 或运行时注入资源中"
+  },
+  "6886": {
+    "definedIn": [],
+    "usedIn": [
+      "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001"
+    ],
+    "conclusion": "只找到引用；定义可能在未加载的公共 chunk 或运行时注入资源中"
+  },
+  "75640": {
+    "definedIn": [],
+    "usedIn": [
+      "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001"
+    ],
+    "conclusion": "只找到引用；定义可能在未加载的公共 chunk 或运行时注入资源中"
+  }
+}
