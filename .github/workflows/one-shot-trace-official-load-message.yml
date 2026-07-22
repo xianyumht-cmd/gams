@@ -1,0 +1,51 @@
+name: Trace official script-loaded message usages
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/one-shot-trace-official-load-message.yml]
+permissions:
+  contents: write
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 1 }
+      - name: Fetch and trace identifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -LfsS --retry 3 --max-time 180 -A 'Mozilla/5.0 (Linux; Android 13)' 'https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607090001' -o /tmp/official.js
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          text=Path('/tmp/official.js').read_text(encoding='utf-8',errors='replace')
+          identifiers=['IlcjX','adHQr','nGjqy']
+          result={}
+          for ident in identifiers:
+            hits=[]
+            for m in re.finditer(re.escape(ident),text):
+              hits.append({'offset':m.start(),'context':text[max(0,m.start()-500):min(len(text),m.end()+500)]})
+            result[ident]=hits
+          # collect all calls where these values are passed to likely output functions
+          patterns=[r'alert\s*\([^)]{0,300}(?:IlcjX|adHQr)',r'SAL_alert\s*\([^)]{0,300}(?:IlcjX|adHQr)',r'\[.{0,30}log.{0,30}\]\([^)]{0,300}(?:IlcjX|adHQr)',r'(?:IlcjX|adHQr)[^;]{0,300}~']
+          matches=[]
+          for pat in patterns:
+            for m in re.finditer(pat,text,re.S):matches.append({'pattern':pat,'offset':m.start(),'match':m.group(0)[:1000]})
+          report={'identifiers':result,'matches':matches}
+          Path('docs/diagnostics').mkdir(parents=True,exist_ok=True)
+          Path('docs/diagnostics/official-script-loaded-message-usage-20260723.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps({'counts':{k:len(v) for k,v in result.items()},'matches':matches},ensure_ascii=False,indent=2))
+          PY
+      - name: Commit and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/one-shot-trace-official-load-message.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m 'Record official script-loaded message usages'
+          for i in 1 2 3; do git pull --rebase origin main || true; git push origin HEAD:main && exit 0; sleep 2; done
+          exit 1
