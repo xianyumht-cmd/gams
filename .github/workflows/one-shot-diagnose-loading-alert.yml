@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p diagnostics
-          cat > /tmp/trace-alert.mjs <<'JS'
+          cat > trace-alert.mjs <<'JS'
           import fs from 'node:fs';
           import { chromium } from 'playwright';
 
@@ -179,12 +179,14 @@ jobs:
             errors: x.errors.slice(0, 3),
           })), null, 2));
           JS
-          node /tmp/trace-alert.mjs
+          node trace-alert.mjs
 
       - name: Commit diagnosis report
         shell: bash
         run: |
           set -euo pipefail
+          rm -f trace-alert.mjs package.json package-lock.json
+          rm -rf node_modules
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add diagnostics/loading-alert-runtime-trace.json
