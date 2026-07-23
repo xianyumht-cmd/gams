@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": 10004,
-  "versionName": "1.0.4",
-  "file": "game-1.0.4.js",
-  "sha256": "c679859cf322f6c2d1049e1017309a2ebee1850c83874a4586e29b784d68cbc5",
-  "size": 11589590,
-  "sourceUrl": "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/game-1.0.4.js",
-  "minNonameVersion": "1.1.2",
-  "publishedAt": "2026-07-22T17:39:42Z",
+  "version": 10005,
+  "versionName": "1.0.5",
+  "file": "game-1.0.5.js",
+  "sha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+  "size": 11590534,
+  "sourceUrl": "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/game-engine/release/game-1.0.5.js",
+  "minNonameVersion": "1.1.3",
+  "publishedAt": "2026-07-23T04:47:23Z",
   "signatureAlgorithm": "SHA256withECDSA",
-  "signature": "MEQCIHauSoPq2LTS9L+7FgyWdDX/+NpELOj7bdiLZVI8PC+OAiB+lddPrx6d+fUzQaeFkyrkAzLrKrfxaVOAkNzRr3fPMg=="
+  "signature": "MEUCIHRl4Rw7hmJRAsR4zPwmBmzddxKIgMTs9iDYkIQh9WAsAiEA2+ry5n1vGgYY5TWDCeG7ax4boFuLMH3HZysFgl4/UME="
 }

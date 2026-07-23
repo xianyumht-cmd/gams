@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clean-compatible-configurable
 // @namespace    R
-// @version      1.1.2
+// @version      1.1.3
 // @description  clean compatible configurable build
 // @author
 // @run-at       document-start

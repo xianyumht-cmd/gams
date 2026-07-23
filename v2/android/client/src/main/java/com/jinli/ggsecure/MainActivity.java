@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
+import android.webkit.JsResult;
 import android.webkit.DownloadListener;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -381,6 +382,20 @@ public final class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                if (isSuppressedEngineReadyAlert(message)) {
+                    try {
+                        view.evaluateJavascript(
+                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.2'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
+                                null);
+                    } catch (Throwable ignored) { }
+                    result.confirm();
+                    return true;
+                }
+                return super.onJsAlert(view, url, message, result);
+            }
+
+            @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 progressBar.setProgress(newProgress);
                 progressBar.setVisibility(newProgress >= 100 ? View.GONE : View.VISIBLE);
@@ -488,6 +503,12 @@ public final class MainActivity extends Activity {
                 "window.__GG_V2_CONTROL_LOADED__=false;" +
                 "console.error('[GG]',e);}" +
                 "})();";
+    }
+
+    private boolean isSuppressedEngineReadyAlert(String message) {
+        if (message == null) return false;
+        String normalized = message.trim().replace('～', '~');
+        return "脚本加载完成~".equals(normalized);
     }
 
     private DownloadListener createDownloadListener() {
