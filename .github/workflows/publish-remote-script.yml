@@ -1,5 +1,5 @@
 name: Publish signed remote script
-# Manual trigger marker for remote script 1.1.2
+# Manual trigger marker for remote script 1.1.3
 
 on:
   workflow_dispatch:
