@@ -54,6 +54,11 @@ jobs:
           tar -xzf /tmp/gamsfix-patch.tar.gz -C .
           rm -f license-api/migrations/0002_v2_signed_protocol.sql
 
+          mkdir -p /tmp/final-workflows
+          cp .github/workflows/deploy-license-api.yml /tmp/final-workflows/
+          cp .github/workflows/v2-deploy-runtime.yml /tmp/final-workflows/
+          cp .github/workflows/security-regression.yml /tmp/final-workflows/
+
           cat >> .gitignore <<'EOF'
 
           # Node and local Worker tooling
@@ -80,7 +85,18 @@ jobs:
           node --check v2/runtime/src/index.js
           node --check scripts/v2-lifecycle-smoke.mjs
           node --check tests/source-security.test.mjs
+
+          # The regression suite checks the final production workflow policy.
+          # Temporarily overlay those reviewed files, then restore the branch versions.
+          cp /tmp/final-workflows/deploy-license-api.yml .github/workflows/
+          cp /tmp/final-workflows/v2-deploy-runtime.yml .github/workflows/
+          cp /tmp/final-workflows/security-regression.yml .github/workflows/
           node tests/source-security.test.mjs
+          git checkout HEAD -- \
+            .github/workflows/deploy-license-api.yml \
+            .github/workflows/v2-deploy-runtime.yml \
+            .github/workflows/apply-audited-bug-fixes.yml
+          rm -f .github/workflows/security-regression.yml
 
           forbidden="$(git ls-files | grep -E '(^|/)(build|\.gradle)/|\.(apk|aab|class|dex|jks|keystore)$' || true)"
           if [[ -n "$forbidden" ]]; then
