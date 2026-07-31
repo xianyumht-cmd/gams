@@ -1,7 +1,13 @@
 name: Apply audited GAMS bug fixes
 
-# Retrigger after the workflow exists on the branch.
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
   push:
     branches:
       - codex/fix-all-audited-bugs-20260801
@@ -17,6 +23,7 @@ concurrency:
 
 jobs:
   apply-and-verify:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
