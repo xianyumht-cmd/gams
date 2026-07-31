@@ -1,5 +1,6 @@
 name: Apply audited GAMS bug fixes
 
+# Retrigger after the workflow exists on the branch.
 on:
   push:
     branches:
