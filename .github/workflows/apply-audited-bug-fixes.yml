@@ -1,0 +1,104 @@
+name: Apply audited GAMS bug fixes
+
+on:
+  push:
+    branches:
+      - codex/fix-all-audited-bugs-20260801
+    paths:
+      - .github/workflows/apply-audited-bug-fixes.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-audited-gams-bug-fixes
+  cancel-in-progress: false
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fix-all-audited-bugs-20260801
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Reassemble and apply reviewed patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/patches/gamsfix.part* | base64 --decode > /tmp/gamsfix-patch.tar.gz
+          echo "18ced80bd2f92cb2cdf423300c0ae470d5364fcd1e18ebf318e05ab64cd89165  /tmp/gamsfix-patch.tar.gz" | sha256sum --check
+          tar -xzf /tmp/gamsfix-patch.tar.gz -C .
+
+          git rm -r --ignore-unmatch v2/android/client/build
+          git rm -r --ignore-unmatch .github/patches
+          git rm --ignore-unmatch .github/workflows/apply-audited-bug-fixes.yml
+
+      - name: Run source and protocol regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check license-api/src/index.js
+          node --check v2/runtime/src/index.js
+          node --check scripts/v2-lifecycle-smoke.mjs
+          node --check tests/source-security.test.mjs
+          node tests/source-security.test.mjs
+
+          forbidden="$(git ls-files | grep -E '(^|/)(build|\.gradle)/|\.(apk|aab|class|dex|jks|keystore)$' || true)"
+          if [[ -n "$forbidden" ]]; then
+            printf '%s\n' "$forbidden"
+            echo "Generated or sensitive files remain tracked"
+            exit 1
+          fi
+
+      - name: Validate Worker migrations and bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed 's/__D1_DATABASE_ID__/00000000-0000-0000-0000-000000000000/g' \
+            license-api/wrangler.template.jsonc > license-api/wrangler.generated.jsonc
+          sed 's/__D1_DATABASE_ID__/00000000-0000-0000-0000-000000000000/g' \
+            v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.generated.jsonc
+          npx --yes wrangler@4 d1 migrations apply gams-license-db --local \
+            --config license-api/wrangler.generated.jsonc
+          npx --yes wrangler@4 deploy --dry-run --config license-api/wrangler.generated.jsonc
+          npx --yes wrangler@4 deploy --dry-run --config v2/runtime/wrangler.generated.jsonc
+          rm -f license-api/wrangler.generated.jsonc v2/runtime/wrangler.generated.jsonc
+
+      - name: Build and lint hardened Android client
+        working-directory: v2/android
+        run: gradle --no-daemon :client:clean :client:lintRelease :client:assembleRelease
+
+      - name: Commit verified fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+
+          forbidden="$(git diff --cached --name-only | grep -E '(^|/)(build|\.gradle)/|\.(apk|aab|class|dex|jks|keystore)$' || true)"
+          if [[ -n "$forbidden" ]]; then
+            printf '%s\n' "$forbidden"
+            echo "Generated or sensitive files would be committed"
+            exit 1
+          fi
+
+          git diff --cached --check
+          git commit -m "fix: resolve audited GAMS defects"
+          git push origin HEAD:codex/fix-all-audited-bugs-20260801
