@@ -54,9 +54,23 @@ jobs:
           tar -xzf /tmp/gamsfix-patch.tar.gz -C .
           rm -f license-api/migrations/0002_v2_signed_protocol.sql
 
+          cat >> .gitignore <<'EOF'
+
+          # Node and local Worker tooling
+          node_modules/
+          EOF
+
           git rm -r --ignore-unmatch v2/android/client/build
           git rm -r --ignore-unmatch .github/patches
-          git rm --ignore-unmatch .github/workflows/apply-audited-bug-fixes.yml
+
+          # GitHub App tokens cannot push workflow changes. Keep workflow files
+          # unchanged in this commit; the connector applies them separately.
+          git checkout HEAD -- \
+            .github/workflows/deploy-license-api.yml \
+            .github/workflows/v2-deploy-runtime.yml \
+            .github/workflows/apply-audited-bug-fixes.yml
+          rm -f .github/workflows/security-regression.yml
+          rm -rf node_modules license-api/.wrangler v2/runtime/.wrangler
 
       - name: Run source and protocol regression checks
         shell: bash
@@ -88,18 +102,27 @@ jobs:
           npx --yes wrangler@4 deploy --dry-run --config license-api/wrangler.generated.jsonc
           npx --yes wrangler@4 deploy --dry-run --config v2/runtime/wrangler.generated.jsonc
           rm -f license-api/wrangler.generated.jsonc v2/runtime/wrangler.generated.jsonc
+          rm -rf node_modules license-api/.wrangler v2/runtime/.wrangler
 
       - name: Build and lint hardened Android client
         working-directory: v2/android
         run: gradle --no-daemon :client:clean :client:lintRelease :client:assembleRelease
 
-      - name: Commit verified fixes
+      - name: Commit verified non-workflow fixes
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf node_modules license-api/.wrangler v2/runtime/.wrangler
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
+
+          workflow_changes="$(git diff --cached --name-only | grep '^\.github/workflows/' || true)"
+          if [[ -n "$workflow_changes" ]]; then
+            printf '%s\n' "$workflow_changes"
+            echo "Workflow changes must be submitted by the GitHub connector"
+            exit 1
+          fi
 
           forbidden="$(git diff --cached --name-only | grep -E '(^|/)(build|\.gradle)/|\.(apk|aab|class|dex|jks|keystore)$' || true)"
           if [[ -n "$forbidden" ]]; then
