@@ -52,6 +52,7 @@ jobs:
           cat .github/patches/gamsfix.part* | base64 --decode > /tmp/gamsfix-patch.tar.gz
           echo "18ced80bd2f92cb2cdf423300c0ae470d5364fcd1e18ebf318e05ab64cd89165  /tmp/gamsfix-patch.tar.gz" | sha256sum --check
           tar -xzf /tmp/gamsfix-patch.tar.gz -C .
+          rm -f license-api/migrations/0002_v2_signed_protocol.sql
 
           git rm -r --ignore-unmatch v2/android/client/build
           git rm -r --ignore-unmatch .github/patches
