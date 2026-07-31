@@ -7,6 +7,7 @@ import android.util.Base64;
 
 import org.json.JSONObject;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
@@ -27,6 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 final class V2LicenseManager {
     private static final int PROTOCOL_APP_VERSION = 11;
+    private static final String DISPLAY_VERSION = "2.0.2";
     private static final int MAX_JSON_BYTES = 256 * 1024;
     private static final int MAX_BUNDLE_BYTES = 18 * 1024 * 1024;
     private static final String RELEASE_PUBLIC_KEY_DER_BASE64 =
@@ -47,13 +49,21 @@ final class V2LicenseManager {
     }
 
     boolean hasSavedKey() {
-        return normalizeKey(secureStore.loadState().optString("licenseKey", "")).length() == 32;
+        JSONObject state = secureStore.loadState();
+        if (normalizeKey(state.optString("licenseKey", "")).length() == 32) return true;
+        return "temporary_keystore_error".equals(secureStore.lastLoadErrorCode());
     }
 
     void initializeSavedAsync(RuntimeCallback callback) {
         executor.execute(() -> {
             try {
+                throwIfInterrupted();
                 JSONObject state = secureStore.loadState();
+                if ("temporary_keystore_error".equals(secureStore.lastLoadErrorCode())) {
+                    deliver(callback, RuntimeResult.invalid(
+                            "系统安全存储暂时不可用，请重启设备后重试"));
+                    return;
+                }
                 String key = normalizeKey(state.optString("licenseKey", ""));
                 if (key.length() != 32) {
                     deliver(callback, RuntimeResult.invalid("请输入激活码"));
@@ -67,7 +77,8 @@ final class V2LicenseManager {
                     try {
                         auth = check(token);
                     } catch (ApiException error) {
-                        if ("bad_session".equals(error.code) || "device_unbound".equals(error.code)) {
+                        if ("bad_session".equals(error.code)
+                                || "device_unbound".equals(error.code)) {
                             auth = activate(key);
                         } else {
                             throw error;
@@ -75,8 +86,15 @@ final class V2LicenseManager {
                     }
                 }
                 saveAuth(key, auth);
+                if (auth.requiresUpdate()) {
+                    deliver(callback, RuntimeResult.updateRequired(auth));
+                    return;
+                }
+                throwIfInterrupted();
                 RuntimePayload payload = loadRuntime(auth.token);
                 deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
             } catch (java.io.IOException error) {
                 deliver(callback, RuntimeResult.invalid("需要联网启动，请检查网络后重试"));
             } catch (ApiException error) {
@@ -95,10 +113,18 @@ final class V2LicenseManager {
         }
         executor.execute(() -> {
             try {
+                throwIfInterrupted();
                 AuthResult auth = activate(key);
                 saveAuth(key, auth);
+                if (auth.requiresUpdate()) {
+                    deliver(callback, RuntimeResult.updateRequired(auth));
+                    return;
+                }
+                throwIfInterrupted();
                 RuntimePayload payload = loadRuntime(auth.token);
                 deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
             } catch (java.io.IOException error) {
                 deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"));
             } catch (ApiException error) {
@@ -112,9 +138,12 @@ final class V2LicenseManager {
     void selfUnbindAsync(SimpleCallback callback) {
         executor.execute(() -> {
             try {
+                throwIfInterrupted();
                 JSONObject state = secureStore.loadState();
                 String token = state.optString("token", "");
-                if (token.isEmpty()) throw new ApiException(401, "bad_session", "服务状态已失效");
+                if (token.isEmpty()) {
+                    throw new ApiException(401, "bad_session", "服务状态已失效");
+                }
                 String deviceId = identity.deviceId();
                 JSONObject body = signedLicenseBody(
                         "unbind", DeviceIdentity.sha256Hex(token + "|unbind"), deviceId);
@@ -122,6 +151,8 @@ final class V2LicenseManager {
                 postLicense("/v1/device/unbind", body);
                 secureStore.clearAuthorization();
                 deliver(callback, SimpleResult.success("当前设备已解除绑定"));
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
             } catch (Exception error) {
                 if (error instanceof ApiException) {
                     deliver(callback, SimpleResult.failure(userMessage((ApiException) error)));
@@ -136,8 +167,9 @@ final class V2LicenseManager {
         JSONObject state = secureStore.loadState();
         boolean permanent = state.optBoolean("permanent", false);
         long expiresAt = state.optLong("licenseExpiresAt", 0L);
-        String validity = permanent ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
-        return "有效期：" + validity + "\n版本：2.0.2";
+        String validity = permanent
+                ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
+        return "有效期：" + validity + "\n版本：" + DISPLAY_VERSION;
     }
 
     void clear() {
@@ -146,6 +178,7 @@ final class V2LicenseManager {
 
     void shutdown() {
         executor.shutdownNow();
+        mainHandler.removeCallbacksAndMessages(null);
     }
 
     private AuthResult activate(String key) throws Exception {
@@ -184,8 +217,9 @@ final class V2LicenseManager {
         String keyFingerprint = identity.keyFingerprint();
         String certificate = identity.certificateDigest();
         DeviceIdentity.Risk risk = identity.risk();
-        String canonical = "runtime\n" + nonce + "\n" + timestamp + "\n" + deviceId + "\n" +
-                keyFingerprint + "\n" + PROTOCOL_APP_VERSION + "\n" + certificate + "\n" + payloadHash;
+        String canonical = "runtime\n" + nonce + "\n" + timestamp + "\n" + deviceId + "\n"
+                + keyFingerprint + "\n" + PROTOCOL_APP_VERSION + "\n" + certificate + "\n"
+                + payloadHash;
 
         JSONObject accessBody = new JSONObject()
                 .put("purpose", "runtime")
@@ -211,7 +245,9 @@ final class V2LicenseManager {
         byte[] encryptedBundle = null;
         byte[] plainZip = null;
         try {
-            String bundlePath = access.optString("bundlePath", "/v2/runtime/bundle");
+            String version = manifest.getString("versionName");
+            String bundlePath = "/v2/runtime/bundle?version="
+                    + URLEncoder.encode(version, StandardCharsets.UTF_8.name());
             encryptedBundle = RuntimeTransport.getBytes(
                     bundlePath, "Bearer " + token, MAX_BUNDLE_BYTES);
             verifyBytes(
@@ -223,11 +259,11 @@ final class V2LicenseManager {
                     encryptedBundle,
                     contentKey,
                     Base64.decode(manifest.getString("iv"), Base64.DEFAULT),
-                    manifest.getString("versionName"));
+                    version);
             return RuntimePayload.fromZip(plainZip, manifest);
         } finally {
             Arrays.fill(contentKey, (byte) 0);
-            if (wrappedKey != null) Arrays.fill(wrappedKey, (byte) 0);
+            Arrays.fill(wrappedKey, (byte) 0);
             if (encryptedBundle != null) Arrays.fill(encryptedBundle, (byte) 0);
             if (plainZip != null) Arrays.fill(plainZip, (byte) 0);
         }
@@ -235,9 +271,12 @@ final class V2LicenseManager {
 
     private byte[] decryptBundle(byte[] encrypted, byte[] key, byte[] iv, String version)
             throws Exception {
-        if (key.length != 32 || iv.length != 12) throw new SecurityException("运行密钥无效");
+        if (key.length != 32 || iv.length != 12) {
+            throw new SecurityException("运行密钥无效");
+        }
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
+        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"),
+                new GCMParameterSpec(128, iv));
         cipher.updateAAD(("gg-v2-runtime|" + version).getBytes(StandardCharsets.UTF_8));
         return cipher.doFinal(encrypted);
     }
@@ -254,8 +293,9 @@ final class V2LicenseManager {
         String fingerprint = identity.keyFingerprint();
         String certificate = identity.certificateDigest();
         DeviceIdentity.Risk risk = identity.risk();
-        String canonical = purpose + "\n" + nonce + "\n" + timestamp + "\n" + deviceId + "\n" +
-                fingerprint + "\n" + PROTOCOL_APP_VERSION + "\n" + certificate + "\n" + payloadHash;
+        String canonical = purpose + "\n" + nonce + "\n" + timestamp + "\n" + deviceId + "\n"
+                + fingerprint + "\n" + PROTOCOL_APP_VERSION + "\n" + certificate + "\n"
+                + payloadHash;
         return new JSONObject()
                 .put("purpose", purpose)
                 .put("nonce", nonce)
@@ -271,14 +311,15 @@ final class V2LicenseManager {
 
     private JSONObject postLicense(String path, JSONObject body) throws Exception {
         ResilientApiTransport.Response response = ResilientApiTransport.post(
-                path, body.toString(), "GG-V2/1 Android", "", MAX_JSON_BYTES);
+                path, body.toString(), "GG-V2/2 Android", "", MAX_JSON_BYTES);
         JSONObject object;
         try {
             object = new JSONObject(response.body);
         } catch (Exception error) {
             throw new java.io.IOException("授权服务响应无效", error);
         }
-        if (response.status < 200 || response.status >= 300 || !object.optBoolean("ok", false)) {
+        if (response.status < 200 || response.status >= 300
+                || !object.optBoolean("ok", false)) {
             throw apiError(object, response.status);
         }
         return object;
@@ -293,7 +334,8 @@ final class V2LicenseManager {
         } catch (Exception error) {
             throw new java.io.IOException("运行服务响应无效", error);
         }
-        if (response.status < 200 || response.status >= 300 || !object.optBoolean("ok", false)) {
+        if (response.status < 200 || response.status >= 300
+                || !object.optBoolean("ok", false)) {
             throw apiError(object, response.status);
         }
         return object;
@@ -302,10 +344,13 @@ final class V2LicenseManager {
     private AuthResult parseAuth(JSONObject object) throws ApiException {
         if (!object.optBoolean("ok", false)) throw apiError(object, 400);
         String token = object.optString("token", "");
-        if (token.isEmpty()) throw new ApiException(500, "bad_response", "授权服务响应无效");
+        if (token.isEmpty()) {
+            throw new ApiException(500, "bad_response", "授权服务响应无效");
+        }
         return new AuthResult(
                 token,
-                object.isNull("licenseExpiresAt") ? 0L : object.optLong("licenseExpiresAt", 0L),
+                object.isNull("licenseExpiresAt")
+                        ? 0L : object.optLong("licenseExpiresAt", 0L),
                 object.optBoolean("permanent", false),
                 object.optInt("latestAppVersion", PROTOCOL_APP_VERSION),
                 object.optBoolean("forceUpdate", false),
@@ -329,9 +374,19 @@ final class V2LicenseManager {
     }
 
     private void verifyReleaseManifest(JSONObject manifest) throws Exception {
-        if (manifest.optInt("schemaVersion", 0) != 2) throw new SecurityException("运行清单版本无效");
+        if (manifest.optInt("schemaVersion", 0) != 2) {
+            throw new SecurityException("运行清单版本无效");
+        }
         if (!"SHA256withECDSA".equals(manifest.optString("signatureAlgorithm", ""))) {
             throw new SecurityException("运行清单签名算法无效");
+        }
+        String version = manifest.optString("versionName", "");
+        if (!version.matches("[A-Za-z0-9._-]{1,64}")) {
+            throw new SecurityException("运行清单版本无效");
+        }
+        String file = manifest.optString("file", "");
+        if (!file.matches("[A-Za-z0-9._-]+\\.bin")) {
+            throw new SecurityException("运行清单文件名无效");
         }
         String[] keys = {
                 "schemaVersion", "versionName", "file", "size", "sha256", "iv",
@@ -339,18 +394,23 @@ final class V2LicenseManager {
                 "keyIv", "keyCipher", "publishedAt"
         };
         StringBuilder canonical = new StringBuilder();
-        for (String key : keys) canonical.append(key).append("=")
-                .append(manifest.get(key)).append("\n");
+        for (String key : keys) {
+            canonical.append(key).append("=").append(manifest.get(key)).append("\n");
+        }
 
         byte[] keyBytes = Base64.decode(RELEASE_PUBLIC_KEY_DER_BASE64, Base64.DEFAULT);
-        PublicKey publicKey = KeyFactory.getInstance("EC")
-                .generatePublic(new X509EncodedKeySpec(keyBytes));
-        Signature verifier = Signature.getInstance("SHA256withECDSA");
-        verifier.initVerify(publicKey);
-        verifier.update(canonical.toString().getBytes(StandardCharsets.UTF_8));
-        if (!verifier.verify(Base64.decode(
-                manifest.getString("signature"), Base64.DEFAULT))) {
-            throw new SecurityException("运行清单签名校验失败");
+        try {
+            PublicKey publicKey = KeyFactory.getInstance("EC")
+                    .generatePublic(new X509EncodedKeySpec(keyBytes));
+            Signature verifier = Signature.getInstance("SHA256withECDSA");
+            verifier.initVerify(publicKey);
+            verifier.update(canonical.toString().getBytes(StandardCharsets.UTF_8));
+            if (!verifier.verify(Base64.decode(
+                    manifest.getString("signature"), Base64.DEFAULT))) {
+                throw new SecurityException("运行清单签名校验失败");
+            }
+        } finally {
+            Arrays.fill(keyBytes, (byte) 0);
         }
         if (!manifest.getString("sha256").matches("[0-9a-f]{64}")) {
             throw new SecurityException("运行清单摘要无效");
@@ -362,12 +422,24 @@ final class V2LicenseManager {
 
     private void verifyBytes(byte[] bytes, int expectedSize, String expectedHash, String label)
             throws Exception {
-        if (bytes.length != expectedSize) throw new SecurityException(label + "大小校验失败");
-        String actual = DeviceIdentity.hex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        if (!MessageDigest.isEqual(
-                actual.getBytes(StandardCharsets.US_ASCII),
-                expectedHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII))) {
-            throw new SecurityException(label + "完整性校验失败");
+        if (bytes.length != expectedSize) {
+            throw new SecurityException(label + "大小校验失败");
+        }
+        String normalizedHash = expectedHash == null
+                ? "" : expectedHash.toLowerCase(Locale.ROOT);
+        if (!normalizedHash.matches("[0-9a-f]{64}")) {
+            throw new SecurityException(label + "摘要无效");
+        }
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+        try {
+            String actual = DeviceIdentity.hex(digest);
+            if (!MessageDigest.isEqual(
+                    actual.getBytes(StandardCharsets.US_ASCII),
+                    normalizedHash.getBytes(StandardCharsets.US_ASCII))) {
+                throw new SecurityException(label + "完整性校验失败");
+            }
+        } finally {
+            Arrays.fill(digest, (byte) 0);
         }
     }
 
@@ -387,6 +459,7 @@ final class V2LicenseManager {
         if ("upgrade_required".equals(error.code)) return "客户端需要更新";
         if ("too_many_requests".equals(error.code)) return "操作过于频繁，请稍后再试";
         if ("server_error".equals(error.code)
+                || "server_misconfigured".equals(error.code)
                 || "runtime_unavailable".equals(error.code)
                 || "runtime_invalid".equals(error.code)
                 || "bad_runtime_key".equals(error.code)
@@ -398,23 +471,25 @@ final class V2LicenseManager {
                 ? "操作失败，请重试" : message;
     }
 
-    private static String safeMessage(Throwable error) {
-        String message = error.getMessage();
-        if (message == null || message.trim().isEmpty()) return error.getClass().getSimpleName();
-        return message.length() > 120 ? message.substring(0, 120) : message;
-    }
-
     private void deliver(RuntimeCallback callback, RuntimeResult result) {
-        if (callback != null) mainHandler.post(() -> callback.onResult(result));
+        if (callback != null && !executor.isShutdown()) {
+            mainHandler.post(() -> callback.onResult(result));
+        }
     }
 
     private void deliver(SimpleCallback callback, SimpleResult result) {
-        if (callback != null) mainHandler.post(() -> callback.onResult(result));
+        if (callback != null && !executor.isShutdown()) {
+            mainHandler.post(() -> callback.onResult(result));
+        }
+    }
+
+    private static void throwIfInterrupted() throws InterruptedException {
+        if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
     }
 
     static String normalizeKey(String input) {
-        return input == null ? "" :
-                input.replaceAll("[^0-9A-Fa-f]", "").toUpperCase(Locale.ROOT);
+        return input == null ? ""
+                : input.replaceAll("[^0-9A-Fa-f]", "").toUpperCase(Locale.ROOT);
     }
 
     private static String formatSeconds(long seconds) {
@@ -463,14 +538,25 @@ final class V2LicenseManager {
         }
 
         static RuntimeResult valid(RuntimePayload payload, AuthResult auth, String message) {
-            boolean required = auth.forceUpdate && auth.latestAppVersion > PROTOCOL_APP_VERSION;
             return new RuntimeResult(
-                    !required,
-                    required ? null : payload,
+                    true,
+                    payload,
                     auth.permanent,
                     auth.licenseExpiresAt,
-                    required ? "需要更新客户端" : message,
-                    required,
+                    message,
+                    false,
+                    auth.updateUrl,
+                    auth.updateMessage);
+        }
+
+        static RuntimeResult updateRequired(AuthResult auth) {
+            return new RuntimeResult(
+                    false,
+                    null,
+                    auth.permanent,
+                    auth.licenseExpiresAt,
+                    "需要更新客户端",
+                    true,
                     auth.updateUrl,
                     auth.updateMessage);
         }
@@ -523,6 +609,10 @@ final class V2LicenseManager {
             this.forceUpdate = forceUpdate;
             this.updateUrl = updateUrl == null ? "" : updateUrl;
             this.updateMessage = updateMessage == null ? "" : updateMessage;
+        }
+
+        boolean requiresUpdate() {
+            return forceUpdate && latestAppVersion > PROTOCOL_APP_VERSION;
         }
     }
 

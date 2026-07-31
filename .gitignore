@@ -1,0 +1,36 @@
+# Android / Gradle generated files
+.gradle/
+**/.gradle/
+**/build/
+local.properties
+
+# Release and signing material
+*.apk
+*.aab
+*.apks
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# Worker generated state
+**/wrangler.generated.jsonc
+**/.wrangler/
+.dev.vars
+.env
+.env.*
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Temporary diagnostics
+*.log
+*.tmp
+/tmp/
+
+# Node and local Worker tooling
+node_modules/

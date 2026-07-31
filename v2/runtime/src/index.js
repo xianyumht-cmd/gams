@@ -1,6 +1,7 @@
-const MIN_V2_APP_VERSION = 9;
+const MIN_V2_APP_VERSION = 11;
 const CHALLENGE_SECONDS = 90;
 const MAX_BODY_BYTES = 96 * 1024;
+const MAX_MANIFEST_BYTES = 128 * 1024;
 const RELEASE_BASE =
   "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/v2/runtime/release/";
 
@@ -11,6 +12,7 @@ let releaseCache = null;
 export default {
   async fetch(request, env) {
     try {
+      assertConfigured(env);
       if (request.method === "OPTIONS") {
         return noStore(new Response(null, { status: 204 }));
       }
@@ -19,10 +21,11 @@ export default {
         return json({
           ok: true,
           service: "gams-runtime-v2",
-          version: 2,
+          version: 3,
           keyWrap: "RSA-OAEP-SHA1",
           minAppVersion: MIN_V2_APP_VERSION,
           encryptedRuntime: true,
+          splitSecrets: true,
         });
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/challenge") {
@@ -44,6 +47,12 @@ export default {
     }
   },
 };
+
+function assertConfigured(env) {
+  if (!env.TOKEN_SIGNING_SECRET || !env.RUNTIME_MASTER_KEY) {
+    throw new HttpError(503, "server_misconfigured", "服务配置不完整");
+  }
+}
 
 async function issueChallenge(request, env) {
   const body = await readJson(request);
@@ -124,13 +133,18 @@ async function runtimeAccess(request, env) {
   const contentKey = await decryptContentKey(manifest, env);
   let wrappedKey;
   try {
-    const runtimeKey = await crypto.subtle.importKey(
-      "spki",
-      runtimePublicBytes,
-      { name: "RSA-OAEP", hash: "SHA-1" },
-      false,
-      ["encrypt"]
-    );
+    let runtimeKey;
+    try {
+      runtimeKey = await crypto.subtle.importKey(
+        "spki",
+        runtimePublicBytes,
+        { name: "RSA-OAEP", hash: "SHA-1" },
+        false,
+        ["encrypt"]
+      );
+    } catch {
+      throw new HttpError(400, "bad_runtime_key", "运行密钥无效");
+    }
     wrappedKey = new Uint8Array(
       await crypto.subtle.encrypt({ name: "RSA-OAEP" }, runtimeKey, contentKey)
     );
@@ -181,7 +195,7 @@ async function runtimeBundle(request, env) {
     throw new HttpError(503, "runtime_unavailable", "服务资源暂时不可用");
   }
   const bytes = new Uint8Array(await upstream.arrayBuffer());
-  if (bytes.length !== Number(manifest.size)) {
+  if (bytes.byteLength !== Number(manifest.size)) {
     throw new HttpError(503, "runtime_invalid", "服务资源校验失败");
   }
   const digest = await sha256HexBytes(bytes);
@@ -192,7 +206,7 @@ async function runtimeBundle(request, env) {
   await touch(env, license.id, device.id);
   const headers = new Headers({
     "content-type": "application/octet-stream",
-    "content-length": String(bytes.length),
+    "content-length": String(bytes.byteLength),
     "cache-control": "no-store, no-cache, max-age=0",
     "pragma": "no-cache",
     "x-content-type-options": "nosniff",
@@ -209,8 +223,8 @@ async function requireActiveDevice(env, session, deviceHash) {
   if (license.status === "disabled") {
     throw new HttpError(403, "license_disabled", "服务已暂停");
   }
-  if (license.status === "expired" ||
-      (license.expires_at && Number(license.expires_at) <= now)) {
+  if (license.status === "expired"
+      || (license.expires_at && Number(license.expires_at) <= now)) {
     throw new HttpError(403, "license_expired", "服务已到期");
   }
 
@@ -220,8 +234,8 @@ async function requireActiveDevice(env, session, deviceHash) {
   if (!device || !device.public_key || !device.key_fingerprint) {
     throw new HttpError(401, "device_unbound", "当前设备未完成授权");
   }
-  if (session.kid !== device.key_fingerprint ||
-      Number(session.sv) !== Number(device.session_version)) {
+  if (session.kid !== device.key_fingerprint
+      || Number(session.sv) !== Number(device.session_version)) {
     throw new HttpError(401, "bad_session", "设备会话已更新，请重新启动");
   }
   return { license, device };
@@ -242,8 +256,9 @@ async function verifySignedRequest(
   const keyFingerprint = normalizeHex64(body.keyFingerprint);
   const certificateDigest = normalizeHex64(body.certificateDigest);
   const payloadHash = normalizeHex64(body.payloadHash);
-  const signature = text(body.signature, 1024);
-  if (!deviceHash || purpose !== expectedPurpose || !nonce || !Number.isFinite(timestamp)) {
+  const signature = text(body.signature, 2048);
+  if (!deviceHash || purpose !== expectedPurpose || !nonce || !Number.isFinite(timestamp)
+      || !keyFingerprint || !certificateDigest || !payloadHash || !signature) {
     throw new HttpError(400, "bad_signature_request", "设备验证信息无效");
   }
   if (Math.abs(nowSeconds() - timestamp) > 120) {
@@ -255,17 +270,9 @@ async function verifySignedRequest(
   if (storedDevice.key_fingerprint !== keyFingerprint) {
     throw new HttpError(401, "key_mismatch", "设备密钥不匹配");
   }
-  if (storedDevice.certificate_digest &&
-      storedDevice.certificate_digest !== certificateDigest) {
+  if (storedDevice.certificate_digest
+      && storedDevice.certificate_digest !== certificateDigest) {
     throw new HttpError(401, "certificate_changed", "客户端校验失败");
-  }
-
-  const consumed = await env.DB.prepare(
-    "UPDATE challenges SET used_at=? WHERE nonce=? AND device_hash=? AND purpose=? " +
-    "AND used_at IS NULL AND expires_at>=?"
-  ).bind(nowSeconds(), nonce, deviceHash, purpose, nowSeconds()).run();
-  if (Number(consumed.meta?.changes || 0) !== 1) {
-    throw new HttpError(401, "bad_nonce", "验证请求已失效");
   }
 
   const publicBytes = base64Decode(publicKeyBase64);
@@ -283,20 +290,38 @@ async function verifySignedRequest(
     certificateDigest,
     payloadHash,
   ].join("\n");
-  const publicKey = await crypto.subtle.importKey(
-    "spki",
-    publicBytes,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["verify"]
-  );
-  const ok = await crypto.subtle.verify(
-    { name: "ECDSA", hash: "SHA-256" },
-    publicKey,
-    base64Decode(signature),
-    encoder.encode(canonical)
-  );
-  if (!ok) throw new HttpError(401, "bad_signature", "设备验证失败");
+  let publicKey;
+  try {
+    publicKey = await crypto.subtle.importKey(
+      "spki",
+      publicBytes,
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["verify"]
+    );
+  } catch {
+    throw new HttpError(400, "bad_public_key", "设备公钥无效");
+  }
+  let verified = false;
+  try {
+    verified = await crypto.subtle.verify(
+      { name: "ECDSA", hash: "SHA-256" },
+      publicKey,
+      base64Decode(signature),
+      encoder.encode(canonical)
+    );
+  } catch {
+    verified = false;
+  }
+  if (!verified) throw new HttpError(401, "bad_signature", "设备验证失败");
+
+  const consumed = await env.DB.prepare(
+    "UPDATE challenges SET used_at=? WHERE nonce=? AND device_hash=? AND purpose=? " +
+    "AND used_at IS NULL AND expires_at>=?"
+  ).bind(nowSeconds(), nonce, deviceHash, purpose, nowSeconds()).run();
+  if (changesOf(consumed) !== 1) {
+    throw new HttpError(401, "bad_nonce", "验证请求已失效");
+  }
 }
 
 async function loadReleaseManifest() {
@@ -306,21 +331,21 @@ async function loadReleaseManifest() {
   if (!response.ok) {
     throw new HttpError(503, "runtime_unavailable", "服务配置暂时不可用");
   }
-  const textBody = await response.text();
-  if (textBody.length > 128 * 1024) {
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > MAX_MANIFEST_BYTES) {
     throw new HttpError(503, "runtime_invalid", "服务配置异常");
   }
   let manifest;
   try {
-    manifest = JSON.parse(textBody);
+    manifest = JSON.parse(decoder.decode(bytes));
   } catch {
     throw new HttpError(503, "runtime_invalid", "服务配置异常");
   }
-  if (manifest.schemaVersion !== 2 ||
-      !/^[A-Za-z0-9._-]+\.bin$/.test(String(manifest.file || "")) ||
-      !/^[0-9a-f]{64}$/.test(String(manifest.sha256 || "")) ||
-      Number(manifest.size || 0) <= 0 ||
-      Number(manifest.size || 0) > 18 * 1024 * 1024) {
+  if (manifest.schemaVersion !== 2
+      || !/^[A-Za-z0-9._-]+\.bin$/.test(String(manifest.file || ""))
+      || !/^[0-9a-f]{64}$/.test(String(manifest.sha256 || ""))
+      || Number(manifest.size || 0) <= 0
+      || Number(manifest.size || 0) > 18 * 1024 * 1024) {
     throw new HttpError(503, "runtime_invalid", "服务配置异常");
   }
   releaseCache = { manifest, expiresAt: now + 30_000 };
@@ -328,10 +353,7 @@ async function loadReleaseManifest() {
 }
 
 async function decryptContentKey(manifest, env) {
-  const masterBytes = new Uint8Array(await crypto.subtle.digest(
-    "SHA-256",
-    encoder.encode(`gg-v2-runtime-master:${env.ADMIN_PASSWORD || ""}`)
-  ));
+  const masterBytes = runtimeMasterKeyBytes(env.RUNTIME_MASTER_KEY);
   const masterKey = await crypto.subtle.importKey(
     "raw",
     masterBytes,
@@ -351,62 +373,75 @@ async function decryptContentKey(manifest, env) {
       base64Decode(manifest.keyCipher)
     );
     const bytes = new Uint8Array(plain);
-    if (bytes.length !== 32) {
+    if (bytes.byteLength !== 32) {
       bytes.fill(0);
       throw new HttpError(503, "runtime_invalid", "运行密钥无效");
     }
     return bytes;
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    throw new HttpError(503, "runtime_invalid", "运行密钥无效");
   } finally {
     masterBytes.fill(0);
   }
 }
 
+function runtimeMasterKeyBytes(value) {
+  const textValue = String(value || "").trim();
+  let bytes;
+  if (/^[0-9a-fA-F]{64}$/.test(textValue)) {
+    bytes = new Uint8Array(32);
+    for (let index = 0; index < 32; index += 1) {
+      bytes[index] = Number.parseInt(textValue.slice(index * 2, index * 2 + 2), 16);
+    }
+  } else {
+    const normalized = textValue.replace(/-/g, "+").replace(/_/g, "/");
+    bytes = base64Decode(normalized + "=".repeat((4 - normalized.length % 4) % 4));
+  }
+  if (bytes.byteLength !== 32) {
+    bytes.fill(0);
+    throw new HttpError(503, "server_misconfigured", "运行密钥配置无效");
+  }
+  return bytes;
+}
+
 async function verifyToken(token, env, expectedType) {
   try {
-    const [payloadPart, signaturePart] = String(token || "").split(".");
-    if (!payloadPart || !signaturePart) return null;
-    const expected = await hmac(payloadPart, env.ADMIN_PASSWORD || "");
-    const supplied = base64UrlDecode(signaturePart);
+    const parts = String(token || "").split(".");
+    if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+    const expected = await hmac(parts[0], env.TOKEN_SIGNING_SECRET);
+    const supplied = base64UrlDecode(parts[1]);
     if (!constantTimeBytes(expected, supplied)) return null;
-    const payload = JSON.parse(decoder.decode(base64UrlDecode(payloadPart)));
-    if (payload.typ !== expectedType ||
-        !Number.isFinite(payload.exp) ||
-        payload.exp <= nowSeconds()) return null;
+    const payload = JSON.parse(decoder.decode(base64UrlDecode(parts[0])));
+    if (payload.typ !== expectedType || !Number.isFinite(payload.exp)
+        || payload.exp <= nowSeconds()) return null;
     return payload;
   } catch {
     return null;
   }
 }
 
-async function hmac(textValue, secret) {
+async function hmac(value, secret) {
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(`gams-license-v1:${secret}`),
+    encoder.encode(String(secret)),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  return new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, encoder.encode(textValue))
-  );
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value)));
 }
 
 async function allowRate(env, key, limit, windowSeconds) {
   const now = nowSeconds();
   const row = await env.DB.prepare(
-    "SELECT window_start,count FROM rate_limits WHERE key=?"
-  ).bind(key).first();
-  if (!row || now - Number(row.window_start) >= windowSeconds) {
-    await env.DB.prepare(
-      "INSERT INTO rate_limits(key,window_start,count) VALUES(?,?,1) " +
-      "ON CONFLICT(key) DO UPDATE SET window_start=excluded.window_start,count=1"
-    ).bind(key, now).run();
-    return true;
-  }
-  if (Number(row.count) >= limit) return false;
-  await env.DB.prepare("UPDATE rate_limits SET count=count+1 WHERE key=?")
-    .bind(key).run();
-  return true;
+    `INSERT INTO rate_limits(key,window_start,count) VALUES(?,?,1)
+     ON CONFLICT(key) DO UPDATE SET
+       count=CASE WHEN ?-window_start>=? THEN 1 ELSE count+1 END,
+       window_start=CASE WHEN ?-window_start>=? THEN ? ELSE window_start END
+     RETURNING count`
+  ).bind(key, now, now, windowSeconds, now, windowSeconds, now).first();
+  return Number(row?.count || 0) <= limit;
 }
 
 async function touch(env, licenseId, deviceId) {
@@ -423,12 +458,7 @@ async function audit(env, event, licenseId, deviceHash, detail) {
       "INSERT INTO audit_log(id,event,license_id,device_hash,detail,created_at) " +
       "VALUES(?,?,?,?,?,?)"
     ).bind(
-      crypto.randomUUID(),
-      event,
-      licenseId,
-      deviceHash,
-      detail || "",
-      nowSeconds()
+      crypto.randomUUID(), event, licenseId, deviceHash, detail || "", nowSeconds()
     ).run();
   } catch (error) {
     console.warn("audit failed", error);
@@ -436,16 +466,16 @@ async function audit(env, event, licenseId, deviceHash, detail) {
 }
 
 async function readJson(request) {
-  const length = Number(request.headers.get("content-length") || 0);
-  if (length > MAX_BODY_BYTES) {
+  const declared = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     throw new HttpError(413, "body_too_large", "请求内容过大");
   }
-  const body = await request.text();
-  if (body.length > MAX_BODY_BYTES) {
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.byteLength > MAX_BODY_BYTES) {
     throw new HttpError(413, "body_too_large", "请求内容过大");
   }
   try {
-    return body ? JSON.parse(body) : {};
+    return bytes.byteLength ? JSON.parse(decoder.decode(bytes)) : {};
   } catch {
     throw new HttpError(400, "bad_json", "请求格式错误");
   }
@@ -455,7 +485,7 @@ function githubFetch(url) {
   return fetch(url, {
     headers: {
       "Accept": "application/vnd.github.raw",
-      "User-Agent": "GG-Runtime-V2/1",
+      "User-Agent": "GG-Runtime-V2/3",
     },
     cf: { cacheEverything: true, cacheTtl: 30 },
   });
@@ -474,24 +504,26 @@ async function sha256HexBytes(bytes) {
   return [...digest].map((value) => value.toString(16).padStart(2, "0")).join("");
 }
 
-async function constantTimeTextEqual(a, b) {
+async function constantTimeTextEqual(leftValue, rightValue) {
   const [left, right] = await Promise.all([
-    crypto.subtle.digest("SHA-256", encoder.encode(String(a))),
-    crypto.subtle.digest("SHA-256", encoder.encode(String(b))),
+    crypto.subtle.digest("SHA-256", encoder.encode(String(leftValue))),
+    crypto.subtle.digest("SHA-256", encoder.encode(String(rightValue))),
   ]);
   return constantTimeBytes(new Uint8Array(left), new Uint8Array(right));
 }
 
-function constantTimeBytes(a, b) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let index = 0; index < a.length; index += 1) diff |= a[index] ^ b[index];
-  return diff === 0;
+function constantTimeBytes(left, right) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left[index] ^ right[index];
+  }
+  return difference === 0;
 }
 
 function appVersionOf(body) {
   const value = Number.parseInt(body.appVersion, 10);
-  return Number.isFinite(value) ? Math.max(0, Math.min(1000000, value)) : 0;
+  return Number.isFinite(value) ? Math.max(0, Math.min(1_000_000, value)) : 0;
 }
 
 function normalizeHex64(value) {
@@ -501,6 +533,10 @@ function normalizeHex64(value) {
 
 function text(value, maximum) {
   return String(value == null ? "" : value).trim().slice(0, maximum);
+}
+
+function changesOf(result) {
+  return Number(result?.meta?.changes ?? result?.changes ?? 0);
 }
 
 function nowSeconds() {
@@ -516,8 +552,12 @@ function base64Standard(bytes) {
 }
 
 function base64Decode(value) {
-  const binary = atob(String(value || ""));
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  try {
+    const binary = atob(String(value || ""));
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  } catch {
+    throw new HttpError(400, "bad_base64", "编码数据无效");
+  }
 }
 
 function base64Url(bytes) {

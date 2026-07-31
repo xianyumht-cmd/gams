@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.Arrays;
 
+import javax.crypto.AEADBadTagException;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -22,6 +23,7 @@ import javax.crypto.spec.GCMParameterSpec;
 final class SecureStore {
     private static final String PREFS = "gg_v2_state";
     private static final String PREF_BLOB = "payload";
+    private static final String PREF_CORRUPT_BLOB = "payload_corrupt_backup";
     private static final String STATE_ALIAS = "gg_v2_state_aes_1";
     private static final String LEGACY_PREFS = "gg_state_v1";
     private static final String LEGACY_STATE_ALIAS = "gg_state_aes_v1";
@@ -29,6 +31,7 @@ final class SecureStore {
 
     private final Context context;
     private final SharedPreferences preferences;
+    private volatile String lastLoadErrorCode = "";
 
     SecureStore(Context context) {
         this.context = context.getApplicationContext();
@@ -58,7 +61,7 @@ final class SecureStore {
                 legacy.edit().clear().commit();
             }
         } catch (Exception ignored) {
-            // A failed migration simply falls back to the normal activation screen.
+            // A failed migration leaves the legacy blob untouched for a later retry.
         } finally {
             if (plain != null) Arrays.fill(plain, (byte) 0);
         }
@@ -66,29 +69,55 @@ final class SecureStore {
 
     synchronized JSONObject loadState() {
         String encoded = preferences.getString(PREF_BLOB, "");
-        if (encoded == null || encoded.isEmpty()) return new JSONObject();
-        try {
-            byte[] plain = decrypt(Base64.decode(encoded, Base64.NO_WRAP));
-            try {
-                return new JSONObject(new String(plain, StandardCharsets.UTF_8));
-            } finally {
-                Arrays.fill(plain, (byte) 0);
-            }
-        } catch (Exception error) {
-            preferences.edit().remove(PREF_BLOB).commit();
+        if (encoded == null || encoded.isEmpty()) {
+            lastLoadErrorCode = "";
             return new JSONObject();
         }
+        byte[] encrypted = null;
+        byte[] plain = null;
+        try {
+            encrypted = Base64.decode(encoded, Base64.NO_WRAP);
+            plain = decrypt(encrypted);
+            JSONObject state = new JSONObject(new String(plain, StandardCharsets.UTF_8));
+            lastLoadErrorCode = "";
+            return state;
+        } catch (AEADBadTagException | CorruptStateException | IllegalArgumentException error) {
+            // Authentication failure, malformed envelope or invalid Base64 is permanent corruption.
+            quarantineCorruptBlob(encoded, error.getClass().getSimpleName());
+            return new JSONObject();
+        } catch (org.json.JSONException error) {
+            quarantineCorruptBlob(encoded, "invalid_json");
+            return new JSONObject();
+        } catch (Exception error) {
+            // AndroidKeyStore can be temporarily unavailable during boot, lock-state changes or
+            // vendor failures. Keep the encrypted state and allow the next startup to retry.
+            lastLoadErrorCode = "temporary_keystore_error";
+            return new JSONObject();
+        } finally {
+            if (encrypted != null) Arrays.fill(encrypted, (byte) 0);
+            if (plain != null) Arrays.fill(plain, (byte) 0);
+        }
+    }
+
+    String lastLoadErrorCode() {
+        return lastLoadErrorCode;
     }
 
     synchronized void saveState(JSONObject state) throws Exception {
         byte[] plain = state.toString().getBytes(StandardCharsets.UTF_8);
-        byte[] encrypted = encrypt(plain);
-        Arrays.fill(plain, (byte) 0);
-        boolean ok = preferences.edit()
-                .putString(PREF_BLOB, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-                .commit();
-        Arrays.fill(encrypted, (byte) 0);
-        if (!ok) throw new IllegalStateException("无法保存服务状态");
+        byte[] encrypted = null;
+        try {
+            encrypted = encrypt(plain);
+            boolean ok = preferences.edit()
+                    .putString(PREF_BLOB, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+                    .remove(PREF_CORRUPT_BLOB)
+                    .commit();
+            if (!ok) throw new IllegalStateException("无法保存服务状态");
+            lastLoadErrorCode = "";
+        } finally {
+            Arrays.fill(plain, (byte) 0);
+            if (encrypted != null) Arrays.fill(encrypted, (byte) 0);
+        }
     }
 
     synchronized void clearAuthorization() {
@@ -99,8 +128,16 @@ final class SecureStore {
             if (!installId.isEmpty()) fresh.put("installId", installId);
             saveState(fresh);
         } catch (Exception ignored) {
-            preferences.edit().clear().commit();
+            preferences.edit().remove(PREF_BLOB).commit();
         }
+    }
+
+    private void quarantineCorruptBlob(String encoded, String reason) {
+        preferences.edit()
+                .putString(PREF_CORRUPT_BLOB, encoded)
+                .remove(PREF_BLOB)
+                .commit();
+        lastLoadErrorCode = "corrupt_state:" + reason;
     }
 
     private byte[] encrypt(byte[] plain) throws Exception {
@@ -109,13 +146,18 @@ final class SecureStore {
         cipher.updateAAD(aad());
         byte[] iv = cipher.getIV();
         byte[] ciphertext = cipher.doFinal(plain);
-        ByteArrayOutputStream output = new ByteArrayOutputStream(2 + iv.length + ciphertext.length);
-        output.write(FORMAT_VERSION);
-        output.write(iv.length);
-        output.write(iv);
-        output.write(ciphertext);
-        Arrays.fill(ciphertext, (byte) 0);
-        return output.toByteArray();
+        try {
+            ByteArrayOutputStream output = new ByteArrayOutputStream(
+                    2 + iv.length + ciphertext.length);
+            output.write(FORMAT_VERSION);
+            output.write(iv.length);
+            output.write(iv);
+            output.write(ciphertext);
+            return output.toByteArray();
+        } finally {
+            Arrays.fill(iv, (byte) 0);
+            Arrays.fill(ciphertext, (byte) 0);
+        }
     }
 
     private byte[] decrypt(byte[] encrypted) throws Exception {
@@ -133,11 +175,11 @@ final class SecureStore {
 
     private byte[] decryptWith(byte[] encrypted, SecretKey key, byte[] aad) throws Exception {
         if (encrypted.length < 2 || encrypted[0] != FORMAT_VERSION) {
-            throw new IllegalStateException("状态格式无效");
+            throw new CorruptStateException("状态格式无效");
         }
         int ivLength = encrypted[1] & 0xff;
-        if (ivLength < 12 || encrypted.length <= 2 + ivLength) {
-            throw new IllegalStateException("状态格式无效");
+        if (ivLength != 12 || encrypted.length <= 2 + ivLength + 16) {
+            throw new CorruptStateException("状态格式无效");
         }
         byte[] iv = Arrays.copyOfRange(encrypted, 2, 2 + ivLength);
         byte[] ciphertext = Arrays.copyOfRange(encrypted, 2 + ivLength, encrypted.length);
@@ -159,7 +201,8 @@ final class SecureStore {
         if (existing instanceof KeyStore.SecretKeyEntry) {
             return ((KeyStore.SecretKeyEntry) existing).getSecretKey();
         }
-        KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        KeyGenerator generator = KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
         generator.init(new KeyGenParameterSpec.Builder(
                 STATE_ALIAS,
                 KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
@@ -200,5 +243,11 @@ final class SecureStore {
         try {
             if (file.exists()) file.delete();
         } catch (Exception ignored) { }
+    }
+
+    private static final class CorruptStateException extends Exception {
+        CorruptStateException(String message) {
+            super(message);
+        }
     }
 }
