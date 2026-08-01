@@ -36,11 +36,18 @@ jobs:
           fi
 
       - name: Run syntax and source security checks
+        shell: bash
         run: |
+          set -euo pipefail
+          python3 -m pip install --quiet cryptography
+          python3 -m py_compile v2/runtime/tools/build_release.py
           node --check license-api/src/index.js
           node --check v2/runtime/src/index.js
+          node --check v2/runtime/src/runtime-key.js
           node --check scripts/v2-lifecycle-smoke.mjs
+          node --check tests/runtime-key-compat.test.mjs
           node --check tests/source-security.test.mjs
+          node tests/runtime-key-compat.test.mjs
           node tests/source-security.test.mjs
 
       - name: Validate Wrangler configuration and local migrations
