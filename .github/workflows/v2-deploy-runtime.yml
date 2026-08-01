@@ -29,6 +29,7 @@ jobs:
       ADMIN_LOGIN_SECRET: ${{ secrets.ADMIN_LOGIN_SECRET }}
       TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
       RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      LEGACY_RUNTIME_PASSWORD: ${{ secrets.LEGACY_RUNTIME_PASSWORD || secrets.LICENSE_ADMIN_PASSWORD }}
       LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
       RUNTIME_ENDPOINT: https://gams-runtime-v2.2320006072.workers.dev
     steps:
@@ -38,22 +39,27 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Validate independent secrets
+      - name: Validate runtime secrets
         shell: bash
         run: |
           set -euo pipefail
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID ADMIN_LOGIN_SECRET TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID ADMIN_LOGIN_SECRET TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY LEGACY_RUNTIME_PASSWORD; do
             test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
           done
-          test "${#TOKEN_SIGNING_SECRET}" -ge 32
-          if [[ ! "$RUNTIME_MASTER_KEY" =~ ^[0-9A-Fa-f]{64}$ ]] && [[ ${#RUNTIME_MASTER_KEY} -lt 43 ]]; then
-            echo "RUNTIME_MASTER_KEY must be 32 random bytes encoded as 64 hex characters or base64"
+          test "${#TOKEN_SIGNING_SECRET}" -ge 32 || {
+            echo "TOKEN_SIGNING_SECRET must contain at least 32 characters"
             exit 1
-          fi
+          }
+          node --input-type=module - <<'NODE'
+          import { decodeRuntimeMasterKey } from "./v2/runtime/src/runtime-key.js";
+          const bytes = decodeRuntimeMasterKey(process.env.RUNTIME_MASTER_KEY);
+          bytes.fill(0);
+          NODE
 
       - name: Validate runtime source
         run: |
           node --check v2/runtime/src/index.js
+          node --check v2/runtime/src/runtime-key.js
           node --check scripts/v2-lifecycle-smoke.mjs
           node tests/source-security.test.mjs
 
@@ -76,7 +82,7 @@ jobs:
           sed "s/__D1_DATABASE_ID__/${{ steps.d1.outputs.database_id }}/g" \
             wrangler.template.jsonc > wrangler.generated.jsonc
 
-      - name: Configure independent runtime secrets
+      - name: Configure runtime secrets
         working-directory: v2/runtime
         shell: bash
         run: |
@@ -85,6 +91,8 @@ jobs:
             | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc
           printf '%s' "$RUNTIME_MASTER_KEY" \
             | npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.generated.jsonc
+          printf '%s' "$LEGACY_RUNTIME_PASSWORD" \
+            | npx --yes wrangler@4 secret put LEGACY_RUNTIME_PASSWORD --config wrangler.generated.jsonc
 
       - name: Deploy production runtime Worker
         working-directory: v2/runtime
@@ -99,7 +107,7 @@ jobs:
             runtime_status="$(curl -sS -o /tmp/runtime-health.json -w '%{http_code}' "$RUNTIME_ENDPOINT/health" || true)"
             if [[ "$license_status" == "200" && "$runtime_status" == "200" ]] \
               && jq -e '.ok and .version == 2 and .signedProtocol == true' /tmp/license-health.json >/dev/null \
-              && jq -e '.ok and .version == 3 and .encryptedRuntime == true' /tmp/runtime-health.json >/dev/null; then
+              && jq -e '.ok and .version == 3 and .encryptedRuntime == true and .legacyReleaseCompatible == true' /tmp/runtime-health.json >/dev/null; then
               exit 0
             fi
             sleep 5
