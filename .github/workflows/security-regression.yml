@@ -28,10 +28,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          forbidden="$(git ls-files | grep -E '(^|/)(build|\.gradle)/|\.(apk|aab|class|dex|jks|keystore)$' || true)"
+          forbidden="$(git ls-files | grep -E '(^|/)(node_modules|build|\.gradle)/|\.(apk|aab|class|dex|jks|keystore)$' || true)"
           if [[ -n "$forbidden" ]]; then
             printf '%s\n' "$forbidden"
-            echo "Generated or sensitive build files are tracked"
+            echo "Generated, dependency, or sensitive build files are tracked"
             exit 1
           fi
 
