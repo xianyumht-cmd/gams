@@ -1,0 +1,41 @@
+name: Remove tracked node_modules
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cleanup-gams-node-modules
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'codex/fix-all-audited-bugs-20260801'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fix-all-audited-bugs-20260801
+          fetch-depth: 0
+
+      - name: Remove tracked dependency directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git ls-files node_modules | grep -q .; then
+            echo 'node_modules is already absent from the Git index'
+            exit 0
+          fi
+          git rm -r node_modules
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'fix: remove tracked node_modules'
+          git push origin HEAD:codex/fix-all-audited-bugs-20260801
