@@ -9,6 +9,9 @@ const manager = read("v2/android/client/src/main/java/com/jinli/ggsecure/V2Licen
 const payload = read("v2/android/client/src/main/java/com/jinli/ggsecure/RuntimePayload.java");
 const secureStore = read("v2/android/client/src/main/java/com/jinli/ggsecure/SecureStore.java");
 const licenseWorkflow = read(".github/workflows/deploy-license-api.yml");
+const runtimeKey = read("v2/runtime/src/runtime-key.js");
+const runtimeBuilder = read("v2/runtime/tools/build_release.py");
+const runtimePublisher = read(".github/workflows/v2-publish-encrypted-runtime.yml");
 
 for (const endpoint of ["/v1/challenge", "/v1/device/unbind", "/v1/activate", "/v1/check"]) {
   assert(license.includes(endpoint), `missing signed protocol endpoint ${endpoint}`);
@@ -20,6 +23,14 @@ assert(!license.includes("env.ADMIN_PASSWORD"), "license worker still reuses ADM
 assert(runtime.includes("RUNTIME_MASTER_KEY"), "runtime worker missing independent master key");
 assert(runtime.includes("TOKEN_SIGNING_SECRET"), "runtime worker missing token signing key");
 assert(!runtime.includes("env.ADMIN_PASSWORD"), "runtime worker still derives keys from admin password");
+assert(runtime.includes("decryptRuntimeContentKey"), "runtime worker lacks release-key migration logic");
+assert(runtimeKey.includes("legacyRuntimePassword"), "legacy release migration is missing");
+assert(!runtimeBuilder.includes("gg-v2-runtime-master:"), "release builder still derives a master key from a password");
+assert(runtimeBuilder.includes("exactly 32 bytes"), "release builder does not enforce a raw 32-byte master key");
+assert(runtimePublisher.includes("RUNTIME_MASTER_KEY"), "runtime publisher does not use the independent master key");
+assert(!runtimePublisher.includes("TARGET_BRANCH"), "runtime publisher still targets an obsolete branch");
+assert(!runtimePublisher.includes("secret put ADMIN_PASSWORD"), "runtime publisher still deploys the obsolete Worker secret");
+assert(runtimePublisher.includes("git push origin HEAD:main"), "runtime release is not published to main");
 assert(license.includes("request.arrayBuffer()"), "license request limit is not byte based");
 assert(runtime.includes("request.arrayBuffer()"), "runtime request limit is not byte based");
 assert(license.includes("RETURNING count"), "license rate limiting is not atomic");

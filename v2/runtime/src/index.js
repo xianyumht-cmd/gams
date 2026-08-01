@@ -1,3 +1,5 @@
+import { decryptRuntimeContentKey } from "./runtime-key.js";
+
 const MIN_V2_APP_VERSION = 11;
 const CHALLENGE_SECONDS = 90;
 const MAX_BODY_BYTES = 96 * 1024;
@@ -26,6 +28,7 @@ export default {
           minAppVersion: MIN_V2_APP_VERSION,
           encryptedRuntime: true,
           splitSecrets: true,
+          legacyReleaseCompatible: true,
         });
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/challenge") {
@@ -353,56 +356,14 @@ async function loadReleaseManifest() {
 }
 
 async function decryptContentKey(manifest, env) {
-  const masterBytes = runtimeMasterKeyBytes(env.RUNTIME_MASTER_KEY);
-  const masterKey = await crypto.subtle.importKey(
-    "raw",
-    masterBytes,
-    { name: "AES-GCM" },
-    false,
-    ["decrypt"]
-  );
   try {
-    const plain = await crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv: base64Decode(manifest.keyIv),
-        additionalData: encoder.encode(`gg-v2-key|${manifest.versionName}`),
-        tagLength: 128,
-      },
-      masterKey,
-      base64Decode(manifest.keyCipher)
-    );
-    const bytes = new Uint8Array(plain);
-    if (bytes.byteLength !== 32) {
-      bytes.fill(0);
-      throw new HttpError(503, "runtime_invalid", "运行密钥无效");
-    }
-    return bytes;
-  } catch (error) {
-    if (error instanceof HttpError) throw error;
+    return await decryptRuntimeContentKey(manifest, {
+      runtimeMasterKey: env.RUNTIME_MASTER_KEY,
+      legacyRuntimePassword: env.LEGACY_RUNTIME_PASSWORD || "",
+    });
+  } catch {
     throw new HttpError(503, "runtime_invalid", "运行密钥无效");
-  } finally {
-    masterBytes.fill(0);
   }
-}
-
-function runtimeMasterKeyBytes(value) {
-  const textValue = String(value || "").trim();
-  let bytes;
-  if (/^[0-9a-fA-F]{64}$/.test(textValue)) {
-    bytes = new Uint8Array(32);
-    for (let index = 0; index < 32; index += 1) {
-      bytes[index] = Number.parseInt(textValue.slice(index * 2, index * 2 + 2), 16);
-    }
-  } else {
-    const normalized = textValue.replace(/-/g, "+").replace(/_/g, "/");
-    bytes = base64Decode(normalized + "=".repeat((4 - normalized.length % 4) % 4));
-  }
-  if (bytes.byteLength !== 32) {
-    bytes.fill(0);
-    throw new HttpError(503, "server_misconfigured", "运行密钥配置无效");
-  }
-  return bytes;
 }
 
 async function verifyToken(token, env, expectedType) {

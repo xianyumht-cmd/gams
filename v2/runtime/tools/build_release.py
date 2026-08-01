@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import base64
+import binascii
 import hashlib
 import json
-import os
+import re
 import secrets
 import sys
 import zipfile
@@ -13,16 +14,34 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 if len(sys.argv) != 6:
     raise SystemExit(
-        "usage: build_release.py <noname.js> <game.js> <version> <password> <output-dir>"
+        "usage: build_release.py <noname.js> <game.js> <version> "
+        "<runtime-master-key> <output-dir>"
     )
+
+
+def decode_runtime_master_key(value: str) -> bytearray:
+    text = value.strip()
+    if re.fullmatch(r"[0-9a-fA-F]{64}", text):
+        decoded = bytes.fromhex(text)
+    else:
+        normalized = text.replace("-", "+").replace("_", "/")
+        normalized += "=" * ((4 - len(normalized) % 4) % 4)
+        try:
+            decoded = base64.b64decode(normalized, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise SystemExit("runtime master key is not valid hex or base64") from error
+    if len(decoded) != 32:
+        raise SystemExit("runtime master key must decode to exactly 32 bytes")
+    return bytearray(decoded)
+
 
 noname_path = Path(sys.argv[1])
 game_path = Path(sys.argv[2])
 version = sys.argv[3].strip()
-password = sys.argv[4]
+master_key = decode_runtime_master_key(sys.argv[4])
 output = Path(sys.argv[5])
-if not version or not password:
-    raise SystemExit("version and password are required")
+if not version:
+    raise SystemExit("version is required")
 
 noname = noname_path.read_bytes()
 game = game_path.read_bytes()
@@ -53,12 +72,9 @@ bundle_iv = secrets.token_bytes(12)
 bundle_aad = f"gg-v2-runtime|{version}".encode()
 encrypted_bundle = AESGCM(bytes(content_key)).encrypt(bundle_iv, bytes(plain), bundle_aad)
 
-master_key = hashlib.sha256(
-    f"gg-v2-runtime-master:{password}".encode()
-).digest()
 key_iv = secrets.token_bytes(12)
 key_aad = f"gg-v2-key|{version}".encode()
-key_cipher = AESGCM(master_key).encrypt(key_iv, bytes(content_key), key_aad)
+key_cipher = AESGCM(bytes(master_key)).encrypt(key_iv, bytes(content_key), key_aad)
 
 filename = f"bundle-{version}.bin"
 bundle_path = output / filename
@@ -98,10 +114,9 @@ Path("/tmp/v2-runtime-unsigned.json").write_text(
     json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
     encoding="utf-8",
 )
-for index in range(len(content_key)):
-    content_key[index] = 0
-for index in range(len(plain)):
-    plain[index] = 0
+for buffer in (content_key, plain, master_key):
+    for index in range(len(buffer)):
+        buffer[index] = 0
 print(json.dumps({
     "version": version,
     "file": filename,
