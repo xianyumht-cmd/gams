@@ -1,0 +1,2 @@
+triggered_at=2026-08-03T22:03:00+08:00
+reason=disable_browser_only_managed_challenge_for_native_api_clients
