@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-03T20:13:42Z",
-  "runId": 30849237766,
+  "generatedAt": "2026-08-03T20:17:43Z",
+  "runId": 30849473086,
   "ok": false,
   "steps": {
-    "patch": "failure",
-    "androidBuild": "skipped",
-    "apkSign": "skipped",
-    "artifact": "skipped",
-    "publish": "skipped"
+    "patch": "success",
+    "androidBuild": "success",
+    "apkSign": "success",
+    "artifact": "success",
+    "publish": "failure"
   },
   "secretsExposed": false
 }
