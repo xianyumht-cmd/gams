@@ -1,0 +1,51 @@
+name: Correct APK signing acceptance for API 24
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/patch-rotation-apk-signing.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch rotation workflow and retrigger it
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/rotate-runtime-release-and-build-client.yml')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              '            --v1-signing-enabled true \\\n':
+                  '            --v1-signing-enabled false \\\n',
+              "          grep -Fq 'Verified using v1 scheme (JAR signing): true' /tmp/apk-verify.txt\n":
+                  '',
+              "sed -n 's/^Signer #1 certificate SHA-256 digest: //p'":
+                  "sed -n 's/^.*certificate SHA-256 digest: //p'",
+          }
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Rotation workflow mismatch for {old!r}: {count}')
+              text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+          PY
+          rm -f .github/workflows/patch-rotation-apk-signing.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A .github/workflows
+          git commit -m "Accept v2 v3 APK signing for API 24"
+          git pull --rebase origin main
+          git push origin HEAD:main
