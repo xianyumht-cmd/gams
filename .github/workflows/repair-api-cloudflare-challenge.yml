@@ -1,0 +1,113 @@
+name: Repair API Cloudflare challenge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ops/repair-api-cloudflare-challenge.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ZONE_NAME: xn--8pv109c.top
+      LICENSE_HOST: license.xn--8pv109c.top
+      RUNTIME_HOST: runtime.xn--8pv109c.top
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add scoped configuration rule and verify
+        shell: bash
+        run: |
+          set +e
+          mkdir -p docs /tmp/gams-cf-repair
+          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json')
+
+          zone_response="$(curl -sS --connect-timeout 10 --max-time 30 "${auth[@]}" \
+            "https://api.cloudflare.com/client/v4/zones?name=${ZONE_NAME}&status=active")"
+          zone_id="$(printf '%s' "$zone_response" | jq -r '.result[0].id // empty')"
+          zone_ok=false
+          [[ -n "$zone_id" ]] && zone_ok=true
+
+          expression='(http.host in {"license.xn--8pv109c.top" "runtime.xn--8pv109c.top"})'
+          rule="$(jq -nc --arg expression "$expression" '{ref:"gams_api_no_interactive_challenge",expression:$expression,description:"GAMS native API clients: disable browser-only challenge settings",action:"set_config",action_parameters:{bic:false,security_level:"essentially_off"},enabled:true}')"
+
+          config_ok=false
+          config_http=000
+          config_response='{}'
+          if [[ "$zone_ok" == true ]]; then
+            entry_url="https://api.cloudflare.com/client/v4/zones/${zone_id}/rulesets/phases/http_config_settings/entrypoint"
+            current_file=/tmp/gams-cf-repair/current-config.json
+            current_http="$(curl -sS --connect-timeout 10 --max-time 30 -o "$current_file" -w '%{http_code}' "${auth[@]}" "$entry_url")"
+
+            if [[ "$current_http" == 200 ]] && jq -e '.success == true' "$current_file" >/dev/null 2>&1; then
+              rules="$(jq -c --argjson newRule "$rule" '[ $newRule ] + [(.result.rules // [])[] | select(.ref != "gams_api_no_interactive_challenge")]' "$current_file")"
+              payload="$(jq -nc --argjson rules "$rules" '{rules:$rules}')"
+              config_response="$(curl -sS --connect-timeout 10 --max-time 30 -X PUT "${auth[@]}" --data "$payload" "$entry_url")"
+              config_http=200
+            else
+              create_url="https://api.cloudflare.com/client/v4/zones/${zone_id}/rulesets"
+              payload="$(jq -nc --argjson rule "$rule" '{name:"GAMS API configuration",description:"Scoped settings for native API subdomains",kind:"zone",phase:"http_config_settings",rules:[$rule]}')"
+              response_file=/tmp/gams-cf-repair/create-config.json
+              config_http="$(curl -sS --connect-timeout 10 --max-time 30 -o "$response_file" -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$create_url")"
+              config_response="$(cat "$response_file" 2>/dev/null)"
+            fi
+            printf '%s' "$config_response" > /tmp/gams-cf-repair/config-response.json
+            jq -e '.success == true' /tmp/gams-cf-repair/config-response.json >/dev/null 2>&1 && config_ok=true
+          else
+            printf '%s' "$zone_response" > /tmp/gams-cf-repair/config-response.json
+          fi
+
+          license_ok=false
+          runtime_ok=false
+          license_http=000
+          runtime_http=000
+          license_mitigated=''
+          runtime_mitigated=''
+          for attempt in $(seq 1 30); do
+            license_http="$(curl -sS --connect-timeout 8 --max-time 15 -D /tmp/gams-cf-repair/license.headers -o /tmp/gams-cf-repair/license.body -w '%{http_code}' "https://${LICENSE_HOST}/health")"
+            runtime_http="$(curl -sS --connect-timeout 8 --max-time 15 -D /tmp/gams-cf-repair/runtime.headers -o /tmp/gams-cf-repair/runtime.body -w '%{http_code}' "https://${RUNTIME_HOST}/health")"
+            license_mitigated="$(awk 'BEGIN{IGNORECASE=1} /^cf-mitigated:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' /tmp/gams-cf-repair/license.headers)"
+            runtime_mitigated="$(awk 'BEGIN{IGNORECASE=1} /^cf-mitigated:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' /tmp/gams-cf-repair/runtime.headers)"
+            if [[ "$license_http" == 200 ]] && jq -e '.ok == true and .service == "gams-license-api"' /tmp/gams-cf-repair/license.body >/dev/null 2>&1; then license_ok=true; fi
+            if [[ "$runtime_http" == 200 ]] && jq -e '.ok == true and .service == "gams-runtime-v2"' /tmp/gams-cf-repair/runtime.body >/dev/null 2>&1; then runtime_ok=true; fi
+            [[ "$license_ok" == true && "$runtime_ok" == true ]] && break
+            sleep 5
+          done
+
+          errors="$(jq -c '[.errors[]? | {code,message}]' /tmp/gams-cf-repair/config-response.json 2>/dev/null)"
+          [[ -n "$errors" ]] || errors='[]'
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg triggerCommit "$GITHUB_SHA" \
+            --arg zoneName "$ZONE_NAME" \
+            --arg zoneId "$zone_id" \
+            --arg configHttp "$config_http" \
+            --arg licenseHttp "$license_http" \
+            --arg runtimeHttp "$runtime_http" \
+            --arg licenseMitigated "$license_mitigated" \
+            --arg runtimeMitigated "$runtime_mitigated" \
+            --argjson zoneFound "$zone_ok" \
+            --argjson configUpdated "$config_ok" \
+            --argjson licenseHealthy "$license_ok" \
+            --argjson runtimeHealthy "$runtime_ok" \
+            --argjson errors "$errors" \
+            '{schemaVersion:1,generatedAt:$generatedAt,triggerCommit:$triggerCommit,zone:{name:$zoneName,id:$zoneId,found:$zoneFound},configurationRule:{ref:"gams_api_no_interactive_challenge",updated:$configUpdated,httpStatus:$configHttp,errors:$errors},license:{httpStatus:$licenseHttp,cfMitigated:$licenseMitigated,healthy:$licenseHealthy},runtime:{httpStatus:$runtimeHttp,cfMitigated:$runtimeMitigated,healthy:$runtimeHealthy},secretsExposed:false}' \
+            > docs/PRODUCTION_CHALLENGE_REPAIR.json
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/PRODUCTION_CHALLENGE_REPAIR.json
+          git commit -m "Record Cloudflare challenge repair" || true
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+          [[ "$config_ok" == true && "$license_ok" == true && "$runtime_ok" == true ]]
