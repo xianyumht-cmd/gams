@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T16:44:29Z",
+  "triggerCommit": "86c6d7af9b21c078a925e728c6e82f355df08786",
+  "runId": 30833455800,
+  "ok": false,
+  "client": {
+    "versionName": "2.0.4",
+    "versionCode": 13,
+    "sha256": ""
+  },
+  "manager": {
+    "versionName": "2.0.1",
+    "versionCode": 2,
+    "sha256": ""
+  },
+  "certificateSha256": "",
+  "steps": {
+    "inputs": "success",
+    "patch": "success",
+    "build": "success",
+    "sign": "failure",
+    "adminApi": "skipped",
+    "commit": "skipped",
+    "githubRelease": "skipped",
+    "artifact": "skipped"
+  },
+  "scope": {
+    "webViewSingleWindow": true,
+    "managerResilientGet": true,
+    "shopCoreModified": false,
+    "runtimeModified": false,
+    "cloudflareRulesModified": false
+  },
+  "secretsExposed": false
+}
