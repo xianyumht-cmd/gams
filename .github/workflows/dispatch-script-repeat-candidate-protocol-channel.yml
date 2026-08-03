@@ -1,0 +1,240 @@
+name: Build script candidate through isolated protocol channel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/dispatch-script-repeat-candidate-protocol-channel.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: script-repeat-protocol-candidate-20260804
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CANDIDATE_BRANCH: candidate-script-repeat-20260804
+      CANDIDATE_RUNTIME_VERSION: 2.0.5-script-repeat-c1
+      CANDIDATE_APP_VERSION: 19
+      APK_VERSION_NAME: 2.0.9-script-candidate
+      APK_VERSION_CODE: 19
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      RUNTIME_CUSTOM_HOST: runtime.xn--8pv109c.top
+      RUNTIME_WORKER_HOST: gams-runtime-v2.2320006072.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Verify candidate runtime artifact and stable client baseline
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          test "${#TOKEN_SIGNING_SECRET}" -ge 32
+          python3 -m py_compile scripts/apply_candidate_runtime_channel.py
+          git fetch origin "$CANDIDATE_BRANCH" --quiet
+          git show "origin/${CANDIDATE_BRANCH}:candidate-runtime/release/manifest.json" > /tmp/candidate-manifest.json
+          candidate_file="$(jq -r '.file' /tmp/candidate-manifest.json)"
+          git show "origin/${CANDIDATE_BRANCH}:candidate-runtime/release/${candidate_file}" > /tmp/candidate-runtime.bin
+          jq -e --arg version "$CANDIDATE_RUNTIME_VERSION" '.versionName == $version and .nonameSize == 332879 and .gameSize == 11590534 and .signatureAlgorithm == "SHA256withECDSA"' /tmp/candidate-manifest.json >/dev/null
+          test "$(stat -c%s /tmp/candidate-runtime.bin)" = "$(jq -r '.size' /tmp/candidate-manifest.json)"
+          test "$(sha256sum /tmp/candidate-runtime.bin | awk '{print $1}')" = "$(jq -r '.sha256' /tmp/candidate-manifest.json)"
+          test "$(jq -r '.sha256' /tmp/candidate-manifest.json)" = 'b232ae9e25b3c4d1b4684f8d74967e07f62d48de227a9ccd901cee355052e3f5'
+
+          : > /tmp/candidate-canonical.txt
+          for key in schemaVersion versionName file size sha256 iv nonameSize nonameSha256 gameSize gameSha256 keyIv keyCipher publishedAt; do
+            printf '%s=%s\n' "$key" "$(jq -r --arg key "$key" '.[$key]' /tmp/candidate-manifest.json)" >> /tmp/candidate-canonical.txt
+          done
+          jq -r '.signature' /tmp/candidate-manifest.json | base64 -d > /tmp/candidate.sig
+          openssl dgst -sha256 -verify remote-script/keys/public.pem -signature /tmp/candidate.sig /tmp/candidate-canonical.txt
+
+          grep -Fq 'versionCode = 16' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.3-stable"' v2/android/client/build.gradle.kts
+          grep -Fq 'PROTOCOL_APP_VERSION = 12' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          main_activity='v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java'
+          sha256sum "$main_activity" | awk '{print $1}' > /tmp/main-activity-baseline.sha256
+          grep -Fq 'setSupportMultipleWindows(false)' "$main_activity"
+          ! grep -Fq 'boolean onCreateWindow' "$main_activity"
+
+      - name: Add default-preserving candidate runtime channel
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_candidate_runtime_channel.py runtime
+          python3 scripts/apply_candidate_runtime_channel.py runtime
+          node --check v2/runtime/src/index.js
+          grep -Fq 'const CANDIDATE_APP_VERSION = 19;' v2/runtime/src/index.js
+          grep -Fq 'candidateChannel: true' v2/runtime/src/index.js
+          grep -Fq 'releaseBaseForAppVersion(appVersion)' v2/runtime/src/index.js
+          grep -Fq 'releaseForRequestedVersion(requestedVersion)' v2/runtime/src/index.js
+          grep -Fq 'candidate-script-repeat-20260804/candidate-runtime/release/' v2/runtime/src/index.js
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v2/runtime/src/index.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add isolated candidate runtime protocol channel'
+          fi
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy updated existing runtime service
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != null
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.candidate-channel.jsonc
+          jq -e --arg id "$database_id" '.name == "gams-runtime-v2" and .workers_dev == true and .routes[0].pattern == "runtime.xn--8pv109c.top" and .routes[0].custom_domain == true and .d1_databases[0].database_id == $id' v2/runtime/wrangler.candidate-channel.jsonc >/dev/null
+
+          cd v2/runtime
+          printf '%s' "$TOKEN_SIGNING_SECRET" | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.candidate-channel.jsonc
+          printf '%s' "$RUNTIME_MASTER_KEY" | npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.candidate-channel.jsonc
+          npx --yes wrangler@4 deploy --config wrangler.candidate-channel.jsonc
+
+      - name: Verify production default and candidate channel
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          custom_ok=false
+          worker_ok=false
+          default_ok=false
+          custom_code=000
+          worker_code=000
+          for attempt in $(seq 1 48); do
+            custom_code="$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/custom-body -w '%{http_code}' "https://${RUNTIME_CUSTOM_HOST}/health?candidate=1&attempt=${attempt}" 2>/tmp/custom-error || true)"
+            worker_code="$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/worker-body -w '%{http_code}' "https://${RUNTIME_WORKER_HOST}/health?candidate=1&attempt=${attempt}" 2>/tmp/worker-error || true)"
+            default_code="$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/default-body -w '%{http_code}' "https://${RUNTIME_CUSTOM_HOST}/health?attempt=${attempt}" 2>/tmp/default-error || true)"
+            custom_text="$(cat /tmp/custom-body 2>/dev/null || true)"
+            worker_text="$(cat /tmp/worker-body 2>/dev/null || true)"
+            default_text="$(cat /tmp/default-body 2>/dev/null || true)"
+            if [[ "$custom_code" == 200 ]] && printf '%s' "$custom_text" | jq -e --arg version "$CANDIDATE_RUNTIME_VERSION" --argjson app "$CANDIDATE_APP_VERSION" '.ok == true and .candidateChannel == true and .candidateAppVersion == $app and .candidateRuntimeVersion == $version' >/dev/null 2>&1; then custom_ok=true; fi
+            if [[ "$worker_code" == 200 ]] && printf '%s' "$worker_text" | jq -e --arg version "$CANDIDATE_RUNTIME_VERSION" --argjson app "$CANDIDATE_APP_VERSION" '.ok == true and .candidateChannel == true and .candidateAppVersion == $app and .candidateRuntimeVersion == $version' >/dev/null 2>&1; then worker_ok=true; fi
+            if [[ "$default_code" == 200 ]] && printf '%s' "$default_text" | jq -e '.ok == true and .encryptedRuntime == true and .candidateChannel == true and .candidateRuntimeVersion == null' >/dev/null 2>&1; then default_ok=true; fi
+            if [[ "$custom_ok" == true && "$worker_ok" == true && "$default_ok" == true ]]; then break; fi
+            sleep 5
+          done
+
+          jq -n --argjson customOk "$custom_ok" --arg customCode "$custom_code" --arg customBody "$(tr '\r\n' '  ' </tmp/custom-body 2>/dev/null | head -c 600 || true)" --arg customError "$(tr '\r\n' '  ' </tmp/custom-error 2>/dev/null | head -c 300 || true)" --argjson workerOk "$worker_ok" --arg workerCode "$worker_code" --arg workerBody "$(tr '\r\n' '  ' </tmp/worker-body 2>/dev/null | head -c 600 || true)" --arg workerError "$(tr '\r\n' '  ' </tmp/worker-error 2>/dev/null | head -c 300 || true)" --argjson defaultOk "$default_ok" --arg defaultCode "$default_code" --arg defaultBody "$(tr '\r\n' '  ' </tmp/default-body 2>/dev/null | head -c 600 || true)" '{custom:{ok:$customOk,httpCode:$customCode,body:$customBody,error:$customError},worker:{ok:$workerOk,httpCode:$workerCode,body:$workerBody,error:$workerError},defaultChannel:{ok:$defaultOk,httpCode:$defaultCode,body:$defaultBody}}' > /tmp/probe.json
+          test "$custom_ok" = true
+          test "$worker_ok" = true
+          test "$default_ok" = true
+
+      - name: Patch candidate-only client protocol version
+        id: client_patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_candidate_runtime_channel.py client
+          grep -Fq 'PROTOCOL_APP_VERSION = 19' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          grep -Fq '版本：2.0.9-script-candidate' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          grep -Fq 'versionCode = 19' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.9-script-candidate"' v2/android/client/build.gradle.kts
+          cmp /tmp/main-activity-baseline.sha256 <(sha256sum v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java | awk '{print $1}')
+          git diff --exit-code "${{ steps.source.outputs.sha }}" -- v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          git diff --exit-code "${{ steps.source.outputs.sha }}" -- v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeNames.java
+          git diff --exit-code "${{ steps.source.outputs.sha }}" -- v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeTransport.java
+
+      - name: Build sign and verify candidate APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p v2/android :client:clean :client:lintRelease :client:assembleRelease
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          test -s /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          mkdir -p /tmp/script-repeat-protocol-candidate
+          signed="/tmp/script-repeat-protocol-candidate/GG-${APK_VERSION_NAME}-code${APK_VERSION_CODE}.apk"
+          "$apksigner" sign --ks /tmp/gg-release.jks --ks-key-alias gg-release --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --verbose --print-certs "$signed" > /tmp/apk-verify.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apk-verify.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apk-verify.txt
+          "$aapt" dump badging "$signed" > /tmp/apk-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='${APK_VERSION_CODE}' versionName='${APK_VERSION_NAME}'" /tmp/apk-badging.txt
+          sha256sum "$signed" | tee /tmp/script-repeat-protocol-candidate/SHA256SUMS.txt
+          jq -n --arg versionName "$APK_VERSION_NAME" --argjson versionCode "$APK_VERSION_CODE" --argjson appVersion "$CANDIDATE_APP_VERSION" --arg runtimeVersion "$CANDIDATE_RUNTIME_VERSION" --arg runtimeSha256 'b232ae9e25b3c4d1b4684f8d74967e07f62d48de227a9ccd901cee355052e3f5' '{schemaVersion:1,kind:"isolated-script-candidate-protocol-channel",versionName:$versionName,versionCode:$versionCode,protocolAppVersion:$appVersion,runtimeVersion:$runtimeVersion,runtimeSha256:$runtimeSha256,isolation:{androidMainActivityChanged:false,scriptChangedFromPreviousCandidate:false,gameChanged:false,defaultRuntimeChannelChanged:false}}' > /tmp/script-repeat-protocol-candidate/CANDIDATE_INFO.json
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-2.0.9-script-repeat-protocol-candidate
+          path: /tmp/script-repeat-protocol-candidate/**
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record protocol candidate result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.verify.outcome }}" == success && "${{ steps.source.outcome }}" == success && "${{ steps.deploy.outcome }}" == success && "${{ steps.probe.outcome }}" == success && "${{ steps.client_patch.outcome }}" == success && "${{ steps.apk.outcome }}" == success && "${{ steps.artifact.outcome }}" == success ]]; then ok=true; fi
+          apk_sha=''
+          if [[ -s /tmp/script-repeat-protocol-candidate/SHA256SUMS.txt ]]; then apk_sha="$(awk '{print $1}' /tmp/script-repeat-protocol-candidate/SHA256SUMS.txt | head -n1)"; fi
+          test -s /tmp/probe.json || echo '{"custom":{"ok":false},"worker":{"ok":false},"defaultChannel":{"ok":false}}' > /tmp/probe.json
+          jq -n --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson runId "$GITHUB_RUN_ID" --argjson ok "$ok" --arg versionName "$APK_VERSION_NAME" --argjson versionCode "$APK_VERSION_CODE" --arg apkSha256 "$apk_sha" --argjson protocolAppVersion "$CANDIDATE_APP_VERSION" --arg runtimeVersion "$CANDIDATE_RUNTIME_VERSION" --arg sourceSha "${{ steps.source.outputs.sha }}" --slurpfile probe /tmp/probe.json --arg verify "${{ steps.verify.outcome }}" --arg source "${{ steps.source.outcome }}" --arg deploy "${{ steps.deploy.outcome }}" --arg probeStep "${{ steps.probe.outcome }}" --arg clientPatch "${{ steps.client_patch.outcome }}" --arg apk "${{ steps.apk.outcome }}" --arg artifact "${{ steps.artifact.outcome }}" '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:$ok,apk:{versionName:$versionName,versionCode:$versionCode,sha256:$apkSha256,protocolAppVersion:$protocolAppVersion},runtime:{candidateVersion:$runtimeVersion,sourceSha:$sourceSha,probe:$probe[0]},isolation:{androidMainActivityChanged:false,scriptChangedFromPreviousCandidate:false,gameChanged:false,defaultRuntimeChannelChanged:false},steps:{verify:$verify,source:$source,deploy:$deploy,probe:$probeStep,clientPatch:$clientPatch,apk:$apk,artifact:$artifact},secretsExposed:false}' > /tmp/status.json
+          content="$(base64 -w0 /tmp/status.json)"
+          path='docs/SCRIPT_REPEAT_PROTOCOL_CANDIDATE_STATUS.json'
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record script repeat protocol candidate result' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
+      - name: Require complete candidate
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.verify.outcome }}" = success
+          test "${{ steps.source.outcome }}" = success
+          test "${{ steps.deploy.outcome }}" = success
+          test "${{ steps.probe.outcome }}" = success
+          test "${{ steps.client_patch.outcome }}" = success
+          test "${{ steps.apk.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
