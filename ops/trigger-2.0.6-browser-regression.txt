@@ -1,0 +1,2 @@
+triggered_at=2026-08-04T02:09:00+08:00
+reason=regression began after duplicate-browser interception fix
