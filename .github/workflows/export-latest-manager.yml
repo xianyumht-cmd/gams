@@ -126,3 +126,5 @@ jobs:
           test "${{ steps.build.outcome }}" = success
           test "${{ steps.sign.outcome }}" = success
           test "${{ steps.artifact.outcome }}" = success
+
+# export-trigger: 2026-08-04T02:24:00+08:00
