@@ -138,6 +138,39 @@ jobs:
           git commit -m 'Fix external blank browser and restore repeat-purchase injection'
           git push origin "HEAD:${HOTFIX_BRANCH}"
 
+      - name: Record dispatcher result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.patch.outcome }}" == success \
+             && "${{ steps.android.outcome }}" == success \
+             && "${{ steps.sign.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success \
+             && "${{ steps.publish.outcome }}" == success ]]; then
+            ok=true
+          fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" \
+            --arg patch "${{ steps.patch.outcome }}" \
+            --arg android "${{ steps.android.outcome }}" \
+            --arg sign "${{ steps.sign.outcome }}" \
+            --arg artifact "${{ steps.artifact.outcome }}" \
+            --arg publish "${{ steps.publish.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:$ok,steps:{patch:$patch,androidBuild:$android,apkSign:$sign,artifact:$artifact,publish:$publish},secretsExposed:false}' \
+            > /tmp/dispatch-status.json
+          content="$(base64 -w0 /tmp/dispatch-status.json)"
+          path='docs/CLIENT_SHOP_REPEAT_HOTFIX_DISPATCH_STATUS.json'
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+            -f message='Record client shop repeat hotfix dispatcher result' \
+            -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
       - name: Require complete candidate
         if: always()
         shell: bash
