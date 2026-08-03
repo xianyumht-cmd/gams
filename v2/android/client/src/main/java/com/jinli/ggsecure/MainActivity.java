@@ -341,9 +341,7 @@ public final class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 statusText.setText("已就绪");
                 CookieManager.getInstance().flush();
-                if (!nativeDocumentStartEnabled && isTargetPage(url)) {
-                    view.evaluateJavascript(wrappedControlScript, null);
-                }
+                ensureControlScriptInjected(view, url);
             }
 
             @Override
@@ -382,13 +380,15 @@ public final class MainActivity extends Activity {
                     Message resultMsg
             ) {
                 WebView popup = new WebView(MainActivity.this);
-                popup.getSettings().setJavaScriptEnabled(false);
+                popup.getSettings().setJavaScriptEnabled(true);
+                popup.getSettings().setDomStorageEnabled(true);
                 popup.setWebViewClient(new WebViewClient() {
                     private boolean routed;
 
                     private boolean route(Uri uri) {
                         if (routed) return true;
-                        if (uri == null || "about:blank".equalsIgnoreCase(uri.toString())) return true;
+                        if (uri == null) return true;
+                        if ("about:blank".equalsIgnoreCase(uri.toString())) return false;
                         routed = true;
                         String scheme = uri.getScheme();
                         if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
@@ -422,7 +422,7 @@ public final class MainActivity extends Activity {
                 if (isSuppressedEngineReadyAlert(message)) {
                     try {
                         view.evaluateJavascript(
-                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.4'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
+                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.5'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
                                 null);
                     } catch (Throwable ignored) { }
                     result.confirm();
@@ -500,6 +500,18 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void ensureControlScriptInjected(WebView view, String url) {
+        if (view == null || wrappedControlScript == null || !isTargetPage(url)) return;
+        view.evaluateJavascript(wrappedControlScript, null);
+        long[] delays = {250L, 1200L, 3000L};
+        for (long delay : delays) {
+            view.postDelayed(() -> {
+                if (webView != view || !isTargetPage(view.getUrl())) return;
+                view.evaluateJavascript(wrappedControlScript, null);
+            }, delay);
+        }
+    }
+
     private WebResourceResponse memoryGameResponse() {
         RuntimePayload payload = runtimePayload;
         if (payload == null) {
@@ -564,11 +576,14 @@ public final class MainActivity extends Activity {
 
     private String wrapControlScript(String source) {
         return "(function(){" +
-                "if(window.__GG_V2_CONTROL_LOADED__)return;" +
+                "if(window.__GG_V2_CONTROL_LOADED__||window.__GG_V2_CONTROL_LOADING__)return;" +
+                "window.__GG_V2_CONTROL_LOADING__=true;" +
+                "try{\n" + source + "\n" +
                 "window.__GG_V2_CONTROL_LOADED__=true;" +
-                "try{\n" + source + "\n}catch(e){" +
+                "}catch(e){" +
                 "window.__GG_V2_CONTROL_LOADED__=false;" +
-                "console.error('[GG]',e);}" +
+                "console.error('[GG]',e);" +
+                "}finally{window.__GG_V2_CONTROL_LOADING__=false;}" +
                 "})();";
     }
 

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": 10103,
-  "versionName": "1.1.3",
-  "file": "noname-1.1.3.js",
-  "sha256": "bb0337e6398658eec79e20da174206eb211807428960ea254b6bb4258dbe0a84",
-  "size": 331520,
+  "version": 10104,
+  "versionName": "1.1.4",
+  "file": "noname-1.1.4.js",
+  "sha256": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818",
+  "size": 332428,
   "minAppVersion": 1,
-  "publishedAt": "2026-07-23T04:49:29Z",
+  "publishedAt": "2026-08-03T17:33:10Z",
   "signatureAlgorithm": "SHA256withECDSA",
-  "signature": "MEUCIH8ev70L9U3j1wE1BHWLA60Ux+4WGHwC6Z7mUpMMshpJAiEA6/rz0SE5MYYrZYsbgNiSuBnw+L5pgai8ujk8o6AaFPc="
+  "signature": "MEQCIA6ZsGaPrKgDTGShdq6dsrUpaVEzzb4D4CEy0L48JIwWAiB9g8qJd/oWGGVGDEbTSmXz9Etx11U++mdGr9L7/AIzRA=="
 }
