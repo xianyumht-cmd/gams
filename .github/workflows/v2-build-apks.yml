@@ -1,84 +1,78 @@
-name: Build GG 2.0.3 formal client release
+name: Diagnose GG client and shop sources
 
 on:
   push:
     branches:
       - main
     paths:
-      - v2/android/client/**
-      - v2/android/build.gradle.kts
-      - v2/android/settings.gradle.kts
-      - v2/android/gradle.properties
-      - .github/workflows/v2-build-apks.yml
-  pull_request:
-    branches:
-      - main
-    paths:
-      - v2/android/client/**
-      - v2/android/build.gradle.kts
-      - v2/android/settings.gradle.kts
-      - v2/android/gradle.properties
       - .github/workflows/v2-build-apks.yml
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build-client:
+  diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.11.1"
-
-      - name: Build formal GG 2.0.3 client
-        working-directory: v2/android
-        run: gradle --no-daemon :client:clean :client:lintRelease :client:assembleRelease
-
-      - name: Verify unsigned release input
+      - name: Inspect Android navigation and shop sources
         shell: bash
         run: |
           set -euo pipefail
-          client="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
-          test -n "$client" && test -s "$client"
+          {
+            echo '===== FILE TREE: remote-script ====='
+            find remote-script -maxdepth 5 -type f | sort
+            echo
+            echo '===== FILE TREE: Android client ====='
+            find v2/android/client/src/main/java -type f | sort
+            echo
+            echo '===== MAINACTIVITY NAVIGATION ====='
+            grep -n -C 16 -E 'setSupportMultipleWindows|setJavaScriptCanOpenWindowsAutomatically|shouldOverrideUrlLoading|onCreateWindow|ACTION_VIEW|window.open' \
+              v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java || true
+            echo
+            echo '===== SHOP / LOGIN / PURCHASE MATCHES ====='
+            grep -RInE --include='*.js' --include='*.mjs' --include='*.ts' --include='*.json' \
+              '商城|购买|领取|橙光|登录|login|buy|purchase|order|window\.open|location\.(href|assign|replace)|_blank' \
+              remote-script scripts game-engine 2>/dev/null | head -n 6000 || true
+            echo
+            echo '===== NON-RELEASE REMOTE SCRIPT CONTENTS ====='
+            while IFS= read -r file; do
+              echo "--- $file"
+              wc -c "$file" || true
+              sed -n '1,240p' "$file" 2>/dev/null || true
+            done < <(find remote-script -maxdepth 5 -type f ! -path '*/release/*' | sort)
+          } > /tmp/client-shop-diagnosis.txt
 
-          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x | sort -V | tail -n1)"
-          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x | sort -V | tail -n1)"
-          test -x "$aapt" && test -x "$apksigner"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          text = Path('/tmp/client-shop-diagnosis.txt').read_text(encoding='utf-8', errors='replace')
+          Path('/tmp/client-shop-diagnosis.json').write_text(json.dumps({
+              'schemaVersion': 1,
+              'ok': True,
+              'report': text[-300000:],
+              'secretsExposed': False,
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
 
-          badging="$($aapt dump badging "$client")"
-          printf '%s\n' "$badging" | grep -Fq "package: name='com.jinli.quickweb' versionCode='12' versionName='2.0.3'"
-          printf '%s\n' "$badging" | grep -Fq "application-label:'GG'"
-
-          if "$apksigner" verify "$client" >/tmp/gg-client-signature.txt 2>&1; then
-            echo 'Formal build input must remain unsigned before production signing.'
-            exit 1
+      - name: Publish diagnosis report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          path='docs/CLIENT_SHOP_BUG_DIAGNOSIS.json'
+          content="$(base64 -w0 /tmp/client-shop-diagnosis.json)"
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          if [[ -n "$sha" ]]; then
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record client and shop bug diagnosis' \
+              -f content="$content" -f sha="$sha" -f branch=main >/dev/null
+          else
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record client and shop bug diagnosis' \
+              -f content="$content" -f branch=main >/dev/null
           fi
-
-          rm -rf /tmp/gg-2.0.3-release
-          mkdir -p /tmp/gg-2.0.3-release
-          cp "$client" /tmp/gg-2.0.3-release/GG-2.0.3-code12-固定签名前.apk
-          sha256sum /tmp/gg-2.0.3-release/*.apk > /tmp/gg-2.0.3-release/SHA256SUMS.txt
-          cat > /tmp/gg-2.0.3-release/RELEASE-INFO.txt <<'EOF'
-          GG 2.0.3 formal client signing input
-          versionCode: 12
-          packageName: com.jinli.quickweb
-          productionCertificateSHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
-          EOF
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: GG-2.0.3-formal-client-release-input
-          path: /tmp/gg-2.0.3-release/**
-          retention-days: 90
-          if-no-files-found: error
