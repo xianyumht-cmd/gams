@@ -15,20 +15,39 @@
 4. A second execution still fails after approximately 1–3 seconds and returns to the login screen.
 5. The failure reproduces both when remaining on the same target page and when leaving that page and entering it again.
 6. The reusable callback candidate did not resolve the repeat-execution failure.
-7. No conclusion is made yet about whether the failure is caused by an upstream page-flow change or by the repository packaging/encryption/decryption/runtime-loading chain.
+
+## Runtime release-chain integrity result
+
+The exact round-trip diagnosis completed successfully:
+
+- The encrypted candidate bundle was decrypted with the configured runtime key.
+- ZIP entry names and order were exact.
+- Both decrypted files matched the exact pre-encryption inputs byte-for-byte.
+- File sizes and SHA-256 values matched the signed manifest.
+- UTF-8 conversion of the injected text file was lossless.
+- The bundle published through GitHub matched the repository bundle byte-for-byte.
+- No silent truncation, encoding conversion, altered line ending, ZIP replacement, download drift or decryption corruption was detected.
+
+The release builder performs a deterministic fixed-address transformation before encryption. The decrypted candidate exactly matches the transformed input. Therefore, repository upload, encryption, download and decryption corruption are excluded as the cause of the repeat-execution defect. The remaining diagnosis must distinguish between runtime loading/lifecycle differences and an upstream page-flow change.
+
+Detailed evidence:
+
+- `docs/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.json`
+- `docs/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.md`
 
 ## Current status
 
 - White-screen regression: isolated from this candidate and recorded as a separate client issue.
 - Startup server-routing regression from code18: not reproduced by the code19 delivery route.
+- Runtime release-chain byte corruption: excluded by exact round-trip verification.
 - Repeat-execution defect: still open and reproducible.
 
 ## Required next checks
 
-1. Perform an exact byte-for-byte round-trip check from repository plaintext input through encrypted release generation and decryption back to runtime plaintext.
-2. Compare source size, SHA-256, byte length, separator boundaries and load order before and after the release chain.
-3. Compare the last known repeat-capable baseline with the current runtime without changing client navigation or white-screen-related code.
-4. Only after release-chain integrity is proven should the investigation attribute the defect to an upstream page-flow change.
+1. Compare the last known repeat-capable delivery baseline with the current runtime while keeping the same script and engine bytes.
+2. Build an A/B diagnostic that changes only the runtime loading path, without changing client navigation or white-screen-related code.
+3. If both loading paths fail identically, treat an upstream page-flow change or baseline incompatibility as the leading cause.
+4. If only the current loading path fails, continue tracing runtime lifecycle and reinjection state.
 
 ## Guardrails
 
