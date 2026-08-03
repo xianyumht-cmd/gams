@@ -1,0 +1,73 @@
+name: Fix Runtime rotation commit staging
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/fix-rotation-commit-step.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Replace commit block and retrigger rotation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path('.github/workflows/rotate-runtime-release-and-build-client.yml')
+          text = path.read_text(encoding='utf-8')
+          pattern = re.compile(
+              r'      - name: Commit rotated sources and Runtime release\n'
+              r'.*?'
+              r'(?=      - name: Configure and deploy both Workers\n)',
+              re.S,
+          )
+          replacement = '''      - name: Commit rotated sources and Runtime release
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/repair-rotation-workflow.yml
+          rm -f .github/workflows/diagnose-android-keystore.yml
+          rm -f .github/workflows/patch-rotation-apk-signing.yml
+          rm -f .github/workflows/diagnose-main-push.yml
+          rm -f .github/workflows/fix-rotation-commit-step.yml
+          rm -f .push-diagnosis.tmp
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git add -f "v2/runtime/release/bundle-${VERSION_NAME}.bin"
+          git status --short
+          git commit -m "Rotate Runtime signing key and publish GG 2.0.3"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+'''
+          updated, count = pattern.subn(replacement, text)
+          if count != 1:
+              raise SystemExit(f'rotation commit block mismatch: {count}')
+          path.write_text(updated, encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/fix-rotation-commit-step.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A .github/workflows
+          git commit -m "Fix Runtime rotation commit staging"
+          git pull --rebase origin main
+          git push origin HEAD:main
