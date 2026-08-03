@@ -1,6 +1,11 @@
 name: Correct release verification and rerun
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/patch-release-verification.yml
   workflow_dispatch:
 
 permissions:
@@ -18,10 +23,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Correct deterministic Runtime comparison
+      - name: Restore release workflow and correct deterministic comparison
         shell: bash
         run: |
           set -euo pipefail
+          git show c9c9a5da5d7e94def4b9c149b8f3d7551c5dc8da:.github/workflows/v2-build-apks.yml \
+            > .github/workflows/v2-build-apks.yml
           python3 - <<'PY'
           from pathlib import Path
           path = Path('.github/workflows/v2-build-apks.yml')
