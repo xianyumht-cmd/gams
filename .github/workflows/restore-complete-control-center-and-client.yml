@@ -1,0 +1,442 @@
+name: Restore complete control center and stable GG client
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/restore-complete-control-center-and-client.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: complete-control-center-restore
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ADMIN_LOGIN_SECRET: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      RUNTIME_ENDPOINT: https://gams-runtime-v2.2320006072.workers.dev
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate all required secrets
+        id: secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID ADMIN_LOGIN_SECRET \
+            TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY \
+            GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          test "${#TOKEN_SIGNING_SECRET}" -ge 32
+
+      - name: Assemble complete signed backend and exact pre-regression clients
+        id: assemble
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin control-center-v1.4 --depth=1
+          git fetch origin 104e14015a32aa8ba05c6793935f94b9e649f11a --depth=1
+          git fetch origin bf07b7dccfe78fe4094abdee5632e61f4b83f3e2 --depth=1
+
+          rm -rf /tmp/control-center
+          mkdir -p /tmp/control-center/license-api/src
+          for part in $(git ls-tree -r --name-only origin/control-center-v1.4 hardening_backend_parts | sort); do
+            git show "origin/control-center-v1.4:${part}"
+          done > /tmp/control-center/license-api/src/index.js
+          for file in control_center_patch.py client_config_patch.py release_baseline_patch.py; do
+            git show "origin/control-center-v1.4:license-api/${file}" \
+              > "/tmp/control-center/license-api/${file}"
+          done
+          (
+            cd /tmp/control-center/license-api
+            python3 control_center_patch.py
+            python3 client_config_patch.py
+            python3 release_baseline_patch.py
+          )
+          node --check /tmp/control-center/license-api/src/index.js
+
+          git show 104e14015a32aa8ba05c6793935f94b9e649f11a:v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
+            > v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          git show 104e14015a32aa8ba05c6793935f94b9e649f11a:v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java \
+            > v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          git show 104e14015a32aa8ba05c6793935f94b9e649f11a:v2/android/client/build.gradle.kts \
+            > v2/android/client/build.gradle.kts
+          sed -i 's/versionCode = 12/versionCode = 16/' v2/android/client/build.gradle.kts
+          sed -i 's/versionName = "2.0.3"/versionName = "2.0.3-stable"/' v2/android/client/build.gradle.kts
+
+          git show bf07b7dccfe78fe4094abdee5632e61f4b83f3e2:v2/android/manager/src/main/java/com/jinli/ggsecure/manager/MainActivity.java \
+            > v2/android/manager/src/main/java/com/jinli/ggsecure/manager/MainActivity.java
+          sed -i 's/versionCode = 3/versionCode = 4/' v2/android/manager/build.gradle.kts
+          sed -i 's/versionName = "2.0.2"/versionName = "2.0.3"/' v2/android/manager/build.gradle.kts
+
+          python3 -m py_compile scripts/assemble_full_control_center_restore.py
+          python3 scripts/assemble_full_control_center_restore.py
+
+      - name: Validate restored source contracts
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check license-api/src/index.js
+          node --check v2/runtime/src/index.js
+
+          license='license-api/src/index.js'
+          runtime='v2/runtime/src/index.js'
+          client='v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java'
+          manager='v2/android/manager/src/main/java/com/jinli/ggsecure/manager/MainActivity.java'
+
+          for route in \
+            /v1/admin/dashboard \
+            /v1/admin/settings /v1/admin/settings/update /v1/admin/settings/history /v1/admin/settings/rollback \
+            /v1/admin/licenses/detail /v1/admin/licenses/update /v1/admin/licenses/batch-action \
+            /v1/admin/devices /v1/admin/devices/detail /v1/admin/devices/revoke /v1/admin/devices/revoke-all \
+            /v1/admin/audit /v1/admin/sessions/revoke-all \
+            /v1/admin/runtime /v1/admin/runtime/releases /v1/admin/runtime/pause /v1/admin/runtime/resume /v1/admin/runtime/select; do
+            grep -Fq "$route" "$license"
+          done
+          grep -Fq 'completeControlCenter: true' "$license"
+          grep -Fq 'env.ADMIN_LOGIN_SECRET' "$license"
+          grep -Fq 'env.TOKEN_SIGNING_SECRET' "$license"
+          grep -Fq 'await requireRuntimeEnabled(env);' "$runtime"
+          test -s license-api/migrations/0003_control_center.sql
+
+          grep -Fq 'versionCode = 16' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.3-stable"' v2/android/client/build.gradle.kts
+          grep -Fq 'PROTOCOL_APP_VERSION = 12' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          grep -Fq 'setSupportMultipleWindows(false)' "$client"
+          ! grep -Fq 'boolean onCreateWindow' "$client"
+          ! grep -Fq 'new WebView(MainActivity.this)' "$client"
+
+          grep -Fq 'versionCode = 4' v2/android/manager/build.gradle.kts
+          grep -Fq 'versionName = "2.0.3"' v2/android/manager/build.gradle.kts
+          grep -Fq 'api.get("/v1/admin/dashboard"' "$manager"
+          grep -Fq 'api.get("/v1/admin/devices' "$manager"
+          grep -Fq 'api.get("/v1/admin/audit' "$manager"
+          grep -Fq 'api.get("/v1/admin/runtime' "$manager"
+
+      - name: Build and lint both restored APKs
+        id: build
+        working-directory: v2/android
+        run: >-
+          gradle --no-daemon
+          :client:clean :client:lintRelease :client:assembleRelease
+          :manager:clean :manager:lintRelease :manager:assembleRelease
+
+      - name: Sign and verify restored APKs
+        id: sign
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+          mkdir -p /tmp/complete-restore
+
+          sign_one() {
+            local input="$1" output="$2"
+            "$apksigner" sign --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+              --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+              --v4-signing-enabled false --out "$output" "$input"
+            "$apksigner" verify --min-sdk-version 24 "$output"
+          }
+
+          client="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          manager="$(find v2/android/manager/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$client" && test -s "$manager"
+          sign_one "$client" /tmp/complete-restore/GG-2.0.3-stable-code16.apk
+          sign_one "$manager" /tmp/complete-restore/GG-Manager-2.0.3-code4.apk
+
+          "$aapt" dump badging /tmp/complete-restore/GG-2.0.3-stable-code16.apk > /tmp/client-badging.txt
+          "$aapt" dump badging /tmp/complete-restore/GG-Manager-2.0.3-code4.apk > /tmp/manager-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb'" /tmp/client-badging.txt
+          grep -Fq "versionCode='16'" /tmp/client-badging.txt
+          grep -Fq "versionName='2.0.3-stable'" /tmp/client-badging.txt
+          grep -Fq "package: name='com.jinli.ggsecure.manager'" /tmp/manager-badging.txt
+          grep -Fq "versionCode='4'" /tmp/manager-badging.txt
+          grep -Fq "versionName='2.0.3'" /tmp/manager-badging.txt
+          sha256sum /tmp/complete-restore/*.apk > /tmp/complete-restore/SHA256SUMS.txt
+          awk '/GG-2.0.3-stable-code16.apk/{print $1}' /tmp/complete-restore/SHA256SUMS.txt > /tmp/client-sha256.txt
+          awk '/GG-Manager-2.0.3-code4.apk/{print $1}' /tmp/complete-restore/SHA256SUMS.txt > /tmp/manager-sha256.txt
+
+      - name: Create local verified candidate commit
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            license-api/src/index.js \
+            license-api/migrations/0003_control_center.sql \
+            v2/runtime/src/index.js \
+            v2/android/client/build.gradle.kts \
+            v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java \
+            v2/android/manager/build.gradle.kts \
+            v2/android/manager/src/main/java/com/jinli/ggsecure/manager/MainActivity.java
+          git commit -m 'Restore complete control center and pre-regression GG client'
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Locate shared D1 database
+        id: d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != "null"
+          echo "database_id=$database_id" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy verified candidate services
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          database_id='${{ steps.d1.outputs.database_id }}'
+
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" \
+            license-api/wrangler.template.jsonc > license-api/wrangler.generated.jsonc
+          printf '%s' "$ADMIN_LOGIN_SECRET" \
+            | (cd license-api && npx --yes wrangler@4 secret put ADMIN_LOGIN_SECRET --config wrangler.generated.jsonc)
+          printf '%s' "$TOKEN_SIGNING_SECRET" \
+            | (cd license-api && npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc)
+          (cd license-api && npx --yes wrangler@4 d1 migrations apply gams-license-db --remote --config wrangler.generated.jsonc)
+          (cd license-api && npx --yes wrangler@4 deploy --config wrangler.generated.jsonc)
+
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" \
+            v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.generated.jsonc
+          printf '%s' "$TOKEN_SIGNING_SECRET" \
+            | (cd v2/runtime && npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc)
+          printf '%s' "$RUNTIME_MASTER_KEY" \
+            | (cd v2/runtime && npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.generated.jsonc)
+          (cd v2/runtime && npx --yes wrangler@4 deploy --config wrangler.generated.jsonc)
+
+      - name: Verify full online control center and lifecycle
+        id: smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            license_status="$(curl -sS -o /tmp/license-health.json -w '%{http_code}' "$LICENSE_ENDPOINT/health" || true)"
+            runtime_status="$(curl -sS -o /tmp/runtime-health.json -w '%{http_code}' "$RUNTIME_ENDPOINT/health" || true)"
+            if [[ "$license_status" == "200" && "$runtime_status" == "200" ]] \
+              && jq -e '.ok == true and .version == 2 and .signedProtocol == true and .completeControlCenter == true' /tmp/license-health.json >/dev/null \
+              && jq -e '.ok == true and .version == 3 and .encryptedRuntime == true' /tmp/runtime-health.json >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == 36 ]]; then
+              cat /tmp/license-health.json 2>/dev/null || true
+              cat /tmp/runtime-health.json 2>/dev/null || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+          login_payload="$(jq -n --arg password "$ADMIN_LOGIN_SECRET" '{password:$password}')"
+          login="$(curl -fsS -H 'Content-Type: application/json' --data "$login_payload" \
+            "$LICENSE_ENDPOINT/v1/admin/login")"
+          token="$(printf '%s' "$login" | jq -er '.token')"
+          auth="Authorization: Bearer $token"
+
+          for path in \
+            '/v1/admin/dashboard' \
+            '/v1/admin/settings' \
+            '/v1/admin/settings/history?limit=5' \
+            '/v1/admin/licenses?limit=5' \
+            '/v1/admin/devices?limit=5' \
+            '/v1/admin/audit?limit=5' \
+            '/v1/admin/runtime' \
+            '/v1/admin/runtime/releases'; do
+            response="$(curl -fsS -H "$auth" "$LICENSE_ENDPOINT$path")"
+            printf '%s' "$response" | jq -e '.ok == true' >/dev/null
+          done
+
+          config="$(curl -fsS -H 'Content-Type: application/json' \
+            --data '{"appVersion":12}' "$LICENSE_ENDPOINT/v1/client/config")"
+          printf '%s' "$config" | jq -e '.ok == true and .minAppVersion >= 11 and .latestAppVersion >= 12' >/dev/null
+
+          node scripts/v2-lifecycle-smoke.mjs
+
+      - name: Roll back online Workers if candidate verification fails
+        if: failure() && steps.deploy.outcome != 'skipped'
+        id: rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          database_id='${{ steps.d1.outputs.database_id }}'
+
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" \
+            license-api/wrangler.template.jsonc > license-api/wrangler.generated.jsonc
+          printf '%s' "$ADMIN_LOGIN_SECRET" \
+            | (cd license-api && npx --yes wrangler@4 secret put ADMIN_LOGIN_SECRET --config wrangler.generated.jsonc)
+          printf '%s' "$TOKEN_SIGNING_SECRET" \
+            | (cd license-api && npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc)
+          (cd license-api && npx --yes wrangler@4 deploy --config wrangler.generated.jsonc)
+
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" \
+            v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.generated.jsonc
+          printf '%s' "$TOKEN_SIGNING_SECRET" \
+            | (cd v2/runtime && npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc)
+          printf '%s' "$RUNTIME_MASTER_KEY" \
+            | (cd v2/runtime && npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.generated.jsonc)
+          (cd v2/runtime && npx --yes wrangler@4 deploy --config wrangler.generated.jsonc)
+
+      - name: Publish verified candidate to main
+        id: push
+        if: steps.smoke.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish restored APK release
+        id: release
+        if: steps.push.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          client_sha="$(cat /tmp/client-sha256.txt)"
+          manager_sha="$(cat /tmp/manager-sha256.txt)"
+          cat > /tmp/release-notes.txt <<EOF
+          Complete recovery release
+
+          - GG client restores the exact 2.0.3 pre-browser-regression behavior.
+          - Android versionCode is 16 so it can directly replace 2.0.6 without uninstalling.
+          - GG manager restores the complete control center.
+          - License Worker restores all 23 administration routes while retaining the signed protocol.
+          - Existing encrypted Runtime V3, signing keys, card database and secrets are retained.
+          - Client SHA-256: ${client_sha}
+          - Manager SHA-256: ${manager_sha}
+          EOF
+          gh release delete gg-complete-restore-20260804 --yes --cleanup-tag 2>/dev/null || true
+          gh release create gg-complete-restore-20260804 \
+            /tmp/complete-restore/GG-2.0.3-stable-code16.apk \
+            /tmp/complete-restore/GG-Manager-2.0.3-code4.apk \
+            /tmp/complete-restore/SHA256SUMS.txt \
+            --target "${{ steps.push.outputs.sha }}" \
+            --title 'GG complete restore 2026-08-04' \
+            --notes-file /tmp/release-notes.txt
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        if: steps.push.outcome == 'success'
+        with:
+          name: GG-complete-restore-client-and-manager
+          path: /tmp/complete-restore/**
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record complete restore status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.secrets.outcome }}" == success \
+             && "${{ steps.assemble.outcome }}" == success \
+             && "${{ steps.source.outcome }}" == success \
+             && "${{ steps.build.outcome }}" == success \
+             && "${{ steps.sign.outcome }}" == success \
+             && "${{ steps.candidate.outcome }}" == success \
+             && "${{ steps.deploy.outcome }}" == success \
+             && "${{ steps.smoke.outcome }}" == success \
+             && "${{ steps.push.outcome }}" == success \
+             && "${{ steps.release.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success ]]; then
+            ok=true
+          fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" \
+            --arg clientSha "$(cat /tmp/client-sha256.txt 2>/dev/null || true)" \
+            --arg managerSha "$(cat /tmp/manager-sha256.txt 2>/dev/null || true)" \
+            --arg candidateSha "${{ steps.candidate.outputs.sha }}" \
+            --arg publishedSha "${{ steps.push.outputs.sha }}" \
+            --arg secrets "${{ steps.secrets.outcome }}" \
+            --arg assemble "${{ steps.assemble.outcome }}" \
+            --arg source "${{ steps.source.outcome }}" \
+            --arg build "${{ steps.build.outcome }}" \
+            --arg sign "${{ steps.sign.outcome }}" \
+            --arg deploy "${{ steps.deploy.outcome }}" \
+            --arg smoke "${{ steps.smoke.outcome }}" \
+            --arg rollback "${{ steps.rollback.outcome }}" \
+            --arg push "${{ steps.push.outcome }}" \
+            --arg release "${{ steps.release.outcome }}" \
+            --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:$ok,
+              client:{versionName:"2.0.3-stable",versionCode:16,protocolAppVersion:12,sha256:$clientSha,preRegressionBehavior:true},
+              manager:{versionName:"2.0.3",versionCode:4,sha256:$managerSha,completeControlCenter:true},
+              backend:{adminRouteCount:23,signedProtocolRetained:true,encryptedRuntimeRetained:true,databasePreserved:true},
+              commits:{candidate:$candidateSha,published:$publishedSha},
+              steps:{secrets:$secrets,assemble:$assemble,source:$source,build:$build,sign:$sign,deploy:$deploy,smoke:$smoke,rollback:$rollback,push:$push,release:$release,artifact:$artifact},
+              secretsExposed:false}' > /tmp/complete-restore-status.json
+          path='docs/COMPLETE_RESTORE_STATUS.json'
+          content="$(base64 -w0 /tmp/complete-restore-status.json)"
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record complete control center and client restore status' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
+      - name: Require complete verified restore
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.secrets.outcome }}" = success
+          test "${{ steps.assemble.outcome }}" = success
+          test "${{ steps.source.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
+          test "${{ steps.sign.outcome }}" = success
+          test "${{ steps.candidate.outcome }}" = success
+          test "${{ steps.deploy.outcome }}" = success
+          test "${{ steps.smoke.outcome }}" = success
+          test "${{ steps.push.outcome }}" = success
+          test "${{ steps.release.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
