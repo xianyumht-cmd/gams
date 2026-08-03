@@ -1,0 +1,84 @@
+name: Public-only candidate runtime probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/probe-script-repeat-candidate-network-v2.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CUSTOM_HOST: runtime-candidate.xn--8pv109c.top
+      WORKER_HOST: gams-runtime-v2-script-candidate.2320006072.workers.dev
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe public endpoints
+        shell: bash
+        run: |
+          set -u
+          mkdir -p /tmp/probe
+          probe_host() {
+            label="$1"
+            host="$2"
+            : > "/tmp/probe/${label}-body.txt"
+            : > "/tmp/probe/${label}-headers.txt"
+            : > "/tmp/probe/${label}-error.txt"
+            getent ahosts "$host" > "/tmp/probe/${label}-dns.txt" 2>&1 || true
+            code="$(curl -sS -o "/tmp/probe/${label}-body.txt" -D "/tmp/probe/${label}-headers.txt" \
+              -w '%{http_code}' --connect-timeout 8 --max-time 25 \
+              "https://${host}/health?probe=${GITHUB_RUN_ID}" \
+              2> "/tmp/probe/${label}-error.txt")"
+            rc=$?
+            printf '%s' "$code" > "/tmp/probe/${label}-code.txt"
+            printf '%s' "$rc" > "/tmp/probe/${label}-rc.txt"
+          }
+          probe_host custom "$CUSTOM_HOST"
+          probe_host worker "$WORKER_HOST"
+
+          one_line() {
+            tr '\r\n' '  ' < "$1" | head -c 800 || true
+          }
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --arg customHost "$CUSTOM_HOST" \
+            --arg customDns "$(one_line /tmp/probe/custom-dns.txt)" \
+            --arg customCode "$(cat /tmp/probe/custom-code.txt)" \
+            --argjson customRc "$(cat /tmp/probe/custom-rc.txt)" \
+            --arg customHeaders "$(one_line /tmp/probe/custom-headers.txt)" \
+            --arg customBody "$(one_line /tmp/probe/custom-body.txt)" \
+            --arg customError "$(one_line /tmp/probe/custom-error.txt)" \
+            --arg workerHost "$WORKER_HOST" \
+            --arg workerDns "$(one_line /tmp/probe/worker-dns.txt)" \
+            --arg workerCode "$(cat /tmp/probe/worker-code.txt)" \
+            --argjson workerRc "$(cat /tmp/probe/worker-rc.txt)" \
+            --arg workerHeaders "$(one_line /tmp/probe/worker-headers.txt)" \
+            --arg workerBody "$(one_line /tmp/probe/worker-body.txt)" \
+            --arg workerError "$(one_line /tmp/probe/worker-error.txt)" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,custom:{host:$customHost,dns:$customDns,httpCode:$customCode,curlRc:$customRc,headers:$customHeaders,body:$customBody,error:$customError},worker:{host:$workerHost,dns:$workerDns,httpCode:$workerCode,curlRc:$workerRc,headers:$workerHeaders,body:$workerBody,error:$workerError},secretsExposed:false}' \
+            > /tmp/probe-status.json
+
+      - name: Record public probe
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -s /tmp/probe-status.json ]]; then
+            jq -n --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson runId "$GITHUB_RUN_ID" \
+              '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,probeCrashed:true,secretsExposed:false}' > /tmp/probe-status.json
+          fi
+          content="$(base64 -w0 /tmp/probe-status.json)"
+          path='docs/SCRIPT_REPEAT_CANDIDATE_PUBLIC_PROBE.json'
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record public candidate runtime probe' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
