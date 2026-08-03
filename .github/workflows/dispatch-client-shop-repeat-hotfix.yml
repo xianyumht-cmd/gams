@@ -1,0 +1,149 @@
+name: Dispatch isolated GG client shop repeat hotfix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/dispatch-client-shop-repeat-hotfix.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dispatch-client-shop-repeat-hotfix
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      GH_TOKEN: ${{ github.token }}
+      HOTFIX_BRANCH: hotfix/client-shop-repeat-no-external-browser-20260804
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix/client-shop-repeat-no-external-browser-20260804
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Apply and validate deterministic hotfix
+        id: patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/apply_client_shop_repeat_hotfix.py
+          python3 scripts/apply_client_shop_repeat_hotfix.py
+
+          client='v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java'
+          grep -Fq 'versionCode = 17' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.7-stable"' v2/android/client/build.gradle.kts
+          grep -Fq 'PROTOCOL_APP_VERSION = 12' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          grep -Fq 'setSupportMultipleWindows(false)' "$client"
+          ! grep -Fq 'setSupportMultipleWindows(true)' "$client"
+          ! grep -Fq 'boolean onCreateWindow' "$client"
+          ! grep -Fq 'new WebView(MainActivity.this)' "$client"
+          grep -Fq 'handleNavigationInsideGg' "$client"
+          grep -Fq 'ensureControlScriptInjected' "$client"
+          grep -Fq '__GG_V2_CONTROL_LOADING__' "$client"
+          grep -Fq 'shouldOverrideUrlLoading(WebView view, String url)' "$client"
+          grep -Fq '"intent".equalsIgnoreCase(scheme)' "$client"
+          grep -Fq '@version      1.1.4' remote-script/src/noname.js
+          grep -Fq '__ggOneShotCallback' remote-script/src/noname.js
+          grep -Fq '__ggOriginalCallback' remote-script/src/noname.js
+          jq -e '.versionName == "2.0.5" and .nonameSize > 332000' v2/runtime/release/manifest.json >/dev/null
+          node --check remote-script/src/noname.js
+
+      - name: Build and lint candidate APK
+        id: android
+        working-directory: v2/android
+        run: >-
+          gradle --no-daemon
+          :client:clean :client:lintRelease :client:assembleRelease
+
+      - name: Sign and verify candidate APK
+        id: sign
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GG_RELEASE_KEYSTORE_BASE64:-}"
+          test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}"
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+          mkdir -p /tmp/gg-client-shop-hotfix
+          signed=/tmp/gg-client-shop-hotfix/GG-2.0.7-stable-code17-candidate.apk
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+            --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --min-sdk-version 24 "$signed"
+          "$aapt" dump badging "$signed" > /tmp/candidate-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='17' versionName='2.0.7-stable'" /tmp/candidate-badging.txt
+          sha256sum "$signed" > /tmp/gg-client-shop-hotfix/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-2.0.7-stable-client-shop-hotfix-candidate
+          path: /tmp/gg-client-shop-hotfix/**
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish verified candidate to hotfix branch
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(awk '{print $1}' /tmp/gg-client-shop-hotfix/SHA256SUMS.txt)"
+          mkdir -p docs
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --arg sha256 "$sha" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:true,client:{versionName:"2.0.7-stable",versionCode:17,protocolAppVersion:12,sha256:$sha256},fixes:{externalBlankBrowser:{genericActionViewRemoved:true,intentBlocked:true,legacyAndModernNavigationCallbacks:true},repeatPurchase:{scriptVersion:"1.1.4",runtimeVersion:"2.0.5",oneShotCallbackRestored:true,pageFinishReinjection:true,delayedInjectionRetries:true}},safety:{multipleWindows:false,onCreateWindow:false,temporaryPopupWebView:false},steps:{patch:"success",androidBuild:"success",apkSign:"success",artifact:"success"},secretsExposed:false}' \
+            > docs/CLIENT_SHOP_REPEAT_HOTFIX_STATUS.json
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            v2/android/client/build.gradle.kts \
+            v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
+            .github/workflows/v2-build-apks.yml \
+            docs/CLIENT_SHOP_REPEAT_HOTFIX_STATUS.json
+          git commit -m 'Fix external blank browser and restore repeat-purchase injection'
+          git push origin "HEAD:${HOTFIX_BRANCH}"
+
+      - name: Require complete candidate
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.patch.outcome }}" = success
+          test "${{ steps.android.outcome }}" = success
+          test "${{ steps.sign.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
+          test "${{ steps.publish.outcome }}" = success
