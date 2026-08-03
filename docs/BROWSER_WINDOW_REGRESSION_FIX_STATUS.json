@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T18:14:05Z",
+  "runId": 30840252305,
+  "ok": true,
+  "client": {
+    "versionName": "2.0.6",
+    "versionCode": 15,
+    "sha256": "1ed2f6ff10b11f21560b7024b415309c5578924ac5ff75794889369c2cd249b1"
+  },
+  "fix": {
+    "regressionSource": "2.0.4 multi-window interception",
+    "singleWindowRestored": true,
+    "popupWebViewRemoved": true,
+    "httpOwnedByMainWebView": true,
+    "systemBrowserForHttp": false
+  },
+  "steps": {
+    "patch": "success",
+    "build": "success",
+    "sign": "success",
+    "commit": "success",
+    "release": "success",
+    "artifact": "success"
+  },
+  "secretsExposed": false
+}
