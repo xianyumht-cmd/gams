@@ -6,10 +6,14 @@ const MAX_BODY_BYTES = 96 * 1024;
 const MAX_MANIFEST_BYTES = 128 * 1024;
 const RELEASE_BASE =
   "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/v2/runtime/release/";
+const CANDIDATE_APP_VERSION = 19;
+const CANDIDATE_RUNTIME_VERSION = "2.0.5-script-repeat-c1";
+const CANDIDATE_RELEASE_BASE =
+  "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-script-repeat-20260804/candidate-runtime/release/";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-let releaseCache = null;
+const releaseCache = new Map();
 
 export default {
   async fetch(request, env) {
@@ -20,6 +24,11 @@ export default {
       }
       const url = new URL(request.url);
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+        let candidateRuntimeVersion = null;
+        if (url.searchParams.get("candidate") === "1") {
+          const candidateManifest = await loadReleaseManifest(CANDIDATE_RELEASE_BASE);
+          candidateRuntimeVersion = candidateManifest.versionName;
+        }
         return json({
           ok: true,
           service: "gams-runtime-v2",
@@ -29,6 +38,9 @@ export default {
           encryptedRuntime: true,
           splitSecrets: true,
           legacyReleaseCompatible: true,
+          candidateChannel: true,
+          candidateAppVersion: CANDIDATE_APP_VERSION,
+          candidateRuntimeVersion,
         });
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/challenge") {
@@ -133,7 +145,8 @@ async function runtimeAccess(request, env) {
     throw new HttpError(429, "too_many_requests", "启动过于频繁");
   }
 
-  const manifest = await loadReleaseManifest();
+  const releaseBase = releaseBaseForAppVersion(appVersion);
+  const manifest = await loadReleaseManifest(releaseBase);
   const contentKey = await decryptContentKey(manifest, env);
   let wrappedKey;
   try {
@@ -185,18 +198,16 @@ async function runtimeBundle(request, env) {
   const deviceHash = normalizeHex64(session.dev);
   const { license, device } = await requireActiveDevice(env, session, deviceHash);
 
-  const manifest = await loadReleaseManifest();
   const requestedVersion = new URL(request.url).searchParams.get("version") || "";
-  if (requestedVersion !== manifest.versionName) {
-    throw new HttpError(409, "runtime_version_changed", "服务已更新，请重新启动");
-  }
+  const release = await releaseForRequestedVersion(requestedVersion);
+  const manifest = release.manifest;
 
   const rateKey = `v2-bundle:${license.id}:${device.id}`;
   if (!(await allowRate(env, rateKey, 20, 60))) {
     throw new HttpError(429, "too_many_requests", "请求过于频繁，请稍后重试");
   }
 
-  const upstream = await githubFetch(`${RELEASE_BASE}${manifest.file}`);
+  const upstream = await githubFetch(`${release.releaseBase}${manifest.file}`);
   if (!upstream.ok) {
     throw new HttpError(503, "runtime_unavailable", "服务资源暂时不可用");
   }
@@ -347,10 +358,29 @@ async function verifySignedRequest(
   }
 }
 
-async function loadReleaseManifest() {
+function releaseBaseForAppVersion(appVersion) {
+  return appVersion === CANDIDATE_APP_VERSION ? CANDIDATE_RELEASE_BASE : RELEASE_BASE;
+}
+
+async function releaseForRequestedVersion(requestedVersion) {
+  const productionManifest = await loadReleaseManifest(RELEASE_BASE);
+  if (requestedVersion === productionManifest.versionName) {
+    return { manifest: productionManifest, releaseBase: RELEASE_BASE };
+  }
+  if (requestedVersion === CANDIDATE_RUNTIME_VERSION) {
+    const candidateManifest = await loadReleaseManifest(CANDIDATE_RELEASE_BASE);
+    if (candidateManifest.versionName === requestedVersion) {
+      return { manifest: candidateManifest, releaseBase: CANDIDATE_RELEASE_BASE };
+    }
+  }
+  throw new HttpError(409, "runtime_version_changed", "服务已更新，请重新启动");
+}
+
+async function loadReleaseManifest(releaseBase = RELEASE_BASE) {
   const now = Date.now();
-  if (releaseCache && releaseCache.expiresAt > now) return releaseCache.manifest;
-  const response = await githubFetch(`${RELEASE_BASE}manifest.json`);
+  const cached = releaseCache.get(releaseBase);
+  if (cached && cached.expiresAt > now) return cached.manifest;
+  const response = await githubFetch(`${releaseBase}manifest.json`);
   if (!response.ok) {
     throw new HttpError(503, "runtime_unavailable", "服务配置暂时不可用");
   }
@@ -371,7 +401,7 @@ async function loadReleaseManifest() {
       || Number(manifest.size || 0) > 18 * 1024 * 1024) {
     throw new HttpError(503, "runtime_invalid", "服务配置异常");
   }
-  releaseCache = { manifest, expiresAt: now + 30_000 };
+  releaseCache.set(releaseBase, { manifest, expiresAt: now + 30_000 });
   return manifest;
 }
 
