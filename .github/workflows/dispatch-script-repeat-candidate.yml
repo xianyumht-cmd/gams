@@ -1,0 +1,391 @@
+name: Build isolated script repeat candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/dispatch-script-repeat-candidate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: script-repeat-candidate-20260804
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CANDIDATE_BRANCH: candidate-script-repeat-20260804
+      CANDIDATE_RUNTIME_VERSION: 2.0.5-script-repeat-c1
+      CANDIDATE_WORKER_NAME: gams-runtime-v2-script-candidate
+      CANDIDATE_WORKER_HOST: gams-runtime-v2-script-candidate.2320006072.workers.dev
+      CANDIDATE_APK_VERSION_NAME: 2.0.8-script-candidate
+      CANDIDATE_APK_VERSION_CODE: 18
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate-script-repeat-20260804
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate candidate inputs
+        id: inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          test "${#TOKEN_SIGNING_SECRET}" -ge 32
+          python3 -m pip install --quiet cryptography
+          node --input-type=module - <<'NODE'
+          import { decodeRuntimeMasterKey } from "./v2/runtime/src/runtime-key.js";
+          const key = decodeRuntimeMasterKey(process.env.RUNTIME_MASTER_KEY);
+          key.fill(0);
+          NODE
+
+      - name: Apply isolated script patch
+        id: patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          main_activity='v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java'
+          sha256sum "$main_activity" | awk '{print $1}' > /tmp/main-activity-before.sha256
+
+          python3 -m py_compile scripts/apply_script_repeat_candidate.py
+          python3 scripts/apply_script_repeat_candidate.py
+          node --check remote-script/src/noname.js
+
+          grep -Fq '@version      1.1.5-candidate' remote-script/src/noname.js
+          grep -Fq '__ggRepeatCallbackBridge' remote-script/src/noname.js
+          grep -Fq '__ggPendingQueue.shift()' remote-script/src/noname.js
+          grep -Fq '__ggPendingQueue.push' remote-script/src/noname.js
+          ! grep -Fq '__ggOneShotCallback' remote-script/src/noname.js
+          ! grep -Fq '__ggCallbackDone' remote-script/src/noname.js
+
+          sha256sum "$main_activity" | awk '{print $1}' > /tmp/main-activity-after.sha256
+          cmp /tmp/main-activity-before.sha256 /tmp/main-activity-after.sha256
+          git diff --exit-code -- "$main_activity"
+
+      - name: Build and sign isolated runtime
+        id: runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf candidate-runtime/release
+          mkdir -p candidate-runtime/release
+          trap 'rm -f /tmp/runtime-private.pem /tmp/runtime.sig /tmp/v2-runtime-canonical.txt /tmp/v2-runtime-unsigned.json' EXIT
+
+          export RUNTIME_SIGNING_PASSWORD="$(python3 - <<'PY'
+          import hashlib, hmac, os
+          print(hmac.new(
+              os.environ['GG_RELEASE_KEYSTORE_PASSWORD'].encode(),
+              b'gams-runtime-release-signing-v1',
+              hashlib.sha256,
+          ).hexdigest())
+          PY
+          )"
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/runtime-private.pem \
+            -pass env:RUNTIME_SIGNING_PASSWORD
+          unset RUNTIME_SIGNING_PASSWORD
+
+          game_file="$(jq -r '.file' game-engine/release/manifest.json)"
+          test -s "game-engine/release/${game_file}"
+
+          python3 v2/runtime/tools/build_release.py \
+            remote-script/src/noname.js \
+            "game-engine/release/${game_file}" \
+            "$CANDIDATE_RUNTIME_VERSION" \
+            "$RUNTIME_MASTER_KEY" \
+            candidate-runtime/release
+
+          openssl dgst -sha256 -sign /tmp/runtime-private.pem \
+            -out /tmp/runtime.sig /tmp/v2-runtime-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/runtime.sig /tmp/v2-runtime-canonical.txt
+
+          python3 - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          manifest = json.loads(Path('/tmp/v2-runtime-unsigned.json').read_text())
+          manifest['signatureAlgorithm'] = 'SHA256withECDSA'
+          manifest['signature'] = base64.b64encode(Path('/tmp/runtime.sig').read_bytes()).decode()
+          release = Path('candidate-runtime/release')
+          (release/'manifest.json').write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          bundle = (release/manifest['file']).read_bytes()
+          assert manifest['versionName'] == os.environ['CANDIDATE_RUNTIME_VERSION']
+          assert len(bundle) == manifest['size']
+          assert hashlib.sha256(bundle).hexdigest() == manifest['sha256']
+          assert manifest['nonameSize'] > 332000
+          PY
+
+          node --check remote-script/src/noname.js
+          jq -e --arg v "$CANDIDATE_RUNTIME_VERSION" '.versionName == $v and .nonameSize > 332000 and .gameSize > 11000000' candidate-runtime/release/manifest.json >/dev/null
+
+      - name: Publish isolated runtime files to candidate branch
+        id: publish_runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add remote-script/src/noname.js candidate-runtime/release
+          git add -f "candidate-runtime/release/bundle-${CANDIDATE_RUNTIME_VERSION}.bin"
+          git commit -m 'Build isolated script repeat runtime candidate'
+          git push origin "HEAD:${CANDIDATE_BRANCH}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for candidate runtime propagation
+        id: propagation
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CANDIDATE_BRANCH}/candidate-runtime/release"
+          for attempt in $(seq 1 36); do
+            version="$(curl -fsS "${base}/manifest.json?attempt=${attempt}" | jq -r '.versionName' 2>/dev/null || true)"
+            if [[ "$version" == "$CANDIDATE_RUNTIME_VERSION" ]]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'candidate runtime did not propagate' >&2
+          exit 1
+
+      - name: Deploy isolated candidate runtime service
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != "null"
+
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          source_path = Path('v2/runtime/src/index.js')
+          source = source_path.read_text(encoding='utf-8')
+          old = '  "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/v2/runtime/release/";'
+          new = f'  "https://raw.githubusercontent.com/xianyumht-cmd/gams/{os.environ["CANDIDATE_BRANCH"]}/candidate-runtime/release/";'
+          if source.count(old) != 1:
+              raise SystemExit('candidate runtime release base mismatch')
+          source_path.write_text(source.replace(old, new, 1), encoding='utf-8')
+
+          template = json.loads(Path('v2/runtime/wrangler.template.jsonc').read_text(encoding='utf-8'))
+          template['name'] = os.environ['CANDIDATE_WORKER_NAME']
+          template['routes'] = []
+          template['workers_dev'] = True
+          template['preview_urls'] = False
+          template['d1_databases'][0]['database_id'] = os.environ['D1_DATABASE_ID']
+          Path('v2/runtime/wrangler.candidate.jsonc').write_text(
+              json.dumps(template, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+        env:
+          D1_DATABASE_ID: ${{ steps.deploy.outputs.database_id }}
+
+      - name: Configure and publish candidate worker
+        id: worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != "null"
+          sed -i "s/__D1_DATABASE_ID__/${database_id}/g" v2/runtime/wrangler.candidate.jsonc || true
+          jq -e --arg id "$database_id" '.d1_databases[0].database_id == $id' v2/runtime/wrangler.candidate.jsonc >/dev/null
+
+          cd v2/runtime
+          printf '%s' "$TOKEN_SIGNING_SECRET" | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.candidate.jsonc
+          printf '%s' "$RUNTIME_MASTER_KEY" | npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.candidate.jsonc
+          npx --yes wrangler@4 deploy --config wrangler.candidate.jsonc
+
+          for attempt in $(seq 1 36); do
+            if curl -fsS "https://${CANDIDATE_WORKER_HOST}/health?attempt=${attempt}" \
+              | jq -e '.ok == true and .encryptedRuntime == true' >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'candidate worker health check failed' >&2
+          exit 1
+
+      - name: Patch candidate-only routing and version
+        id: client_patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          names_path = Path('v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeNames.java')
+          names = names_path.read_text(encoding='utf-8')
+          names = names.replace(
+              '        return "runtime." + "xn--8pv109c.top";',
+              f'        return "{os.environ["CANDIDATE_WORKER_HOST"]}";',
+              1,
+          )
+          names = names.replace(
+              '        return "gams-runtime-v2." + "2320006072.workers.dev";',
+              f'        return "{os.environ["CANDIDATE_WORKER_HOST"]}";',
+              1,
+          )
+          if names.count(os.environ['CANDIDATE_WORKER_HOST']) != 2:
+              raise SystemExit('candidate runtime routing patch failed')
+          names_path.write_text(names, encoding='utf-8')
+
+          gradle_path = Path('v2/android/client/build.gradle.kts')
+          gradle = gradle_path.read_text(encoding='utf-8')
+          if gradle.count('versionCode = 16') != 1:
+              raise SystemExit('stable versionCode baseline mismatch')
+          if gradle.count('versionName = "2.0.3-stable"') != 1:
+              raise SystemExit('stable versionName baseline mismatch')
+          gradle = gradle.replace('versionCode = 16', f'versionCode = {os.environ["CANDIDATE_APK_VERSION_CODE"]}', 1)
+          gradle = gradle.replace('versionName = "2.0.3-stable"', f'versionName = "{os.environ["CANDIDATE_APK_VERSION_NAME"]}"', 1)
+          gradle_path.write_text(gradle, encoding='utf-8')
+          PY
+
+          main_activity='v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java'
+          git diff --exit-code "${{ steps.publish_runtime.outputs.sha }}" -- "$main_activity"
+          grep -Fq 'setSupportMultipleWindows(false)' "$main_activity"
+          ! grep -Fq 'boolean onCreateWindow' "$main_activity"
+          ! grep -Fq 'new WebView(MainActivity.this)' "$main_activity"
+          grep -Fq "versionCode = ${CANDIDATE_APK_VERSION_CODE}" v2/android/client/build.gradle.kts
+          grep -Fq "versionName = \"${CANDIDATE_APK_VERSION_NAME}\"" v2/android/client/build.gradle.kts
+
+      - name: Build, sign and verify candidate APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p v2/android :client:clean :client:lintRelease :client:assembleRelease
+
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          test -s /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          mkdir -p /tmp/script-repeat-candidate
+          signed="/tmp/script-repeat-candidate/GG-${CANDIDATE_APK_VERSION_NAME}-code${CANDIDATE_APK_VERSION_CODE}.apk"
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+            --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --verbose --print-certs "$signed" > /tmp/apk-verify.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apk-verify.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apk-verify.txt
+          "$aapt" dump badging "$signed" > /tmp/apk-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='${CANDIDATE_APK_VERSION_CODE}' versionName='${CANDIDATE_APK_VERSION_NAME}'" /tmp/apk-badging.txt
+          sha256sum "$signed" | tee /tmp/script-repeat-candidate/SHA256SUMS.txt
+          jq -n \
+            --arg versionName "$CANDIDATE_APK_VERSION_NAME" \
+            --argjson versionCode "$CANDIDATE_APK_VERSION_CODE" \
+            --arg runtimeVersion "$CANDIDATE_RUNTIME_VERSION" \
+            --arg workerHost "$CANDIDATE_WORKER_HOST" \
+            --arg sourceCommit "${{ steps.publish_runtime.outputs.sha }}" \
+            '{schemaVersion:1,kind:"isolated-script-candidate",versionName:$versionName,versionCode:$versionCode,runtimeVersion:$runtimeVersion,workerHost:$workerHost,sourceCommit:$sourceCommit,androidMainActivityChanged:false,productionRuntimeChanged:false,productionWorkerChanged:false}' \
+            > /tmp/script-repeat-candidate/CANDIDATE_INFO.json
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-2.0.8-script-repeat-candidate
+          path: /tmp/script-repeat-candidate/**
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record candidate result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.patch.outcome }}" == success \
+             && "${{ steps.runtime.outcome }}" == success \
+             && "${{ steps.publish_runtime.outcome }}" == success \
+             && "${{ steps.worker.outcome }}" == success \
+             && "${{ steps.client_patch.outcome }}" == success \
+             && "${{ steps.apk.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success ]]; then
+            ok=true
+          fi
+          apk_sha=""
+          if [[ -f /tmp/script-repeat-candidate/SHA256SUMS.txt ]]; then
+            apk_sha="$(awk '{print $1}' /tmp/script-repeat-candidate/SHA256SUMS.txt | head -n1)"
+          fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" \
+            --arg branch "$CANDIDATE_BRANCH" \
+            --arg runtimeVersion "$CANDIDATE_RUNTIME_VERSION" \
+            --arg workerHost "$CANDIDATE_WORKER_HOST" \
+            --arg apkVersionName "$CANDIDATE_APK_VERSION_NAME" \
+            --argjson apkVersionCode "$CANDIDATE_APK_VERSION_CODE" \
+            --arg apkSha256 "$apk_sha" \
+            --arg patch "${{ steps.patch.outcome }}" \
+            --arg runtime "${{ steps.runtime.outcome }}" \
+            --arg publishRuntime "${{ steps.publish_runtime.outcome }}" \
+            --arg worker "${{ steps.worker.outcome }}" \
+            --arg clientPatch "${{ steps.client_patch.outcome }}" \
+            --arg apk "${{ steps.apk.outcome }}" \
+            --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:$ok,branch:$branch,runtimeVersion:$runtimeVersion,workerHost:$workerHost,apk:{versionName:$apkVersionName,versionCode:$apkVersionCode,sha256:$apkSha256},isolation:{androidMainActivityChanged:false,productionRuntimeChanged:false,productionWorkerChanged:false},steps:{patch:$patch,runtime:$runtime,publishRuntime:$publishRuntime,worker:$worker,clientPatch:$clientPatch,apk:$apk,artifact:$artifact},secretsExposed:false}' \
+            > /tmp/script-repeat-candidate-status.json
+          content="$(base64 -w0 /tmp/script-repeat-candidate-status.json)"
+          path='docs/SCRIPT_REPEAT_CANDIDATE_STATUS.json'
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+            -f message='Record isolated script repeat candidate result' \
+            -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
+      - name: Require complete candidate
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.patch.outcome }}" = success
+          test "${{ steps.runtime.outcome }}" = success
+          test "${{ steps.publish_runtime.outcome }}" = success
+          test "${{ steps.worker.outcome }}" = success
+          test "${{ steps.client_patch.outcome }}" = success
+          test "${{ steps.apk.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
