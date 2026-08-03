@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "versionName": "2.0.6-remote-engine-ab-c1",
+  "file": "bundle-2.0.6-remote-engine-ab-c1.bin",
+  "size": 3905514,
+  "sha256": "3c555fac0441b81bac9f1211d6f06255904103c65a7045e35e5369c8d147bbc4",
+  "iv": "QYX6hnP6IoJc8MqC",
+  "nonameSize": 332428,
+  "nonameSha256": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818",
+  "gameSize": 11590534,
+  "gameSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+  "keyIv": "Yqv+cbEQ16SKj8/I",
+  "keyCipher": "UHYMLsF/fcnLooWp3/G0qkR93Mqk/8p2skxTXUbCuDdsRB/1lqrjnM594pIPCY+Z",
+  "publishedAt": "2026-08-03T21:57:13Z",
+  "signatureAlgorithm": "SHA256withECDSA",
+  "signature": "MEUCIC3KwdZZcQ3N3twxsU7a8lmr+JUvedHkB7CPQNMcWZKdAiEAifrZQTHZNt8pQAptMAPHVub+hd1cfcCBHKgIsPaZNM4="
+}
