@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-03T19:28:05Z",
-  "runId": 30845773802,
-  "ok": false,
-  "currentStep": "verify-admin-routes",
-  "failure": "step=verify-admin-routes; exit=22",
+  "generatedAt": "2026-08-03T19:32:11Z",
+  "runId": 30846062533,
+  "ok": true,
+  "currentStep": "complete",
+  "failure": "",
   "client": {
     "versionName": "2.0.3-stable",
     "versionCode": 16,
@@ -26,10 +26,9 @@
     "deploymentStarted": true
   },
   "commits": {
-    "candidate": "f889bf32d94df90e8aab56046b176024c706f602",
-    "published": "",
-    "publishedToMain": false
+    "candidate": "564d8fb0e7326a47f8f65e987ab8afc2b14a6c66",
+    "published": "564d8fb0e7326a47f8f65e987ab8afc2b14a6c66",
+    "publishedToMain": true
   },
-  "secretsExposed": false,
-  "artifact": "skipped"
+  "secretsExposed": false
 }
