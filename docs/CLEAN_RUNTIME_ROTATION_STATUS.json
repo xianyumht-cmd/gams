@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-03T15:29:01Z",
-  "triggerCommit": "566f6ae70adf25e5f723efcbbdae0984d395db6d",
+  "generatedAt": "2026-08-03T15:40:15Z",
+  "triggerCommit": "8c3825c6ce7fa8fc4b7ef2649faa3c009bef159e",
   "ok": false,
   "versionName": "2.0.3",
   "versionCode": 12,
-  "runtimePublicKeySha256": "4057f1dd33986b2b03272eb4fc363e0677f349e9e69486b56da5c83030e8fdf0",
-  "apkSha256": "60cd8b20979836c1b73ec8a6ed5b740e53ce37b34a592d2719f8c4cc21037386",
+  "runtimePublicKeySha256": "d9c3033a5be7b1c7b564cf544c9b923148b0ed8735728c900a6c04c1813255d1",
+  "apkSha256": "c1bd7f041e4a0e8c8efbe5fb2833237791b5eff3af75b6cae10a0db9c00dadcf",
   "apkCertificateSha256": "70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34",
   "steps": {
     "inputs": "success",
