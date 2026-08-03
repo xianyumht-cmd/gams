@@ -62,32 +62,16 @@ public final class MainActivity extends Activity {
     }
 
     private void showConsole() {
-        LinearLayout root = page("GG V2 管理器", "服务器、卡密、设备、版本、安全策略和远程资源统一控制");
-        TextView state = box("请选择管理模块");
+        LinearLayout root = page("GG V2 管理器", "当前生产接口管理控制台");
+        TextView state = box("当前服务支持：卡密创建、列表、停用、启用、续期、永久和解绑");
         root.addView(state, full(dp(16)));
 
-        addMenu(root, "系统总览", "查看卡密、设备、风险、版本和运行状态", this::showDashboard);
-        addMenu(root, "卡密管理", "创建、搜索、详情、续期、停用、解绑和批量操作", this::showLicenseManager);
-        addMenu(root, "设备管理", "查看设备详情、风险信息和撤销绑定", this::showDeviceManager);
-        addMenu(root, "版本与更新", "最低版本、最新版本、强制更新和下载地址", this::showVersionSettings);
-        addMenu(root, "安全策略", "会话、复检、离线、租期、解绑和风险阈值", this::showSecuritySettings);
-        addMenu(root, "远程资源", "运行状态、已登记版本、暂停、恢复和回滚", this::showRuntimeManager);
-        addMenu(root, "审计日志", "查看登录、激活、验证、解绑和风险记录", this::showAudit);
-        addMenu(root, "配置历史", "查看配置变更并回滚历史版本", this::showSettingsHistory);
-
-        Button revoke = danger("全局撤销全部会话");
-        revoke.setOnClickListener(v -> confirmDanger(
-                "全局撤销会话",
-                "所有客户端当前会话将立即失效，并在下次操作时重新验证。",
-                () -> api.post("/v1/admin/sessions/revoke-all", new J(), result -> {
-                    toastResult(result);
-                    if (result.success) showJson("撤销结果", result.data);
-                })));
-        root.addView(revoke, full(dp(12)));
+        addMenu(root, "系统总览", "查看当前卡密与设备数量信息", this::showDashboard);
+        addMenu(root, "卡密管理", "创建、查看、续期、停用、启用和解绑", this::showLicenseManager);
 
         Button logout = secondary("退出管理登录");
         logout.setOnClickListener(v -> { api.logout(); showLogin(""); });
-        root.addView(logout, full(0));
+        root.addView(logout, full(dp(12)));
         setContentView(wrap(root));
     }
 
@@ -101,7 +85,7 @@ public final class MainActivity extends Activity {
 
     private void showDashboard() {
         showLoading("系统总览");
-        api.get("/v1/admin/dashboard", result -> handlePageResult("系统总览", result));
+        api.get("/v1/admin/licenses?limit=100", result -> handlePageResult("系统总览", result));
     }
 
     private void handlePageResult(String title, AdminApiManager.Result result) {
@@ -141,22 +125,20 @@ public final class MainActivity extends Activity {
         setContentView(wrap(root));
     }
     private void showLicenseManager() {
-        LinearLayout root = page("卡密管理", "支持搜索、创建、查看详情、续期、停用、解绑和批量处理");
-        EditText query = input("输入卡密预览、备注或卡密编号", false);
-        TextView output = box("点击查询读取服务器卡密列表");
-        Button search = primary("查询卡密");
-        root.addView(query, full(dp(10)));
-        root.addView(search, full(dp(12)));
-        root.addView(output, full(dp(16)));
-        search.setOnClickListener(v -> {
-            search.setEnabled(false);
-            String path = "/v1/admin/licenses?limit=100&q=" + encode(query.getText().toString());
-            api.get(path, result -> {
-                search.setEnabled(true);
+        LinearLayout root = page("卡密管理", "与当前生产接口完全一致");
+        TextView output = box("点击刷新读取卡密列表");
+
+        Button refresh = primary("刷新卡密列表");
+        refresh.setOnClickListener(v -> {
+            refresh.setEnabled(false);
+            api.get("/v1/admin/licenses?limit=100", result -> {
+                refresh.setEnabled(true);
                 if (redirectUnauthorized(result)) return;
                 output.setText(result.success ? pretty(result.data) : result.message);
             });
         });
+        root.addView(refresh, full(dp(10)));
+        root.addView(output, full(dp(16)));
 
         Button create = secondary("创建卡密");
         create.setOnClickListener(v -> showCreateLicenseDialog(output));
@@ -165,58 +147,30 @@ public final class MainActivity extends Activity {
         root.addView(section("单张卡密操作"), full(dp(8)));
         EditText keyOrId = input("输入完整卡密或卡密编号", false);
         root.addView(keyOrId, full(dp(10)));
-        Button detail = secondary("查看卡密与设备详情");
-        detail.setOnClickListener(v -> {
-            String value = keyOrId.getText().toString().trim();
-            if (value.isEmpty()) { output.setText("请输入卡密或卡密编号"); return; }
-            api.get(detailPath(value), result -> {
-                if (redirectUnauthorized(result)) return;
-                output.setText(result.success ? pretty(result.data) : result.message);
-            });
-        });
-        root.addView(detail, full(dp(10)));
 
         LinearLayout row = horizontal();
         Button disable = small("停用");
         Button enable = small("启用");
-        Button unbind = small("解绑全部设备");
+        Button unbind = small("解绑设备");
         row.addView(disable, weight());
         row.addView(enable, weightMargins());
         row.addView(unbind, weight());
         root.addView(row, full(dp(10)));
         disable.setOnClickListener(v -> licenseAction(keyOrId, "disable", 0L, output));
         enable.setOnClickListener(v -> licenseAction(keyOrId, "enable", 0L, output));
-        unbind.setOnClickListener(v -> confirmDanger("管理员解绑", "将撤销该卡密绑定的全部设备，不会扣除有效期。",
+        unbind.setOnClickListener(v -> confirmDanger(
+                "管理员解绑",
+                "将撤销该卡密绑定的全部设备，不会扣除有效期。",
                 () -> licenseAction(keyOrId, "unbind", 0L, output)));
 
         LinearLayout row2 = horizontal();
         Button permanent = small("改为永久");
         Button extend = small("自定义续期");
-        Button edit = small("修改参数");
         row2.addView(permanent, weight());
         row2.addView(extend, weightMargins());
-        row2.addView(edit, weight());
         root.addView(row2, full(dp(16)));
         permanent.setOnClickListener(v -> licenseAction(keyOrId, "permanent", 0L, output));
         extend.setOnClickListener(v -> showExtendDialog(keyOrId, output));
-        edit.setOnClickListener(v -> showLicenseEditDialog(keyOrId, output));
-
-        root.addView(section("批量操作"), full(dp(8)));
-        EditText ids = input("卡密编号，使用逗号或换行分隔，最多100个", false);
-        EditText batchDays = numeric("续期天数，仅批量续期时填写");
-        root.addView(ids, full(dp(10)));
-        root.addView(batchDays, full(dp(10)));
-        LinearLayout batchRow = horizontal();
-        Button batchDisable = small("批量停用");
-        Button batchEnable = small("批量启用");
-        Button batchExtend = small("批量续期");
-        batchRow.addView(batchDisable, weight());
-        batchRow.addView(batchEnable, weightMargins());
-        batchRow.addView(batchExtend, weight());
-        root.addView(batchRow, full(dp(16)));
-        batchDisable.setOnClickListener(v -> batchAction(ids, "disable", 0L, output));
-        batchEnable.setOnClickListener(v -> batchAction(ids, "enable", 0L, output));
-        batchExtend.setOnClickListener(v -> batchAction(ids, "extend", parseLong(batchDays, 30L) * 86400L, output));
 
         Button back = secondary("返回控制台");
         back.setOnClickListener(v -> showConsole());
@@ -252,11 +206,11 @@ public final class MainActivity extends Activity {
                 }).show();
     }
 
-    private void licenseAction(EditText keyOrId, String action, long seconds, TextView output) {
+    private void licenseAction(EditText keyOrId, String action, long days, TextView output) {
         String value = keyOrId.getText().toString().trim();
         if (value.isEmpty()) { output.setText("请输入卡密或卡密编号"); return; }
         J body = identifier(value).put("action", action);
-        if (seconds > 0) body.put("seconds", seconds);
+        if (days > 0) body.put("days", days);
         api.post("/v1/admin/licenses/action", body, result -> {
             if (redirectUnauthorized(result)) return;
             output.setText(result.success ? pretty(result.data) : result.message);
@@ -269,7 +223,7 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("自定义续期").setView(days)
                 .setNegativeButton("取消", null)
                 .setPositiveButton("续期", (dialog, which) ->
-                        licenseAction(keyOrId, "extend", parseLong(days, 30L) * 86400L, output)).show();
+                        licenseAction(keyOrId, "extend", parseLong(days, 30L), output)).show();
     }
 
     private void showLicenseEditDialog(EditText keyOrId, TextView output) {
