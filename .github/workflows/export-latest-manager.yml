@@ -1,0 +1,128 @@
+name: Export latest formal GG manager APK
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/export-latest-manager.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: export-latest-gg-manager
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Verify manager version
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'versionCode = 2' v2/android/manager/build.gradle.kts
+          grep -Fq 'versionName = "2.0.1"' v2/android/manager/build.gradle.kts
+
+      - name: Build and lint manager
+        id: build
+        working-directory: v2/android
+        run: gradle --no-daemon :manager:clean :manager:lintRelease :manager:assembleRelease
+
+      - name: Sign and verify formal manager APK
+        id: sign
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GG_RELEASE_KEYSTORE_BASE64:-}"
+          test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}"
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          unsigned="$(find v2/android/manager/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+          mkdir -p /tmp/gg-manager
+          signed=/tmp/gg-manager/GG-Manager-2.0.1-code2.apk
+          "$apksigner" sign --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+            --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --min-sdk-version 24 "$signed"
+          "$aapt" dump badging "$signed" > /tmp/manager-badging.txt
+          grep -Fq "package: name='com.jinli.ggsecure.manager'" /tmp/manager-badging.txt
+          grep -Fq "versionCode='2'" /tmp/manager-badging.txt
+          grep -Fq "versionName='2.0.1'" /tmp/manager-badging.txt
+          sha256sum "$signed" | awk '{print $1}' > /tmp/manager-sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-Manager-2.0.1-code2
+          path: /tmp/gg-manager/GG-Manager-2.0.1-code2.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record export status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.verify.outcome }}" == success \
+             && "${{ steps.build.outcome }}" == success \
+             && "${{ steps.sign.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success ]]; then ok=true; fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" \
+            --arg sha256 "$(cat /tmp/manager-sha256.txt 2>/dev/null || true)" \
+            --arg verify "${{ steps.verify.outcome }}" \
+            --arg build "${{ steps.build.outcome }}" \
+            --arg sign "${{ steps.sign.outcome }}" \
+            --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:$ok,manager:{versionName:"2.0.1",versionCode:2,file:"GG-Manager-2.0.1-code2.apk",sha256:$sha256},steps:{verify:$verify,build:$build,sign:$sign,artifact:$artifact},secretsExposed:false}' > /tmp/status.json
+          path='docs/LATEST_MANAGER_EXPORT.json'
+          content="$(base64 -w0 /tmp/status.json)"
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record latest GG manager export' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
+      - name: Require successful export
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.verify.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
+          test "${{ steps.sign.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
