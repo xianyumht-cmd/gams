@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T21:04:35Z",
+  "runId": 30852688601,
+  "ok": false,
+  "diagnosis": "candidate used duplicate workers.dev-only runtime routes",
+  "apk": {
+    "versionName": "2.0.9-script-candidate",
+    "versionCode": 19,
+    "sha256": ""
+  },
+  "routing": {
+    "customHost": "runtime-candidate.xn--8pv109c.top",
+    "workerHost": "gams-runtime-v2-script-candidate.2320006072.workers.dev",
+    "distinct": true
+  },
+  "isolation": {
+    "androidMainActivityChanged": false,
+    "scriptChangedFromPreviousCandidate": false,
+    "gameChanged": false,
+    "productionRuntimeChanged": false
+  },
+  "steps": {
+    "verify": "success",
+    "worker": "failure",
+    "apk": "skipped",
+    "artifact": "skipped"
+  },
+  "secretsExposed": false
+}
