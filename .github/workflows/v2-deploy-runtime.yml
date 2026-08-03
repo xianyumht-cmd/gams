@@ -21,7 +21,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +35,25 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
-          test -n "${LICENSE_ADMIN_PASSWORD:-}"
+          test -n "${TOKEN_SIGNING_SECRET:-}"
+          test "${#TOKEN_SIGNING_SECRET}" -ge 32
+
+      - name: Patch runtime token verification only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("v2/runtime/src/index.js")
+          text = path.read_text(encoding="utf-8")
+          old = '    const expected = await hmac(payloadPart, env.ADMIN_PASSWORD || "");'
+          new = '    const expected = await hmac(payloadPart, env.TOKEN_SIGNING_SECRET || "");'
+          if text.count(old) != 1:
+              raise SystemExit("runtime token verification source did not match the stable contract")
+          path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
+          node --check v2/runtime/src/index.js
+          grep -Fq 'env.TOKEN_SIGNING_SECRET' v2/runtime/src/index.js
 
       - name: Locate shared license D1 database
         id: d1
@@ -56,13 +74,13 @@ jobs:
           sed "s/__D1_DATABASE_ID__/${{ steps.d1.outputs.database_id }}/g" \
             wrangler.template.jsonc > wrangler.generated.jsonc
 
-      - name: Configure runtime master secret
+      - name: Configure runtime token verification secret
         working-directory: v2/runtime
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' "$LICENSE_ADMIN_PASSWORD" \
-            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+          printf '%s' "$TOKEN_SIGNING_SECRET" \
+            | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc
 
       - name: Deploy production runtime Worker
         working-directory: v2/runtime
