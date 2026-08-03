@@ -1,0 +1,69 @@
+name: Diagnose production custom-domain 403
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ops/diagnose-production-403.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Capture endpoint responses
+        shell: bash
+        run: |
+          set +e
+          mkdir -p docs /tmp/gams-403
+
+          capture() {
+            key="$1"; url="$2"
+            headers="/tmp/gams-403/${key}.headers"
+            body="/tmp/gams-403/${key}.body"
+            code="$(curl -sS -L --max-redirs 0 --connect-timeout 10 --max-time 20 \
+              -D "$headers" -o "$body" -w '%{http_code}' "$url")"
+            address="$(getent ahostsv4 "$(printf '%s' "$url" | sed -E 's#https://([^/]+).*#\1#')" 2>/dev/null | awk '{print $1}' | sort -u | paste -sd, -)"
+            server="$(awk 'BEGIN{IGNORECASE=1} /^server:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' "$headers")"
+            cfray="$(awk 'BEGIN{IGNORECASE=1} /^cf-ray:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' "$headers")"
+            ctype="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' "$headers")"
+            mitigated="$(awk 'BEGIN{IGNORECASE=1} /^cf-mitigated:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' "$headers")"
+            location="$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' "$headers")"
+            preview="$(head -c 4096 "$body" 2>/dev/null | tr '\000' '?' | sed 's/[^[:print:]\t]/?/g')"
+            jq -nc \
+              --arg url "$url" --arg http "${code:-000}" --arg addresses "$address" \
+              --arg server "$server" --arg cfRay "$cfray" --arg contentType "$ctype" \
+              --arg mitigated "$mitigated" --arg location "$location" --arg bodyPreview "$preview" \
+              '{url:$url,httpStatus:$http,addresses:($addresses|split(",")|map(select(length>0))),headers:{server:$server,cfRay:$cfRay,contentType:$contentType,cfMitigated:$mitigated,location:$location},bodyPreview:$bodyPreview}' \
+              > "/tmp/gams-403/${key}.json"
+          }
+
+          capture license_custom https://license.xn--8pv109c.top/health
+          capture runtime_custom https://runtime.xn--8pv109c.top/health
+          capture license_worker https://gams-license-api.2320006072.workers.dev/health
+          capture runtime_worker https://gams-runtime-v2.2320006072.workers.dev/health
+
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg triggerCommit "$GITHUB_SHA" \
+            --slurpfile licenseCustom /tmp/gams-403/license_custom.json \
+            --slurpfile runtimeCustom /tmp/gams-403/runtime_custom.json \
+            --slurpfile licenseWorker /tmp/gams-403/license_worker.json \
+            --slurpfile runtimeWorker /tmp/gams-403/runtime_worker.json \
+            '{schemaVersion:1,generatedAt:$generatedAt,triggerCommit:$triggerCommit,licenseCustom:$licenseCustom[0],runtimeCustom:$runtimeCustom[0],licenseWorker:$licenseWorker[0],runtimeWorker:$runtimeWorker[0],secretsExposed:false}' \
+            > docs/PRODUCTION_403_DIAGNOSIS.json
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/PRODUCTION_403_DIAGNOSIS.json
+          git commit -m "Record production 403 diagnosis" || true
+          git pull --rebase origin main
+          git push origin HEAD:main
