@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T21:58:23Z",
+  "runId": 30856724253,
+  "ok": true,
+  "apk": {
+    "versionName": "2.0.10-remote-engine-ab",
+    "versionCode": 20,
+    "sha256": "192f173c6084e34d58a085695ea4b07adc5b00b8879f045656c7eb34f989f020"
+  },
+  "runtime": {
+    "version": "2.0.6-remote-engine-ab-c1",
+    "branch": "candidate-remote-engine-ab-20260804"
+  },
+  "probe": {
+    "abWorker": true,
+    "defaultWorker": true,
+    "customDomainHttpCode": "403"
+  },
+  "isolation": {
+    "androidMainActivityChanged": false,
+    "clientNetworkHostsChanged": false,
+    "stableScriptUsed": true,
+    "reusableCallbackCandidateUsed": false,
+    "productionDefaultChannelChanged": false
+  },
+  "steps": {
+    "verify": "success",
+    "runtime": "success",
+    "remoteEngine": "success",
+    "source": "success",
+    "deploy": "success",
+    "probe": "success",
+    "clientPatch": "success",
+    "apk": "success",
+    "artifact": "success"
+  },
+  "secretsExposed": false
+}
