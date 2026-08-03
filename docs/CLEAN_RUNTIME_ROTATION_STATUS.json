@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T15:11:22Z",
+  "triggerCommit": "328334464b5660e2a8c7396198f14fd08d68609a",
+  "ok": false,
+  "versionName": "2.0.3",
+  "versionCode": 12,
+  "runtimePublicKeySha256": "44c4047b7ae9bd9b1295908ea040f43677c53bf938cca29044d61814ae02b6bc",
+  "apkSha256": "",
+  "apkCertificateSha256": "",
+  "steps": {
+    "inputs": "success",
+    "runtimeSigningKeyRotation": "success",
+    "sourcePatch": "success",
+    "runtimeRelease": "success",
+    "androidBuild": "success",
+    "apkSigning": "failure",
+    "workflowUpdate": "skipped",
+    "commit": "skipped",
+    "licenseDeploy": "skipped",
+    "runtimeDeploy": "skipped",
+    "servicesHealthy": "skipped",
+    "signedLifecycleAcceptance": "skipped",
+    "githubRelease": "skipped"
+  },
+  "sanitizedLog": "",
+  "oldRuntimePasswordRequired": false,
+  "oldRuntimeSigningPasswordRequired": false,
+  "cloudflareSecurityRulesChanged": false,
+  "secretsExposed": false
+}
