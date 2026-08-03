@@ -1,25 +1,25 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-08-03T16:48:24Z",
-  "triggerCommit": "07edf601180f7d029cf1bc3476e1c9f1f9e03b28",
-  "runId": 30833751787,
+  "schemaVersion": 3,
+  "generatedAt": "2026-08-03T16:52:09Z",
+  "triggerCommit": "8fa13c684bbe5b1892bd21ea1f716eba2c077d53",
+  "runId": 30834014441,
   "ok": false,
   "client": {
     "versionName": "2.0.4",
     "versionCode": 13,
-    "sha256": ""
+    "sha256": "c0e50573dc1544b4e752eb520bfad6d14afcacf07f7a2198844f4bf848eff203"
   },
   "manager": {
     "versionName": "2.0.1",
     "versionCode": 2,
-    "sha256": ""
+    "sha256": "80cade3076a4827defc94879918d600ed386af8864181a000e0138c0f9b614e9"
   },
-  "certificateSha256": "",
+  "certificateSha256": "70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34",
   "steps": {
     "patch": "success",
     "build": "success",
-    "sign": "failure",
-    "adminApi": "skipped",
+    "sign": "success",
+    "adminApi": "failure",
     "commit": "skipped",
     "githubRelease": "skipped",
     "artifact": "skipped"
