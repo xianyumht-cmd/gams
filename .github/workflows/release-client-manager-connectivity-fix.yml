@@ -1,0 +1,272 @@
+name: Release GG client and manager connectivity fixes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release-client-manager-connectivity-fix.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-client-manager-connectivity-fix
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      CLIENT_VERSION: 2.0.4
+      CLIENT_CODE: 13
+      MANAGER_VERSION: 2.0.1
+      MANAGER_CODE: 2
+      RELEASE_TAG: gg-2.0.4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate protected build inputs
+        id: inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD LICENSE_ADMIN_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          python3 -m py_compile scripts/apply_2_0_4_client_manager_connectivity_fixes.py
+
+      - name: Apply deterministic client and manager fixes
+        id: patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_2_0_4_client_manager_connectivity_fixes.py
+          git diff --exit-code -- remote-script v2/runtime license-api
+          grep -Fq 'setSupportMultipleWindows(true)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'boolean onCreateWindow' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq '已阻止外部浏览器跳转' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'ResilientApiTransport.get' v2/android/manager/src/main/java/com/jinli/ggsecure/manager/AdminApiManager.java
+          grep -Fq 'static Response get' v2/android/manager/src/main/java/com/jinli/ggsecure/manager/ResilientApiTransport.java
+          test "$(git diff --name-only | grep -Ec '^(v2/android/client|v2/android/manager)/')" -ge 6
+
+      - name: Build and lint both release APKs
+        id: build
+        working-directory: v2/android
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon \
+            :client:clean :client:lintRelease :client:assembleRelease \
+            :manager:clean :manager:lintRelease :manager:assembleRelease
+
+      - name: Sign and verify both APKs
+        id: sign
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          client_unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          manager_unsigned="$(find v2/android/manager/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$client_unsigned" && test -s "$manager_unsigned"
+
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/gg-release.jks
+          test -s /tmp/gg-release.jks
+          keytool -list -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release >/tmp/keytool.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          mkdir -p /tmp/gg-connectivity-release
+          client_signed="/tmp/gg-connectivity-release/GG-${CLIENT_VERSION}-code${CLIENT_CODE}.apk"
+          manager_signed="/tmp/gg-connectivity-release/GG-Manager-${MANAGER_VERSION}-code${MANAGER_CODE}.apk"
+
+          for pair in "$client_unsigned|$client_signed" "$manager_unsigned|$manager_signed"; do
+            input="${pair%%|*}"
+            output="${pair#*|}"
+            "$apksigner" sign \
+              --ks /tmp/gg-release.jks \
+              --ks-key-alias gg-release \
+              --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+              --v1-signing-enabled false \
+              --v2-signing-enabled true \
+              --v3-signing-enabled true \
+              --v4-signing-enabled false \
+              --out "$output" "$input"
+            "$apksigner" verify --verbose --print-certs "$output" > "${output}.verify.txt"
+            grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "${output}.verify.txt"
+            grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "${output}.verify.txt"
+          done
+
+          "$aapt" dump badging "$client_signed" > /tmp/client-badging.txt
+          "$aapt" dump badging "$manager_signed" > /tmp/manager-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='13' versionName='2.0.4'" /tmp/client-badging.txt
+          grep -Fq "application-label:'GG'" /tmp/client-badging.txt
+          grep -Fq "package: name='com.jinli.ggsecure.manager' versionCode='2' versionName='2.0.1'" /tmp/manager-badging.txt
+          grep -Fq "application-label:'GG V2 管理器'" /tmp/manager-badging.txt
+
+          cert_hex="$(sed -n 's/^.*certificate SHA-256 digest: //p' "${client_signed}.verify.txt" | head -n1 | tr '[:lower:]' '[:upper:]')"
+          test "${#cert_hex}" = 64
+          manager_cert="$(sed -n 's/^.*certificate SHA-256 digest: //p' "${manager_signed}.verify.txt" | head -n1 | tr '[:lower:]' '[:upper:]')"
+          test "$manager_cert" = "$cert_hex"
+          cert_colon="$(printf '%s' "$cert_hex" | sed 's/../&:/g;s/:$//')"
+          test "$cert_colon" = '70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34'
+
+          sha256sum "$client_signed" | awk '{print $1}' > /tmp/client-sha256.txt
+          sha256sum "$manager_signed" | awk '{print $1}' > /tmp/manager-sha256.txt
+          printf '%s' "$cert_colon" > /tmp/certificate-sha256.txt
+          rm -f /tmp/gg-connectivity-release/*.verify.txt
+
+      - name: Verify production admin API
+        id: api
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload="$(jq -n --arg password "$LICENSE_ADMIN_PASSWORD" '{password:$password}')"
+          login="$(curl -fsS -H 'Content-Type: application/json' --data "$payload" "$LICENSE_ENDPOINT/v1/admin/login")"
+          token="$(printf '%s' "$login" | jq -r 'select(.ok == true) | .token')"
+          test -n "$token" && test "$token" != null
+          dashboard="$(curl -fsS -H "Authorization: Bearer $token" "$LICENSE_ENDPOINT/v1/admin/dashboard")"
+          printf '%s' "$dashboard" | jq -e '.ok == true' >/dev/null
+          unset token login dashboard payload
+
+      - name: Commit verified Android source fixes
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            v2/android/client/build.gradle.kts \
+            v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java \
+            v2/android/manager/build.gradle.kts \
+            v2/android/manager/src/main/java/com/jinli/ggsecure/manager/AdminApiManager.java \
+            v2/android/manager/src/main/java/com/jinli/ggsecure/manager/ResilientApiTransport.java
+          git commit -m 'Fix GG duplicate external browser and rebuild manager connectivity'
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish signed APK release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          client_sha="$(cat /tmp/client-sha256.txt)"
+          manager_sha="$(cat /tmp/manager-sha256.txt)"
+          cert="$(cat /tmp/certificate-sha256.txt)"
+          cat > /tmp/release-notes.txt <<EOF
+          GG ${CLIENT_VERSION} / 管理端 ${MANAGER_VERSION}
+
+          - 修复网页偶发同时唤起系统浏览器与 GG 内部浏览器。
+          - HTTP/HTTPS 与新窗口统一留在 GG 内部 WebView。
+          - 管理端 GET/POST 均使用抗 DNS 污染的多通道连接。
+          - 客户端 SHA-256：${client_sha}
+          - 管理端 SHA-256：${manager_sha}
+          - APK 证书 SHA-256：${cert}
+          - 未修改核心商城脚本、Runtime 运行包、卡密数据库或 Cloudflare 安全规则。
+          EOF
+          gh release delete "$RELEASE_TAG" --yes 2>/dev/null || true
+          gh release create "$RELEASE_TAG" \
+            /tmp/gg-connectivity-release/GG-${CLIENT_VERSION}-code${CLIENT_CODE}.apk \
+            /tmp/gg-connectivity-release/GG-Manager-${MANAGER_VERSION}-code${MANAGER_CODE}.apk \
+            --target "${{ steps.commit.outputs.sha }}" \
+            --title "GG ${CLIENT_VERSION} 与管理端 ${MANAGER_VERSION}" \
+            --notes-file /tmp/release-notes.txt
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-2.0.4-client-and-manager
+          path: /tmp/gg-connectivity-release/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record release status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.inputs.outcome }}" == success \
+             && "${{ steps.patch.outcome }}" == success \
+             && "${{ steps.build.outcome }}" == success \
+             && "${{ steps.sign.outcome }}" == success \
+             && "${{ steps.api.outcome }}" == success \
+             && "${{ steps.commit.outcome }}" == success \
+             && "${{ steps.release.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success ]]; then ok=true; fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg triggerCommit "$GITHUB_SHA" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" \
+            --arg clientVersion "$CLIENT_VERSION" \
+            --argjson clientCode "$CLIENT_CODE" \
+            --arg managerVersion "$MANAGER_VERSION" \
+            --argjson managerCode "$MANAGER_CODE" \
+            --arg clientSha256 "$(cat /tmp/client-sha256.txt 2>/dev/null || true)" \
+            --arg managerSha256 "$(cat /tmp/manager-sha256.txt 2>/dev/null || true)" \
+            --arg certificateSha256 "$(cat /tmp/certificate-sha256.txt 2>/dev/null || true)" \
+            --arg inputs "${{ steps.inputs.outcome }}" \
+            --arg patch "${{ steps.patch.outcome }}" \
+            --arg build "${{ steps.build.outcome }}" \
+            --arg sign "${{ steps.sign.outcome }}" \
+            --arg api "${{ steps.api.outcome }}" \
+            --arg commit "${{ steps.commit.outcome }}" \
+            --arg release "${{ steps.release.outcome }}" \
+            --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,triggerCommit:$triggerCommit,runId:$runId,ok:$ok,client:{versionName:$clientVersion,versionCode:$clientCode,sha256:$clientSha256},manager:{versionName:$managerVersion,versionCode:$managerCode,sha256:$managerSha256},certificateSha256:$certificateSha256,steps:{inputs:$inputs,patch:$patch,build:$build,sign:$sign,adminApi:$api,commit:$commit,githubRelease:$release,artifact:$artifact},scope:{webViewSingleWindow:true,managerResilientGet:true,shopCoreModified:false,runtimeModified:false,cloudflareRulesModified:false},secretsExposed:false}' \
+            > /tmp/connectivity-status.json
+          path='docs/CLIENT_MANAGER_CONNECTIVITY_FIX_STATUS.json'
+          content="$(base64 -w0 /tmp/connectivity-status.json)"
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          if [[ -n "$sha" ]]; then
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record client and manager connectivity release status' \
+              -f content="$content" -f sha="$sha" -f branch=main >/dev/null
+          else
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record client and manager connectivity release status' \
+              -f content="$content" -f branch=main >/dev/null
+          fi
+
+      - name: Require complete release
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.inputs.outcome }}" = success
+          test "${{ steps.patch.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
+          test "${{ steps.sign.outcome }}" = success
+          test "${{ steps.api.outcome }}" = success
+          test "${{ steps.commit.outcome }}" = success
+          test "${{ steps.release.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
