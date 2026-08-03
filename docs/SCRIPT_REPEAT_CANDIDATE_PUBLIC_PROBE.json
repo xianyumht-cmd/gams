@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T21:13:34Z",
+  "runId": 30853712010,
+  "custom": {
+    "host": "runtime-candidate.xn--8pv109c.top",
+    "dns": "104.21.79.68    STREAM runtime-candidate.脚本.top 104.21.79.68    DGRAM   104.21.79.68    RAW     172.67.169.60   STREAM  172.67.169.60   DGRAM   172.67.169.60   RAW     2606:4700:3030::6815:4f44 STREAM  2606:4700:3030::6815:4f44 DGRAM   2606:4700:3030::6815:4f44 RAW     2606:4700:3034::ac43:a93c STREAM  2606:4700:3034::ac43:a93c DGRAM   2606:4700:3034::ac43:a93c RAW     ",
+    "httpCode": "403",
+    "curlRc": 0,
+    "headers": "HTTP/2 403   date: Mon, 03 Aug 2026 21:13:34 GMT  content-type: text/html; charset=UTF-8  content-length: 5404  accept-ch: Sec-CH-UA-Bitness, Sec-CH-UA-Arch, Sec-CH-UA-Full-Version, Sec-CH-UA-Mobile, Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List, Sec-CH-UA-Platform, Sec-CH-UA, UA-Bitness, UA-Arch, UA-Full-Version, UA-Mobile, UA-Model, UA-Platform-Version, UA-Platform, UA  cf-mitigated: challenge  content-security-policy: default-src 'none'; script-src 'nonce-hPCnN9BBmKWQFAIy4i9vmE' 'unsafe-eval' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'unsafe-inline'; img-src 'self' https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com blob:; child-src 'self' https:/",
+    "body": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\"><meta name=\"robots\" content=\"noindex,nofollow\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"content-security-policy\" content=\"default-src &#39;none&#39;; script-src &#39;nonce-hPCnN9BBmKWQFAIy4i9vmE&#39; &#39;unsafe-eval&#39; https://challenges.cloudflare.com; script-src-attr &#39;none&#39;; style-src &#39;unsafe-inline&#39;; img-src &#39;self&#39; https://challenges.cloudflare.com; connect-src &#39;self&#39; https://challenges.cloudflare.com; frame-src &#39;self&#39; https://challenges.cloudflare.com blob:; child-src &#39;self&#39; https://challenges.cloudflare.",
+    "error": ""
+  },
+  "worker": {
+    "host": "gams-runtime-v2-script-candidate.2320006072.workers.dev",
+    "dns": "172.67.199.204  STREAM gams-runtime-v2-script-candidate.2320006072.workers.dev 172.67.199.204  DGRAM   172.67.199.204  RAW     104.21.21.185   STREAM  104.21.21.185   DGRAM   104.21.21.185   RAW     2606:4700:3034::6815:15b9 STREAM  2606:4700:3034::6815:15b9 DGRAM   2606:4700:3034::6815:15b9 RAW     2606:4700:3037::ac43:c7cc STREAM  2606:4700:3037::ac43:c7cc DGRAM   2606:4700:3037::ac43:c7cc RAW     ",
+    "httpCode": "200",
+    "curlRc": 0,
+    "headers": "HTTP/2 200   date: Mon, 03 Aug 2026 21:13:34 GMT  content-type: application/json; charset=utf-8  content-length: 171  cache-control: no-store, no-cache, max-age=0  pragma: no-cache  x-content-type-options: nosniff  report-to: {\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=N%2BWNdjtQkYjqtw7pZjGQp6FC%2BTHm8uE8UUW8SKO0Q2wKI3BCOQk23ntOY2MzmHsSiVbrzie7BlR%2Fn2%2F9VPsw7BygqGmyw6Y1IwbP%2Bb%2FC8cQjtl7ERem76y8SkdqSRgbSUtcQsF3CtJndeUcmSwEsrrcO2%2BKRVhq0OiqJ4EOCLdxddI4Bt1HYiCCZ\"}]}  nel: {\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}  server: cloudflare  cf-ray: a25853b48bd2e7f7-SEA  alt-svc: h3=\":443\"; ma=86400    ",
+    "body": "{\"ok\":true,\"service\":\"gams-runtime-v2\",\"version\":3,\"keyWrap\":\"RSA-OAEP-SHA1\",\"minAppVersion\":11,\"encryptedRuntime\":true,\"splitSecrets\":true,\"legacyReleaseCompatible\":true}",
+    "error": ""
+  },
+  "secretsExposed": false
+}
