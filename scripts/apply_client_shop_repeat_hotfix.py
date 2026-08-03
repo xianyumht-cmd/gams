@@ -9,6 +9,13 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def replace_exact(text: str, old: str, new: str, expected: int, label: str) -> str:
+    count = text.count(old)
+    if count != expected:
+        raise SystemExit(f"{label}: expected {expected} matches, found {count}")
+    return text.replace(old, new)
+
+
 main_path = Path("v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java")
 text = main_path.read_text(encoding="utf-8")
 
@@ -167,8 +174,18 @@ build_path.write_text(build, encoding="utf-8")
 
 workflow_path = Path(".github/workflows/v2-build-apks.yml")
 workflow = workflow_path.read_text(encoding="utf-8")
-workflow = replace_once(workflow, "grep -Fq 'versionCode = 16'", "grep -Fq 'versionCode = 17'", "formal versionCode assertion")
-workflow = replace_once(workflow, "grep -Fq 'versionName = \\\"2.0.3-stable\\\"'", "grep -Fq 'versionName = \\\"2.0.7-stable\\\"'", "formal versionName assertion")
+workflow = replace_once(
+    workflow,
+    "grep -Fq 'versionCode = 16'",
+    "grep -Fq 'versionCode = 17'",
+    "formal versionCode assertion",
+)
+workflow = replace_once(
+    workflow,
+    "grep -Fq 'versionName = \"2.0.3-stable\"'",
+    "grep -Fq 'versionName = \"2.0.7-stable\"'",
+    "formal versionName assertion",
+)
 workflow = replace_once(
     workflow,
     '''          ! grep -Fq 'new WebView(MainActivity.this)' "$client"
@@ -184,7 +201,13 @@ workflow = replace_once(
 ''',
     "formal hotfix assertions",
 )
-workflow = replace_once(workflow, "GG-2.0.3-stable-code16.apk", "GG-2.0.7-stable-code17.apk", "formal client filename")
+workflow = replace_exact(
+    workflow,
+    "GG-2.0.3-stable-code16.apk",
+    "GG-2.0.7-stable-code17.apk",
+    2,
+    "formal client filename",
+)
 workflow = replace_once(
     workflow,
     "versionCode='16' versionName='2.0.3-stable'",
