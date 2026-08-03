@@ -1,0 +1,243 @@
+name: Diagnose runtime round-trip integrity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/diagnose-runtime-roundtrip-integrity.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: runtime-roundtrip-integrity-20260804
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CANDIDATE_BRANCH: candidate-script-repeat-20260804
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate-script-repeat-20260804
+          fetch-depth: 0
+
+      - name: Decrypt and compare exact runtime bytes
+        id: roundtrip
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RUNTIME_MASTER_KEY:-}"
+          python3 -m pip install --quiet cryptography
+          python3 - <<'PY'
+          import base64
+          import binascii
+          import hashlib
+          import io
+          import json
+          import os
+          import re
+          import urllib.request
+          import zipfile
+          from pathlib import Path
+
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+          def sha(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+
+          def decode_key(value: str) -> bytearray:
+              text = value.strip()
+              if re.fullmatch(r"[0-9a-fA-F]{64}", text):
+                  raw = bytes.fromhex(text)
+              else:
+                  normalized = text.replace("-", "+").replace("_", "/")
+                  normalized += "=" * ((4 - len(normalized) % 4) % 4)
+                  try:
+                      raw = base64.b64decode(normalized, validate=True)
+                  except (binascii.Error, ValueError) as error:
+                      raise SystemExit("invalid runtime key encoding") from error
+              if len(raw) != 32:
+                  raise SystemExit("invalid runtime key length")
+              return bytearray(raw)
+
+          release = Path("candidate-runtime/release")
+          manifest = json.loads((release / "manifest.json").read_text(encoding="utf-8"))
+          bundle_path = release / manifest["file"]
+          bundle = bundle_path.read_bytes()
+          assert len(bundle) == int(manifest["size"])
+          assert sha(bundle) == manifest["sha256"]
+
+          master_key = decode_key(os.environ["RUNTIME_MASTER_KEY"])
+          content_key = bytearray(AESGCM(bytes(master_key)).decrypt(
+              base64.b64decode(manifest["keyIv"]),
+              base64.b64decode(manifest["keyCipher"]),
+              f"gg-v2-key|{manifest['versionName']}".encode(),
+          ))
+          plain_zip = bytearray(AESGCM(bytes(content_key)).decrypt(
+              base64.b64decode(manifest["iv"]),
+              bundle,
+              f"gg-v2-runtime|{manifest['versionName']}".encode(),
+          ))
+
+          with zipfile.ZipFile(io.BytesIO(bytes(plain_zip)), "r") as archive:
+              names = archive.namelist()
+              assert names == ["noname.js", "game.js"], names
+              assert archive.testzip() is None
+              actual_noname = archive.read("noname.js")
+              actual_game = archive.read("game.js")
+
+          source_noname = Path("remote-script/src/noname.js").read_bytes()
+          virtual_url = b"https://ggv2.local/runtime/game.js"
+          old_urls = [
+              b"https://gams-script-edge.2320006072.workers.dev/engine/stable.js",
+              b"https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js",
+          ]
+          expected_noname = source_noname
+          replacement_counts = {}
+          for old in old_urls:
+              count = expected_noname.count(old)
+              replacement_counts[old.decode("ascii")] = count
+              expected_noname = expected_noname.replace(old, virtual_url)
+          assert virtual_url in expected_noname
+          assert all(old not in expected_noname for old in old_urls)
+
+          game_manifest = json.loads(Path("game-engine/release/manifest.json").read_text(encoding="utf-8"))
+          expected_game = (Path("game-engine/release") / game_manifest["file"]).read_bytes()
+
+          checks = {
+              "bundleSizeMatchesManifest": len(bundle) == int(manifest["size"]),
+              "bundleSha256MatchesManifest": sha(bundle) == manifest["sha256"],
+              "zipEntryOrderExact": names == ["noname.js", "game.js"],
+              "zipCrcValid": True,
+              "nonameBytesExact": actual_noname == expected_noname,
+              "gameBytesExact": actual_game == expected_game,
+              "nonameSizeMatchesManifest": len(actual_noname) == int(manifest["nonameSize"]),
+              "nonameSha256MatchesManifest": sha(actual_noname) == manifest["nonameSha256"],
+              "gameSizeMatchesManifest": len(actual_game) == int(manifest["gameSize"]),
+              "gameSha256MatchesManifest": sha(actual_game) == manifest["gameSha256"],
+              "nonameUtf8RoundTripExact": actual_noname.decode("utf-8").encode("utf-8") == actual_noname,
+          }
+
+          raw_base = (
+              "https://raw.githubusercontent.com/xianyumht-cmd/gams/"
+              f"{os.environ['CANDIDATE_BRANCH']}/candidate-runtime/release/"
+          )
+          request_headers = {"User-Agent": "GAMS-Integrity-Diagnosis/1"}
+          with urllib.request.urlopen(
+              urllib.request.Request(raw_base + "manifest.json?integrity=1", headers=request_headers),
+              timeout=20,
+          ) as response:
+              published_manifest_bytes = response.read()
+          published_manifest = json.loads(published_manifest_bytes.decode("utf-8"))
+          with urllib.request.urlopen(
+              urllib.request.Request(raw_base + published_manifest["file"] + "?integrity=1", headers=request_headers),
+              timeout=30,
+          ) as response:
+              published_bundle = response.read()
+          checks["publishedManifestVersionExact"] = (
+              published_manifest["versionName"] == manifest["versionName"]
+          )
+          checks["publishedBundleBytesExact"] = published_bundle == bundle
+          checks["publishedBundleSha256Matches"] = sha(published_bundle) == manifest["sha256"]
+
+          ok = all(checks.values())
+          result = {
+              "schemaVersion": 1,
+              "candidateBranch": os.environ["CANDIDATE_BRANCH"],
+              "runtimeVersion": manifest["versionName"],
+              "bundle": {
+                  "size": len(bundle),
+                  "sha256": sha(bundle),
+              },
+              "decrypted": {
+                  "entryNames": names,
+                  "noname": {
+                      "size": len(actual_noname),
+                      "sha256": sha(actual_noname),
+                      "expectedSize": len(expected_noname),
+                      "expectedSha256": sha(expected_noname),
+                  },
+                  "game": {
+                      "size": len(actual_game),
+                      "sha256": sha(actual_game),
+                      "expectedSize": len(expected_game),
+                      "expectedSha256": sha(expected_game),
+                  },
+              },
+              "preEncryptionTransform": {
+                  "fixedAddressReplacementCounts": replacement_counts,
+                  "sourceNonameSize": len(source_noname),
+                  "sourceNonameSha256": sha(source_noname),
+                  "transformedNonameSize": len(expected_noname),
+                  "transformedNonameSha256": sha(expected_noname),
+              },
+              "checks": checks,
+              "ok": ok,
+              "secretsExposed": False,
+          }
+          Path("/tmp/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.json").write_text(
+              json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          lines = [
+              "# Runtime round-trip integrity — 2026-08-04",
+              "",
+              f"- Candidate branch: `{result['candidateBranch']}`",
+              f"- Runtime version: `{result['runtimeVersion']}`",
+              f"- Result: `{'PASS' if ok else 'FAIL'}`",
+              "",
+              "## Exact-byte checks",
+              "",
+          ]
+          for key, value in checks.items():
+              lines.append(f"- `{key}`: `{'PASS' if value else 'FAIL'}`")
+          lines.extend([
+              "",
+              "## Interpretation",
+              "",
+              "The encrypted bundle was decrypted with the production runtime key, unpacked, and compared byte-for-byte with the exact pre-encryption inputs after applying the release builder's fixed address transformation.",
+              "",
+              "A PASS result excludes silent byte corruption, truncation, encoding conversion, ZIP entry replacement, or published-bundle drift in this candidate release chain.",
+              "",
+              "This check does not by itself prove whether the remaining repeat-execution defect is caused by runtime state/lifecycle behavior or an upstream page-flow change.",
+              "",
+          ])
+          Path("/tmp/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.md").write_text(
+              "\n".join(lines), encoding="utf-8"
+          )
+
+          for buffer in (content_key, plain_zip, master_key):
+              for index in range(len(buffer)):
+                  buffer[index] = 0
+
+          if not ok:
+              raise SystemExit("runtime round-trip integrity failed")
+          print("runtime round-trip integrity passed")
+          PY
+
+      - name: Record integrity result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s /tmp/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.json
+          test -s /tmp/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.md
+          for file in RUNTIME_ROUNDTRIP_INTEGRITY_20260804.json RUNTIME_ROUNDTRIP_INTEGRITY_20260804.md; do
+            path="docs/${file}"
+            content="$(base64 -w0 "/tmp/${file}")"
+            old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+            args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record runtime round-trip integrity diagnosis' -f content="$content" -f branch=main)
+            [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+            gh api "${args[@]}" >/dev/null
+          done
+
+      - name: Require successful integrity result
+        shell: bash
+        run: |
+          jq -e '.ok == true and .secretsExposed == false' /tmp/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.json >/dev/null
