@@ -107,3 +107,5 @@ jobs:
       - name: Require successful diagnosis
         if: always()
         run: test "${{ steps.generate.outcome }}" = success
+
+# trigger: 2026-08-04T02:53:00+08:00
