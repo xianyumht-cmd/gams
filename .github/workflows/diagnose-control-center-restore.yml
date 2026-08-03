@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   diagnose:
@@ -104,8 +105,13 @@ jobs:
           [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
           gh api "${args[@]}" >/dev/null
 
+      - name: Dispatch complete restore
+        if: steps.generate.outcome == 'success'
+        shell: bash
+        run: gh workflow run restore-complete-control-center-and-client.yml --ref main
+
       - name: Require successful diagnosis
         if: always()
         run: test "${{ steps.generate.outcome }}" = success
 
-# trigger: 2026-08-04T02:53:00+08:00
+# dispatch-trigger: 2026-08-04T03:04:00+08:00
