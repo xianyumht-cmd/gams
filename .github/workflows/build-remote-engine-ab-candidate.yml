@@ -1,0 +1,349 @@
+name: Build remote-engine A/B candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/build-remote-engine-ab-candidate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: remote-engine-ab-candidate-20260804
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CANDIDATE_BRANCH: candidate-remote-engine-ab-20260804
+      CANDIDATE_RUNTIME_DIR: candidate-runtime-remote-engine/release
+      CANDIDATE_RUNTIME_VERSION: 2.0.6-remote-engine-ab-c1
+      CANDIDATE_APP_VERSION: 20
+      APK_VERSION_NAME: 2.0.10-remote-engine-ab
+      APK_VERSION_CODE: 20
+      RUNTIME_WORKER_HOST: gams-runtime-v2.2320006072.workers.dev
+      RUNTIME_CUSTOM_HOST: runtime.xn--8pv109c.top
+      REMOTE_ENGINE_URL: https://gams-script-edge.2320006072.workers.dev/engine/stable.js
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Verify stable baseline and tools
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          python3 -m py_compile scripts/build_remote_engine_ab_runtime.py scripts/apply_remote_engine_ab_candidate.py
+          node --check remote-script/src/noname.js
+          grep -Fq '@version      1.1.4' remote-script/src/noname.js
+          grep -Fq 'https://gams-script-edge.2320006072.workers.dev/engine/stable.js' remote-script/src/noname.js
+          ! grep -Fq 'https://ggv2.local/runtime/game.js' remote-script/src/noname.js
+          grep -Fq 'versionCode = 16' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.3-stable"' v2/android/client/build.gradle.kts
+          grep -Fq 'PROTOCOL_APP_VERSION = 12' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          sha256sum v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java > /tmp/main-activity.sha256
+          sha256sum v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeNames.java > /tmp/runtime-names.sha256
+
+      - name: Build and publish exact remote-engine runtime
+        id: runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet cryptography
+          rm -rf /tmp/gams-ab
+          if git show-ref --verify --quiet "refs/remotes/origin/${CANDIDATE_BRANCH}"; then
+            git worktree add /tmp/gams-ab "origin/${CANDIDATE_BRANCH}"
+            cd /tmp/gams-ab
+            git checkout -B "$CANDIDATE_BRANCH" "origin/${CANDIDATE_BRANCH}"
+            git reset --hard origin/main
+          else
+            git worktree add -b "$CANDIDATE_BRANCH" /tmp/gams-ab origin/main
+            cd /tmp/gams-ab
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          rm -rf "$CANDIDATE_RUNTIME_DIR"
+          mkdir -p "$CANDIDATE_RUNTIME_DIR"
+          game_file="$(jq -r '.file' game-engine/release/manifest.json)"
+          expected_game_sha="$(jq -r '.sha256' game-engine/release/manifest.json)"
+          expected_game_size="$(jq -r '.size' game-engine/release/manifest.json)"
+          test -s "game-engine/release/${game_file}"
+          test "$(stat -c%s "game-engine/release/${game_file}")" = "$expected_game_size"
+          test "$(sha256sum "game-engine/release/${game_file}" | awk '{print $1}')" = "$expected_game_sha"
+
+          export RUNTIME_SIGNING_PASSWORD="$(python3 - <<'PY'
+          import hashlib, hmac, os
+          print(hmac.new(
+              os.environ['GG_RELEASE_KEYSTORE_PASSWORD'].encode(),
+              b'gams-runtime-release-signing-v1',
+              hashlib.sha256,
+          ).hexdigest())
+          PY
+          )"
+          trap 'rm -f /tmp/remote-engine-ab-private.pem /tmp/remote-engine-ab.sig /tmp/remote-engine-ab-runtime-canonical.txt /tmp/remote-engine-ab-runtime-unsigned.json' EXIT
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/remote-engine-ab-private.pem \
+            -pass env:RUNTIME_SIGNING_PASSWORD
+          unset RUNTIME_SIGNING_PASSWORD
+
+          python3 scripts/build_remote_engine_ab_runtime.py \
+            remote-script/src/noname.js \
+            "game-engine/release/${game_file}" \
+            "$CANDIDATE_RUNTIME_VERSION" \
+            "$RUNTIME_MASTER_KEY" \
+            "$CANDIDATE_RUNTIME_DIR"
+          openssl dgst -sha256 -sign /tmp/remote-engine-ab-private.pem \
+            -out /tmp/remote-engine-ab.sig /tmp/remote-engine-ab-runtime-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem \
+            -signature /tmp/remote-engine-ab.sig /tmp/remote-engine-ab-runtime-canonical.txt
+
+          python3 - <<'PY'
+          import base64, hashlib, io, json, os, re, zipfile
+          from pathlib import Path
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+          release = Path(os.environ['CANDIDATE_RUNTIME_DIR'])
+          manifest = json.loads(Path('/tmp/remote-engine-ab-runtime-unsigned.json').read_text())
+          manifest['signatureAlgorithm'] = 'SHA256withECDSA'
+          manifest['signature'] = base64.b64encode(Path('/tmp/remote-engine-ab.sig').read_bytes()).decode()
+          (release / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          bundle = (release / manifest['file']).read_bytes()
+          assert len(bundle) == manifest['size']
+          assert hashlib.sha256(bundle).hexdigest() == manifest['sha256']
+
+          text = os.environ['RUNTIME_MASTER_KEY'].strip()
+          if re.fullmatch(r'[0-9a-fA-F]{64}', text):
+              master = bytes.fromhex(text)
+          else:
+              normalized = text.replace('-', '+').replace('_', '/')
+              normalized += '=' * ((4 - len(normalized) % 4) % 4)
+              master = base64.b64decode(normalized)
+          content_key = AESGCM(master).decrypt(
+              base64.b64decode(manifest['keyIv']),
+              base64.b64decode(manifest['keyCipher']),
+              f"gg-v2-key|{manifest['versionName']}".encode(),
+          )
+          plain = AESGCM(content_key).decrypt(
+              base64.b64decode(manifest['iv']),
+              bundle,
+              f"gg-v2-runtime|{manifest['versionName']}".encode(),
+          )
+          with zipfile.ZipFile(io.BytesIO(plain)) as archive:
+              assert archive.namelist() == ['noname.js', 'game.js']
+              assert archive.testzip() is None
+              noname = archive.read('noname.js')
+              game = archive.read('game.js')
+          expected_noname = Path('remote-script/src/noname.js').read_bytes()
+          game_file = json.loads(Path('game-engine/release/manifest.json').read_text())['file']
+          expected_game = (Path('game-engine/release') / game_file).read_bytes()
+          assert noname == expected_noname
+          assert game == expected_game
+          assert hashlib.sha256(noname).hexdigest() == manifest['nonameSha256']
+          assert hashlib.sha256(game).hexdigest() == manifest['gameSha256']
+          assert b'https://gams-script-edge.2320006072.workers.dev/engine/stable.js' in noname
+          assert b'https://ggv2.local/runtime/game.js' not in noname
+          PY
+
+          git add "$CANDIDATE_RUNTIME_DIR"
+          git add -f "$CANDIDATE_RUNTIME_DIR/bundle-${CANDIDATE_RUNTIME_VERSION}.bin"
+          git commit -m 'Build remote-engine A/B runtime candidate'
+          git push --force-with-lease origin "HEAD:${CANDIDATE_BRANCH}"
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+          raw_base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CANDIDATE_BRANCH}/${CANDIDATE_RUNTIME_DIR}"
+          for attempt in $(seq 1 30); do
+            version="$(curl -fsS "${raw_base}/manifest.json?attempt=${attempt}" | jq -r '.versionName' 2>/dev/null || true)"
+            if [[ "$version" == "$CANDIDATE_RUNTIME_VERSION" ]]; then break; fi
+            sleep 3
+          done
+          test "$version" = "$CANDIDATE_RUNTIME_VERSION"
+          published_file="$(curl -fsS "${raw_base}/manifest.json?final=1" | jq -r '.file')"
+          curl -fsS "${raw_base}/${published_file}?final=1" -o /tmp/published-ab.bin
+          expected_bundle_sha="$(jq -r '.sha256' "$CANDIDATE_RUNTIME_DIR/manifest.json")"
+          test "$(sha256sum /tmp/published-ab.bin | awk '{print $1}')" = "$expected_bundle_sha"
+
+      - name: Verify remote engine endpoint exact bytes
+        id: remote_engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/gams-ab
+          expected_sha="$(jq -r '.sha256' game-engine/release/manifest.json)"
+          expected_size="$(jq -r '.size' game-engine/release/manifest.json)"
+          curl -fsS --connect-timeout 8 --max-time 45 "$REMOTE_ENGINE_URL?ab=${GITHUB_RUN_ID}" -o /tmp/remote-engine.js
+          test "$(stat -c%s /tmp/remote-engine.js)" = "$expected_size"
+          test "$(sha256sum /tmp/remote-engine.js | awk '{print $1}')" = "$expected_sha"
+
+      - name: Add default-preserving A/B runtime channel
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git pull --rebase origin main
+          python3 scripts/apply_remote_engine_ab_candidate.py server
+          python3 scripts/apply_remote_engine_ab_candidate.py server
+          node --check v2/runtime/src/index.js
+          grep -Fq 'const REMOTE_ENGINE_AB_APP_VERSION = 20;' v2/runtime/src/index.js
+          grep -Fq '2.0.6-remote-engine-ab-c1' v2/runtime/src/index.js
+          grep -Fq 'candidate-remote-engine-ab-20260804/candidate-runtime-remote-engine/release/' v2/runtime/src/index.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v2/runtime/src/index.js
+          if ! git diff --cached --quiet; then git commit -m 'Add isolated remote-engine A/B runtime channel'; fi
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy existing runtime Worker with A/B channel
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != null
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.ab.generated.jsonc
+          cd v2/runtime
+          printf '%s' "$TOKEN_SIGNING_SECRET" | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.ab.generated.jsonc
+          printf '%s' "$RUNTIME_MASTER_KEY" | npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.ab.generated.jsonc
+          npx --yes wrangler@4 deploy --config wrangler.ab.generated.jsonc
+
+      - name: Verify default and A/B channels
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          ab_ok=false
+          default_ok=false
+          for attempt in $(seq 1 24); do
+            ab_body="$(curl -fsS --connect-timeout 5 --max-time 15 "https://${RUNTIME_WORKER_HOST}/health?candidate=20&attempt=${attempt}" 2>/dev/null || true)"
+            default_body="$(curl -fsS --connect-timeout 5 --max-time 15 "https://${RUNTIME_WORKER_HOST}/health?attempt=${attempt}" 2>/dev/null || true)"
+            if printf '%s' "$ab_body" | jq -e '.ok == true and .remoteEngineAbAppVersion == 20 and .remoteEngineAbRuntimeVersion == "2.0.6-remote-engine-ab-c1"' >/dev/null 2>&1; then ab_ok=true; fi
+            if printf '%s' "$default_body" | jq -e '.ok == true and .encryptedRuntime == true and .candidateRuntimeVersion == null and .remoteEngineAbRuntimeVersion == null' >/dev/null 2>&1; then default_ok=true; fi
+            if [[ "$ab_ok" == true && "$default_ok" == true ]]; then break; fi
+            sleep 3
+          done
+          test "$ab_ok" = true
+          test "$default_ok" = true
+          custom_code="$(curl -sS --connect-timeout 5 --max-time 12 -o /tmp/custom-ab-body -w '%{http_code}' "https://${RUNTIME_CUSTOM_HOST}/health?candidate=20" || true)"
+          jq -n --argjson abOk "$ab_ok" --argjson defaultOk "$default_ok" --arg customCode "$custom_code" '{abWorker:$abOk,defaultWorker:$defaultOk,customDomainHttpCode:$customCode}' > /tmp/ab-probe.json
+
+      - name: Patch candidate-only client protocol
+        id: client_patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_remote_engine_ab_candidate.py client
+          grep -Fq 'PROTOCOL_APP_VERSION = 20' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          grep -Fq 'versionCode = 20' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.10-remote-engine-ab"' v2/android/client/build.gradle.kts
+          sha256sum -c /tmp/main-activity.sha256
+          sha256sum -c /tmp/runtime-names.sha256
+
+      - name: Build sign and verify A/B APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p v2/android :client:clean :client:lintRelease :client:assembleRelease
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool-ab.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool-ab.txt
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+          mkdir -p /tmp/remote-engine-ab-candidate
+          signed="/tmp/remote-engine-ab-candidate/GG-${APK_VERSION_NAME}-code${APK_VERSION_CODE}.apk"
+          "$apksigner" sign --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+            --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --verbose --print-certs "$signed" > /tmp/apk-ab-verify.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apk-ab-verify.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apk-ab-verify.txt
+          "$aapt" dump badging "$signed" > /tmp/apk-ab-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='20' versionName='2.0.10-remote-engine-ab'" /tmp/apk-ab-badging.txt
+          sha256sum "$signed" | tee /tmp/remote-engine-ab-candidate/SHA256SUMS.txt
+          cp /tmp/ab-probe.json /tmp/remote-engine-ab-candidate/AB_PROBE.json
+          jq -n --arg versionName "$APK_VERSION_NAME" --argjson versionCode "$APK_VERSION_CODE" \
+            --arg runtimeVersion "$CANDIDATE_RUNTIME_VERSION" --arg runtimeBranch "$CANDIDATE_BRANCH" \
+            --arg runtimeSourceSha "${{ steps.runtime.outputs.source_sha }}" --arg serverSourceSha "${{ steps.source.outputs.sha }}" \
+            '{schemaVersion:1,kind:"remote-engine-ab",versionName:$versionName,versionCode:$versionCode,runtimeVersion:$runtimeVersion,runtimeBranch:$runtimeBranch,runtimeSourceSha:$runtimeSourceSha,serverSourceSha:$serverSourceSha,androidMainActivityChanged:false,clientNetworkHostsChanged:false,stableScriptUsed:true,reusableCallbackCandidateUsed:false}' \
+            > /tmp/remote-engine-ab-candidate/CANDIDATE_INFO.json
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-2.0.10-remote-engine-ab
+          path: /tmp/remote-engine-ab-candidate/**
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record A/B candidate result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.verify.outcome }}" == success && "${{ steps.runtime.outcome }}" == success && "${{ steps.remote_engine.outcome }}" == success && "${{ steps.source.outcome }}" == success && "${{ steps.deploy.outcome }}" == success && "${{ steps.probe.outcome }}" == success && "${{ steps.client_patch.outcome }}" == success && "${{ steps.apk.outcome }}" == success && "${{ steps.artifact.outcome }}" == success ]]; then ok=true; fi
+          apk_sha=''
+          if [[ -s /tmp/remote-engine-ab-candidate/SHA256SUMS.txt ]]; then apk_sha="$(awk '{print $1}' /tmp/remote-engine-ab-candidate/SHA256SUMS.txt | head -n1)"; fi
+          test -s /tmp/ab-probe.json || echo '{}' > /tmp/ab-probe.json
+          jq -n --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson runId "$GITHUB_RUN_ID" --argjson ok "$ok" \
+            --arg versionName "$APK_VERSION_NAME" --argjson versionCode "$APK_VERSION_CODE" --arg apkSha256 "$apk_sha" \
+            --arg runtimeVersion "$CANDIDATE_RUNTIME_VERSION" --arg runtimeBranch "$CANDIDATE_BRANCH" --slurpfile probe /tmp/ab-probe.json \
+            --arg verify "${{ steps.verify.outcome }}" --arg runtime "${{ steps.runtime.outcome }}" --arg remoteEngine "${{ steps.remote_engine.outcome }}" --arg source "${{ steps.source.outcome }}" --arg deploy "${{ steps.deploy.outcome }}" --arg probeStep "${{ steps.probe.outcome }}" --arg clientPatch "${{ steps.client_patch.outcome }}" --arg apk "${{ steps.apk.outcome }}" --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:$ok,apk:{versionName:$versionName,versionCode:$versionCode,sha256:$apkSha256},runtime:{version:$runtimeVersion,branch:$runtimeBranch},probe:$probe[0],isolation:{androidMainActivityChanged:false,clientNetworkHostsChanged:false,stableScriptUsed:true,reusableCallbackCandidateUsed:false,productionDefaultChannelChanged:false},steps:{verify:$verify,runtime:$runtime,remoteEngine:$remoteEngine,source:$source,deploy:$deploy,probe:$probeStep,clientPatch:$clientPatch,apk:$apk,artifact:$artifact},secretsExposed:false}' > /tmp/remote-engine-ab-status.json
+          content="$(base64 -w0 /tmp/remote-engine-ab-status.json)"
+          path='docs/REMOTE_ENGINE_AB_CANDIDATE_STATUS.json'
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record remote-engine A/B candidate result' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
+      - name: Require complete A/B candidate
+        shell: bash
+        run: |
+          test "${{ steps.verify.outcome }}" = success
+          test "${{ steps.runtime.outcome }}" = success
+          test "${{ steps.remote_engine.outcome }}" = success
+          test "${{ steps.source.outcome }}" = success
+          test "${{ steps.deploy.outcome }}" = success
+          test "${{ steps.probe.outcome }}" = success
+          test "${{ steps.client_patch.outcome }}" = success
+          test "${{ steps.apk.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
