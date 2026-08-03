@@ -35,19 +35,41 @@ Detailed evidence:
 - `docs/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.json`
 - `docs/RUNTIME_ROUNDTRIP_INTEGRITY_20260804.md`
 
+## A/B candidate prepared
+
+A controlled A/B package has been built:
+
+- APK: `GG-2.0.10-remote-engine-ab-code20.apk`
+- versionName: `2.0.10-remote-engine-ab`
+- versionCode: `20`
+- APK SHA-256: `192f173c6084e34d58a085695ea4b07adc5b00b8879f045656c7eb34f989f020`
+- Runtime version: `2.0.6-remote-engine-ab-c1`
+
+Isolation contract:
+
+- Uses the stable script baseline rather than the unsuccessful reusable-callback candidate.
+- Keeps `MainActivity.java` unchanged.
+- Keeps client runtime host names unchanged.
+- Keeps the production default runtime channel unchanged.
+- Changes only the second runtime file's delivery path from the application virtual route to the signed remote stable route.
+- Remote stable bytes, size and SHA-256 were verified before the APK was built.
+
+Interpretation of the next user test:
+
+- If code20 restores repeat execution, continue diagnosis in the application virtual-route and runtime lifecycle layer.
+- If code20 fails identically, runtime encryption/decryption and the virtual-route delivery difference are excluded; upstream page-flow change or baseline incompatibility becomes the leading direction.
+
+Detailed status:
+
+- `docs/REMOTE_ENGINE_AB_CANDIDATE_STATUS.json`
+
 ## Current status
 
 - White-screen regression: isolated from this candidate and recorded as a separate client issue.
 - Startup server-routing regression from code18: not reproduced by the code19 delivery route.
 - Runtime release-chain byte corruption: excluded by exact round-trip verification.
-- Repeat-execution defect: still open and reproducible.
-
-## Required next checks
-
-1. Compare the last known repeat-capable delivery baseline with the current runtime while keeping the same script and engine bytes.
-2. Build an A/B diagnostic that changes only the runtime loading path, without changing client navigation or white-screen-related code.
-3. If both loading paths fail identically, treat an upstream page-flow change or baseline incompatibility as the leading cause.
-4. If only the current loading path fails, continue tracing runtime lifecycle and reinjection state.
+- Remote-engine A/B candidate: built and ready for device testing.
+- Repeat-execution defect: still open and reproducible on code19.
 
 ## Guardrails
 
