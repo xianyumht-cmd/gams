@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T20:44:05Z",
+  "runId": 30851514619,
+  "ok": false,
+  "branch": "candidate-script-repeat-20260804",
+  "runtimeVersion": "2.0.5-script-repeat-c1",
+  "workerHost": "gams-runtime-v2-script-candidate.2320006072.workers.dev",
+  "apk": {
+    "versionName": "2.0.8-script-candidate",
+    "versionCode": 18,
+    "sha256": ""
+  },
+  "isolation": {
+    "androidMainActivityChanged": false,
+    "productionRuntimeChanged": false,
+    "productionWorkerChanged": false
+  },
+  "steps": {
+    "patch": "success",
+    "runtime": "success",
+    "publishRuntime": "success",
+    "worker": "failure",
+    "clientPatch": "skipped",
+    "apk": "skipped",
+    "artifact": "skipped"
+  },
+  "secretsExposed": false
+}
