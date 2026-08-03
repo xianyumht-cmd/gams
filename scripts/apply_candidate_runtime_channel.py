@@ -79,10 +79,22 @@ def patch_runtime() -> None:
     )
     text = replace_once(text, health_marker, health_fields, "health candidate fields")
 
-    access_old = "  const manifest = await loadReleaseManifest();\n"
+    access_old = (
+        '  const rateKey = `v2-access:${license.id}:${device.id}`;\n'
+        "  if (!(await allowRate(env, rateKey, 12, 60))) {\n"
+        '    throw new HttpError(429, "too_many_requests", "启动过于频繁");\n'
+        "  }\n\n"
+        "  const manifest = await loadReleaseManifest();\n"
+        "  const contentKey = await decryptContentKey(manifest, env);\n"
+    )
     access_new = (
+        '  const rateKey = `v2-access:${license.id}:${device.id}`;\n'
+        "  if (!(await allowRate(env, rateKey, 12, 60))) {\n"
+        '    throw new HttpError(429, "too_many_requests", "启动过于频繁");\n'
+        "  }\n\n"
         "  const releaseBase = releaseBaseForAppVersion(appVersion);\n"
         "  const manifest = await loadReleaseManifest(releaseBase);\n"
+        "  const contentKey = await decryptContentKey(manifest, env);\n"
     )
     text = replace_once(text, access_old, access_new, "runtime access channel")
 
