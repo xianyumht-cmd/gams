@@ -75,3 +75,5 @@ jobs:
               -f message='Record client and shop bug diagnosis' \
               -f content="$content" -f branch=main >/dev/null
           fi
+
+# retrigger: 2026-08-04
