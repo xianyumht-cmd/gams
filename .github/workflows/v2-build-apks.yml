@@ -1,28 +1,340 @@
-name: Trigger corrected white-screen and repeat-action release
+name: Release white-screen and repeat-action fixes v2
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - .github/workflows/v2-build-apks.yml
   workflow_dispatch:
 
 permissions:
-  actions: write
-  contents: read
+  contents: write
+
+concurrency:
+  group: release-white-screen-repeat-action
+  cancel-in-progress: false
 
 jobs:
-  dispatch:
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 50
     env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      RUNTIME_ENDPOINT: https://gams-runtime-v2.2320006072.workers.dev
+      CLIENT_VERSION: 2.0.5
+      CLIENT_CODE: 14
+      RUNTIME_VERSION: 2.0.5
+      RELEASE_TAG: gg-2.0.5
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
       GH_TOKEN: ${{ github.token }}
+
     steps:
-      - name: Dispatch verification correction
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Apply and validate focused fixes
+        id: patch
         shell: bash
         run: |
           set -euo pipefail
-          gh api --method POST \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/patch-release-verification.yml/dispatches" \
-            -f ref=main
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY LICENSE_ADMIN_PASSWORD GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          python3 -m pip install --quiet cryptography
+          python3 scripts/apply_2_0_5_white_screen_repeat_action_fix.py
+          node --check remote-script/src/noname.js
+          grep -Fq '// @version      1.1.4' remote-script/src/noname.js
+          grep -Fq '__ggOneShotCallback' remote-script/src/noname.js
+          grep -Fq '__ggOriginalCallback' remote-script/src/noname.js
+          grep -Fq 'setJavaScriptEnabled(true)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'ensureControlScriptInjected(view, url)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'PROTOCOL_APP_VERSION = 14' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          grep -Fq 'versionCode = 14' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.5"' v2/android/client/build.gradle.kts
+
+      - name: Unlock release signing identity
+        id: key
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DERIVED_RUNTIME_SIGNING_PASSWORD="$(python3 - <<'PY'
+          import hashlib, hmac, os
+          print(hmac.new(os.environ['GG_RELEASE_KEYSTORE_PASSWORD'].encode(), b'gams-runtime-release-signing-v1', hashlib.sha256).hexdigest())
+          PY
+          )"
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/runtime-private.pem \
+            -pass env:DERIVED_RUNTIME_SIGNING_PASSWORD
+          unset DERIVED_RUNTIME_SIGNING_PASSWORD
+          chmod 600 /tmp/runtime-private.pem
+          openssl pkey -in /tmp/runtime-private.pem -pubout -out /tmp/runtime-public.pem
+          cmp -s /tmp/runtime-public.pem remote-script/keys/public.pem
+
+      - name: Build signed script release 1.1.4
+        id: script
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          from pathlib import Path
+          import hashlib, json
+          source = Path('remote-script/src/noname.js')
+          release = Path('remote-script/release/noname-1.1.4.js')
+          release.write_bytes(source.read_bytes())
+          manifest = {
+              'schemaVersion': 1, 'channel': 'stable', 'version': 10104,
+              'versionName': '1.1.4', 'file': release.name,
+              'sha256': hashlib.sha256(release.read_bytes()).hexdigest(),
+              'size': release.stat().st_size, 'minAppVersion': 1,
+              'publishedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+          }
+          keys = ('schemaVersion','channel','version','versionName','file','sha256','size','minAppVersion','publishedAt')
+          Path('/tmp/script-canonical.txt').write_text(''.join(f'{k}={manifest[k]}\n' for k in keys), encoding='utf-8', newline='\n')
+          Path('/tmp/script-unsigned.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+          openssl dgst -sha256 -sign /tmp/runtime-private.pem -out /tmp/script.sig /tmp/script-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem -signature /tmp/script.sig /tmp/script-canonical.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, json
+          manifest=json.loads(Path('/tmp/script-unsigned.json').read_text())
+          manifest['signatureAlgorithm']='SHA256withECDSA'
+          manifest['signature']=base64.b64encode(Path('/tmp/script.sig').read_bytes()).decode()
+          Path('remote-script/release/manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+      - name: Build, sign and decrypt-verify Runtime 2.0.5
+        id: runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          game_file="$(jq -r '.file' game-engine/release/manifest.json)"
+          python3 v2/runtime/tools/build_release.py \
+            remote-script/release/noname-1.1.4.js \
+            "game-engine/release/${game_file}" \
+            "$RUNTIME_VERSION" "$RUNTIME_MASTER_KEY" v2/runtime/release
+          openssl dgst -sha256 -sign /tmp/runtime-private.pem -out /tmp/runtime.sig /tmp/v2-runtime-canonical.txt
+          openssl dgst -sha256 -verify remote-script/keys/public.pem -signature /tmp/runtime.sig /tmp/v2-runtime-canonical.txt
+          python3 - <<'PY'
+          from io import BytesIO
+          from pathlib import Path
+          import base64, hashlib, json, os, re, zipfile
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          manifest=json.loads(Path('/tmp/v2-runtime-unsigned.json').read_text())
+          manifest['signatureAlgorithm']='SHA256withECDSA'
+          manifest['signature']=base64.b64encode(Path('/tmp/runtime.sig').read_bytes()).decode()
+          release=Path('v2/runtime/release')
+          (release/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          bundle=(release/manifest['file']).read_bytes()
+          assert manifest['versionName']=='2.0.5'
+          assert len(bundle)==manifest['size']
+          assert hashlib.sha256(bundle).hexdigest()==manifest['sha256']
+          text=os.environ['RUNTIME_MASTER_KEY'].strip()
+          if re.fullmatch(r'[0-9a-fA-F]{64}',text):
+              master=bytes.fromhex(text)
+          else:
+              normalized=text.replace('-','+').replace('_','/')
+              normalized+='='*((4-len(normalized)%4)%4)
+              master=base64.b64decode(normalized)
+          content_key=AESGCM(master).decrypt(base64.b64decode(manifest['keyIv']),base64.b64decode(manifest['keyCipher']),b'gg-v2-key|2.0.5')
+          plain=AESGCM(content_key).decrypt(base64.b64decode(manifest['iv']),bundle,b'gg-v2-runtime|2.0.5')
+          with zipfile.ZipFile(BytesIO(plain)) as archive:
+              actual_script=archive.read('noname.js')
+              actual_game=archive.read('game.js')
+          expected_script=Path('remote-script/release/noname-1.1.4.js').read_bytes()
+          virtual_url=b'https://ggv2.local/runtime/game.js'
+          for old_url in (
+              b'https://gams-script-edge.2320006072.workers.dev/engine/stable.js',
+              b'https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js',
+          ):
+              expected_script=expected_script.replace(old_url,virtual_url)
+          game_manifest=json.loads(Path('game-engine/release/manifest.json').read_text())
+          expected_game=Path('game-engine/release/'+game_manifest['file']).read_bytes()
+          assert actual_script==expected_script
+          assert actual_game==expected_game
+          assert hashlib.sha256(actual_script).hexdigest()==manifest['nonameSha256']
+          assert hashlib.sha256(actual_game).hexdigest()==manifest['gameSha256']
+          PY
+
+      - name: Build and lint client
+        id: build
+        working-directory: v2/android
+        run: gradle --no-daemon :client:clean :client:lintRelease :client:assembleRelease
+
+      - name: Sign and verify client APK
+        id: sign
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool.txt
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+          mkdir -p /tmp/gg-2.0.5
+          signed="/tmp/gg-2.0.5/GG-${CLIENT_VERSION}-code${CLIENT_CODE}.apk"
+          "$apksigner" sign --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+            --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --min-sdk-version 24 "$signed"
+          "$aapt" dump badging "$signed" > /tmp/badging.txt
+          grep -Fq "package: name='com.jinli.quickweb'" /tmp/badging.txt
+          grep -Fq "versionCode='14'" /tmp/badging.txt
+          grep -Fq "versionName='2.0.5'" /tmp/badging.txt
+          sha256sum "$signed" | awk '{print $1}' > /tmp/client-sha256.txt
+
+      - name: Commit verified source and releases
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add remote-script/src/noname.js remote-script/release/manifest.json remote-script/release/noname-1.1.4.js \
+            v2/runtime/release/manifest.json v2/runtime/release/bundle-2.0.5.bin \
+            v2/android/client/build.gradle.kts \
+            v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          git commit -m 'Fix blank script pages and repeat action state'
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Locate production database
+        id: d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[]|select(.name=="gams-license-db")|(.uuid//.id)'|head -n1)"
+          test -n "$database_id" && test "$database_id" != null
+          echo "database_id=$database_id" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy refreshed Runtime
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed "s/__D1_DATABASE_ID__/${{ steps.d1.outputs.database_id }}/g" v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.generated.jsonc
+          cd v2/runtime
+          printf '%s' "$TOKEN_SIGNING_SECRET" | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc
+          printf '%s' "$RUNTIME_MASTER_KEY" | npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.generated.jsonc
+          npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
+
+      - name: Verify complete production lifecycle
+        id: lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            ls="$(curl -sS -o /tmp/lh.json -w '%{http_code}' "$LICENSE_ENDPOINT/health"||true)"
+            rs="$(curl -sS -o /tmp/rh.json -w '%{http_code}' "$RUNTIME_ENDPOINT/health"||true)"
+            if [[ "$ls" == 200 && "$rs" == 200 ]] && jq -e '.ok==true' /tmp/lh.json >/dev/null && jq -e '.ok==true and .version==3' /tmp/rh.json >/dev/null; then
+              break
+            fi
+            sleep 5
+          done
+          jq -e '.ok==true' /tmp/lh.json >/dev/null
+          jq -e '.ok==true and .version==3' /tmp/rh.json >/dev/null
+          node scripts/v2-lifecycle-smoke.mjs
+
+      - name: Publish APK release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(cat /tmp/client-sha256.txt)"
+          cat > /tmp/notes.txt <<EOF
+          GG ${CLIENT_VERSION}
+
+          - 修复目标页面偶发白屏。
+          - 修复脚本加载失败后不能补载。
+          - 修复第二次操作被旧回调状态干扰。
+          - APK SHA-256：${sha}
+          - 签名证书 SHA-256：${CERT_SHA256}
+          EOF
+          gh release delete "$RELEASE_TAG" --yes 2>/dev/null || true
+          gh release create "$RELEASE_TAG" "/tmp/gg-2.0.5/GG-${CLIENT_VERSION}-code${CLIENT_CODE}.apk" \
+            --target "${{ steps.commit.outputs.sha }}" --title "GG ${CLIENT_VERSION}" --notes-file /tmp/notes.txt
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-2.0.5-white-screen-repeat-action-fix
+          path: /tmp/gg-2.0.5/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record release status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.patch.outcome }}" == success && "${{ steps.key.outcome }}" == success \
+             && "${{ steps.script.outcome }}" == success && "${{ steps.runtime.outcome }}" == success \
+             && "${{ steps.build.outcome }}" == success && "${{ steps.sign.outcome }}" == success \
+             && "${{ steps.commit.outcome }}" == success && "${{ steps.deploy.outcome }}" == success \
+             && "${{ steps.lifecycle.outcome }}" == success && "${{ steps.release.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success ]]; then ok=true; fi
+          jq -n --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" --arg sha "$(cat /tmp/client-sha256.txt 2>/dev/null||true)" \
+            --arg patch "${{ steps.patch.outcome }}" --arg script "${{ steps.script.outcome }}" \
+            --arg runtime "${{ steps.runtime.outcome }}" --arg build "${{ steps.build.outcome }}" \
+            --arg sign "${{ steps.sign.outcome }}" --arg commit "${{ steps.commit.outcome }}" \
+            --arg deploy "${{ steps.deploy.outcome }}" --arg lifecycle "${{ steps.lifecycle.outcome }}" \
+            --arg release "${{ steps.release.outcome }}" --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:2,generatedAt:$generatedAt,runId:$runId,ok:$ok,client:{versionName:"2.0.5",versionCode:14,sha256:$sha},script:{versionName:"1.1.4"},runtime:{versionName:"2.0.5"},fixes:{blankPage:true,injectionRetry:true,oneShotCallbackRestored:true},steps:{patch:$patch,scriptRelease:$script,runtimeRelease:$runtime,androidBuild:$build,apkSign:$sign,commit:$commit,deploy:$deploy,lifecycle:$lifecycle,githubRelease:$release,artifact:$artifact},secretsExposed:false}' > /tmp/status.json
+          path='docs/WHITE_SCREEN_AND_REPEAT_ACTION_FIX_STATUS.json'
+          content="$(base64 -w0 /tmp/status.json)"
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null||true)"
+          gh_args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record white-screen and repeat-action fix status' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || gh_args+=(-f sha="$old_sha")
+          gh api "${gh_args[@]}" >/dev/null
+          rm -f /tmp/runtime-private.pem /tmp/script.sig /tmp/runtime.sig
+
+      - name: Require complete release
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.patch.outcome }}" = success
+          test "${{ steps.key.outcome }}" = success
+          test "${{ steps.script.outcome }}" = success
+          test "${{ steps.runtime.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
+          test "${{ steps.sign.outcome }}" = success
+          test "${{ steps.commit.outcome }}" = success
+          test "${{ steps.deploy.outcome }}" = success
+          test "${{ steps.lifecycle.outcome }}" = success
+          test "${{ steps.release.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
