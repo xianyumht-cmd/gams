@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-08-03T17:34:22Z",
-  "runId": 30837237583,
-  "ok": false,
+  "schemaVersion": 3,
+  "generatedAt": "2026-08-03T17:40:09Z",
+  "runId": 30837705311,
+  "ok": true,
   "client": {
     "versionName": "2.0.5",
     "versionCode": 14,
@@ -12,7 +12,8 @@
     "versionName": "1.1.4"
   },
   "runtime": {
-    "versionName": "2.0.5"
+    "versionName": "2.0.5",
+    "deployed": true
   },
   "fixes": {
     "blankPage": true,
@@ -20,16 +21,12 @@
     "oneShotCallbackRestored": true
   },
   "steps": {
-    "patch": "success",
-    "scriptRelease": "success",
-    "runtimeRelease": "success",
+    "validate": "success",
+    "lifecycle": "success",
     "androidBuild": "success",
     "apkSign": "success",
-    "commit": "success",
-    "deploy": "success",
-    "lifecycle": "failure",
-    "githubRelease": "skipped",
-    "artifact": "skipped"
+    "githubRelease": "success",
+    "artifact": "success"
   },
   "secretsExposed": false
 }
