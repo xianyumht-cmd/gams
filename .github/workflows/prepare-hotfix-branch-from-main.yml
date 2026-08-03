@@ -1,0 +1,58 @@
+name: Prepare isolated minimal token hotfix branch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .hotfix-main-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix/minimal-token-secret-sync-20260803
+          fetch-depth: 0
+
+      - name: Apply deterministic hotfix script
+        run: python3 tools/prepare_minimal_token_hotfix.py
+
+      - name: Validate exact scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check license-api/src/index.js
+          node --check v2/runtime/src/index.js
+          grep -Fq 'env.TOKEN_SIGNING_SECRET' license-api/src/index.js
+          grep -Fq 'env.TOKEN_SIGNING_SECRET' v2/runtime/src/index.js
+          ! grep -Fq 'secret put ADMIN_PASSWORD' .github/workflows/v2-deploy-runtime.yml
+          git diff --check
+
+          changed="$(git status --short | awk '{print $2}' | sort)"
+          expected="$(printf '%s\n' \
+            .github/workflows/deploy-license-api.yml \
+            .github/workflows/v2-deploy-runtime.yml \
+            docs/MINIMAL_TOKEN_SECRET_HOTFIX.md \
+            license-api/src/index.js \
+            v2/runtime/src/index.js | sort)"
+          test "$changed" = "$expected"
+
+      - name: Commit only the prepared production hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .hotfix/minimal-token-trigger.txt
+          rm -f .github/workflows/prepare-minimal-token-hotfix.yml
+          rm -f tools/prepare_minimal_token_hotfix.py
+          rmdir .hotfix 2>/dev/null || true
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Prepare minimal License Runtime token secret hotfix"
+          git push origin HEAD:hotfix/minimal-token-secret-sync-20260803
