@@ -1,0 +1,67 @@
+name: Correct release verification and rerun
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  correct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Correct deterministic Runtime comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/v2-build-apks.yml')
+          text = path.read_text(encoding='utf-8')
+          old = """          expected_noname = Path('remote-script/release/noname-1.1.4.js').read_bytes()
+          expected_game = Path('game-engine/release/' + json.loads(Path('game-engine/release/manifest.json').read_text())['file']).read_bytes()
+          assert noname == expected_noname
+"""
+          new = """          expected_noname = Path('remote-script/release/noname-1.1.4.js').read_bytes()
+          virtual_url = b'https://ggv2.local/runtime/game.js'
+          for old_url in (
+              b'https://gams-script-edge.2320006072.workers.dev/engine/stable.js',
+              b'https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js',
+          ):
+              expected_noname = expected_noname.replace(old_url, virtual_url)
+          expected_game = Path('game-engine/release/' + json.loads(Path('game-engine/release/manifest.json').read_text())['file']).read_bytes()
+          assert noname == expected_noname
+"""
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'verification block match count: {count}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          grep -Fq 'expected_noname = expected_noname.replace(old_url, virtual_url)' .github/workflows/v2-build-apks.yml
+
+      - name: Commit correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/v2-build-apks.yml
+          git commit -m 'Correct encrypted Runtime byte comparison'
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Dispatch corrected release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/v2-build-apks.yml/dispatches" \
+            -f ref=main
