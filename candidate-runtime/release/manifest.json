@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "versionName": "2.0.5-script-repeat-c1",
+  "file": "bundle-2.0.5-script-repeat-c1.bin",
+  "size": 3905567,
+  "sha256": "b232ae9e25b3c4d1b4684f8d74967e07f62d48de227a9ccd901cee355052e3f5",
+  "iv": "OyWaVSvuXlrNp2Ok",
+  "nonameSize": 332879,
+  "nonameSha256": "af85d0eef85b9b3720c7afb36098c86c5dfb03f7433eb1f2d3974be002947d63",
+  "gameSize": 11590534,
+  "gameSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+  "keyIv": "wWLJYmNwcKqo6dkl",
+  "keyCipher": "tbKX6yK6l8KluPe5rt9fGUhz6lnKh01ubekRgZR05bvLnUcf+5rvolsGYA/kkZ9P",
+  "publishedAt": "2026-08-03T20:44:02Z",
+  "signatureAlgorithm": "SHA256withECDSA",
+  "signature": "MEUCIQDW97alfmZ3vvVG0/loWvo0frP1se+PSdw7vyyGpzagegIgeMR4p0sfAzMNeO09+LN2tSugAX35CgL9Bj1NeCcjXU8="
+}
