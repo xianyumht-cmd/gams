@@ -60,3 +60,5 @@ jobs:
           git commit -m "Repair Runtime rotation APK signing validation"
           git pull --rebase origin main
           git push origin HEAD:main
+
+# trigger: 2026-08-03T23:20:00+08:00
