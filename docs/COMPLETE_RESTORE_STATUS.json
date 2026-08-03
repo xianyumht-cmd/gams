@@ -30,5 +30,6 @@
     "published": "",
     "publishedToMain": false
   },
-  "secretsExposed": false
+  "secretsExposed": false,
+  "artifact": "skipped"
 }
