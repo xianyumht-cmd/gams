@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-03T20:44:05Z",
-  "runId": 30851514619,
+  "generatedAt": "2026-08-03T20:46:34Z",
+  "runId": 30851703602,
   "ok": false,
   "branch": "candidate-script-repeat-20260804",
   "runtimeVersion": "2.0.5-script-repeat-c1",
@@ -17,11 +17,9 @@
     "productionWorkerChanged": false
   },
   "steps": {
-    "patch": "success",
-    "runtime": "success",
-    "publishRuntime": "success",
-    "worker": "failure",
-    "clientPatch": "skipped",
+    "patch": "failure",
+    "runtime": "skipped",
+    "worker": "skipped",
     "apk": "skipped",
     "artifact": "skipped"
   },
