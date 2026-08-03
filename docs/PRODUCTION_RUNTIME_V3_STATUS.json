@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T14:53:04Z",
+  "triggerCommit": "f0655b9893188b39e0b5c99c7c487693ef513395",
+  "ok": false,
+  "runtimeVersion": 3,
+  "steps": {
+    "inputs": "success",
+    "legacyCompatibilityPatch": "success",
+    "splitSecrets": "success",
+    "deploy": "success",
+    "health": "success",
+    "lifecycle": "failure"
+  },
+  "sanitizedLog": "file:<redacted>.mjs:31\n    throw new Error(`${url} returned non-JSON HTTP ${response.status}: ${text.slice(0, 300)}`);\n          ^\n\nError: https://gams-license-api.2320006072.workers.dev/v1/check returned non-JSON HTTP 500: <!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!\n    at requestJson (file:<redacted>.mjs:31:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:<redacted>.mjs:232:22\n\nNode.js v22.23.1\n",
+  "runtimeAdminPasswordOverwritten": false,
+  "cloudflareSecurityRulesChanged": false,
+  "apkRebuilt": false,
+  "secretsExposed": false
+}
