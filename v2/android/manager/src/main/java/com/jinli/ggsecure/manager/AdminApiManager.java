@@ -55,8 +55,11 @@ final class AdminApiManager {
     void get(String path, Callback callback) {
         executor.execute(() -> {
             try {
-                JSONObject response = getJson(path, authorization());
-                deliver(callback, parse(response, 200));
+                ResilientApiTransport.Response response = ResilientApiTransport.get(
+                        path, "GG-Admin/8 Android", authorization(), MAX_BYTES);
+                JSONObject object = parseJson(response.body);
+                if (response.status == 401) throw new UnauthorizedException();
+                deliver(callback, parse(object, response.status));
             } catch (UnauthorizedException error) {
                 logout();
                 deliver(callback, Result.unauthorized("管理登录已失效，请重新登录"));
@@ -83,7 +86,7 @@ final class AdminApiManager {
             try {
                 String authorization = authorized ? authorization() : "";
                 ResilientApiTransport.Response response = ResilientApiTransport.post(
-                        path, body.toString(), "GG-Admin/7 Android", authorization, MAX_BYTES);
+                        path, body.toString(), "GG-Admin/8 Android", authorization, MAX_BYTES);
                 JSONObject object = parseJson(response.body);
                 if (response.status == 401) throw new UnauthorizedException();
                 deliver(callback, parse(object, response.status));
@@ -108,7 +111,7 @@ final class AdminApiManager {
                 connection.setUseCaches(false);
                 connection.setInstanceFollowRedirects(false);
                 connection.setRequestProperty("Accept", "application/json");
-                connection.setRequestProperty("User-Agent", "GG-Admin/7 Android");
+                connection.setRequestProperty("User-Agent", "GG-Admin/8 Android");
                 connection.setRequestProperty("Authorization", authorization);
                 int status = connection.getResponseCode();
                 if (status == 401) throw new UnauthorizedException();

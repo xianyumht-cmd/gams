@@ -45,6 +45,100 @@ final class ResilientApiTransport {
     private ResilientApiTransport() {
     }
 
+    static Response get(String path, String userAgent,
+                        String authorization, int maximumBytes) throws IOException {
+        List<String> failures = new ArrayList<>();
+        for (String host : NORMAL_HOSTS) {
+            try {
+                Response response = normalGet(host, path, userAgent, authorization, maximumBytes);
+                if (isApiJson(response.body)) return response;
+                failures.add(host + ": HTTP " + response.status + nonJsonReason(response));
+            } catch (IOException error) {
+                failures.add(host + ": " + shortMessage(error));
+            }
+        }
+        Set<String> addresses = resolveWorkerAddresses(failures);
+        for (String address : addresses) {
+            try {
+                Response response = directTlsGet(WORKER_HOST, address, path, userAgent,
+                        authorization, maximumBytes);
+                if (isApiJson(response.body)) return response;
+                failures.add(address + ": HTTP " + response.status + nonJsonReason(response));
+            } catch (IOException error) {
+                failures.add(address + ": " + shortMessage(error));
+            }
+        }
+        String detail = failures.isEmpty() ? "没有可用连接通道" : joinFailures(failures);
+        throw new IOException("授权服务器连接失败：" + detail);
+    }
+
+    private static Response normalGet(String host, String path, String userAgent,
+                                      String authorization, int maximumBytes) throws IOException {
+        HttpsURLConnection connection = (HttpsURLConnection) new URL("https://" + host + path).openConnection();
+        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+        connection.setReadTimeout(READ_TIMEOUT_MS);
+        connection.setRequestMethod("GET");
+        connection.setUseCaches(false);
+        connection.setInstanceFollowRedirects(false);
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("User-Agent", userAgent);
+        if (authorization != null && !authorization.isEmpty()) {
+            connection.setRequestProperty("Authorization", authorization);
+        }
+        try {
+            int status = connection.getResponseCode();
+            InputStream input = status >= 200 && status < 400
+                    ? connection.getInputStream() : connection.getErrorStream();
+            String body = input == null ? "" : new String(readLimited(input, maximumBytes), StandardCharsets.UTF_8);
+            return new Response(status, body,
+                    connection.getHeaderField("Content-Type"),
+                    connection.getHeaderField("cf-mitigated"));
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private static Response directTlsGet(String host, String address, String path,
+                                         String userAgent, String authorization,
+                                         int maximumBytes) throws IOException {
+        Socket plain = new Socket();
+        plain.connect(new InetSocketAddress(address, 443), CONNECT_TIMEOUT_MS);
+        plain.setSoTimeout(READ_TIMEOUT_MS);
+        SSLSocket ssl = null;
+        try {
+            SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            ssl = (SSLSocket) factory.createSocket(plain, host, 443, true);
+            SSLParameters parameters = ssl.getSSLParameters();
+            parameters.setEndpointIdentificationAlgorithm("HTTPS");
+            ssl.setSSLParameters(parameters);
+            ssl.setSoTimeout(READ_TIMEOUT_MS);
+            ssl.startHandshake();
+            SSLSocket verified = ssl;
+            HostnameVerifier verifier = HttpsURLConnection.getDefaultHostnameVerifier();
+            if (!verifier.verify(host, verified.getSession())) throw new IOException("TLS 域名校验失败");
+
+            BufferedOutputStream output = new BufferedOutputStream(ssl.getOutputStream());
+            StringBuilder headers = new StringBuilder();
+            headers.append("GET ").append(path).append(" HTTP/1.1\r\n");
+            headers.append("Host: ").append(host).append("\r\n");
+            headers.append("User-Agent: ").append(userAgent).append("\r\n");
+            headers.append("Accept: application/json\r\n");
+            if (authorization != null && !authorization.isEmpty()) {
+                headers.append("Authorization: ").append(authorization).append("\r\n");
+            }
+            headers.append("Connection: close\r\n\r\n");
+            output.write(headers.toString().getBytes(StandardCharsets.ISO_8859_1));
+            output.flush();
+            return readHttpResponse(ssl.getInputStream(), maximumBytes);
+        } finally {
+            if (ssl != null) {
+                try { ssl.close(); } catch (Exception ignored) { }
+            } else {
+                try { plain.close(); } catch (Exception ignored) { }
+            }
+        }
+    }
+
     static Response post(String path, String jsonBody, String userAgent,
                          String authorization, int maximumBytes) throws IOException {
         List<String> failures = new ArrayList<>();

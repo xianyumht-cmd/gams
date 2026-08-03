@@ -26,7 +26,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 final class V2LicenseManager {
-    private static final int PROTOCOL_APP_VERSION = 12;
+    private static final int PROTOCOL_APP_VERSION = 13;
     private static final int MAX_JSON_BYTES = 256 * 1024;
     private static final int MAX_BUNDLE_BYTES = 18 * 1024 * 1024;
     private static final String RELEASE_PUBLIC_KEY_DER_BASE64 =
