@@ -52,7 +52,7 @@ jobs:
       - name: Run atomic verified restore
         id: restore
         shell: bash
-        run: bash scripts/run_complete_restore.sh
+        run: bash scripts/run_complete_restore_v2.sh
 
       - uses: actions/upload-artifact@v4
         id: artifact
@@ -88,4 +88,4 @@ jobs:
           test "${{ steps.restore.outcome }}" = success
           test "${{ steps.artifact.outcome }}" = success
 
-# atomic-script-trigger: 2026-08-04T03:27:00+08:00
+# protocol-compat-trigger: 2026-08-04T03:34:00+08:00
