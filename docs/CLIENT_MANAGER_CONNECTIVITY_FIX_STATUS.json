@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 3,
-  "generatedAt": "2026-08-03T16:52:09Z",
-  "triggerCommit": "8fa13c684bbe5b1892bd21ea1f716eba2c077d53",
-  "runId": 30834014441,
-  "ok": false,
+  "schemaVersion": 4,
+  "generatedAt": "2026-08-03T16:57:04Z",
+  "triggerCommit": "02de065432eb722f7f7e2021985633559bd2fc49",
+  "runId": 30834412718,
+  "ok": true,
   "client": {
     "versionName": "2.0.4",
     "versionCode": 13,
@@ -19,10 +19,10 @@
     "patch": "success",
     "build": "success",
     "sign": "success",
-    "adminApi": "failure",
-    "commit": "skipped",
-    "githubRelease": "skipped",
-    "artifact": "skipped"
+    "adminApi": "success",
+    "commit": "success",
+    "githubRelease": "success",
+    "artifact": "success"
   },
   "scope": {
     "webViewSingleWindow": true,
