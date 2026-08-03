@@ -1,12 +1,12 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-03T17:25:41Z",
-  "runId": 30836670822,
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-03T17:34:22Z",
+  "runId": 30837237583,
   "ok": false,
   "client": {
     "versionName": "2.0.5",
     "versionCode": 14,
-    "sha256": ""
+    "sha256": "f0ba43a7aebb44270ce73624aad7a1a269216f49e0c5e4c15b59881af9837945"
   },
   "script": {
     "versionName": "1.1.4"
@@ -22,12 +22,12 @@
   "steps": {
     "patch": "success",
     "scriptRelease": "success",
-    "runtimeRelease": "failure",
-    "androidBuild": "skipped",
-    "apkSign": "skipped",
-    "commit": "skipped",
-    "deploy": "skipped",
-    "lifecycle": "skipped",
+    "runtimeRelease": "success",
+    "androidBuild": "success",
+    "apkSign": "success",
+    "commit": "success",
+    "deploy": "success",
+    "lifecycle": "failure",
     "githubRelease": "skipped",
     "artifact": "skipped"
   },
