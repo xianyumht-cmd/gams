@@ -1,0 +1,59 @@
+name: Diagnose main push path
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/diagnose-main-push.yml
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Test local commit and dry-run push
+        id: test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          printf 'diagnosis\n' > /tmp/diagnosis.txt
+          cp /tmp/diagnosis.txt .push-diagnosis.tmp
+          git add .push-diagnosis.tmp
+          git commit -m 'Temporary push diagnosis' 2>&1 | tee /tmp/commit.log
+          git push --dry-run origin HEAD:main 2>&1 | tee /tmp/push.log
+
+      - name: Record sanitized result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat /tmp/commit.log /tmp/push.log 2>/dev/null > /tmp/all.log || true
+          sed -E 's#https://x-access-token:[^@]+@github.com#https://<redacted>@github.com#g' /tmp/all.log > /tmp/safe.log
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg outcome "$TEST_OUTCOME" \
+            --rawfile log /tmp/safe.log \
+            '{schemaVersion:1,generatedAt:$generatedAt,outcome:$outcome,sanitizedLog:$log,secretsExposed:false}' \
+            > /tmp/report.json
+          path='docs/MAIN_PUSH_DIAGNOSIS.json'
+          content="$(base64 -w0 /tmp/report.json)"
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          if [[ -n "$sha" ]]; then
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record main push diagnosis' -f content="$content" -f sha="$sha" -f branch=main >/dev/null
+          else
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record main push diagnosis' -f content="$content" -f branch=main >/dev/null
+          fi
