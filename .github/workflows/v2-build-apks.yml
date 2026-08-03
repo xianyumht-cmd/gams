@@ -1,4 +1,4 @@
-name: Diagnose GG client and shop sources
+name: Trigger GG client and manager connectivity release
 
 on:
   push:
@@ -9,70 +9,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  actions: write
+  contents: read
 
 jobs:
-  diagnose:
+  dispatch:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Inspect Android navigation and shop sources
+      - name: Dispatch verified release workflow
         shell: bash
         run: |
           set -euo pipefail
-          {
-            echo '===== FILE TREE: remote-script ====='
-            find remote-script -maxdepth 5 -type f | sort
-            echo
-            echo '===== FILE TREE: Android client ====='
-            find v2/android/client/src/main/java -type f | sort
-            echo
-            echo '===== MAINACTIVITY NAVIGATION ====='
-            grep -n -C 16 -E 'setSupportMultipleWindows|setJavaScriptCanOpenWindowsAutomatically|shouldOverrideUrlLoading|onCreateWindow|ACTION_VIEW|window.open' \
-              v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java || true
-            echo
-            echo '===== SHOP / LOGIN / PURCHASE MATCHES ====='
-            grep -RInE --include='*.js' --include='*.mjs' --include='*.ts' --include='*.json' \
-              '商城|购买|领取|橙光|登录|login|buy|purchase|order|window\.open|location\.(href|assign|replace)|_blank' \
-              remote-script scripts game-engine 2>/dev/null | head -n 6000 || true
-            echo
-            echo '===== NON-RELEASE REMOTE SCRIPT CONTENTS ====='
-            while IFS= read -r file; do
-              echo "--- $file"
-              wc -c "$file" || true
-              sed -n '1,240p' "$file" 2>/dev/null || true
-            done < <(find remote-script -maxdepth 5 -type f ! -path '*/release/*' | sort)
-          } > /tmp/client-shop-diagnosis.txt
-
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          text = Path('/tmp/client-shop-diagnosis.txt').read_text(encoding='utf-8', errors='replace')
-          Path('/tmp/client-shop-diagnosis.json').write_text(json.dumps({
-              'schemaVersion': 1,
-              'ok': True,
-              'report': text[-300000:],
-              'secretsExposed': False,
-          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-          PY
-
-      - name: Publish diagnosis report
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          path='docs/CLIENT_SHOP_BUG_DIAGNOSIS.json'
-          content="$(base64 -w0 /tmp/client-shop-diagnosis.json)"
-          sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
-          if [[ -n "$sha" ]]; then
-            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
-              -f message='Record client and shop bug diagnosis' \
-              -f content="$content" -f sha="$sha" -f branch=main >/dev/null
-          else
-            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
-              -f message='Record client and shop bug diagnosis' \
-              -f content="$content" -f branch=main >/dev/null
-          fi
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/release-client-manager-connectivity-fix.yml/dispatches" \
+            -f ref=main
+          echo 'GG client and manager release dispatched.'
