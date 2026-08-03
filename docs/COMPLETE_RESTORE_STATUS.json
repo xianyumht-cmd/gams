@@ -30,5 +30,6 @@
     "published": "564d8fb0e7326a47f8f65e987ab8afc2b14a6c66",
     "publishedToMain": true
   },
-  "secretsExposed": false
+  "secretsExposed": false,
+  "artifact": "success"
 }
