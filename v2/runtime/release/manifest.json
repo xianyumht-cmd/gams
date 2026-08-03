@@ -1,17 +1,17 @@
 {
   "schemaVersion": 2,
-  "versionName": "2.0.2-r1",
-  "file": "bundle-2.0.2-r1.bin",
+  "versionName": "2.0.3",
+  "file": "bundle-2.0.3.bin",
   "size": 3905308,
-  "sha256": "572912ba2f73e383ff759fab536a197ad58568dc75ba66039781dbbbb4d03d6c",
-  "iv": "0xjP2Km9ZnwR+BRF",
+  "sha256": "b29d01792c930fec19ac8c40ea33ac930174a93efe7d43cd7cbfe18f761ae567",
+  "iv": "9ChQqBrTQhGpl5GH",
   "nonameSize": 331460,
   "nonameSha256": "7bbd50e1b7ce9ed48869f9afbf2cb07b92dfa4b96af1cd40726515672643dfdb",
   "gameSize": 11590534,
   "gameSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
-  "keyIv": "FSH9R+X9s1GYNKaP",
-  "keyCipher": "9HTOAxhMG/RcpYJQPP4dUKc2MmP6ZQDdea0CrkqhiIcVg7aly9HM/n+KoBSMLb64",
-  "publishedAt": "2026-07-23T04:47:25Z",
+  "keyIv": "fkDrMZHrDzG0w+Yw",
+  "keyCipher": "nKGhhn3DrKCw8zjK8AbNQco/NcdXOS+lYtR2BI8+HXPQKOxywvl/xi1OH9JBIkl2",
+  "publishedAt": "2026-08-03T15:44:25Z",
   "signatureAlgorithm": "SHA256withECDSA",
-  "signature": "MEUCIQDULSdcwUIwMlSL0hSv53jRERgETdtzSpzEIn2BnLSVLwIgYytn3BqGddgJSSjoy7yZEJAEBLPopdYtk9obph2fUO0="
+  "signature": "MEYCIQCSiBF1dZgqTHEEFNHmcdFX/DciHdyBZZ3l+OnNvwquKwIhAP+Rwaj+3ByFT3mD+MCLaV41LRmc1VagbYbKcOT4vO+Q"
 }

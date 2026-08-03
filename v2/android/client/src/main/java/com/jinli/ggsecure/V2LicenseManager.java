@@ -26,12 +26,11 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 final class V2LicenseManager {
-    private static final int PROTOCOL_APP_VERSION = 11;
+    private static final int PROTOCOL_APP_VERSION = 12;
     private static final int MAX_JSON_BYTES = 256 * 1024;
     private static final int MAX_BUNDLE_BYTES = 18 * 1024 * 1024;
     private static final String RELEASE_PUBLIC_KEY_DER_BASE64 =
-            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn1P0wJwOtd+btZuTxPslVdjaOxSE" +
-            "k8iRPNbzkPz3lHT7Cyoi6/e0K7UgQNDRTJKcD8TPcIR1PNrgLLIot34X3w==";
+            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfe3MtnU9YdnqKeTRhWUR8/krK8G52hi0hueAFVzCQLyTlC12pirRXlVSKskUsZWtN4IpHmsdNmc9BhfdGsZIww==";
 
     private final SecureStore secureStore;
     private final DeviceIdentity identity;

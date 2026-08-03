@@ -32,13 +32,13 @@ export default {
         });
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/challenge") {
-        return issueChallenge(request, env);
+        return await issueChallenge(request, env);
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/access") {
-        return runtimeAccess(request, env);
+        return await runtimeAccess(request, env);
       }
       if (request.method === "GET" && url.pathname === "/v2/runtime/bundle") {
-        return runtimeBundle(request, env);
+        return await runtimeBundle(request, env);
       }
       return json({ ok: false, code: "not_found", message: "接口不存在" }, 404);
     } catch (error) {
@@ -359,7 +359,7 @@ async function decryptContentKey(manifest, env) {
   try {
     return await decryptRuntimeContentKey(manifest, {
       runtimeMasterKey: env.RUNTIME_MASTER_KEY,
-      legacyRuntimePassword: env.LEGACY_RUNTIME_PASSWORD || "",
+      legacyRuntimePassword: env.ADMIN_PASSWORD || env.LEGACY_RUNTIME_PASSWORD || "",
     });
   } catch {
     throw new HttpError(503, "runtime_invalid", "运行密钥无效");

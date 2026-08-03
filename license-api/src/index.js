@@ -25,28 +25,28 @@ export default {
         });
       }
       if (request.method === "POST" && url.pathname === "/v1/admin/login") {
-        return adminLogin(request, env);
+        return await adminLogin(request, env);
       }
       if (request.method === "POST" && url.pathname === "/v1/admin/licenses/create") {
-        return adminCreateLicenses(request, env);
+        return await adminCreateLicenses(request, env);
       }
       if (request.method === "GET" && url.pathname === "/v1/admin/licenses") {
-        return adminListLicenses(request, env);
+        return await adminListLicenses(request, env);
       }
       if (request.method === "POST" && url.pathname === "/v1/admin/licenses/action") {
-        return adminLicenseAction(request, env);
+        return await adminLicenseAction(request, env);
       }
       if (request.method === "POST" && url.pathname === "/v1/challenge") {
-        return issueChallenge(request, env);
+        return await issueChallenge(request, env);
       }
       if (request.method === "POST" && url.pathname === "/v1/activate") {
-        return activate(request, env);
+        return await activate(request, env);
       }
       if (request.method === "POST" && url.pathname === "/v1/check") {
-        return check(request, env);
+        return await check(request, env);
       }
       if (request.method === "POST" && url.pathname === "/v1/device/unbind") {
-        return selfUnbind(request, env);
+        return await selfUnbind(request, env);
       }
       return reply({ ok: false, code: "not_found", message: "接口不存在" }, 404);
     } catch (error) {
