@@ -88,4 +88,4 @@ jobs:
           test "${{ steps.restore.outcome }}" = success
           test "${{ steps.artifact.outcome }}" = success
 
-# clean-publish-trigger: 2026-08-04T03:41:00+08:00
+# propagation-retry-trigger: 2026-08-04T03:48:00+08:00
