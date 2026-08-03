@@ -1,0 +1,23 @@
+继续 GAMS 客户端“模拟器额外打开系统浏览器空白页 + 商城只能购买一次”修复任务。
+
+先读取并严格按照仓库中的以下文档继续：
+- docs/CURRENT_TASK_STATE.json
+- docs/CHAT_CHECKPOINT_20260804_CLIENT_SHOP_HOTFIX.md
+- docs/NEXT_CHAT_HANDOFF.md
+- docs/CLIENT_SHOP_REPEAT_HOTFIX_DISPATCH_STATUS.json
+
+测试分支：hotfix/client-shop-repeat-no-external-browser-20260804
+候选版本：GG 2.0.7-stable，versionCode 17
+GitHub Actions run ID：30849473086
+artifact ID：8870025435
+APK SHA-256：799124ed7b2b0347ebd387daec309a6982a4e62b8fa0a0a9042419a33e12972b
+
+不要重新从 Cloudflare、授权密钥、Runtime 加密或大范围回滚开始排查。不要恢复多窗口 WebView、onCreateWindow 或临时 popup WebView。候选 APK 已构建签名成功，但候选产品源码还没有写回测试分支，也尚未正式发布。
+
+我的模拟器测试结果如下：
+1. 启动速度和白屏：
+2. 是否还打开系统浏览器空白页：
+3. 商城内连续购买两个商品：
+4. 返回剧情再进入商城购买第三个商品：
+
+根据我的实际结果继续；只有现有代码和资源确实无法定位时，再给我一键日志捕获脚本。
