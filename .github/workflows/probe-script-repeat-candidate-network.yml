@@ -1,0 +1,94 @@
+name: Probe script repeat candidate network
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/probe-script-repeat-candidate-network.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUSTOM_HOST: runtime-candidate.xn--8pv109c.top
+      WORKER_HOST: gams-runtime-v2-script-candidate.2320006072.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe DNS and HTTPS separately
+        id: probe
+        shell: bash
+        run: |
+          set -u
+          mkdir -p /tmp/probe
+          probe_host() {
+            label="$1"
+            host="$2"
+            getent ahosts "$host" 2>&1 | head -n 20 > "/tmp/probe/${label}-dns.txt" || true
+            set +e
+            code="$(curl -sS -o "/tmp/probe/${label}-body.txt" -D "/tmp/probe/${label}-headers.txt" \
+              -w '%{http_code}' --connect-timeout 8 --max-time 25 \
+              "https://${host}/health?probe=${GITHUB_RUN_ID}" 2> "/tmp/probe/${label}-curl-error.txt")"
+            rc=$?
+            set -e
+            printf '%s' "$code" > "/tmp/probe/${label}-code.txt"
+            printf '%s' "$rc" > "/tmp/probe/${label}-rc.txt"
+          }
+          set -e
+          probe_host custom "$CUSTOM_HOST"
+          probe_host worker "$WORKER_HOST"
+
+          api="https://api.cloudflare.com/client/v4/zones"
+          zone_response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?name=xn--8pv109c.top")"
+          zone_id="$(printf '%s' "$zone_response" | jq -r '.result[0].id // empty')"
+          test -n "$zone_id"
+          dns_response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "${api}/${zone_id}/dns_records?name=${CUSTOM_HOST}")"
+          dns_count="$(printf '%s' "$dns_response" | jq -r '.result | length')"
+          dns_type="$(printf '%s' "$dns_response" | jq -r '.result[0].type // ""')"
+          dns_proxied="$(printf '%s' "$dns_response" | jq -r '.result[0].proxied // false')"
+
+          clean_text() {
+            tr '\r\n' '  ' < "$1" | head -c 500
+          }
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --arg customHost "$CUSTOM_HOST" \
+            --arg customDns "$(clean_text /tmp/probe/custom-dns.txt)" \
+            --arg customCode "$(cat /tmp/probe/custom-code.txt)" \
+            --argjson customRc "$(cat /tmp/probe/custom-rc.txt)" \
+            --arg customBody "$(clean_text /tmp/probe/custom-body.txt)" \
+            --arg customError "$(clean_text /tmp/probe/custom-curl-error.txt)" \
+            --arg workerHost "$WORKER_HOST" \
+            --arg workerDns "$(clean_text /tmp/probe/worker-dns.txt)" \
+            --arg workerCode "$(cat /tmp/probe/worker-code.txt)" \
+            --argjson workerRc "$(cat /tmp/probe/worker-rc.txt)" \
+            --arg workerBody "$(clean_text /tmp/probe/worker-body.txt)" \
+            --arg workerError "$(clean_text /tmp/probe/worker-curl-error.txt)" \
+            --argjson dnsRecordCount "$dns_count" \
+            --arg dnsRecordType "$dns_type" \
+            --argjson dnsRecordProxied "$dns_proxied" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,custom:{host:$customHost,dns:$customDns,httpCode:$customCode,curlRc:$customRc,body:$customBody,error:$customError},worker:{host:$workerHost,dns:$workerDns,httpCode:$workerCode,curlRc:$workerRc,body:$workerBody,error:$workerError},cloudflareDns:{recordCount:$dnsRecordCount,type:$dnsRecordType,proxied:$dnsRecordProxied},secretsExposed:false}' \
+            > /tmp/probe-status.json
+
+      - name: Record probe result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s /tmp/probe-status.json
+          content="$(base64 -w0 /tmp/probe-status.json)"
+          path='docs/SCRIPT_REPEAT_CANDIDATE_NETWORK_PROBE.json'
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record candidate runtime network probe' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
