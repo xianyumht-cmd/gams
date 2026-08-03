@@ -12,7 +12,6 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Message;
 import android.os.Environment;
 import android.view.Gravity;
 import android.view.View;
@@ -314,7 +313,7 @@ public final class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        settings.setSupportMultipleWindows(true);
+        settings.setSupportMultipleWindows(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
@@ -373,56 +372,11 @@ public final class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
-            public boolean onCreateWindow(
-                    WebView view,
-                    boolean isDialog,
-                    boolean isUserGesture,
-                    Message resultMsg
-            ) {
-                WebView popup = new WebView(MainActivity.this);
-                popup.getSettings().setJavaScriptEnabled(true);
-                popup.getSettings().setDomStorageEnabled(true);
-                popup.setWebViewClient(new WebViewClient() {
-                    private boolean routed;
-
-                    private boolean route(Uri uri) {
-                        if (routed) return true;
-                        if (uri == null) return true;
-                        if ("about:blank".equalsIgnoreCase(uri.toString())) return false;
-                        routed = true;
-                        String scheme = uri.getScheme();
-                        if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-                            if (webView != null) webView.loadUrl(uri.toString());
-                        } else if (webView != null) {
-                            handleNavigationInsideGg(webView, uri);
-                        }
-                        try { popup.stopLoading(); } catch (Throwable ignored) { }
-                        try { popup.destroy(); } catch (Throwable ignored) { }
-                        return true;
-                    }
-
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView ignored, WebResourceRequest request) {
-                        return route(request.getUrl());
-                    }
-
-                    @Override
-                    public void onPageStarted(WebView ignored, String url, Bitmap favicon) {
-                        if (url != null) route(Uri.parse(url));
-                    }
-                });
-                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
-                transport.setWebView(popup);
-                resultMsg.sendToTarget();
-                return true;
-            }
-
-            @Override
             public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
                 if (isSuppressedEngineReadyAlert(message)) {
                     try {
                         view.evaluateJavascript(
-                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.5'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
+                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.6'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
                                 null);
                     } catch (Throwable ignored) { }
                     result.confirm();
@@ -461,7 +415,14 @@ public final class MainActivity extends Activity {
         if (uri == null) return true;
         String scheme = uri.getScheme();
         if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-            return false;
+            if (view != null) {
+                String target = uri.toString();
+                String current = view.getUrl();
+                if (current == null || !current.equals(target)) {
+                    view.loadUrl(target);
+                }
+            }
+            return true;
         }
         if ("tel".equalsIgnoreCase(scheme)
                 || "mailto".equalsIgnoreCase(scheme)
