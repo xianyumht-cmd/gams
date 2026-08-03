@@ -1,4 +1,4 @@
-name: Trigger robust GG client and manager release
+name: Trigger final GG client and manager release
 
 on:
   push:
@@ -19,11 +19,11 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Dispatch robust release workflow
+      - name: Dispatch final release workflow
         shell: bash
         run: |
           set -euo pipefail
           gh api --method POST \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/release-client-manager-connectivity-fix-v3.yml/dispatches" \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/release-client-manager-connectivity-final.yml/dispatches" \
             -f ref=main
-          echo 'Robust GG client and manager release dispatched.'
+          echo 'Final GG client and manager release dispatched.'
