@@ -59,10 +59,10 @@ jobs:
           client_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' v2/android/client/build.gradle.kts | head -n1)"
           manager_version="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' v2/android/manager/build.gradle.kts | head -n1)"
           manager_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' v2/android/manager/build.gradle.kts | head -n1)"
-          test "$client_version" = "2.0.2"
-          test "$client_code" = "11"
-          test "$manager_version" = "2.0.0-test1"
-          test "$manager_code" = "1"
+          test "$client_version" = "2.0.2" || { echo "::error::Unexpected client version: $client_version"; exit 1; }
+          test "$client_code" = "11" || { echo "::error::Unexpected client version code: $client_code"; exit 1; }
+          test "$manager_version" = "2.0.0-test1" || { echo "::error::Unexpected manager version: $manager_version"; exit 1; }
+          test "$manager_code" = "1" || { echo "::error::Unexpected manager version code: $manager_code"; exit 1; }
 
           rm -rf /tmp/gg-client-apk /tmp/gg-manager-apk /tmp/gg-release
           mkdir -p /tmp/gg-client-apk /tmp/gg-manager-apk /tmp/gg-release/tools
@@ -79,11 +79,28 @@ jobs:
 
           client_badging="$($aapt_bin dump badging "$client")"
           manager_badging="$($aapt_bin dump badging "$manager")"
-          printf '%s\n' "$client_badging" | grep -q "package: name='com.jinli.quickweb' versionCode='11' versionName='2.0.2'"
-          printf '%s\n' "$client_badging" | grep -q "application-label:'GG'"
-          printf '%s\n' "$client_badging" | grep -Eq "application-icon-|application: label='GG'.*icon="
-          printf '%s\n' "$manager_badging" | grep -q "package: name='com.jinli.ggsecure.manager' versionCode='1' versionName='2.0.0-test1'"
-          printf '%s\n' "$manager_badging" | grep -q "application-label:'GG V2 管理器'"
+          printf '%s\n' '--- client badging ---' "$client_badging"
+          printf '%s\n' '--- manager badging ---' "$manager_badging"
+          printf '%s\n' "$client_badging" | grep -Fq "package: name='com.jinli.quickweb' versionCode='11' versionName='2.0.2'" || {
+            echo '::error::Client package metadata does not match the release contract.'
+            exit 1
+          }
+          printf '%s\n' "$client_badging" | grep -Fq "application-label:'GG'" || {
+            echo '::error::Client application label does not match the release contract.'
+            exit 1
+          }
+          printf '%s\n' "$client_badging" | grep -Eq "application-icon-|application: label='GG'.*icon=" || {
+            echo '::error::Client application icon is missing.'
+            exit 1
+          }
+          printf '%s\n' "$manager_badging" | grep -Fq "package: name='com.jinli.ggsecure.manager' versionCode='1' versionName='2.0.0-test1'" || {
+            echo '::error::Manager package metadata does not match the release contract.'
+            exit 1
+          }
+          grep -Fq 'android:label="GG V2 管理器"' v2/android/manager/src/main/AndroidManifest.xml || {
+            echo '::error::Manager application label does not match the release contract.'
+            exit 1
+          }
 
           if "$apksigner_bin" verify "$client" >/tmp/gg-client-signature.txt 2>&1; then
             echo 'The client release input must remain unsigned before the fixed production certificate is applied.'
