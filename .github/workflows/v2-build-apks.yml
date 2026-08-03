@@ -148,7 +148,7 @@ jobs:
           managerPackageName: com.jinli.ggsecure.manager
           managerApplicationName: GG V2 管理器
           nativeAlertSuppression: 脚本加载完成~
-          必须使用证书 SHA-256：F2:20:C5:D4:75:13:C7:44:CB:9B:5F:17:C0:F8:F3:9B:0C:10:9F:8F:7D:C8:92:98:97:13:EE:F3:3F:DB:E0:C4
+          必须使用证书 SHA-256：70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
           tools/apksigner.jar 与 tools/aapt 仅用于离线固定证书签名和校验。
           EOF
 
