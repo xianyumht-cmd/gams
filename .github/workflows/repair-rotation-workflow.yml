@@ -1,0 +1,62 @@
+name: Repair Runtime rotation workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/repair-rotation-workflow.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Repair rotation and restore canonical build workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          rotation = Path('.github/workflows/rotate-runtime-release-and-build-client.yml')
+          text = rotation.read_text(encoding='utf-8')
+          replacements = [
+              ('--v1-signing-enabled true', '--v1-signing-enabled false'),
+              ("          grep -Fq 'Verified using v1 scheme (JAR signing): true' /tmp/apk-verify.txt\n", ''),
+              ("sed -n 's/^Signer #1 certificate SHA-256 digest: //p'", "sed -n 's/^.*certificate SHA-256 digest: //p'"),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected one occurrence of {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+          rotation.write_text(text, encoding='utf-8')
+          PY
+
+          git show eaced92b184fd148f583fe17d501576f11787d31:.github/workflows/v2-build-apks.yml \
+            > .github/workflows/v2-build-apks.yml
+
+          rm -f .github/workflows/repair-rotation-workflow.yml
+          rm -f .github/workflows/diagnose-android-keystore.yml
+          rm -f .github/workflows/patch-rotation-apk-signing.yml
+
+          grep -Fq -- '--v1-signing-enabled false' .github/workflows/rotate-runtime-release-and-build-client.yml
+          ! grep -Fq 'Verified using v1 scheme (JAR signing): true' .github/workflows/rotate-runtime-release-and-build-client.yml
+          grep -Fq "s/^.*certificate SHA-256 digest: //p" .github/workflows/rotate-runtime-release-and-build-client.yml
+          grep -Fq 'Build GG 2.0.2 formal client release' .github/workflows/v2-build-apks.yml
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A .github/workflows
+          git commit -m "Repair Runtime rotation APK signing validation"
+          git pull --rebase origin main
+          git push origin HEAD:main
