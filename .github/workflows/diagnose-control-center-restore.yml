@@ -1,0 +1,109 @@
+name: Diagnose complete control center restore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/diagnose-control-center-restore.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Generate historical complete control center backend
+        id: generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin control-center-v1.4 --depth=1
+          rm -rf /tmp/control-center
+          mkdir -p /tmp/control-center/license-api/src
+          for part in $(git ls-tree -r --name-only origin/control-center-v1.4 hardening_backend_parts | sort); do
+            git show "origin/control-center-v1.4:${part}"
+          done > /tmp/control-center/license-api/src/index.js
+          for file in control_center_patch.py client_config_patch.py release_baseline_patch.py; do
+            git show "origin/control-center-v1.4:license-api/${file}" > "/tmp/control-center/license-api/${file}"
+          done
+          (
+            cd /tmp/control-center/license-api
+            python3 control_center_patch.py
+            python3 client_config_patch.py
+            python3 release_baseline_patch.py
+          )
+          node --check /tmp/control-center/license-api/src/index.js
+
+      - name: Inventory routes and functions
+        id: inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          old = Path('/tmp/control-center/license-api/src/index.js').read_text(encoding='utf-8')
+          current = Path('license-api/src/index.js').read_text(encoding='utf-8')
+
+          def funcs(text):
+              return sorted(set(re.findall(r'^(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(', text, re.M)))
+          def routes(text):
+              return sorted(set(re.findall(r'url\.pathname\s*===\s*"([^"]+)"', text)))
+
+          admin_routes = [r for r in routes(old) if r.startswith('/v1/admin/')]
+          report = {
+              'historicalRoutes': routes(old),
+              'historicalAdminRoutes': admin_routes,
+              'historicalFunctionCount': len(funcs(old)),
+              'currentFunctionCount': len(funcs(current)),
+              'commonFunctions': sorted(set(funcs(old)) & set(funcs(current))),
+              'historicalOnlyFunctions': sorted(set(funcs(old)) - set(funcs(current))),
+              'currentOnlyFunctions': sorted(set(funcs(current)) - set(funcs(old))),
+              'historicalNodeCheck': True,
+              'onlineChanged': False,
+          }
+          Path('/tmp/control-center-inventory.json').write_text(
+              json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+
+      - name: Record diagnosis
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -s /tmp/control-center-inventory.json ]]; then
+            jq -n --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              --arg outcome "${{ steps.generate.outcome }}" \
+              '{generatedAt:$generatedAt,ok:false,generation:$outcome,onlineChanged:false}' \
+              > /tmp/control-center-inventory.json
+          else
+            jq --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              --arg outcome "${{ steps.generate.outcome }}" \
+              '. + {generatedAt:$generatedAt,ok:($outcome=="success"),generation:$outcome}' \
+              /tmp/control-center-inventory.json > /tmp/report.json
+            mv /tmp/report.json /tmp/control-center-inventory.json
+          fi
+          path='docs/CONTROL_CENTER_RESTORE_DIAGNOSIS.json'
+          content="$(base64 -w0 /tmp/control-center-inventory.json)"
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record control center restore diagnosis' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
+      - name: Require successful diagnosis
+        if: always()
+        run: test "${{ steps.generate.outcome }}" = success
