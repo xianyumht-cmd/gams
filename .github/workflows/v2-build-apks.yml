@@ -1,4 +1,4 @@
-name: Build GG 2.0.2 formal client release
+name: Build GG 2.0.2 client and manager release inputs
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - v2/android/client/**
+      - v2/android/manager/**
       - v2/android/build.gradle.kts
       - v2/android/settings.gradle.kts
       - v2/android/gradle.properties
@@ -15,6 +16,7 @@ on:
       - main
     paths:
       - v2/android/client/**
+      - v2/android/manager/**
       - v2/android/build.gradle.kts
       - v2/android/settings.gradle.kts
       - v2/android/gradle.properties
@@ -40,25 +42,32 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build formal release client
+      - name: Build unsigned client and manager release inputs
         working-directory: v2/android
-        run: gradle --no-daemon :client:clean :client:assembleRelease
+        run: gradle --no-daemon :client:clean :manager:clean :client:assembleRelease :manager:assembleRelease
 
-      - name: Verify formal release package
+      - name: Verify unsigned release packages
         shell: bash
         run: |
           set -euo pipefail
           client="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          manager="$(find v2/android/manager/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
           test -n "$client" && test -s "$client"
+          test -n "$manager" && test -s "$manager"
 
           client_version="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' v2/android/client/build.gradle.kts | head -n1)"
           client_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' v2/android/client/build.gradle.kts | head -n1)"
-          test "$client_version" = "2.0.2"
-          test "$client_code" = "11"
+          manager_version="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' v2/android/manager/build.gradle.kts | head -n1)"
+          manager_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' v2/android/manager/build.gradle.kts | head -n1)"
+          test "$client_version" = "2.0.2" || { echo "::error::Unexpected client version: $client_version"; exit 1; }
+          test "$client_code" = "11" || { echo "::error::Unexpected client version code: $client_code"; exit 1; }
+          test "$manager_version" = "2.0.0-test1" || { echo "::error::Unexpected manager version: $manager_version"; exit 1; }
+          test "$manager_code" = "1" || { echo "::error::Unexpected manager version code: $manager_code"; exit 1; }
 
-          rm -rf /tmp/gg-client-apk /tmp/gg-release
-          mkdir -p /tmp/gg-client-apk /tmp/gg-release/tools
+          rm -rf /tmp/gg-client-apk /tmp/gg-manager-apk /tmp/gg-release
+          mkdir -p /tmp/gg-client-apk /tmp/gg-manager-apk /tmp/gg-release/tools
           unzip -q "$client" -d /tmp/gg-client-apk
+          unzip -q "$manager" -d /tmp/gg-manager-apk
 
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
           aapt_bin="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
@@ -69,12 +78,36 @@ jobs:
           test -s "$apksigner_jar"
 
           client_badging="$($aapt_bin dump badging "$client")"
-          printf '%s\n' "$client_badging" | grep -q "package: name='com.jinli.quickweb' versionCode='11' versionName='2.0.2'"
-          printf '%s\n' "$client_badging" | grep -q "application-label:'GG'"
-          printf '%s\n' "$client_badging" | grep -Eq "application-icon-|application: label='GG'.*icon="
+          manager_badging="$($aapt_bin dump badging "$manager")"
+          printf '%s\n' '--- client badging ---' "$client_badging"
+          printf '%s\n' '--- manager badging ---' "$manager_badging"
+          printf '%s\n' "$client_badging" | grep -Fq "package: name='com.jinli.quickweb' versionCode='11' versionName='2.0.2'" || {
+            echo '::error::Client package metadata does not match the release contract.'
+            exit 1
+          }
+          printf '%s\n' "$client_badging" | grep -Fq "application-label:'GG'" || {
+            echo '::error::Client application label does not match the release contract.'
+            exit 1
+          }
+          printf '%s\n' "$client_badging" | grep -Eq "application-icon-|application: label='GG'.*icon=" || {
+            echo '::error::Client application icon is missing.'
+            exit 1
+          }
+          printf '%s\n' "$manager_badging" | grep -Fq "package: name='com.jinli.ggsecure.manager' versionCode='1' versionName='2.0.0-test1'" || {
+            echo '::error::Manager package metadata does not match the release contract.'
+            exit 1
+          }
+          grep -Fq 'android:label="GG V2 管理器"' v2/android/manager/src/main/AndroidManifest.xml || {
+            echo '::error::Manager application label does not match the release contract.'
+            exit 1
+          }
 
           if "$apksigner_bin" verify "$client" >/tmp/gg-client-signature.txt 2>&1; then
-            echo 'The release input must remain unsigned before the fixed production certificate is applied.'
+            echo 'The client release input must remain unsigned before the fixed production certificate is applied.'
+            exit 1
+          fi
+          if "$apksigner_bin" verify "$manager" >/tmp/gg-manager-signature.txt 2>&1; then
+            echo 'The manager release input must remain unsigned before the fixed production certificate is applied.'
             exit 1
           fi
 
@@ -93,25 +126,35 @@ jobs:
             echo 'JavaScript file found inside client APK.'
             exit 1
           fi
+          if find /tmp/gg-manager-apk -type f \( -name '*.js' -o -name 'game.js' -o -name 'noname.js' \) | grep -q .; then
+            echo 'JavaScript file found inside manager APK.'
+            exit 1
+          fi
 
-          cp "$client" "/tmp/gg-release/GG-${client_version}-code${client_code}-固定签名前.apk"
+          cp "$client" "/tmp/gg-release/GG-${client_version}-code${client_code}-客户端-固定签名前.apk"
+          cp "$manager" "/tmp/gg-release/GG-${manager_version}-code${manager_code}-管理端-固定签名前.apk"
           cp "$apksigner_jar" /tmp/gg-release/tools/apksigner.jar
           cp "$aapt_bin" /tmp/gg-release/tools/aapt
           chmod +x /tmp/gg-release/tools/aapt
           sha256sum /tmp/gg-release/*.apk > /tmp/gg-release/SHA256SUMS.txt
           cat > /tmp/gg-release/RELEASE-INFO.txt <<EOF
-          GG ${client_version} 正式版（固定证书签名前）
-          versionCode: ${client_code}
-          packageName: com.jinli.quickweb
-          applicationName: GG
+          GG 客户端与管理端（固定证书签名前）
+          clientVersionName: ${client_version}
+          clientVersionCode: ${client_code}
+          clientPackageName: com.jinli.quickweb
+          clientApplicationName: GG
+          managerVersionName: ${manager_version}
+          managerVersionCode: ${manager_code}
+          managerPackageName: com.jinli.ggsecure.manager
+          managerApplicationName: GG V2 管理器
           nativeAlertSuppression: 脚本加载完成~
-          必须使用证书 SHA-256：F2:20:C5:D4:75:13:C7:44:CB:9B:5F:17:C0:F8:F3:9B:0C:10:9F:8F:7D:C8:92:98:97:13:EE:F3:3F:DB:E0:C4
+          必须使用证书 SHA-256：70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
           tools/apksigner.jar 与 tools/aapt 仅用于离线固定证书签名和校验。
           EOF
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-2.0.2-formal-client-release-input
+          name: GG-2.0.2-client-and-manager-release-input
           path: /tmp/gg-release/**
           retention-days: 90
           if-no-files-found: error
@@ -123,7 +166,7 @@ jobs:
           set -euo pipefail
           mkdir -p release-download
           cat > release-download/latest-unsigned-build.json <<EOF
-          {"ok":true,"run_id":${GITHUB_RUN_ID},"artifact_name":"GG-2.0.2-formal-client-release-input","versionName":"2.0.2","versionCode":11}
+          {"ok":true,"run_id":${GITHUB_RUN_ID},"artifact_name":"GG-2.0.2-client-and-manager-release-input","versionName":"2.0.2","versionCode":11,"managerVersionName":"2.0.0-test1","managerVersionCode":1}
           EOF
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com

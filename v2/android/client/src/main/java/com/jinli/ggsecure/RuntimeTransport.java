@@ -33,14 +33,14 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 final class RuntimeTransport {
-    private static final int CONNECT_TIMEOUT_MS = 8000;
-    private static final int READ_TIMEOUT_MS = 30000;
+    private static final int CONNECT_TIMEOUT_MS = 6000;
+    private static final int READ_TIMEOUT_MS = 15000;
+    private static final int TOTAL_TIMEOUT_MS = 30000;
+    private static final int MAX_DIRECT_ADDRESSES = 3;
     private static final String CUSTOM_HOST = RuntimeNames.runtimeCustomHost();
     private static final String WORKER_HOST = RuntimeNames.runtimeWorkerHost();
     private static final String[] NORMAL_HOSTS = { CUSTOM_HOST, WORKER_HOST };
-    private static final String[] DNS_RESOLVERS = {
-            "223.5.5.5", "119.29.29.29", "1.1.1.1", "8.8.8.8"
-    };
+    private static final String[] DNS_RESOLVERS = { "223.5.5.5", "119.29.29.29", "1.1.1.1" };
 
     private RuntimeTransport() { }
 
@@ -66,11 +66,14 @@ final class RuntimeTransport {
             int maximumBytes,
             boolean expectJson
     ) throws IOException {
+        validateRelativePath(path);
+        long deadline = System.nanoTime() + TOTAL_TIMEOUT_MS * 1_000_000L;
         List<String> failures = new ArrayList<>();
         for (String host : NORMAL_HOSTS) {
+            ensureTime(deadline);
             try {
                 Response response = requestHost(
-                        host, method, path, requestBody, authorization, maximumBytes);
+                        host, method, path, requestBody, authorization, maximumBytes, deadline);
                 if (isExpectedResponse(response, expectJson)) return response;
                 failures.add(host + ": HTTP " + response.status + responseReason(response));
             } catch (IOException error) {
@@ -78,14 +81,14 @@ final class RuntimeTransport {
             }
         }
 
-        Set<String> addresses = resolveWorkerAddresses(failures);
         int attempted = 0;
-        for (String address : addresses) {
-            if (++attempted > 12) break;
+        for (String address : resolveWorkerAddresses(failures, deadline)) {
+            if (++attempted > MAX_DIRECT_ADDRESSES) break;
+            ensureTime(deadline);
             try {
                 Response response = directTlsRequest(
                         WORKER_HOST, address, method, path, requestBody,
-                        authorization, maximumBytes);
+                        authorization, maximumBytes, deadline);
                 if (isExpectedResponse(response, expectJson)) return response;
                 failures.add(address + ": HTTP " + response.status + responseReason(response));
             } catch (IOException error) {
@@ -115,12 +118,13 @@ final class RuntimeTransport {
             String path,
             byte[] requestBody,
             String authorization,
-            int maximumBytes
+            int maximumBytes,
+            long deadline
     ) throws IOException {
         HttpsURLConnection connection = (HttpsURLConnection) new URL(
                 "https://" + host + path).openConnection();
-        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-        connection.setReadTimeout(READ_TIMEOUT_MS);
+        connection.setConnectTimeout(timeout(deadline, CONNECT_TIMEOUT_MS));
+        connection.setReadTimeout(timeout(deadline, READ_TIMEOUT_MS));
         connection.setRequestMethod(method);
         connection.setUseCaches(false);
         connection.setDefaultUseCaches(false);
@@ -128,9 +132,9 @@ final class RuntimeTransport {
         connection.setRequestProperty("Accept", "application/json, application/octet-stream");
         connection.setRequestProperty("Cache-Control", "no-store, no-cache, max-age=0");
         connection.setRequestProperty("Pragma", "no-cache");
-        connection.setRequestProperty("User-Agent", "GG-V2/3 Android");
+        connection.setRequestProperty("User-Agent", "GG-V2/4 Android");
         if (authorization != null && !authorization.isEmpty()) {
-            connection.setRequestProperty("Authorization", authorization);
+            connection.setRequestProperty("Authorization", safeHeader(authorization));
         }
         if (requestBody != null) {
             connection.setDoOutput(true);
@@ -141,10 +145,12 @@ final class RuntimeTransport {
             }
         }
         try {
+            ensureTime(deadline);
             int status = connection.getResponseCode();
             InputStream source = status >= 200 && status < 400
                     ? connection.getInputStream() : connection.getErrorStream();
-            byte[] body = source == null ? new byte[0] : readLimited(source, maximumBytes);
+            byte[] body = source == null
+                    ? new byte[0] : readLimited(source, maximumBytes, deadline);
             return new Response(
                     status,
                     body,
@@ -162,11 +168,12 @@ final class RuntimeTransport {
             String path,
             byte[] requestBody,
             String authorization,
-            int maximumBytes
+            int maximumBytes,
+            long deadline
     ) throws IOException {
         Socket plain = new Socket();
-        plain.connect(new InetSocketAddress(address, 443), CONNECT_TIMEOUT_MS);
-        plain.setSoTimeout(READ_TIMEOUT_MS);
+        plain.connect(new InetSocketAddress(address, 443), timeout(deadline, CONNECT_TIMEOUT_MS));
+        plain.setSoTimeout(timeout(deadline, READ_TIMEOUT_MS));
 
         SSLSocket ssl = null;
         try {
@@ -175,25 +182,23 @@ final class RuntimeTransport {
             SSLParameters parameters = ssl.getSSLParameters();
             parameters.setEndpointIdentificationAlgorithm("HTTPS");
             ssl.setSSLParameters(parameters);
-            ssl.setSoTimeout(READ_TIMEOUT_MS);
+            ssl.setSoTimeout(timeout(deadline, READ_TIMEOUT_MS));
             ssl.startHandshake();
 
             SSLSession session = ssl.getSession();
             HostnameVerifier verifier = HttpsURLConnection.getDefaultHostnameVerifier();
-            if (!verifier.verify(host, session)) {
-                throw new IOException("TLS 域名校验失败");
-            }
+            if (!verifier.verify(host, session)) throw new IOException("TLS 域名校验失败");
 
             BufferedOutputStream output = new BufferedOutputStream(ssl.getOutputStream());
             StringBuilder headers = new StringBuilder();
             headers.append(method).append(' ').append(path).append(" HTTP/1.1\r\n");
             headers.append("Host: ").append(host).append("\r\n");
-            headers.append("User-Agent: GG-V2/3 Android\r\n");
+            headers.append("User-Agent: GG-V2/4 Android\r\n");
             headers.append("Accept: application/json, application/octet-stream\r\n");
             headers.append("Cache-Control: no-store, no-cache, max-age=0\r\n");
             headers.append("Pragma: no-cache\r\n");
             if (authorization != null && !authorization.isEmpty()) {
-                headers.append("Authorization: ").append(authorization).append("\r\n");
+                headers.append("Authorization: ").append(safeHeader(authorization)).append("\r\n");
             }
             if (requestBody != null) {
                 headers.append("Content-Type: application/json; charset=utf-8\r\n");
@@ -203,8 +208,8 @@ final class RuntimeTransport {
             output.write(headers.toString().getBytes(StandardCharsets.ISO_8859_1));
             if (requestBody != null) output.write(requestBody);
             output.flush();
-
-            return readHttpResponse(ssl.getInputStream(), maximumBytes);
+            ensureTime(deadline);
+            return readHttpResponse(ssl.getInputStream(), maximumBytes, deadline);
         } finally {
             if (ssl != null) {
                 try { ssl.close(); } catch (Exception ignored) { }
@@ -214,9 +219,10 @@ final class RuntimeTransport {
         }
     }
 
-    private static Response readHttpResponse(InputStream raw, int maximumBytes) throws IOException {
+    private static Response readHttpResponse(InputStream raw, int maximumBytes, long deadline)
+            throws IOException {
         BufferedInputStream input = new BufferedInputStream(raw);
-        String statusLine = readAsciiLine(input, 8192);
+        String statusLine = readAsciiLine(input, 8192, deadline);
         if (statusLine == null || !statusLine.startsWith("HTTP/")) {
             throw new IOException("服务器响应格式无效");
         }
@@ -234,7 +240,7 @@ final class RuntimeTransport {
         boolean chunked = false;
         long contentLength = -1L;
         for (;;) {
-            String line = readAsciiLine(input, 16384);
+            String line = readAsciiLine(input, 16384, deadline);
             if (line == null) throw new EOFException("响应头提前结束");
             if (line.isEmpty()) break;
             int colon = line.indexOf(':');
@@ -244,26 +250,25 @@ final class RuntimeTransport {
             if ("content-type".equals(name)) contentType = value;
             else if ("cf-mitigated".equals(name)) mitigated = value;
             else if ("transfer-encoding".equals(name)
-                    && value.toLowerCase(Locale.ROOT).contains("chunked")) {
-                chunked = true;
-            } else if ("content-length".equals(name)) {
+                    && value.toLowerCase(Locale.ROOT).contains("chunked")) chunked = true;
+            else if ("content-length".equals(name)) {
                 try { contentLength = Long.parseLong(value); }
                 catch (NumberFormatException ignored) { }
             }
         }
 
         byte[] body;
-        if (chunked) body = readChunked(input, maximumBytes);
-        else if (contentLength >= 0) body = readFixed(input, contentLength, maximumBytes);
-        else body = readLimited(input, maximumBytes);
+        if (chunked) body = readChunked(input, maximumBytes, deadline);
+        else if (contentLength >= 0) body = readFixed(input, contentLength, maximumBytes, deadline);
+        else body = readLimited(input, maximumBytes, deadline);
         return new Response(status, body, contentType, mitigated);
     }
 
-    private static byte[] readChunked(BufferedInputStream input, int maximumBytes)
+    private static byte[] readChunked(BufferedInputStream input, int maximumBytes, long deadline)
             throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         for (;;) {
-            String sizeLine = readAsciiLine(input, 4096);
+            String sizeLine = readAsciiLine(input, 4096, deadline);
             if (sizeLine == null) throw new EOFException("分块响应提前结束");
             int semicolon = sizeLine.indexOf(';');
             String sizeText = (semicolon >= 0
@@ -275,7 +280,7 @@ final class RuntimeTransport {
             }
             if (size == 0) {
                 while (true) {
-                    String trailer = readAsciiLine(input, 8192);
+                    String trailer = readAsciiLine(input, 8192, deadline);
                     if (trailer == null || trailer.isEmpty()) break;
                 }
                 break;
@@ -283,8 +288,8 @@ final class RuntimeTransport {
             if (size < 0 || output.size() + size > maximumBytes) {
                 throw new IOException("服务器响应过大");
             }
-            copyExact(input, output, size);
-            String terminator = readAsciiLine(input, 16);
+            copyExact(input, output, size, deadline);
+            String terminator = readAsciiLine(input, 16, deadline);
             if (terminator == null || !terminator.isEmpty()) {
                 throw new IOException("分块响应终止符无效");
             }
@@ -292,21 +297,24 @@ final class RuntimeTransport {
         return output.toByteArray();
     }
 
-    private static byte[] readFixed(InputStream input, long contentLength, int maximumBytes)
+    private static byte[] readFixed(
+            InputStream input, long contentLength, int maximumBytes, long deadline)
             throws IOException {
         if (contentLength < 0 || contentLength > maximumBytes) {
             throw new IOException("服务器响应过大");
         }
         ByteArrayOutputStream output = new ByteArrayOutputStream((int) contentLength);
-        copyExact(input, output, (int) contentLength);
+        copyExact(input, output, (int) contentLength, deadline);
         return output.toByteArray();
     }
 
     private static void copyExact(
-            InputStream input, ByteArrayOutputStream output, int count) throws IOException {
+            InputStream input, ByteArrayOutputStream output, int count, long deadline)
+            throws IOException {
         byte[] buffer = new byte[4096];
         int remaining = count;
         while (remaining > 0) {
+            ensureTime(deadline);
             int read = input.read(buffer, 0, Math.min(buffer.length, remaining));
             if (read < 0) throw new EOFException("服务器响应提前结束");
             output.write(buffer, 0, read);
@@ -314,12 +322,14 @@ final class RuntimeTransport {
         }
     }
 
-    private static byte[] readLimited(InputStream input, int maximumBytes) throws IOException {
+    private static byte[] readLimited(InputStream input, int maximumBytes, long deadline)
+            throws IOException {
         try (InputStream source = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[8192];
             int total = 0;
             int read;
             while ((read = source.read(buffer)) != -1) {
+                ensureTime(deadline);
                 total += read;
                 if (total > maximumBytes) throw new IOException("运行服务响应过大");
                 output.write(buffer, 0, read);
@@ -328,11 +338,12 @@ final class RuntimeTransport {
         }
     }
 
-    private static String readAsciiLine(InputStream input, int maximumBytes)
+    private static String readAsciiLine(InputStream input, int maximumBytes, long deadline)
             throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         int previous = -1;
         for (;;) {
+            ensureTime(deadline);
             int value = input.read();
             if (value < 0) {
                 if (output.size() == 0 && previous < 0) return null;
@@ -347,27 +358,21 @@ final class RuntimeTransport {
         return output.toString(StandardCharsets.ISO_8859_1.name());
     }
 
-    private static Set<String> resolveWorkerAddresses(List<String> failures) {
+    private static Set<String> resolveWorkerAddresses(List<String> failures, long deadline) {
         LinkedHashSet<String> result = new LinkedHashSet<>();
         for (String resolver : DNS_RESOLVERS) {
+            if (result.size() >= MAX_DIRECT_ADDRESSES || remainingMillis(deadline) < 1000) break;
             try {
-                result.addAll(queryDnsA(WORKER_HOST, resolver));
+                result.addAll(queryDnsA(WORKER_HOST, resolver, deadline));
             } catch (Exception error) {
                 failures.add("DNS " + resolver + ": " + shortMessage(error));
             }
         }
-        try {
-            InetAddress[] system = InetAddress.getAllByName(WORKER_HOST);
-            for (InetAddress address : system) {
-                if (address.getAddress().length == 4) result.add(address.getHostAddress());
-            }
-        } catch (Exception error) {
-            failures.add("系统 DNS: " + shortMessage(error));
-        }
         return result;
     }
 
-    private static List<String> queryDnsA(String host, String resolver) throws IOException {
+    private static List<String> queryDnsA(String host, String resolver, long deadline)
+            throws IOException {
         SecureRandom random = new SecureRandom();
         int transactionId = random.nextInt(0x10000);
         ByteArrayOutputStream packetBytes = new ByteArrayOutputStream();
@@ -380,9 +385,7 @@ final class RuntimeTransport {
         output.writeShort(0);
         for (String label : host.split("\\.")) {
             byte[] bytes = label.getBytes(StandardCharsets.US_ASCII);
-            if (bytes.length == 0 || bytes.length > 63) {
-                throw new IOException("DNS 名称无效");
-            }
+            if (bytes.length == 0 || bytes.length > 63) throw new IOException("DNS 名称无效");
             output.writeByte(bytes.length);
             output.write(bytes);
         }
@@ -394,7 +397,7 @@ final class RuntimeTransport {
         byte[] query = packetBytes.toByteArray();
         DatagramSocket socket = new DatagramSocket();
         try {
-            socket.setSoTimeout(2500);
+            socket.setSoTimeout(timeout(deadline, 1800));
             DatagramPacket request = new DatagramPacket(
                     query, query.length, InetAddress.getByName(resolver), 53);
             socket.send(request);
@@ -410,11 +413,10 @@ final class RuntimeTransport {
         }
     }
 
-    private static List<String> parseDnsA(
-            byte[] bytes, int length, int transactionId) throws IOException {
+    private static List<String> parseDnsA(byte[] bytes, int length, int transactionId)
+            throws IOException {
         if (length < 12) throw new IOException("DNS 响应过短");
-        DataInputStream input = new DataInputStream(
-                new ByteArrayInputStream(bytes, 0, length));
+        DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes, 0, length));
         int id = input.readUnsignedShort();
         int flags = input.readUnsignedShort();
         int questionCount = input.readUnsignedShort();
@@ -425,13 +427,12 @@ final class RuntimeTransport {
             throw new IOException("DNS 响应无效");
         }
         int offset = 12;
-        for (int i = 0; i < questionCount; i++) {
-            offset = skipDnsName(bytes, length, offset);
-            offset += 4;
+        for (int index = 0; index < questionCount; index += 1) {
+            offset = skipDnsName(bytes, length, offset) + 4;
             if (offset > length) throw new IOException("DNS 问题段越界");
         }
         List<String> addresses = new ArrayList<>();
-        for (int i = 0; i < answerCount; i++) {
+        for (int index = 0; index < answerCount; index += 1) {
             offset = skipDnsName(bytes, length, offset);
             if (offset + 10 > length) throw new IOException("DNS 答案段越界");
             int type = unsignedShort(bytes, offset);
@@ -451,8 +452,7 @@ final class RuntimeTransport {
         return addresses;
     }
 
-    private static int skipDnsName(byte[] bytes, int length, int offset)
-            throws IOException {
+    private static int skipDnsName(byte[] bytes, int length, int offset) throws IOException {
         int steps = 0;
         while (offset < length) {
             int value = bytes[offset] & 0xFF;
@@ -462,9 +462,7 @@ final class RuntimeTransport {
             }
             offset += 1;
             if (value == 0) return offset;
-            if (value > 63 || offset + value > length) {
-                throw new IOException("DNS 名称越界");
-            }
+            if (value > 63 || offset + value > length) throw new IOException("DNS 名称越界");
             offset += value;
             if (++steps > 128) throw new IOException("DNS 名称异常");
         }
@@ -473,6 +471,35 @@ final class RuntimeTransport {
 
     private static int unsignedShort(byte[] bytes, int offset) {
         return ((bytes[offset] & 0xFF) << 8) | (bytes[offset + 1] & 0xFF);
+    }
+
+    private static void validateRelativePath(String path) throws IOException {
+        if (path == null || !path.startsWith("/") || path.contains("\r")
+                || path.contains("\n") || path.contains(" ") || path.contains("://")) {
+            throw new IOException("请求路径无效");
+        }
+    }
+
+    private static String safeHeader(String value) throws IOException {
+        if (value.contains("\r") || value.contains("\n")) throw new IOException("请求头无效");
+        return value;
+    }
+
+    private static int timeout(long deadline, int maximum) throws SocketTimeoutException {
+        long remaining = remainingMillis(deadline);
+        if (remaining <= 0) throw new SocketTimeoutException("请求总超时");
+        return (int) Math.max(1L, Math.min(maximum, remaining));
+    }
+
+    private static long remainingMillis(long deadline) {
+        return (deadline - System.nanoTime()) / 1_000_000L;
+    }
+
+    private static void ensureTime(long deadline) throws SocketTimeoutException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new SocketTimeoutException("请求已取消");
+        }
+        if (remainingMillis(deadline) <= 0) throw new SocketTimeoutException("请求总超时");
     }
 
     private static String responseReason(Response response) {
@@ -492,10 +519,10 @@ final class RuntimeTransport {
     private static String joinFailures(List<String> failures) {
         if (failures.isEmpty()) return "没有可用连接通道";
         StringBuilder out = new StringBuilder();
-        int start = Math.max(0, failures.size() - 8);
-        for (int i = start; i < failures.size(); i++) {
+        int start = Math.max(0, failures.size() - 6);
+        for (int index = start; index < failures.size(); index += 1) {
             if (out.length() > 0) out.append("；");
-            out.append(failures.get(i));
+            out.append(failures.get(index));
         }
         return out.toString();
     }

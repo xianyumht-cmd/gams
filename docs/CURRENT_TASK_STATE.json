@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "project": "xianyumht-cmd/gams",
+  "task": "修复所有实际确认的 Bug",
+  "updatedAt": "2026-08-01T21:55:00+08:00",
+  "status": "paused_by_user",
+  "pauseReason": "用户当前未准备继续",
+  "branch": "codex/fix-all-audited-bugs-20260801",
+  "pullRequest": {
+    "number": 25,
+    "state": "open",
+    "draft": true,
+    "base": "main",
+    "mergeAllowed": false,
+    "productionDeployAllowed": false
+  },
+  "confirmedBugs": {
+    "count": 2,
+    "fixed": 2,
+    "items": [
+      {
+        "id": "RUNTIME-KEY-PUBLISH-001",
+        "title": "Runtime 密钥迁移与发布链不兼容",
+        "status": "code_fixed_ci_passed"
+      },
+      {
+        "id": "SECRET-MIGRATION-001",
+        "title": "现有 Secret 迁移会阻断部署",
+        "status": "code_fixed_ci_pending_latest_doc_commit"
+      }
+    ]
+  },
+  "verifiedRepositorySecrets": [
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "LICENSE_ADMIN_PASSWORD"
+  ],
+  "requiredNewRepositorySecrets": [
+    {
+      "name": "TOKEN_SIGNING_SECRET",
+      "requirement": "独立随机值，至少 32 个字符，推荐 64 位十六进制",
+      "configured": false
+    },
+    {
+      "name": "RUNTIME_MASTER_KEY",
+      "requirement": "独立随机 32 字节，64 位十六进制或 Base64",
+      "configured": false
+    }
+  ],
+  "notRequiredDuringMigration": [
+    {
+      "name": "ADMIN_LOGIN_SECRET",
+      "fallback": "LICENSE_ADMIN_PASSWORD"
+    },
+    {
+      "name": "LEGACY_RUNTIME_PASSWORD",
+      "fallback": "LICENSE_ADMIN_PASSWORD"
+    },
+    {
+      "name": "RELEASE_SIGNING_PASSWORD",
+      "fallback": "LICENSE_ADMIN_PASSWORD"
+    }
+  ],
+  "productionEnvironment": {
+    "name": "production",
+    "exists": false
+  },
+  "completedValidation": [
+    "runtime raw-key compatibility test",
+    "legacy release migration test",
+    "source security regression",
+    "D1 local migrations 0001-0003",
+    "license Worker Wrangler dry-run",
+    "runtime Worker Wrangler dry-run",
+    "Android lintRelease",
+    "Android assembleRelease",
+    "two Android APK builds",
+    "formal client build",
+    "control center static and live tests"
+  ],
+  "pendingActions": [
+    "用户创建 production Environment",
+    "用户新增 TOKEN_SIGNING_SECRET",
+    "用户新增 RUNTIME_MASTER_KEY",
+    "重新运行最新提交的 PR 检查",
+    "确认全部检查通过后退出 Draft",
+    "合并 PR #25",
+    "观察生产部署",
+    "执行生产完整生命周期验收"
+  ],
+  "hardStops": [
+    "用户明确继续前不得推进",
+    "不得修改或删除 LICENSE_ADMIN_PASSWORD",
+    "不得输出、提交或记录 Secret 明文",
+    "不得合并 PR #25",
+    "不得触发生产部署"
+  ],
+  "resumeDocuments": [
+    "docs/NEXT_CHAT_HANDOFF.md",
+    "docs/BUG_FIXES_2026-08-01.md"
+  ]
+}

@@ -4,6 +4,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -21,7 +22,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -38,20 +38,24 @@ final class ResilientApiTransport {
     private static final String CUSTOM_HOST = RuntimeNames.customHost();
     private static final String WORKER_HOST = RuntimeNames.workerHost();
     private static final String[] NORMAL_HOSTS = { CUSTOM_HOST, WORKER_HOST };
-    private static final String[] DNS_RESOLVERS = { "1.1.1.1", "8.8.8.8", "223.5.5.5" };
+    private static final String[] DNS_RESOLVERS = { "223.5.5.5", "1.1.1.1" };
     private static final int CONNECT_TIMEOUT_MS = 5000;
     private static final int READ_TIMEOUT_MS = 10000;
+    private static final int TOTAL_TIMEOUT_MS = 25000;
+    private static final int MAX_DIRECT_ADDRESSES = 2;
 
-    private ResilientApiTransport() {
-    }
+    private ResilientApiTransport() { }
 
     static Response post(String path, String jsonBody, String userAgent,
                          String authorization, int maximumBytes) throws IOException {
+        validateRelativePath(path);
+        long deadline = System.nanoTime() + TOTAL_TIMEOUT_MS * 1_000_000L;
         List<String> failures = new ArrayList<>();
         for (String host : NORMAL_HOSTS) {
+            ensureTime(deadline);
             try {
                 Response response = normalPost(host, path, jsonBody, userAgent,
-                        authorization, maximumBytes);
+                        authorization, maximumBytes, deadline);
                 if (isApiJson(response.body)) return response;
                 failures.add(host + ": HTTP " + response.status + nonJsonReason(response));
             } catch (IOException error) {
@@ -59,11 +63,13 @@ final class ResilientApiTransport {
             }
         }
 
-        Set<String> addresses = resolveWorkerAddresses(failures);
-        for (String address : addresses) {
+        int attempted = 0;
+        for (String address : resolveWorkerAddresses(failures, deadline)) {
+            if (++attempted > MAX_DIRECT_ADDRESSES) break;
+            ensureTime(deadline);
             try {
                 Response response = directTlsPost(WORKER_HOST, address, path, jsonBody,
-                        userAgent, authorization, maximumBytes);
+                        userAgent, authorization, maximumBytes, deadline);
                 if (isApiJson(response.body)) return response;
                 failures.add(address + ": HTTP " + response.status + nonJsonReason(response));
             } catch (IOException error) {
@@ -75,32 +81,38 @@ final class ResilientApiTransport {
         throw new IOException("授权服务器连接失败：" + detail);
     }
 
-    private static Response normalPost(String host, String path, String jsonBody,
-                                       String userAgent, String authorization,
-                                       int maximumBytes) throws IOException {
-        HttpsURLConnection connection = (HttpsURLConnection) new URL("https://" + host + path).openConnection();
-        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-        connection.setReadTimeout(READ_TIMEOUT_MS);
+    private static Response normalPost(
+            String host, String path, String jsonBody, String userAgent,
+            String authorization, int maximumBytes, long deadline) throws IOException {
+        HttpsURLConnection connection = (HttpsURLConnection) new URL(
+                "https://" + host + path).openConnection();
+        connection.setConnectTimeout(timeout(deadline, CONNECT_TIMEOUT_MS));
+        connection.setReadTimeout(timeout(deadline, READ_TIMEOUT_MS));
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
         connection.setUseCaches(false);
+        connection.setDefaultUseCaches(false);
         connection.setInstanceFollowRedirects(false);
         connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("User-Agent", userAgent);
+        connection.setRequestProperty("Cache-Control", "no-store");
+        connection.setRequestProperty("User-Agent", safeHeader(userAgent, "GG-V2 Android"));
         if (authorization != null && !authorization.isEmpty()) {
-            connection.setRequestProperty("Authorization", authorization);
+            connection.setRequestProperty("Authorization", safeHeader(authorization, ""));
         }
         byte[] payload = jsonBody.getBytes(StandardCharsets.UTF_8);
         connection.setFixedLengthStreamingMode(payload.length);
         try {
+            ensureTime(deadline);
             try (OutputStream output = connection.getOutputStream()) {
                 output.write(payload);
             }
+            ensureTime(deadline);
             int status = connection.getResponseCode();
             InputStream input = status >= 200 && status < 400
                     ? connection.getInputStream() : connection.getErrorStream();
-            String body = input == null ? "" : new String(readLimited(input, maximumBytes), StandardCharsets.UTF_8);
+            String body = input == null ? ""
+                    : new String(readLimited(input, maximumBytes, deadline), StandardCharsets.UTF_8);
             return new Response(status, body,
                     connection.getHeaderField("Content-Type"),
                     connection.getHeaderField("cf-mitigated"));
@@ -109,12 +121,12 @@ final class ResilientApiTransport {
         }
     }
 
-    private static Response directTlsPost(String host, String address, String path,
-                                          String jsonBody, String userAgent,
-                                          String authorization, int maximumBytes) throws IOException {
+    private static Response directTlsPost(
+            String host, String address, String path, String jsonBody, String userAgent,
+            String authorization, int maximumBytes, long deadline) throws IOException {
         Socket plain = new Socket();
-        plain.connect(new InetSocketAddress(address, 443), CONNECT_TIMEOUT_MS);
-        plain.setSoTimeout(READ_TIMEOUT_MS);
+        plain.connect(new InetSocketAddress(address, 443), timeout(deadline, CONNECT_TIMEOUT_MS));
+        plain.setSoTimeout(timeout(deadline, READ_TIMEOUT_MS));
 
         SSLSocket ssl = null;
         try {
@@ -123,33 +135,34 @@ final class ResilientApiTransport {
             SSLParameters parameters = ssl.getSSLParameters();
             parameters.setEndpointIdentificationAlgorithm("HTTPS");
             ssl.setSSLParameters(parameters);
-            ssl.setSoTimeout(READ_TIMEOUT_MS);
+            ssl.setSoTimeout(timeout(deadline, READ_TIMEOUT_MS));
             ssl.startHandshake();
 
             SSLSession session = ssl.getSession();
             HostnameVerifier verifier = HttpsURLConnection.getDefaultHostnameVerifier();
-            if (!verifier.verify(host, session)) {
-                throw new IOException("TLS 域名校验失败");
-            }
+            if (!verifier.verify(host, session)) throw new IOException("TLS 域名校验失败");
 
             byte[] payload = jsonBody.getBytes(StandardCharsets.UTF_8);
             BufferedOutputStream output = new BufferedOutputStream(ssl.getOutputStream());
             StringBuilder headers = new StringBuilder();
             headers.append("POST ").append(path).append(" HTTP/1.1\r\n");
             headers.append("Host: ").append(host).append("\r\n");
-            headers.append("User-Agent: ").append(userAgent).append("\r\n");
+            headers.append("User-Agent: ").append(safeHeader(userAgent, "GG-V2 Android"))
+                    .append("\r\n");
             headers.append("Accept: application/json\r\n");
             headers.append("Content-Type: application/json; charset=utf-8\r\n");
+            headers.append("Cache-Control: no-store\r\n");
             if (authorization != null && !authorization.isEmpty()) {
-                headers.append("Authorization: ").append(authorization).append("\r\n");
+                headers.append("Authorization: ").append(safeHeader(authorization, ""))
+                        .append("\r\n");
             }
             headers.append("Content-Length: ").append(payload.length).append("\r\n");
             headers.append("Connection: close\r\n\r\n");
             output.write(headers.toString().getBytes(StandardCharsets.ISO_8859_1));
             output.write(payload);
             output.flush();
-
-            return readHttpResponse(ssl.getInputStream(), maximumBytes);
+            ensureTime(deadline);
+            return readHttpResponse(ssl.getInputStream(), maximumBytes, deadline);
         } finally {
             if (ssl != null) {
                 try { ssl.close(); } catch (Exception ignored) { }
@@ -159,9 +172,10 @@ final class ResilientApiTransport {
         }
     }
 
-    private static Response readHttpResponse(InputStream raw, int maximumBytes) throws IOException {
+    private static Response readHttpResponse(InputStream raw, int maximumBytes, long deadline)
+            throws IOException {
         BufferedInputStream input = new BufferedInputStream(raw);
-        String statusLine = readAsciiLine(input, 8192);
+        String statusLine = readAsciiLine(input, 8192, deadline);
         if (statusLine == null || !statusLine.startsWith("HTTP/")) {
             throw new IOException("服务器响应格式无效");
         }
@@ -179,7 +193,7 @@ final class ResilientApiTransport {
         boolean chunked = false;
         long contentLength = -1L;
         for (;;) {
-            String line = readAsciiLine(input, 16384);
+            String line = readAsciiLine(input, 16384, deadline);
             if (line == null) throw new EOFException("响应头提前结束");
             if (line.isEmpty()) break;
             int colon = line.indexOf(':');
@@ -188,33 +202,39 @@ final class ResilientApiTransport {
             String value = line.substring(colon + 1).trim();
             if ("content-type".equals(name)) contentType = value;
             else if ("cf-mitigated".equals(name)) mitigated = value;
-            else if ("transfer-encoding".equals(name) && value.toLowerCase(Locale.ROOT).contains("chunked")) {
-                chunked = true;
-            } else if ("content-length".equals(name)) {
-                try { contentLength = Long.parseLong(value); } catch (NumberFormatException ignored) { }
+            else if ("transfer-encoding".equals(name)
+                    && value.toLowerCase(Locale.ROOT).contains("chunked")) chunked = true;
+            else if ("content-length".equals(name)) {
+                try { contentLength = Long.parseLong(value); }
+                catch (NumberFormatException ignored) { }
             }
         }
 
         byte[] body;
-        if (chunked) body = readChunked(input, maximumBytes);
-        else if (contentLength >= 0) body = readFixed(input, contentLength, maximumBytes);
-        else body = readLimited(input, maximumBytes);
-        return new Response(status, new String(body, StandardCharsets.UTF_8), contentType, mitigated);
+        if (chunked) body = readChunked(input, maximumBytes, deadline);
+        else if (contentLength >= 0) body = readFixed(input, contentLength, maximumBytes, deadline);
+        else body = readLimited(input, maximumBytes, deadline);
+        return new Response(status, new String(body, StandardCharsets.UTF_8),
+                contentType, mitigated);
     }
 
-    private static byte[] readChunked(BufferedInputStream input, int maximumBytes) throws IOException {
+    private static byte[] readChunked(BufferedInputStream input, int maximumBytes, long deadline)
+            throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         for (;;) {
-            String sizeLine = readAsciiLine(input, 4096);
+            String sizeLine = readAsciiLine(input, 4096, deadline);
             if (sizeLine == null) throw new EOFException("分块响应提前结束");
             int semicolon = sizeLine.indexOf(';');
-            String sizeText = (semicolon >= 0 ? sizeLine.substring(0, semicolon) : sizeLine).trim();
+            String sizeText = (semicolon >= 0
+                    ? sizeLine.substring(0, semicolon) : sizeLine).trim();
             int size;
             try { size = Integer.parseInt(sizeText, 16); }
-            catch (NumberFormatException error) { throw new IOException("分块长度无效", error); }
+            catch (NumberFormatException error) {
+                throw new IOException("分块长度无效", error);
+            }
             if (size == 0) {
                 while (true) {
-                    String trailer = readAsciiLine(input, 8192);
+                    String trailer = readAsciiLine(input, 8192, deadline);
                     if (trailer == null || trailer.isEmpty()) break;
                 }
                 break;
@@ -222,8 +242,8 @@ final class ResilientApiTransport {
             if (size < 0 || output.size() + size > maximumBytes) {
                 throw new IOException("服务器响应过大");
             }
-            copyExact(input, output, size);
-            String terminator = readAsciiLine(input, 16);
+            copyExact(input, output, size, deadline);
+            String terminator = readAsciiLine(input, 16, deadline);
             if (terminator == null || !terminator.isEmpty()) {
                 throw new IOException("分块响应终止符无效");
             }
@@ -231,17 +251,24 @@ final class ResilientApiTransport {
         return output.toByteArray();
     }
 
-    private static byte[] readFixed(InputStream input, long contentLength, int maximumBytes) throws IOException {
-        if (contentLength < 0 || contentLength > maximumBytes) throw new IOException("服务器响应过大");
+    private static byte[] readFixed(
+            InputStream input, long contentLength, int maximumBytes, long deadline)
+            throws IOException {
+        if (contentLength < 0 || contentLength > maximumBytes) {
+            throw new IOException("服务器响应过大");
+        }
         ByteArrayOutputStream output = new ByteArrayOutputStream((int) contentLength);
-        copyExact(input, output, (int) contentLength);
+        copyExact(input, output, (int) contentLength, deadline);
         return output.toByteArray();
     }
 
-    private static void copyExact(InputStream input, ByteArrayOutputStream output, int count) throws IOException {
+    private static void copyExact(
+            InputStream input, ByteArrayOutputStream output, int count, long deadline)
+            throws IOException {
         byte[] buffer = new byte[4096];
         int remaining = count;
         while (remaining > 0) {
+            ensureTime(deadline);
             int read = input.read(buffer, 0, Math.min(buffer.length, remaining));
             if (read < 0) throw new EOFException("服务器响应提前结束");
             output.write(buffer, 0, read);
@@ -249,12 +276,14 @@ final class ResilientApiTransport {
         }
     }
 
-    private static byte[] readLimited(InputStream input, int maximumBytes) throws IOException {
+    private static byte[] readLimited(InputStream input, int maximumBytes, long deadline)
+            throws IOException {
         try (InputStream source = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[4096];
             int total = 0;
             int read;
             while ((read = source.read(buffer)) != -1) {
+                ensureTime(deadline);
                 total += read;
                 if (total > maximumBytes) throw new IOException("服务器响应过大");
                 output.write(buffer, 0, read);
@@ -263,10 +292,12 @@ final class ResilientApiTransport {
         }
     }
 
-    private static String readAsciiLine(InputStream input, int maximumBytes) throws IOException {
+    private static String readAsciiLine(InputStream input, int maximumBytes, long deadline)
+            throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         int previous = -1;
         for (;;) {
+            ensureTime(deadline);
             int value = input.read();
             if (value < 0) {
                 if (output.size() == 0 && previous < 0) return null;
@@ -281,20 +312,12 @@ final class ResilientApiTransport {
         return output.toString(StandardCharsets.ISO_8859_1.name());
     }
 
-    private static Set<String> resolveWorkerAddresses(List<String> failures) {
+    private static Set<String> resolveWorkerAddresses(List<String> failures, long deadline) {
         LinkedHashSet<String> result = new LinkedHashSet<>();
-        try {
-            InetAddress[] system = InetAddress.getAllByName(WORKER_HOST);
-            for (InetAddress address : system) {
-                if (address.getAddress().length == 4) result.add(address.getHostAddress());
-            }
-        } catch (Exception error) {
-            failures.add("系统 DNS: " + shortMessage(error));
-        }
         for (String resolver : DNS_RESOLVERS) {
+            if (result.size() >= MAX_DIRECT_ADDRESSES || remainingMillis(deadline) < 1000) break;
             try {
-                result.addAll(queryDnsA(WORKER_HOST, resolver));
-                if (!result.isEmpty()) break;
+                result.addAll(queryDnsA(WORKER_HOST, resolver, deadline));
             } catch (Exception error) {
                 failures.add("DNS " + resolver + ": " + shortMessage(error));
             }
@@ -302,7 +325,8 @@ final class ResilientApiTransport {
         return result;
     }
 
-    private static List<String> queryDnsA(String host, String resolver) throws IOException {
+    private static List<String> queryDnsA(String host, String resolver, long deadline)
+            throws IOException {
         SecureRandom random = new SecureRandom();
         int transactionId = random.nextInt(0x10000);
         ByteArrayOutputStream packetBytes = new ByteArrayOutputStream();
@@ -327,12 +351,13 @@ final class ResilientApiTransport {
         byte[] query = packetBytes.toByteArray();
         DatagramSocket socket = new DatagramSocket();
         try {
-            socket.setSoTimeout(2500);
-            DatagramPacket request = new DatagramPacket(query, query.length,
-                    InetAddress.getByName(resolver), 53);
+            socket.setSoTimeout(timeout(deadline, 1800));
+            DatagramPacket request = new DatagramPacket(
+                    query, query.length, InetAddress.getByName(resolver), 53);
             socket.send(request);
             byte[] responseBuffer = new byte[2048];
-            DatagramPacket responsePacket = new DatagramPacket(responseBuffer, responseBuffer.length);
+            DatagramPacket responsePacket = new DatagramPacket(
+                    responseBuffer, responseBuffer.length);
             socket.receive(responsePacket);
             return parseDnsA(responseBuffer, responsePacket.getLength(), transactionId);
         } catch (SocketTimeoutException error) {
@@ -342,9 +367,10 @@ final class ResilientApiTransport {
         }
     }
 
-    private static List<String> parseDnsA(byte[] bytes, int length, int transactionId) throws IOException {
+    private static List<String> parseDnsA(byte[] bytes, int length, int transactionId)
+            throws IOException {
         if (length < 12) throw new IOException("DNS 响应过短");
-        DataInputStream input = new DataInputStream(new java.io.ByteArrayInputStream(bytes, 0, length));
+        DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes, 0, length));
         int id = input.readUnsignedShort();
         int flags = input.readUnsignedShort();
         int questionCount = input.readUnsignedShort();
@@ -355,13 +381,12 @@ final class ResilientApiTransport {
             throw new IOException("DNS 响应无效");
         }
         int offset = 12;
-        for (int i = 0; i < questionCount; i++) {
-            offset = skipDnsName(bytes, length, offset);
-            offset += 4;
+        for (int index = 0; index < questionCount; index += 1) {
+            offset = skipDnsName(bytes, length, offset) + 4;
             if (offset > length) throw new IOException("DNS 问题段越界");
         }
         List<String> addresses = new ArrayList<>();
-        for (int i = 0; i < answerCount; i++) {
+        for (int index = 0; index < answerCount; index += 1) {
             offset = skipDnsName(bytes, length, offset);
             if (offset + 10 > length) throw new IOException("DNS 答案段越界");
             int type = unsignedShort(bytes, offset);
@@ -370,8 +395,10 @@ final class ResilientApiTransport {
             offset += 10;
             if (offset + dataLength > length) throw new IOException("DNS 数据越界");
             if (type == 1 && clazz == 1 && dataLength == 4) {
-                addresses.add((bytes[offset] & 0xFF) + "." + (bytes[offset + 1] & 0xFF) + "." +
-                        (bytes[offset + 2] & 0xFF) + "." + (bytes[offset + 3] & 0xFF));
+                addresses.add((bytes[offset] & 0xFF) + "."
+                        + (bytes[offset + 1] & 0xFF) + "."
+                        + (bytes[offset + 2] & 0xFF) + "."
+                        + (bytes[offset + 3] & 0xFF));
             }
             offset += dataLength;
         }
@@ -400,6 +427,36 @@ final class ResilientApiTransport {
         return ((bytes[offset] & 0xFF) << 8) | (bytes[offset + 1] & 0xFF);
     }
 
+    private static void validateRelativePath(String path) throws IOException {
+        if (path == null || !path.startsWith("/") || path.contains("\r")
+                || path.contains("\n") || path.contains(" ") || path.contains("://")) {
+            throw new IOException("请求路径无效");
+        }
+    }
+
+    private static String safeHeader(String value, String fallback) throws IOException {
+        String text = value == null ? fallback : value;
+        if (text.contains("\r") || text.contains("\n")) throw new IOException("请求头无效");
+        return text;
+    }
+
+    private static int timeout(long deadline, int maximum) throws SocketTimeoutException {
+        long remaining = remainingMillis(deadline);
+        if (remaining <= 0) throw new SocketTimeoutException("请求总超时");
+        return (int) Math.max(1L, Math.min(maximum, remaining));
+    }
+
+    private static long remainingMillis(long deadline) {
+        return (deadline - System.nanoTime()) / 1_000_000L;
+    }
+
+    private static void ensureTime(long deadline) throws SocketTimeoutException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new SocketTimeoutException("请求已取消");
+        }
+        if (remainingMillis(deadline) <= 0) throw new SocketTimeoutException("请求总超时");
+    }
+
     private static boolean isApiJson(String body) {
         if (body == null) return false;
         String trimmed = body.trim();
@@ -413,9 +470,7 @@ final class ResilientApiTransport {
 
     private static String nonJsonReason(Response response) {
         if ("challenge".equalsIgnoreCase(response.mitigated)) return "（Cloudflare 挑战）";
-        if (response.contentType != null && !response.contentType.isEmpty()) {
-            return "（" + response.contentType + "）";
-        }
+        if (!response.contentType.isEmpty()) return "（" + response.contentType + "）";
         return "（非授权接口响应）";
     }
 
@@ -429,9 +484,9 @@ final class ResilientApiTransport {
     private static String joinFailures(List<String> failures) {
         StringBuilder out = new StringBuilder();
         int start = Math.max(0, failures.size() - 4);
-        for (int i = start; i < failures.size(); i++) {
+        for (int index = start; index < failures.size(); index += 1) {
             if (out.length() > 0) out.append("；");
-            out.append(failures.get(i));
+            out.append(failures.get(index));
         }
         return out.toString();
     }

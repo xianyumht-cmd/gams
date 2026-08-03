@@ -1,27 +1,37 @@
 name: Deploy GG production runtime service
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - v2/runtime/src/**
-      - v2/runtime/wrangler.template.jsonc
-      - v2/runtime/release/**
+      - v2/runtime/**
+      - license-api/**
+      - scripts/v2-lifecycle-smoke.mjs
       - .github/workflows/v2-deploy-runtime.yml
-  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: production-runtime
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    environment: production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      LICENSE_ADMIN_PASSWORD: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      ADMIN_LOGIN_SECRET: ${{ secrets.ADMIN_LOGIN_SECRET || secrets.LICENSE_ADMIN_PASSWORD }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      LEGACY_RUNTIME_PASSWORD: ${{ secrets.LEGACY_RUNTIME_PASSWORD || secrets.LICENSE_ADMIN_PASSWORD }}
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      RUNTIME_ENDPOINT: https://gams-runtime-v2.2320006072.workers.dev
     steps:
       - uses: actions/checkout@v4
 
@@ -29,15 +39,31 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Validate deployment secrets
+      - name: Validate runtime secrets
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
-          test -n "${LICENSE_ADMIN_PASSWORD:-}"
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID ADMIN_LOGIN_SECRET TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY LEGACY_RUNTIME_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          test "${#TOKEN_SIGNING_SECRET}" -ge 32 || {
+            echo "TOKEN_SIGNING_SECRET must contain at least 32 characters"
+            exit 1
+          }
+          node --input-type=module - <<'NODE'
+          import { decodeRuntimeMasterKey } from "./v2/runtime/src/runtime-key.js";
+          const bytes = decodeRuntimeMasterKey(process.env.RUNTIME_MASTER_KEY);
+          bytes.fill(0);
+          NODE
 
-      - name: Locate shared license D1 database
+      - name: Validate runtime source
+        run: |
+          node --check v2/runtime/src/index.js
+          node --check v2/runtime/src/runtime-key.js
+          node --check scripts/v2-lifecycle-smoke.mjs
+          node tests/source-security.test.mjs
+
+      - name: Locate shared D1 database
         id: d1
         shell: bash
         run: |
@@ -56,30 +82,41 @@ jobs:
           sed "s/__D1_DATABASE_ID__/${{ steps.d1.outputs.database_id }}/g" \
             wrangler.template.jsonc > wrangler.generated.jsonc
 
-      - name: Configure runtime master secret
+      - name: Configure runtime secrets
         working-directory: v2/runtime
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' "$LICENSE_ADMIN_PASSWORD" \
-            | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.generated.jsonc
+          printf '%s' "$TOKEN_SIGNING_SECRET" \
+            | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc
+          printf '%s' "$RUNTIME_MASTER_KEY" \
+            | npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.generated.jsonc
+          printf '%s' "$LEGACY_RUNTIME_PASSWORD" \
+            | npx --yes wrangler@4 secret put LEGACY_RUNTIME_PASSWORD --config wrangler.generated.jsonc
 
       - name: Deploy production runtime Worker
         working-directory: v2/runtime
         run: npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
 
-      - name: Verify production runtime endpoint
+      - name: Wait for both production services
         shell: bash
         run: |
           set -euo pipefail
-          endpoint="https://gams-runtime-v2.2320006072.workers.dev"
-          for attempt in $(seq 1 24); do
-            status="$(curl --silent --show-error --output /tmp/runtime-health.json --write-out '%{http_code}' "$endpoint/health" || true)"
-            if [[ "$status" == "200" ]] && jq -e '.ok == true and .service == "gams-runtime-v2" and .encryptedRuntime == true' /tmp/runtime-health.json >/dev/null; then
-              echo "Production runtime is ready"
+          for attempt in $(seq 1 36); do
+            license_status="$(curl -sS -o /tmp/license-health.json -w '%{http_code}' "$LICENSE_ENDPOINT/health" || true)"
+            runtime_status="$(curl -sS -o /tmp/runtime-health.json -w '%{http_code}' "$RUNTIME_ENDPOINT/health" || true)"
+            if [[ "$license_status" == "200" && "$runtime_status" == "200" ]] \
+              && jq -e '.ok and .version == 2 and .signedProtocol == true' /tmp/license-health.json >/dev/null \
+              && jq -e '.ok and .version == 3 and .encryptedRuntime == true and .legacyReleaseCompatible == true' /tmp/runtime-health.json >/dev/null; then
               exit 0
             fi
             sleep 5
           done
+          cat /tmp/license-health.json 2>/dev/null || true
           cat /tmp/runtime-health.json 2>/dev/null || true
           exit 1
+
+      - name: Run signed V2 lifecycle acceptance
+        env:
+          ADMIN_LOGIN_SECRET: ${{ secrets.ADMIN_LOGIN_SECRET || secrets.LICENSE_ADMIN_PASSWORD }}
+        run: node scripts/v2-lifecycle-smoke.mjs

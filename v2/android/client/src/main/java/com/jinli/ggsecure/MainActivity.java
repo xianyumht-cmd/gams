@@ -18,8 +18,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
-import android.webkit.JsResult;
 import android.webkit.DownloadListener;
+import android.webkit.JsResult;
+import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -85,7 +86,7 @@ public final class MainActivity extends Activity {
 
     private void initializeV2(@Nullable Bundle savedInstanceState) {
         browserVisible = false;
-        releaseRuntime();
+        clearBrowserAndRuntime();
         showLoading("正在启动…");
         licenseManager.initializeSavedAsync(result -> {
             if (isFinishing() || isDestroyed()) {
@@ -105,7 +106,6 @@ public final class MainActivity extends Activity {
     }
 
     private void showLoading(String message) {
-        destroyWebView();
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER);
@@ -136,8 +136,7 @@ public final class MainActivity extends Activity {
 
     private void showLicenseScreen(String initialMessage) {
         browserVisible = false;
-        releaseRuntime();
-        destroyWebView();
+        clearBrowserAndRuntime();
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -223,6 +222,9 @@ public final class MainActivity extends Activity {
                 if (!result.valid || result.payload == null) {
                     status.setTextColor(Color.rgb(185, 28, 28));
                     status.setText(result.message);
+                    if (result.updateRequired) {
+                        showUpdateDialog(result.updateMessage, result.updateUrl, true);
+                    }
                     return;
                 }
                 showBrowser(null, result.payload);
@@ -233,14 +235,20 @@ public final class MainActivity extends Activity {
     }
 
     private void showBrowser(@Nullable Bundle savedInstanceState, RuntimePayload payload) {
-        releaseRuntime();
+        clearBrowserAndRuntime();
         runtimePayload = payload;
-        wrappedControlScript = wrapControlScript(payload.nonameSource());
+        String source = payload.takeNonameSource();
+        try {
+            wrappedControlScript = wrapControlScript(source);
+        } finally {
+            source = null;
+        }
         browserVisible = true;
         createBrowserUi();
         configureWebView();
-        if (savedInstanceState != null) webView.restoreState(savedInstanceState);
-        else webView.loadUrl(START_URL);
+        if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
+            webView.loadUrl(START_URL);
+        }
     }
 
     private void createBrowserUi() {
@@ -293,8 +301,12 @@ public final class MainActivity extends Activity {
             if (webView != null && webView.canGoBack()) webView.goBack();
             else finish();
         });
-        home.setOnClickListener(v -> webView.loadUrl(START_URL));
-        refresh.setOnClickListener(v -> webView.reload());
+        home.setOnClickListener(v -> {
+            if (webView != null) webView.loadUrl(START_URL);
+        });
+        refresh.setOnClickListener(v -> {
+            if (webView != null) webView.reload();
+        });
         reset.setOnClickListener(v -> resetWebData());
         service.setOnClickListener(v -> showServiceDialog());
     }
@@ -312,63 +324,54 @@ public final class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(true);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
 
         webView.clearCache(true);
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
-        cookies.setAcceptThirdPartyCookies(webView, true);
+        cookies.setAcceptThirdPartyCookies(webView, false);
 
         installDocumentStartScript();
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                statusText.setText("加载中…");
-                progressBar.setVisibility(View.VISIBLE);
-                if (!nativeDocumentStartEnabled && isTargetPage(url)) {
-                    view.evaluateJavascript(wrappedControlScript, null);
-                }
+                if (statusText != null) statusText.setText("加载中…");
+                if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+                injectFallbackScript(view, url);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                statusText.setText("已就绪");
+                if (statusText != null) statusText.setText("已就绪");
                 CookieManager.getInstance().flush();
-                if (!nativeDocumentStartEnabled && isTargetPage(url)) {
-                    view.evaluateJavascript(wrappedControlScript, null);
-                }
+                injectFallbackScript(view, url);
             }
 
             @Override
             public WebResourceResponse shouldInterceptRequest(
                     WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
-                if (isEngineRequest(url)) return memoryGameResponse();
-                if (isForbiddenCoreRequest(url)) {
-                    return new WebResourceResponse(
-                            "text/plain", "UTF-8", 403, "Blocked",
-                            java.util.Collections.singletonMap("Cache-Control", "no-store"),
-                            new ByteArrayInputStream(new byte[0]));
-                }
+                Uri uri = request.getUrl();
+                if (isOfficialEngineRequest(uri)) return emptyOfficialEngineResponse();
+                if (isEngineRequest(uri)) return memoryGameResponse();
+                if (isForbiddenCoreRequest(uri)) return blockedResponse();
                 return super.shouldInterceptRequest(view, request);
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                String scheme = uri.getScheme();
-                if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) return false;
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                } catch (Exception ignored) {
-                    Toast.makeText(MainActivity.this, "无法打开此链接", Toast.LENGTH_SHORT).show();
+                if (isTrustedWebUri(uri)) return false;
+                if (request.isForMainFrame() && isHttps(uri)) {
+                    openExternalHttps(uri);
+                } else {
+                    Toast.makeText(MainActivity.this, "已阻止不受信任的链接", Toast.LENGTH_SHORT)
+                            .show();
                 }
                 return true;
             }
@@ -376,7 +379,9 @@ public final class MainActivity extends Activity {
             @Override
             public void onReceivedError(
                     WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) statusText.setText("页面加载失败");
+                if (request.isForMainFrame() && statusText != null) {
+                    statusText.setText("页面加载失败");
+                }
             }
         });
 
@@ -397,6 +402,7 @@ public final class MainActivity extends Activity {
 
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
+                if (progressBar == null) return;
                 progressBar.setProgress(newProgress);
                 progressBar.setVisibility(newProgress >= 100 ? View.GONE : View.VISIBLE);
             }
@@ -407,13 +413,15 @@ public final class MainActivity extends Activity {
                     ValueCallback<Uri[]> filePathCallback,
                     FileChooserParams fileChooserParams
             ) {
-                if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
+                cancelFileChooser();
                 fileChooserCallback = filePathCallback;
                 try {
                     startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST);
                     return true;
                 } catch (Exception error) {
-                    fileChooserCallback = null;
+                    cancelFileChooser();
+                    Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT)
+                            .show();
                     return false;
                 }
             }
@@ -424,12 +432,20 @@ public final class MainActivity extends Activity {
     private void installDocumentStartScript() {
         nativeDocumentStartEnabled =
                 WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
-        if (!nativeDocumentStartEnabled) return;
+        if (!nativeDocumentStartEnabled || wrappedControlScript == null) return;
         try {
             scriptHandler = WebViewCompat.addDocumentStartJavaScript(
                     webView, wrappedControlScript, SCRIPT_ORIGINS);
+            // The WebView implementation owns its copy after registration.
+            wrappedControlScript = null;
         } catch (Throwable error) {
             nativeDocumentStartEnabled = false;
+        }
+    }
+
+    private void injectFallbackScript(WebView view, String url) {
+        if (!nativeDocumentStartEnabled && wrappedControlScript != null && isTargetPage(url)) {
+            view.evaluateJavascript(wrappedControlScript, null);
         }
     }
 
@@ -445,7 +461,6 @@ public final class MainActivity extends Activity {
         headers.put("Cache-Control", "no-store, no-cache, max-age=0");
         headers.put("Pragma", "no-cache");
         headers.put("X-Content-Type-Options", "nosniff");
-        headers.put("Access-Control-Allow-Origin", "*");
         headers.put("Content-Length", String.valueOf(payload.gameSize()));
         return new WebResourceResponse(
                 "application/javascript", "UTF-8", 200, "OK",
@@ -465,44 +480,92 @@ public final class MainActivity extends Activity {
                 headers, new ByteArrayInputStream(body));
     }
 
-    private boolean isOfficialEngineRequest(String url) {
-        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
-        return lower.contains("c2.cgyouxi.com/website/hfplayer/")
-                && lower.contains("/bin/official/game.js");
+    private WebResourceResponse blockedResponse() {
+        return new WebResourceResponse(
+                "text/plain", "UTF-8", 403, "Blocked",
+                java.util.Collections.singletonMap("Cache-Control", "no-store"),
+                new ByteArrayInputStream(new byte[0]));
     }
 
-    private boolean isEngineRequest(String url) {
-        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
-        return lower.equals(RuntimeNames.virtualGameUrl().toLowerCase(Locale.ROOT))
-                || lower.contains("gams-script-edge.2320006072.workers.dev/engine/stable.js")
-                || lower.contains("space-z.ai/game.js");
+    private boolean isOfficialEngineRequest(Uri uri) {
+        if (!isHttps(uri) || !"c2.cgyouxi.com".equalsIgnoreCase(uri.getHost())) return false;
+        String path = normalizedPath(uri);
+        return path.startsWith("/website/hfplayer/")
+                && path.endsWith("/bin/official/game.js")
+                && !path.contains("/../");
     }
 
-    private boolean isForbiddenCoreRequest(String url) {
-        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
-        return lower.contains("raw.githubusercontent.com/xianyumht-cmd/gams")
-                && (lower.contains("/remote-script/") || lower.contains("/game-engine/"));
+    private boolean isEngineRequest(Uri uri) {
+        if (!isHttps(uri)) return false;
+        String host = safeLower(uri.getHost());
+        String path = normalizedPath(uri);
+        return ("ggv2.local".equals(host) && "/runtime/game.js".equals(path))
+                || ("gams-script-edge.2320006072.workers.dev".equals(host)
+                    && "/engine/stable.js".equals(path))
+                || ("space-z.ai".equals(host) && "/game.js".equals(path));
+    }
+
+    private boolean isForbiddenCoreRequest(Uri uri) {
+        if (!isHttps(uri) || !"raw.githubusercontent.com".equalsIgnoreCase(uri.getHost())) {
+            return false;
+        }
+        String path = normalizedPath(uri);
+        return path.startsWith("/xianyumht-cmd/gams/")
+                && (path.contains("/remote-script/") || path.contains("/game-engine/"));
     }
 
     private boolean isTargetPage(String url) {
-        if (url == null) return false;
         try {
-            String host = Uri.parse(url).getHost();
-            return "m.66rpg.com".equalsIgnoreCase(host)
-                    || "www.66rpg.com".equalsIgnoreCase(host);
+            return isTrustedWebUri(Uri.parse(url));
         } catch (Exception error) {
             return false;
         }
     }
 
+    private boolean isTrustedWebUri(Uri uri) {
+        if (!isHttps(uri) || uri.getUserInfo() != null || !isDefaultHttpsPort(uri)) return false;
+        String host = safeLower(uri.getHost());
+        return "m.66rpg.com".equals(host) || "www.66rpg.com".equals(host);
+    }
+
+    private boolean isTrustedDownloadUri(Uri uri) {
+        if (!isHttps(uri) || uri.getUserInfo() != null || !isDefaultHttpsPort(uri)) return false;
+        String host = safeLower(uri.getHost());
+        return "c2.cgyouxi.com".equals(host)
+                || "m.66rpg.com".equals(host)
+                || "www.66rpg.com".equals(host)
+                || host.endsWith(".66rpg.com");
+    }
+
+    private boolean isHttps(Uri uri) {
+        return uri != null && "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null;
+    }
+
+    private boolean isDefaultHttpsPort(Uri uri) {
+        return uri.getPort() == -1 || uri.getPort() == 443;
+    }
+
+    private String normalizedPath(Uri uri) {
+        String path = uri == null ? null : uri.getEncodedPath();
+        return path == null || path.isEmpty() ? "/" : path.toLowerCase(Locale.ROOT);
+    }
+
+    private String safeLower(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
+    }
+
     private String wrapControlScript(String source) {
-        return "(function(){" +
-                "if(window.__GG_V2_CONTROL_LOADED__)return;" +
-                "window.__GG_V2_CONTROL_LOADED__=true;" +
-                "try{\n" + source + "\n}catch(e){" +
-                "window.__GG_V2_CONTROL_LOADED__=false;" +
-                "console.error('[GG]',e);}" +
-                "})();";
+        StringBuilder output = new StringBuilder(source.length() + 180);
+        output.append("(function(){")
+                .append("if(window.__GG_V2_CONTROL_LOADED__)return;")
+                .append("window.__GG_V2_CONTROL_LOADED__=true;")
+                .append("try{\n")
+                .append(source)
+                .append("\n}catch(e){")
+                .append("window.__GG_V2_CONTROL_LOADED__=false;")
+                .append("console.error('[GG]',e);}")
+                .append("})();");
+        return output.toString();
     }
 
     private boolean isSuppressedEngineReadyAlert(String message) {
@@ -513,24 +576,82 @@ public final class MainActivity extends Activity {
 
     private DownloadListener createDownloadListener() {
         return (url, userAgent, contentDisposition, mimeType, contentLength) -> {
+            Uri uri;
             try {
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-                request.setMimeType(mimeType);
-                request.addRequestHeader("User-Agent", userAgent);
-                String cookie = CookieManager.getInstance().getCookie(url);
-                if (cookie != null) request.addRequestHeader("Cookie", cookie);
-                request.setNotificationVisibility(
-                        DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalFilesDir(
-                        this,
-                        Environment.DIRECTORY_DOWNLOADS,
-                        "download_" + System.currentTimeMillis());
-                ((DownloadManager) getSystemService(DOWNLOAD_SERVICE)).enqueue(request);
-                Toast.makeText(this, "已开始下载", Toast.LENGTH_SHORT).show();
+                uri = Uri.parse(url);
             } catch (Exception error) {
-                Toast.makeText(this, "下载失败", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "下载地址无效", Toast.LENGTH_SHORT).show();
+                return;
             }
+            if (!isTrustedDownloadUri(uri)) {
+                Toast.makeText(this, "已阻止不受信任来源的下载", Toast.LENGTH_LONG).show();
+                return;
+            }
+            String guessed = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            String fileName = sanitizeFileName(guessed);
+            String detail = "来源：" + uri.getHost() + "\n文件：" + fileName;
+            if (contentLength > 0) detail += "\n大小：" + humanSize(contentLength);
+            new AlertDialog.Builder(this)
+                    .setTitle("确认下载")
+                    .setMessage(detail)
+                    .setNegativeButton("取消", null)
+                    .setPositiveButton("下载", (dialog, which) -> enqueueDownload(
+                            uri, userAgent, mimeType, fileName))
+                    .show();
         };
+    }
+
+    private void enqueueDownload(Uri uri, String userAgent, String mimeType, String fileName) {
+        try {
+            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (manager == null) throw new IllegalStateException("下载服务不可用");
+            DownloadManager.Request request = new DownloadManager.Request(uri);
+            if (mimeType != null && !mimeType.trim().isEmpty()) request.setMimeType(mimeType);
+            if (userAgent != null && !userAgent.trim().isEmpty()) {
+                request.addRequestHeader("User-Agent", userAgent);
+            }
+            String cookie = CookieManager.getInstance().getCookie(uri.toString());
+            if (cookie != null && !cookie.isEmpty()) request.addRequestHeader("Cookie", cookie);
+            request.setTitle(fileName);
+            request.setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalFilesDir(
+                    this, Environment.DIRECTORY_DOWNLOADS, fileName);
+            manager.enqueue(request);
+            Toast.makeText(this, "已开始下载", Toast.LENGTH_SHORT).show();
+        } catch (Exception error) {
+            Toast.makeText(this, "下载失败", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String sanitizeFileName(String value) {
+        String cleaned = value == null ? "download" : value
+                .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_")
+                .trim();
+        if (cleaned.isEmpty() || ".".equals(cleaned) || "..".equals(cleaned)) {
+            cleaned = "download";
+        }
+        return cleaned.length() > 120 ? cleaned.substring(cleaned.length() - 120) : cleaned;
+    }
+
+    private String humanSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024L * 1024L) return String.format(Locale.ROOT, "%.1f KB", bytes / 1024.0);
+        return String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0));
+    }
+
+    private void openExternalHttps(Uri uri) {
+        if (!isHttps(uri)) {
+            Toast.makeText(this, "已阻止不安全链接", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+            startActivity(intent);
+        } catch (Exception error) {
+            Toast.makeText(this, "无法打开此链接", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void resetWebData() {
@@ -548,7 +669,9 @@ public final class MainActivity extends Activity {
                         WebStorage.getInstance().deleteAllData();
                         webView.evaluateJavascript(
                                 "try{localStorage.clear();sessionStorage.clear();}catch(e){}",
-                                ignored -> webView.loadUrl(START_URL));
+                                ignored -> {
+                                    if (webView != null) webView.loadUrl(START_URL);
+                                });
                     });
                 })
                 .show();
@@ -573,6 +696,8 @@ public final class MainActivity extends Activity {
                                 .setNegativeButton("取消", null)
                                 .setPositiveButton("确认", (confirm, which) -> {
                                     dialog.dismiss();
+                                    browserVisible = false;
+                                    clearBrowserAndRuntime();
                                     showLoading("正在解除设备绑定…");
                                     licenseManager.selfUnbindAsync(result -> {
                                         Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
@@ -590,16 +715,23 @@ public final class MainActivity extends Activity {
                 .setMessage(message == null || message.trim().isEmpty()
                         ? "发现新版本" : message)
                 .setNegativeButton(required ? "关闭" : "稍后", null);
-        if (url != null && !url.trim().isEmpty()) {
-            builder.setPositiveButton("下载更新", (dialog, which) -> {
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                } catch (Exception error) {
-                    Toast.makeText(this, "无法打开更新地址", Toast.LENGTH_SHORT).show();
-                }
-            });
+        Uri updateUri = safeHttpsUri(url);
+        if (updateUri != null) {
+            builder.setPositiveButton("下载更新", (dialog, which) -> openExternalHttps(updateUri));
         }
         builder.show();
+    }
+
+    @Nullable
+    private Uri safeHttpsUri(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        try {
+            Uri uri = Uri.parse(value.trim());
+            return isHttps(uri) && uri.getUserInfo() == null && isDefaultHttpsPort(uri)
+                    ? uri : null;
+        } catch (Exception error) {
+            return null;
+        }
     }
 
     private Button actionButton(String text, boolean primary) {
@@ -661,7 +793,7 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onStop() {
-        backgroundAtMs = System.currentTimeMillis();
+        if (browserVisible) backgroundAtMs = System.currentTimeMillis();
         super.onStop();
     }
 
@@ -675,22 +807,38 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void cancelFileChooser() {
+        if (fileChooserCallback != null) {
+            try {
+                fileChooserCallback.onReceiveValue(null);
+            } catch (Throwable ignored) { }
+            fileChooserCallback = null;
+        }
+    }
+
     private void destroyWebView() {
+        cancelFileChooser();
         if (scriptHandler != null) {
             try {
                 scriptHandler.remove();
             } catch (Throwable ignored) { }
             scriptHandler = null;
         }
+        nativeDocumentStartEnabled = false;
         if (webView != null) {
             webView.stopLoading();
-            webView.clearCache(true);
+            webView.setDownloadListener(null);
             webView.setWebChromeClient(null);
             webView.setWebViewClient(null);
+            webView.loadUrl("about:blank");
+            webView.clearHistory();
+            webView.clearCache(true);
             webView.removeAllViews();
             webView.destroy();
             webView = null;
         }
+        progressBar = null;
+        statusText = null;
     }
 
     private void releaseRuntime() {
@@ -701,11 +849,16 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void clearBrowserAndRuntime() {
+        // Stop all WebView readers before wiping the shared runtime buffers.
+        destroyWebView();
+        releaseRuntime();
+    }
+
     @Override
     protected void onDestroy() {
         browserVisible = false;
-        destroyWebView();
-        releaseRuntime();
+        clearBrowserAndRuntime();
         if (licenseManager != null) {
             licenseManager.shutdown();
             licenseManager = null;

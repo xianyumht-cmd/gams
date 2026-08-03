@@ -6,8 +6,11 @@
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": true },
-  "build": {
-    "command": "cat ../hardening_backend_parts/part* > src/index.js && python3 control_center_patch.py && python3 client_config_patch.py && python3 release_baseline_patch.py"
+  "vars": {
+    "LATEST_APP_VERSION": "11",
+    "FORCE_UPDATE": "false",
+    "UPDATE_URL": "",
+    "UPDATE_MESSAGE": ""
   },
   "routes": [
     {
