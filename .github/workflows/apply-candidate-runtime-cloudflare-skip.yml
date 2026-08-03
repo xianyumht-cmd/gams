@@ -1,0 +1,176 @@
+name: Allow isolated candidate runtime through Cloudflare security
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-candidate-runtime-cloudflare-skip.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CANDIDATE_HOST: runtime-candidate.xn--8pv109c.top
+      CANDIDATE_WORKER_HOST: gams-runtime-v2-script-candidate.2320006072.workers.dev
+      RULE_REF: gams_candidate_runtime_skip_20260804
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upsert hostname-scoped Cloudflare skip rule
+        id: rule
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json')
+
+          zones_file=/tmp/zones.json
+          zones_code="$(curl -sS -o "$zones_file" -w '%{http_code}' "${auth[@]}" \
+            "${api}/zones?name=xn--8pv109c.top&status=active")"
+          test "$zones_code" = 200
+          jq -e '.success == true and (.result | length) == 1' "$zones_file" >/dev/null
+          zone_id="$(jq -r '.result[0].id' "$zones_file")"
+          test -n "$zone_id" && test "$zone_id" != null
+
+          entry_file=/tmp/entry.json
+          entry_code="$(curl -sS -o "$entry_file" -w '%{http_code}' "${auth[@]}" \
+            "${api}/zones/${zone_id}/rulesets/phases/http_request_firewall_custom/entrypoint")"
+
+          jq -n \
+            --arg ref "$RULE_REF" \
+            --arg host "$CANDIDATE_HOST" \
+            '{action:"skip",action_parameters:{ruleset:"current",phases:["http_ratelimit","http_request_sbfm","http_request_firewall_managed"],products:["bic","hot","rateLimit","securityLevel","uaBlock","waf","zoneLockdown"]},expression:("(http.host eq \""+$host+"\")"),description:"GAMS isolated candidate runtime API bypass",ref:$ref,enabled:true,logging:{enabled:true}}' \
+            > /tmp/rule.json
+
+          operation=''
+          ruleset_id=''
+          rule_id=''
+          response_file=/tmp/rule-response.json
+          response_code=''
+
+          if [[ "$entry_code" == 200 ]] && jq -e '.success == true and .result.id' "$entry_file" >/dev/null; then
+            ruleset_id="$(jq -r '.result.id' "$entry_file")"
+            rule_id="$(jq -r --arg ref "$RULE_REF" '.result.rules[]? | select(.ref == $ref) | .id' "$entry_file" | head -n1)"
+            if [[ -n "$rule_id" ]]; then
+              operation='update'
+              response_code="$(curl -sS -o "$response_file" -w '%{http_code}' -X PATCH "${auth[@]}" \
+                --data-binary @/tmp/rule.json \
+                "${api}/zones/${zone_id}/rulesets/${ruleset_id}/rules/${rule_id}")"
+            else
+              operation='add'
+              jq '. + {position:{index:1}}' /tmp/rule.json > /tmp/rule-add.json
+              response_code="$(curl -sS -o "$response_file" -w '%{http_code}' -X POST "${auth[@]}" \
+                --data-binary @/tmp/rule-add.json \
+                "${api}/zones/${zone_id}/rulesets/${ruleset_id}/rules")"
+            fi
+          elif [[ "$entry_code" == 404 ]]; then
+            operation='create-ruleset'
+            jq -n --slurpfile rule /tmp/rule.json \
+              '{name:"GAMS isolated candidate runtime exceptions",description:"Hostname-scoped exception for isolated candidate runtime testing",kind:"zone",phase:"http_request_firewall_custom",rules:$rule}' \
+              > /tmp/ruleset.json
+            response_code="$(curl -sS -o "$response_file" -w '%{http_code}' -X POST "${auth[@]}" \
+              --data-binary @/tmp/ruleset.json \
+              "${api}/zones/${zone_id}/rulesets")"
+          else
+            cp "$entry_file" "$response_file"
+            response_code="$entry_code"
+            operation='entrypoint-failed'
+          fi
+
+          success=false
+          if [[ "$response_code" =~ ^20[0-9]$ ]] && jq -e '.success == true' "$response_file" >/dev/null; then
+            success=true
+          fi
+
+          jq -n \
+            --arg operation "$operation" \
+            --arg entryCode "$entry_code" \
+            --arg responseCode "$response_code" \
+            --arg zoneId "$zone_id" \
+            --arg rulesetId "$ruleset_id" \
+            --arg ruleId "$rule_id" \
+            --argjson success "$success" \
+            --arg errors "$(jq -c '.errors // []' "$response_file" 2>/dev/null || printf '[]')" \
+            '{operation:$operation,entryCode:$entryCode,responseCode:$responseCode,zoneId:$zoneId,rulesetId:$rulesetId,ruleId:$ruleId,success:$success,errors:$errors}' \
+            > /tmp/rule-status.json
+
+          test "$success" = true
+
+      - name: Verify candidate endpoints after rule propagation
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          custom_ok=false
+          worker_ok=false
+          custom_code='000'
+          worker_code='000'
+          custom_body=''
+          worker_body=''
+          for attempt in $(seq 1 48); do
+            custom_body="$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/custom-body -w '%{http_code}' \
+              "https://${CANDIDATE_HOST}/health?rule_probe=${attempt}" 2>/tmp/custom-error || true)"
+            custom_code="$custom_body"
+            custom_text="$(cat /tmp/custom-body 2>/dev/null || true)"
+            worker_code="$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/worker-body -w '%{http_code}' \
+              "https://${CANDIDATE_WORKER_HOST}/health?rule_probe=${attempt}" 2>/tmp/worker-error || true)"
+            worker_text="$(cat /tmp/worker-body 2>/dev/null || true)"
+            if [[ "$custom_code" == 200 ]] && printf '%s' "$custom_text" | jq -e '.ok == true and .encryptedRuntime == true' >/dev/null 2>&1; then custom_ok=true; fi
+            if [[ "$worker_code" == 200 ]] && printf '%s' "$worker_text" | jq -e '.ok == true and .encryptedRuntime == true' >/dev/null 2>&1; then worker_ok=true; fi
+            if [[ "$custom_ok" == true && "$worker_ok" == true ]]; then break; fi
+            sleep 5
+          done
+
+          jq -n \
+            --argjson customOk "$custom_ok" \
+            --arg customCode "$custom_code" \
+            --arg customBody "$(tr '\r\n' '  ' </tmp/custom-body 2>/dev/null | head -c 500 || true)" \
+            --arg customError "$(tr '\r\n' '  ' </tmp/custom-error 2>/dev/null | head -c 500 || true)" \
+            --argjson workerOk "$worker_ok" \
+            --arg workerCode "$worker_code" \
+            --arg workerBody "$(tr '\r\n' '  ' </tmp/worker-body 2>/dev/null | head -c 500 || true)" \
+            --arg workerError "$(tr '\r\n' '  ' </tmp/worker-error 2>/dev/null | head -c 500 || true)" \
+            '{custom:{ok:$customOk,httpCode:$customCode,body:$customBody,error:$customError},worker:{ok:$workerOk,httpCode:$workerCode,body:$workerBody,error:$workerError}}' \
+            > /tmp/probe-status.json
+
+          test "$custom_ok" = true
+          test "$worker_ok" = true
+
+      - name: Record rule and probe result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s /tmp/rule-status.json || echo '{"success":false,"operation":"not-run"}' > /tmp/rule-status.json
+          test -s /tmp/probe-status.json || echo '{"custom":{"ok":false},"worker":{"ok":false}}' > /tmp/probe-status.json
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --slurpfile rule /tmp/rule-status.json \
+            --slurpfile probe /tmp/probe-status.json \
+            --arg ruleOutcome "${{ steps.rule.outcome }}" \
+            --arg probeOutcome "${{ steps.probe.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,ok:($ruleOutcome=="success" and $probeOutcome=="success"),rule:$rule[0],probe:$probe[0],steps:{rule:$ruleOutcome,probe:$probeOutcome},scope:{hostname:"runtime-candidate.xn--8pv109c.top",productionHostChanged:false},secretsExposed:false}' \
+            > /tmp/status.json
+          content="$(base64 -w0 /tmp/status.json)"
+          path='docs/SCRIPT_REPEAT_CANDIDATE_CLOUDFLARE_SKIP_STATUS.json'
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" -f message='Record candidate Cloudflare skip result' -f content="$content" -f branch=main)
+          [[ -z "$old_sha" ]] || args+=(-f sha="$old_sha")
+          gh api "${args[@]}" >/dev/null
+
+      - name: Require successful hostname bypass
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.rule.outcome }}" = success
+          test "${{ steps.probe.outcome }}" = success
