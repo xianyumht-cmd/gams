@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - .hotfix-main-trigger.txt
+      - .github/workflows/prepare-hotfix-branch-from-main.yml
 
 permissions:
   contents: write
