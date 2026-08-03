@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "candidateBranch": "candidate-script-repeat-20260804",
+  "runtimeVersion": "2.0.5-script-repeat-c1",
+  "bundle": {
+    "size": 3905567,
+    "sha256": "b232ae9e25b3c4d1b4684f8d74967e07f62d48de227a9ccd901cee355052e3f5"
+  },
+  "decrypted": {
+    "entryNames": [
+      "noname.js",
+      "game.js"
+    ],
+    "noname": {
+      "size": 332879,
+      "sha256": "af85d0eef85b9b3720c7afb36098c86c5dfb03f7433eb1f2d3974be002947d63",
+      "expectedSize": 332879,
+      "expectedSha256": "af85d0eef85b9b3720c7afb36098c86c5dfb03f7433eb1f2d3974be002947d63"
+    },
+    "game": {
+      "size": 11590534,
+      "sha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+      "expectedSize": 11590534,
+      "expectedSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112"
+    }
+  },
+  "preEncryptionTransform": {
+    "fixedAddressReplacementCounts": {
+      "https://gams-script-edge.2320006072.workers.dev/engine/stable.js": 2,
+      "https://preview-chat-1b176371-f9ab-4760-b15c-b9d70ed59d23.space-z.ai/game.js": 0
+    },
+    "sourceNonameSize": 332939,
+    "sourceNonameSha256": "dc88cd755e03a7307c6ea49e4b265f69be6165cc4bac516f06cbe81c8bd16567",
+    "transformedNonameSize": 332879,
+    "transformedNonameSha256": "af85d0eef85b9b3720c7afb36098c86c5dfb03f7433eb1f2d3974be002947d63"
+  },
+  "checks": {
+    "bundleSizeMatchesManifest": true,
+    "bundleSha256MatchesManifest": true,
+    "zipEntryOrderExact": true,
+    "zipCrcValid": true,
+    "nonameBytesExact": true,
+    "gameBytesExact": true,
+    "nonameSizeMatchesManifest": true,
+    "nonameSha256MatchesManifest": true,
+    "gameSizeMatchesManifest": true,
+    "gameSha256MatchesManifest": true,
+    "nonameUtf8RoundTripExact": true,
+    "publishedManifestVersionExact": true,
+    "publishedBundleBytesExact": true,
+    "publishedBundleSha256Matches": true
+  },
+  "ok": true,
+  "secretsExposed": false
+}
