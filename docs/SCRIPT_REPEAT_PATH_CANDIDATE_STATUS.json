@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T21:24:47Z",
+  "runId": 30854467017,
+  "ok": false,
+  "apk": {
+    "versionName": "2.0.9-script-candidate",
+    "versionCode": 19,
+    "sha256": ""
+  },
+  "routing": {
+    "route": "runtime.xn--8pv109c.top/gams-candidate-20260804/*",
+    "prefix": "/gams-candidate-20260804",
+    "probe": {
+      "primary": {
+        "ok": false
+      },
+      "fallback": {
+        "ok": false
+      }
+    }
+  },
+  "isolation": {
+    "androidMainActivityChanged": false,
+    "scriptChangedFromPreviousCandidate": false,
+    "gameChanged": false,
+    "productionDefaultPathsChanged": false
+  },
+  "steps": {
+    "verify": "success",
+    "route": "failure",
+    "probe": "skipped",
+    "clientPatch": "skipped",
+    "apk": "skipped",
+    "artifact": "skipped"
+  },
+  "secretsExposed": false
+}
