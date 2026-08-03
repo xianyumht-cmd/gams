@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T14:03:52Z",
+  "triggerCommit": "1d59e3495117d1f0e7e16427b06e8b114d6087b9",
+  "zone": {
+    "name": "xn--8pv109c.top",
+    "id": "59aaeb74f3688b7cdd3c6231065f6c6e",
+    "found": true
+  },
+  "configurationRule": {
+    "ref": "gams_api_no_interactive_challenge",
+    "updated": false,
+    "httpStatus": "403",
+    "errors": [
+      {
+        "code": 10000,
+        "message": "Authentication error"
+      }
+    ]
+  },
+  "license": {
+    "httpStatus": "403",
+    "cfMitigated": "challenge",
+    "healthy": false
+  },
+  "runtime": {
+    "httpStatus": "403",
+    "cfMitigated": "challenge",
+    "healthy": false
+  },
+  "secretsExposed": false
+}
