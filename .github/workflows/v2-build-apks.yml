@@ -1,4 +1,4 @@
-name: Hold after corrected production release trigger
+name: Finalize GG 2.0.5 validation and release
 
 on:
   push:
@@ -8,10 +8,186 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: finalize-gg-2.0.5
+  cancel-in-progress: false
 
 jobs:
-  hold:
+  finalize:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      RUNTIME_ENDPOINT: https://gams-runtime-v2.2320006072.workers.dev
+      ADMIN_LOGIN_SECRET: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      GH_TOKEN: ${{ github.token }}
+
     steps:
-      - run: echo 'Corrected production release was triggered by this workflow update.'
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate released source contracts
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ADMIN_LOGIN_SECRET RUNTIME_MASTER_KEY GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          grep -Fq '// @version      1.1.4' remote-script/src/noname.js
+          grep -Fq '__ggOneShotCallback' remote-script/src/noname.js
+          grep -Fq '__ggOriginalCallback' remote-script/src/noname.js
+          grep -Fq 'ensureControlScriptInjected(view, url)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'popup.getSettings().setJavaScriptEnabled(true)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'versionCode = 14' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.5"' v2/android/client/build.gradle.kts
+          grep -Fq 'PROTOCOL_APP_VERSION = 14' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          jq -e '.versionName == "1.1.4" and .version == 10104' remote-script/release/manifest.json >/dev/null
+          jq -e '.versionName == "2.0.5" and .file == "bundle-2.0.5.bin"' v2/runtime/release/manifest.json >/dev/null
+          test -s remote-script/release/noname-1.1.4.js
+          test -s v2/runtime/release/bundle-2.0.5.bin
+          node --check remote-script/src/noname.js
+
+      - name: Verify production health and lifecycle
+        id: lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            license_status="$(curl -sS -o /tmp/license-health.json -w '%{http_code}' "$LICENSE_ENDPOINT/health" || true)"
+            runtime_status="$(curl -sS -o /tmp/runtime-health.json -w '%{http_code}' "$RUNTIME_ENDPOINT/health" || true)"
+            if [[ "$license_status" == 200 && "$runtime_status" == 200 ]] \
+              && jq -e '.ok == true and .version == 2' /tmp/license-health.json >/dev/null \
+              && jq -e '.ok == true and .version == 3 and .encryptedRuntime == true' /tmp/runtime-health.json >/dev/null; then
+              break
+            fi
+            sleep 5
+          done
+          jq -e '.ok == true and .version == 2' /tmp/license-health.json >/dev/null
+          jq -e '.ok == true and .version == 3 and .encryptedRuntime == true' /tmp/runtime-health.json >/dev/null
+          node scripts/v2-lifecycle-smoke.mjs
+
+      - name: Build and lint client 2.0.5
+        id: build
+        working-directory: v2/android
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :client:clean :client:lintRelease :client:assembleRelease
+
+      - name: Sign and verify formal APK
+        id: sign
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool.txt
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+          mkdir -p /tmp/gg-2.0.5
+          signed=/tmp/gg-2.0.5/GG-2.0.5-code14.apk
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+            --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --min-sdk-version 24 "$signed"
+          "$aapt" dump badging "$signed" > /tmp/badging.txt
+          grep -Fq "package: name='com.jinli.quickweb'" /tmp/badging.txt
+          grep -Fq "versionCode='14'" /tmp/badging.txt
+          grep -Fq "versionName='2.0.5'" /tmp/badging.txt
+          sha256sum "$signed" | awk '{print $1}' > /tmp/client-sha256.txt
+
+      - name: Publish GitHub release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(cat /tmp/client-sha256.txt)"
+          cat > /tmp/release-notes.txt <<EOF
+          GG 2.0.5
+
+          - 修复目标页面偶发白屏。
+          - 修复脚本加载失败后的自动补载。
+          - 修复第二次购买被上一次回调状态干扰。
+          - APK SHA-256：${sha}
+          - 签名证书 SHA-256：${CERT_SHA256}
+          EOF
+          gh release delete gg-2.0.5 --yes 2>/dev/null || true
+          gh release create gg-2.0.5 /tmp/gg-2.0.5/GG-2.0.5-code14.apk \
+            --target main --title 'GG 2.0.5' --notes-file /tmp/release-notes.txt
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: GG-2.0.5-code14
+          path: /tmp/gg-2.0.5/GG-2.0.5-code14.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record final status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.validate.outcome }}" == success \
+             && "${{ steps.lifecycle.outcome }}" == success \
+             && "${{ steps.build.outcome }}" == success \
+             && "${{ steps.sign.outcome }}" == success \
+             && "${{ steps.release.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success ]]; then ok=true; fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" \
+            --arg sha "$(cat /tmp/client-sha256.txt 2>/dev/null || true)" \
+            --arg validate "${{ steps.validate.outcome }}" \
+            --arg lifecycle "${{ steps.lifecycle.outcome }}" \
+            --arg build "${{ steps.build.outcome }}" \
+            --arg sign "${{ steps.sign.outcome }}" \
+            --arg release "${{ steps.release.outcome }}" \
+            --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:3,generatedAt:$generatedAt,runId:$runId,ok:$ok,client:{versionName:"2.0.5",versionCode:14,sha256:$sha},script:{versionName:"1.1.4"},runtime:{versionName:"2.0.5",deployed:true},fixes:{blankPage:true,injectionRetry:true,oneShotCallbackRestored:true},steps:{validate:$validate,lifecycle:$lifecycle,androidBuild:$build,apkSign:$sign,githubRelease:$release,artifact:$artifact},secretsExposed:false}' > /tmp/status.json
+          path=docs/WHITE_SCREEN_AND_REPEAT_ACTION_FIX_STATUS.json
+          content="$(base64 -w0 /tmp/status.json)"
+          old_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha')"
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+            -f message='Finalize white-screen and repeat-action release status' \
+            -f content="$content" -f sha="$old_sha" -f branch=main >/dev/null
+
+      - name: Require complete release
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.validate.outcome }}" = success
+          test "${{ steps.lifecycle.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
+          test "${{ steps.sign.outcome }}" = success
+          test "${{ steps.release.outcome }}" = success
+          test "${{ steps.artifact.outcome }}" = success
