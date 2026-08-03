@@ -49,3 +49,5 @@ jobs:
           git commit -m "Accept v2 v3 APK signing for API 24"
           git pull --rebase origin main
           git push origin HEAD:main
+
+# retrigger: 2026-08-03T23:16:00+08:00
