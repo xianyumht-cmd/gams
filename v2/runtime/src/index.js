@@ -10,6 +10,10 @@ const CANDIDATE_APP_VERSION = 19;
 const CANDIDATE_RUNTIME_VERSION = "2.0.5-script-repeat-c1";
 const CANDIDATE_RELEASE_BASE =
   "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-script-repeat-20260804/candidate-runtime/release/";
+const REMOTE_ENGINE_AB_APP_VERSION = 20;
+const REMOTE_ENGINE_AB_RUNTIME_VERSION = "2.0.6-remote-engine-ab-c1";
+const REMOTE_ENGINE_AB_RELEASE_BASE =
+  "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-remote-engine-ab-20260804/candidate-runtime-remote-engine/release/";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -25,9 +29,15 @@ export default {
       const url = new URL(request.url);
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
         let candidateRuntimeVersion = null;
-        if (url.searchParams.get("candidate") === "1") {
+        let remoteEngineAbRuntimeVersion = null;
+        const candidateQuery = url.searchParams.get("candidate");
+        if (candidateQuery === "1") {
           const candidateManifest = await loadReleaseManifest(CANDIDATE_RELEASE_BASE);
           candidateRuntimeVersion = candidateManifest.versionName;
+        }
+        if (candidateQuery === "20") {
+          const remoteEngineAbManifest = await loadReleaseManifest(REMOTE_ENGINE_AB_RELEASE_BASE);
+          remoteEngineAbRuntimeVersion = remoteEngineAbManifest.versionName;
         }
         return json({
           ok: true,
@@ -41,6 +51,8 @@ export default {
           candidateChannel: true,
           candidateAppVersion: CANDIDATE_APP_VERSION,
           candidateRuntimeVersion,
+          remoteEngineAbAppVersion: REMOTE_ENGINE_AB_APP_VERSION,
+          remoteEngineAbRuntimeVersion,
         });
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/challenge") {
@@ -359,7 +371,9 @@ async function verifySignedRequest(
 }
 
 function releaseBaseForAppVersion(appVersion) {
-  return appVersion === CANDIDATE_APP_VERSION ? CANDIDATE_RELEASE_BASE : RELEASE_BASE;
+  if (appVersion === REMOTE_ENGINE_AB_APP_VERSION) return REMOTE_ENGINE_AB_RELEASE_BASE;
+  if (appVersion === CANDIDATE_APP_VERSION) return CANDIDATE_RELEASE_BASE;
+  return RELEASE_BASE;
 }
 
 async function releaseForRequestedVersion(requestedVersion) {
@@ -371,6 +385,12 @@ async function releaseForRequestedVersion(requestedVersion) {
     const candidateManifest = await loadReleaseManifest(CANDIDATE_RELEASE_BASE);
     if (candidateManifest.versionName === requestedVersion) {
       return { manifest: candidateManifest, releaseBase: CANDIDATE_RELEASE_BASE };
+    }
+  }
+  if (requestedVersion === REMOTE_ENGINE_AB_RUNTIME_VERSION) {
+    const remoteEngineAbManifest = await loadReleaseManifest(REMOTE_ENGINE_AB_RELEASE_BASE);
+    if (remoteEngineAbManifest.versionName === requestedVersion) {
+      return { manifest: remoteEngineAbManifest, releaseBase: REMOTE_ENGINE_AB_RELEASE_BASE };
     }
   }
   throw new HttpError(409, "runtime_version_changed", "服务已更新，请重新启动");
