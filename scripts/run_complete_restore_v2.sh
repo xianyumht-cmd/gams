@@ -25,6 +25,12 @@ if text.count(git_add_old) != 1:
     raise SystemExit(f'candidate migration marker expected once, found {text.count(git_add_old)}')
 text = text.replace(git_add_old, git_add_new, 1)
 
+publish_old = """CURRENT_STEP=\"publish-source\"\ngit pull --rebase origin main\ngit push origin HEAD:main"""
+publish_new = """CURRENT_STEP=\"publish-source\"\n# The compatibility runner intentionally edits this tracked helper only in the ephemeral workspace.\n# Reset all unstaged build/deploy helpers to the already verified candidate commit before rebasing.\ngit reset --hard HEAD\ngit clean -fd\ngit fetch origin main\ngit rebase origin/main\ngit push origin HEAD:main"""
+if text.count(publish_old) != 1:
+    raise SystemExit(f'publish cleanup marker expected once, found {text.count(publish_old)}')
+text = text.replace(publish_old, publish_new, 1)
+
 path.write_text(text, encoding='utf-8')
 PY
 
