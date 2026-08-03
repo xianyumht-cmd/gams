@@ -1,18 +1,24 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-03T18:29:08Z",
-  "runId": 30841370649,
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-03T18:35:40Z",
+  "runId": 30841895143,
   "ok": true,
   "manager": {
-    "versionName": "2.0.1",
-    "versionCode": 2,
-    "file": "GG-Manager-2.0.1-code2.apk",
-    "sha256": "80cade3076a4827defc94879918d600ed386af8864181a000e0138c0f9b614e9"
+    "versionName": "2.0.2",
+    "versionCode": 3,
+    "file": "GG-Manager-2.0.2-code3.apk",
+    "sha256": "a440dfa2265cb1fe3772c91710523c3c4ff7f3955b5421b53037a36df3dbe65a"
+  },
+  "compatibility": {
+    "dashboardUsesLicenseList": true,
+    "unsupportedMenusHidden": true,
+    "extendUsesDays": true
   },
   "steps": {
-    "verify": "success",
+    "patch": "success",
     "build": "success",
     "sign": "success",
+    "commit": "success",
     "artifact": "success"
   },
   "secretsExposed": false
