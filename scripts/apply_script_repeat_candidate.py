@@ -9,8 +9,38 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def validate_candidate(text: str) -> None:
+    required = (
+        "// @version      1.1.5-candidate",
+        "__ggRepeatCallbackBridge",
+        "__ggPendingQueue.shift()",
+        "__ggPendingQueue.push",
+        "__ggOriginalCallback",
+    )
+    for token in required:
+        if token not in text:
+            raise SystemExit(f"missing candidate contract: {token}")
+
+    for forbidden in (
+        "__ggOneShotCallback",
+        "__ggCallbackDone",
+    ):
+        if forbidden in text:
+            raise SystemExit(f"obsolete one-shot state remains: {forbidden}")
+
+
 path = Path("remote-script/src/noname.js")
 text = path.read_text(encoding="utf-8")
+
+if (
+    "// @version      1.1.5-candidate" in text
+    and "__ggRepeatCallbackBridge" in text
+    and "__ggPendingQueue.shift()" in text
+    and "__ggPendingQueue.push" in text
+):
+    validate_candidate(text)
+    print("isolated script repeat candidate already applied")
+    raise SystemExit(0)
 
 text = replace_once(
     text,
@@ -111,24 +141,6 @@ new = '''              if(vUYe8N&&yWpiJH&&Epe456s) {
 '''
 
 text = replace_once(text, old, new, "repeat callback bridge")
-
-required = (
-    "// @version      1.1.5-candidate",
-    "__ggRepeatCallbackBridge",
-    "__ggPendingQueue.shift()",
-    "__ggPendingQueue.push",
-    "__ggOriginalCallback",
-)
-for token in required:
-    if token not in text:
-        raise SystemExit(f"missing candidate contract: {token}")
-
-for forbidden in (
-    "__ggOneShotCallback",
-    "__ggCallbackDone",
-):
-    if forbidden in text:
-        raise SystemExit(f"obsolete one-shot state remains: {forbidden}")
-
+validate_candidate(text)
 path.write_text(text, encoding="utf-8")
 print("isolated script repeat candidate applied")
