@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T13:55:13Z",
+  "triggerCommit": "193a95288710307eb2b5bf7951cd9f0ef0940e28",
+  "operation": "attach-existing-workers-to-custom-domains",
+  "license": {
+    "attach": {
+      "httpStatus": "200",
+      "success": true,
+      "errors": [],
+      "result": {
+        "hostname": "license.xn--8pv109c.top",
+        "service": "gams-license-api",
+        "zone_name": "脚本.top"
+      }
+    },
+    "check": {
+      "host": "license.xn--8pv109c.top",
+      "service": "gams-license-api",
+      "dnsResolved": true,
+      "addresses": [
+        "104.21.79.68",
+        "172.67.169.60"
+      ],
+      "httpStatus": "403",
+      "healthOk": false
+    }
+  },
+  "runtime": {
+    "attach": {
+      "httpStatus": "200",
+      "success": true,
+      "errors": [],
+      "result": {
+        "hostname": "runtime.xn--8pv109c.top",
+        "service": "gams-runtime-v2",
+        "zone_name": "脚本.top"
+      }
+    },
+    "check": {
+      "host": "runtime.xn--8pv109c.top",
+      "service": "gams-runtime-v2",
+      "dnsResolved": true,
+      "addresses": [
+        "104.21.79.68",
+        "172.67.169.60"
+      ],
+      "httpStatus": "403",
+      "healthOk": false
+    }
+  },
+  "secretsExposed": false
+}
