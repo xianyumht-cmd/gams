@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-03T16:46:19Z",
-  "triggerCommit": "01c121cc8e3656f07020aa544a36bcb41098f97c",
-  "runId": 30833581019,
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-03T16:48:24Z",
+  "triggerCommit": "07edf601180f7d029cf1bc3476e1c9f1f9e03b28",
+  "runId": 30833751787,
   "ok": false,
   "client": {
     "versionName": "2.0.4",
@@ -16,7 +16,6 @@
   },
   "certificateSha256": "",
   "steps": {
-    "inputs": "success",
     "patch": "success",
     "build": "success",
     "sign": "failure",
