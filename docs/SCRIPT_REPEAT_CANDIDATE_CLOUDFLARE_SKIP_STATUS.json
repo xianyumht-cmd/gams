@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T21:15:47Z",
+  "runId": 30853880332,
+  "ok": false,
+  "rule": {
+    "operation": "entrypoint-failed",
+    "entryCode": "403",
+    "responseCode": "403",
+    "zoneId": "59aaeb74f3688b7cdd3c6231065f6c6e",
+    "rulesetId": "",
+    "ruleId": "",
+    "success": false,
+    "errors": "[{\"code\":10000,\"message\":\"Authentication error\"}]"
+  },
+  "probe": {
+    "custom": {
+      "ok": false
+    },
+    "worker": {
+      "ok": false
+    }
+  },
+  "steps": {
+    "rule": "failure",
+    "probe": "skipped"
+  },
+  "scope": {
+    "hostname": "runtime-candidate.xn--8pv109c.top",
+    "productionHostChanged": false
+  },
+  "secretsExposed": false
+}
