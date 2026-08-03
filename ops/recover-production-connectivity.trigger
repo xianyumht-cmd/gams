@@ -1,0 +1,2 @@
+triggered_at=2026-08-03T21:53:00+08:00
+reason=restore_worker_custom_domains_after_license_secret_rotation
