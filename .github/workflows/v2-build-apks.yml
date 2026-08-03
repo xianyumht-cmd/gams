@@ -1,4 +1,4 @@
-name: Trigger GG client and manager connectivity release
+name: Trigger corrected GG client and manager release
 
 on:
   push:
@@ -19,11 +19,11 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Dispatch verified release workflow
+      - name: Dispatch corrected release workflow
         shell: bash
         run: |
           set -euo pipefail
           gh api --method POST \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/release-client-manager-connectivity-fix.yml/dispatches" \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/release-client-manager-connectivity-fix-v2.yml/dispatches" \
             -f ref=main
-          echo 'GG client and manager release dispatched.'
+          echo 'Corrected GG client and manager release dispatched.'
