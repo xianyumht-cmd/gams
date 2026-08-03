@@ -1,0 +1,71 @@
+name: Check Runtime release signing key availability
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/check-runtime-release-signing-key.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      RELEASE_SIGNING_PASSWORD: ${{ secrets.RELEASE_SIGNING_PASSWORD || secrets.LICENSE_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify encrypted private key can be opened and matches public key
+        id: key
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RELEASE_SIGNING_PASSWORD:-}"
+          trap 'rm -f /tmp/runtime-private.pem /tmp/runtime-public.pem /tmp/repo-public.pem' EXIT
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in remote-script/keys/private.pem.enc \
+            -out /tmp/runtime-private.pem \
+            -pass env:RELEASE_SIGNING_PASSWORD
+          openssl pkey -in /tmp/runtime-private.pem -pubout -out /tmp/runtime-public.pem
+          openssl pkey -pubin -in remote-script/keys/public.pem -out /tmp/repo-public.pem
+          cmp -s /tmp/runtime-public.pem /tmp/repo-public.pem
+
+      - name: Record signing-key check
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY_OUTCOME: ${{ steps.key.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "$KEY_OUTCOME" == "success" ]]; then ok=true; fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg commit "$GITHUB_SHA" \
+            --arg keyOutcome "$KEY_OUTCOME" \
+            --argjson ok "$ok" \
+            '{schemaVersion:1,generatedAt:$generatedAt,triggerCommit:$commit,ok:$ok,encryptedPrivateKeyUsable:$ok,publicKeyMatchesRepository:$ok,secretsExposed:false}' \
+            > /tmp/signing-key-status.json
+          path="docs/RUNTIME_RELEASE_SIGNING_KEY_STATUS.json"
+          content="$(base64 -w0 /tmp/signing-key-status.json)"
+          existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          if [[ -n "$existing_sha" ]]; then
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record Runtime release signing key status' -f content="$content" \
+              -f sha="$existing_sha" -f branch=main >/dev/null
+          else
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record Runtime release signing key status' -f content="$content" \
+              -f branch=main >/dev/null
+          fi
+
+      - name: Require usable signing key
+        if: always()
+        run: test "${{ steps.key.outcome }}" = "success"
