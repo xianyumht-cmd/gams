@@ -180,3 +180,5 @@ jobs:
           test "${{ steps.sign.outcome }}" = success
           test "${{ steps.artifact.outcome }}" = success
           test "${{ steps.publish.outcome }}" = success
+
+# retry-trigger: 2026-08-04T04:20:00+08:00
