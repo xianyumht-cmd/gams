@@ -1,0 +1,90 @@
+name: Diagnose production V2 lifecycle
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/diagnose-production-lifecycle.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ADMIN_LOGIN_SECRET: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      RUNTIME_ENDPOINT: https://gams-runtime-v2.2320006072.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify both health endpoints
+        id: health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "$LICENSE_ENDPOINT/health" | jq -e '.ok and .version == 2 and .signedProtocol == true' >/dev/null
+          curl -fsS "$RUNTIME_ENDPOINT/health" | jq -e '.ok and .encryptedRuntime == true' >/dev/null
+
+      - name: Run lifecycle with captured log
+        id: lifecycle
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/v2-lifecycle-smoke.mjs 2>&1 | tee /tmp/lifecycle.log
+
+      - name: Record sanitized diagnosis
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEALTH_OUTCOME: ${{ steps.health.outcome }}
+          LIFECYCLE_OUTCOME: ${{ steps.lifecycle.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          source = Path('/tmp/lifecycle.log')
+          text = source.read_text(encoding='utf-8', errors='replace') if source.exists() else ''
+          text = text[-5000:]
+          text = re.sub(r'[A-Za-z0-9_+/=-]{48,}', '<redacted>', text)
+          Path('/tmp/lifecycle-sanitized.log').write_text(text, encoding='utf-8')
+          PY
+
+          ok=false
+          if [[ "$HEALTH_OUTCOME" == "success" && "$LIFECYCLE_OUTCOME" == "success" ]]; then ok=true; fi
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg commit "$GITHUB_SHA" \
+            --arg health "$HEALTH_OUTCOME" \
+            --arg lifecycle "$LIFECYCLE_OUTCOME" \
+            --rawfile log /tmp/lifecycle-sanitized.log \
+            --argjson ok "$ok" \
+            '{schemaVersion:1,generatedAt:$generatedAt,triggerCommit:$commit,ok:$ok,health:$health,lifecycle:$lifecycle,sanitizedLog:$log,secretsExposed:false}' \
+            > /tmp/diagnosis.json
+
+          path="docs/PRODUCTION_LIFECYCLE_DIAGNOSIS.json"
+          content="$(base64 -w0 /tmp/diagnosis.json)"
+          existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          if [[ -n "$existing_sha" ]]; then
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record production lifecycle diagnosis' -f content="$content" \
+              -f sha="$existing_sha" -f branch=main >/dev/null
+          else
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record production lifecycle diagnosis' -f content="$content" \
+              -f branch=main >/dev/null
+          fi
+
+      - name: Require successful lifecycle
+        if: always()
+        run: test "${{ steps.lifecycle.outcome }}" = "success"
