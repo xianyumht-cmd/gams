@@ -1,43 +1,34 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-03T19:10:57Z",
-  "runId": 30844608684,
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-03T19:19:07Z",
+  "runId": 30845073567,
   "ok": false,
+  "currentStep": "verify-lifecycle",
+  "failure": "step=verify-lifecycle; exit=1",
   "client": {
     "versionName": "2.0.3-stable",
     "versionCode": 16,
     "protocolAppVersion": 12,
-    "sha256": "",
+    "sha256": "ccdd4d6bfc7b9481f852c73486a5bc6a8fdbd677d3a70dafb8a324040709a1a2",
     "preRegressionBehavior": true
   },
   "manager": {
     "versionName": "2.0.3",
     "versionCode": 4,
-    "sha256": "",
+    "sha256": "bd9c491f5441db342699c57ed4775bf6898a441c6f1638bea2e798c8ff9bb149",
     "completeControlCenter": true
   },
   "backend": {
     "adminRouteCount": 23,
     "signedProtocolRetained": true,
     "encryptedRuntimeRetained": true,
-    "databasePreserved": true
+    "databasePreserved": true,
+    "deploymentStarted": true
   },
   "commits": {
-    "candidate": "",
-    "published": ""
-  },
-  "steps": {
-    "secrets": "success",
-    "assemble": "success",
-    "source": "failure",
-    "build": "skipped",
-    "sign": "skipped",
-    "deploy": "skipped",
-    "smoke": "skipped",
-    "rollback": "skipped",
-    "push": "skipped",
-    "release": "skipped",
-    "artifact": "skipped"
+    "candidate": "1f53037f3a3e6bb64b1524482a9e3052b8c48606",
+    "published": "",
+    "publishedToMain": false
   },
   "secretsExposed": false
 }
