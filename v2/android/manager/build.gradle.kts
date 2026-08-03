@@ -6,8 +6,8 @@ android {
         applicationId = "com.jinli.ggsecure.manager"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.0.2"
+        versionCode = 4
+        versionName = "2.0.3"
     }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }

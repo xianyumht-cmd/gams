@@ -35,7 +35,7 @@ INSERT OR IGNORE INTO system_settings(id,config_version,settings_json,updated_at
 VALUES(
   1,
   1,
-  '{"minAppVersion":5,"secureAppVersion":6,"latestAppVersion":7,"forceUpdate":false,"updateUrl":"","updateMessage":"","sessionSeconds":7200,"adminSessionSeconds":43200,"foregroundRecheckSeconds":1800,"offlineGraceSeconds":21600,"legacyOfflineGraceSeconds":86400,"scriptLeaseSeconds":21600,"challengeSeconds":90,"globalForceOnline":false,"riskForceOnlineThreshold":2,"selfUnbindEnabled":true,"unbindPenaltySeconds":21600,"unbindCooldownSeconds":86400,"unbindWindowSeconds":2592000,"unbindWindowLimit":5,"sessionGeneration":1,"scriptDeliveryEnabled":true,"activeScriptVersion":"","configCacheSeconds":30}',
+  '{"minAppVersion":11,"secureAppVersion":11,"latestAppVersion":12,"forceUpdate":false,"updateUrl":"","updateMessage":"","sessionSeconds":43200,"adminSessionSeconds":43200,"foregroundRecheckSeconds":1800,"offlineGraceSeconds":86400,"legacyOfflineGraceSeconds":86400,"scriptLeaseSeconds":600,"challengeSeconds":90,"globalForceOnline":false,"riskForceOnlineThreshold":2,"selfUnbindEnabled":true,"unbindPenaltySeconds":21600,"unbindCooldownSeconds":86400,"unbindWindowSeconds":2592000,"unbindWindowLimit":5,"sessionGeneration":1,"scriptDeliveryEnabled":true,"activeScriptVersion":"","configCacheSeconds":30}',
   unixepoch(),
-  'migration'
+  'signed-control-center-restore'
 );

@@ -8,46 +8,83 @@ const MIN_SIGNED_APP_VERSION = 11;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+const DEFAULT_SETTINGS = Object.freeze({
+  minAppVersion: 11,
+  secureAppVersion: 11,
+  latestAppVersion: 12,
+  forceUpdate: false,
+  updateUrl: "",
+  updateMessage: "",
+  sessionSeconds: 43200,
+  adminSessionSeconds: 43200,
+  foregroundRecheckSeconds: 1800,
+  offlineGraceSeconds: 86400,
+  legacyOfflineGraceSeconds: 86400,
+  scriptLeaseSeconds: 600,
+  challengeSeconds: 90,
+  globalForceOnline: false,
+  riskForceOnlineThreshold: 2,
+  selfUnbindEnabled: true,
+  unbindPenaltySeconds: 21600,
+  unbindCooldownSeconds: 86400,
+  unbindWindowSeconds: 2592000,
+  unbindWindowLimit: 5,
+  sessionGeneration: 1,
+  scriptDeliveryEnabled: true,
+  activeScriptVersion: "",
+  configCacheSeconds: 30,
+});
+let memorySettingsCache = null;
+const RUNTIME_RELEASE_BASE =
+  "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/v2/runtime/release/";
+
 export default {
   async fetch(request, env) {
     try {
       assertConfigured(env);
       if (request.method === "OPTIONS") return cors(new Response(null, { status: 204 }));
       const url = new URL(request.url);
-
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+        const settings = await loadSettings(env);
         return reply({
           ok: true,
           service: "gams-license-api",
           version: 2,
           signedProtocol: true,
+          completeControlCenter: true,
           minSignedAppVersion: MIN_SIGNED_APP_VERSION,
+          configVersion: settings.configVersion,
+          latestAppVersion: settings.latestAppVersion,
         });
       }
-      if (request.method === "POST" && url.pathname === "/v1/admin/login") {
-        return await adminLogin(request, env);
-      }
-      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/create") {
-        return await adminCreateLicenses(request, env);
-      }
-      if (request.method === "GET" && url.pathname === "/v1/admin/licenses") {
-        return await adminListLicenses(request, env);
-      }
-      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/action") {
-        return await adminLicenseAction(request, env);
-      }
-      if (request.method === "POST" && url.pathname === "/v1/challenge") {
-        return await issueChallenge(request, env);
-      }
-      if (request.method === "POST" && url.pathname === "/v1/activate") {
-        return await activate(request, env);
-      }
-      if (request.method === "POST" && url.pathname === "/v1/check") {
-        return await check(request, env);
-      }
-      if (request.method === "POST" && url.pathname === "/v1/device/unbind") {
-        return await selfUnbind(request, env);
-      }
+      if (request.method === "POST" && url.pathname === "/v1/admin/login") return await adminLogin(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/dashboard") return await adminDashboard(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/settings") return await adminGetSettings(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/settings/update") return await adminUpdateSettings(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/settings/history") return await adminSettingsHistory(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/settings/rollback") return await adminRollbackSettings(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/create") return await adminCreateLicenses(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/licenses") return await adminListLicenses(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/licenses/detail") return await adminLicenseDetail(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/action") return await adminLicenseAction(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/update") return await adminLicenseUpdate(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/licenses/batch-action") return await adminLicenseBatchAction(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/devices") return await adminListDevices(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/devices/detail") return await adminDeviceDetail(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/devices/revoke") return await adminRevokeDevice(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/devices/revoke-all") return await adminRevokeAllDevices(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/audit") return await adminAudit(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/sessions/revoke-all") return await adminRevokeAllSessions(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/runtime") return await adminRuntime(request, env);
+      if (request.method === "GET" && url.pathname === "/v1/admin/runtime/releases") return await adminRuntimeReleases(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/admin/runtime/pause") return await adminRuntimeToggle(request, env, false);
+      if (request.method === "POST" && url.pathname === "/v1/admin/runtime/resume") return await adminRuntimeToggle(request, env, true);
+      if (request.method === "POST" && url.pathname === "/v1/admin/runtime/select") return await adminRuntimeSelect(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/client/config") return await clientConfig(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/challenge") return await issueChallenge(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/activate") return await activate(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/check") return await check(request, env);
+      if (request.method === "POST" && url.pathname === "/v1/device/unbind") return await selfUnbind(request, env);
       return reply({ ok: false, code: "not_found", message: "接口不存在" }, 404);
     } catch (error) {
       if (error instanceof HttpError) {
@@ -76,16 +113,18 @@ async function adminLogin(request, env) {
     await audit(env, "admin_login_failed", null, null, "");
     throw new HttpError(401, "bad_password", "管理密码错误");
   }
+  const settings = await loadSettings(env);
   const now = nowSeconds();
   const token = await signToken({
     typ: "admin",
     iat: now,
-    exp: now + ADMIN_SECONDS,
+    exp: now + settings.adminSessionSeconds,
     jti: crypto.randomUUID(),
   }, env);
   await audit(env, "admin_login_ok", null, null, "");
-  return reply({ ok: true, token, expiresAt: now + ADMIN_SECONDS });
+  return reply({ ok: true, token, expiresAt: now + settings.adminSessionSeconds, apiVersion: 4 });
 }
+
 
 async function adminCreateLicenses(request, env) {
   await requireAdmin(request, env);
@@ -123,19 +162,39 @@ async function adminListLicenses(request, env) {
   await requireAdmin(request, env);
   const url = new URL(request.url);
   const limit = clampInteger(url.searchParams.get("limit"), 1, 100, 50);
+  const offset = clampInteger(url.searchParams.get("offset"), 0, 1000000, 0);
+  const status = text(url.searchParams.get("status"), 20);
+  const query = text(url.searchParams.get("q"), 100);
+  const conditions = [];
+  const bindings = [];
+  if (["active", "disabled", "expired"].includes(status)) {
+    conditions.push("l.status=?");
+    bindings.push(status);
+  }
+  if (query) {
+    conditions.push("(l.key_preview LIKE ? OR l.note LIKE ? OR l.id=?)");
+    bindings.push(`%${query}%`, `%${query}%`, query);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const countRow = await env.DB.prepare(`SELECT COUNT(*) AS count FROM licenses l ${where}`)
+    .bind(...bindings).first();
   const rows = await env.DB.prepare(
     `SELECT l.id,l.key_preview,l.status,l.created_at,l.activated_at,l.expires_at,
-            l.max_devices,l.note,l.last_seen_at,
+            l.max_devices,l.note,l.last_seen_at,l.last_unbind_at,l.rebind_available_at,
             SUM(CASE WHEN d.id IS NOT NULL AND d.revoked_at IS NULL THEN 1 ELSE 0 END)
               AS active_devices
-       FROM licenses l
-       LEFT JOIN devices d ON d.license_id=l.id
-      GROUP BY l.id
-      ORDER BY l.created_at DESC
-      LIMIT ?`
-  ).bind(limit).all();
-  return reply({ ok: true, licenses: rows.results || [] });
+       FROM licenses l LEFT JOIN devices d ON d.license_id=l.id ${where}
+      GROUP BY l.id ORDER BY l.created_at DESC LIMIT ? OFFSET ?`
+  ).bind(...bindings, limit, offset).all();
+  return reply({
+    ok: true,
+    total: Number(countRow?.count || 0),
+    limit,
+    offset,
+    licenses: rows.results || [],
+  });
 }
+
 
 async function adminLicenseAction(request, env) {
   await requireAdmin(request, env);
@@ -144,42 +203,34 @@ async function adminLicenseAction(request, env) {
   const license = await findLicenseForAdmin(env, body);
   if (!license) throw new HttpError(404, "license_not_found", "未找到卡密");
   const now = nowSeconds();
-
   if (action === "disable") {
-    await env.DB.prepare("UPDATE licenses SET status='disabled' WHERE id=?")
-      .bind(license.id).run();
+    await env.DB.prepare("UPDATE licenses SET status='disabled' WHERE id=?").bind(license.id).run();
   } else if (action === "enable") {
-    const status = license.expires_at && Number(license.expires_at) <= now
-      ? "expired" : "active";
-    await env.DB.prepare("UPDATE licenses SET status=? WHERE id=?")
-      .bind(status, license.id).run();
+    const status = license.expires_at && Number(license.expires_at) <= now ? "expired" : "active";
+    await env.DB.prepare("UPDATE licenses SET status=? WHERE id=?").bind(status, license.id).run();
   } else if (action === "extend") {
-    const days = clampInteger(body.days, 1, 3650, 30);
+    const seconds = body.seconds != null
+      ? clampInteger(body.seconds, 60, 315360000, 2592000)
+      : clampInteger(body.days, 1, 3650, 30) * 86400;
     const base = license.expires_at && Number(license.expires_at) > now
       ? Number(license.expires_at) : now;
     await env.DB.prepare("UPDATE licenses SET expires_at=?,status='active' WHERE id=?")
-      .bind(base + days * 86400, license.id).run();
+      .bind(base + seconds, license.id).run();
   } else if (action === "permanent") {
     await env.DB.prepare("UPDATE licenses SET expires_at=NULL,status='active' WHERE id=?")
       .bind(license.id).run();
   } else if (action === "unbind") {
-    await env.DB.prepare(
-      "UPDATE devices SET revoked_at=?,session_version=session_version+1 " +
-      "WHERE license_id=? AND revoked_at IS NULL"
-    ).bind(now, license.id).run();
+    await revokeDevicesForLicense(env, license.id, now);
+    await env.DB.prepare("UPDATE licenses SET rebind_available_at=NULL WHERE id=?")
+      .bind(license.id).run();
   } else {
     throw new HttpError(400, "bad_action", "不支持的管理操作");
   }
-
   await audit(env, `license_${action}`, license.id, null,
-    JSON.stringify({ days: body.days || null }));
-  const updated = await env.DB.prepare(
-    `SELECT id,key_preview,status,created_at,activated_at,expires_at,
-            max_devices,note,last_seen_at
-       FROM licenses WHERE id=?`
-  ).bind(license.id).first();
-  return reply({ ok: true, license: updated });
+    JSON.stringify({ days: body.days || null, seconds: body.seconds || null }));
+  return reply({ ok: true, license: await getLicenseSummary(env, license.id) });
 }
+
 
 async function issueChallenge(request, env) {
   const body = await readJson(request);
@@ -238,6 +289,9 @@ async function activate(request, env) {
     .bind(keyHash).first();
   if (!license) throw new HttpError(404, "license_not_found", "卡密无效");
   await requireActiveLicense(env, license);
+  if (license.rebind_available_at && Number(license.rebind_available_at) > nowSeconds()) {
+    throw new HttpError(429, "rebind_cooldown", "解绑后暂时不能重新绑定");
+  }
 
   const publicBytes = base64Decode(publicKeyBase64);
   const actualFingerprint = await sha256HexBytes(publicBytes);
@@ -312,6 +366,7 @@ async function activate(request, env) {
   return licenseSuccess(env, license, device, now);
 }
 
+
 async function check(request, env) {
   const rateKey = await requestRateKey(request, "check");
   if (!(await allowRate(env, rateKey, 120, 60))) {
@@ -345,6 +400,10 @@ async function selfUnbind(request, env) {
   if (!(await allowRate(env, rateKey, 12, 60))) {
     throw new HttpError(429, "too_many_requests", "操作过于频繁");
   }
+  const settings = await loadSettings(env);
+  if (!settings.selfUnbindEnabled) {
+    throw new HttpError(403, "unbind_disabled", "当前不允许自助解绑");
+  }
   const body = await readJson(request);
   requireSignedVersion(body);
   const deviceHash = normalizeHex64(body.deviceId);
@@ -364,6 +423,10 @@ async function selfUnbind(request, env) {
     device
   );
   const now = nowSeconds();
+  if (license.last_unbind_at
+      && now - Number(license.last_unbind_at) < settings.unbindCooldownSeconds) {
+    throw new HttpError(429, "unbind_cooldown", "解绑操作过于频繁，请稍后再试");
+  }
   const result = await env.DB.prepare(
     "UPDATE devices SET revoked_at=?,session_version=session_version+1 " +
     "WHERE id=? AND revoked_at IS NULL"
@@ -371,9 +434,17 @@ async function selfUnbind(request, env) {
   if (changesOf(result) !== 1) {
     throw new HttpError(409, "device_unbound", "设备已解除绑定");
   }
+  await env.DB.prepare(
+    "UPDATE licenses SET last_unbind_at=?,rebind_available_at=? WHERE id=?"
+  ).bind(now, now + settings.unbindPenaltySeconds, license.id).run();
   await audit(env, "device_self_unbound", license.id, deviceHash, "");
-  return reply({ ok: true, message: "当前设备已解除绑定" });
+  return reply({
+    ok: true,
+    message: "当前设备已解除绑定",
+    rebindAvailableAt: now + settings.unbindPenaltySeconds,
+  });
 }
+
 
 async function verifySignedRequest(
   env,
@@ -470,12 +541,16 @@ async function requireActiveDevice(env, session, deviceHash) {
   if (!device || !device.public_key || !device.key_fingerprint) {
     throw new HttpError(401, "device_unbound", "当前设备未完成授权");
   }
+  const settings = await loadSettings(env);
+  const sessionGeneration = Number(session.gen == null ? 1 : session.gen);
   if (session.kid !== device.key_fingerprint
-      || Number(session.sv) !== Number(device.session_version)) {
+      || Number(session.sv) !== Number(device.session_version)
+      || sessionGeneration !== Number(settings.sessionGeneration || 1)) {
     throw new HttpError(401, "bad_session", "设备会话已更新，请重新启动");
   }
   return { license, device };
 }
+
 
 async function requireActiveLicense(env, license) {
   const now = nowSeconds();
@@ -493,33 +568,36 @@ async function requireActiveLicense(env, license) {
 }
 
 async function licenseSuccess(env, license, device, now) {
+  const settings = await loadSettings(env);
+  const tokenExpiresAt = now + settings.sessionSeconds;
   const token = await signToken({
     typ: "session",
     lic: license.id,
     dev: device.device_hash,
     kid: device.key_fingerprint,
     sv: Number(device.session_version),
+    gen: Number(settings.sessionGeneration || 1),
     iat: now,
-    exp: now + SESSION_SECONDS,
+    exp: tokenExpiresAt,
     jti: crypto.randomUUID(),
   }, env);
-  const latestAppVersion = clampInteger(env.LATEST_APP_VERSION, 1, 1_000_000,
-    MIN_SIGNED_APP_VERSION);
-  const forceUpdate = String(env.FORCE_UPDATE || "").toLowerCase() === "true";
   return reply({
     ok: true,
     token,
-    tokenExpiresAt: now + SESSION_SECONDS,
+    tokenExpiresAt,
     licenseExpiresAt: license.expires_at || null,
     permanent: license.expires_at == null,
-    offlineGraceSeconds: OFFLINE_GRACE_SECONDS,
+    offlineGraceSeconds: settings.offlineGraceSeconds,
+    foregroundRecheckSeconds: settings.foregroundRecheckSeconds,
     serverTime: now,
-    latestAppVersion,
-    forceUpdate,
-    updateUrl: text(env.UPDATE_URL, 2048),
-    updateMessage: text(env.UPDATE_MESSAGE, 1000),
+    latestAppVersion: settings.latestAppVersion,
+    forceUpdate: settings.forceUpdate,
+    updateUrl: settings.updateUrl,
+    updateMessage: settings.updateMessage,
+    configVersion: settings.configVersion,
   });
 }
+
 
 async function requireAdmin(request, env) {
   const authorization = request.headers.get("authorization") || "";
@@ -742,6 +820,461 @@ function reply(data, status = 200) {
     status,
     headers: { "content-type": "application/json; charset=utf-8" },
   }));
+}
+
+
+async function activeDeviceCount(env, licenseId) {
+  const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM devices WHERE license_id=? AND revoked_at IS NULL").bind(licenseId).first();
+  return Number(row?.count || 0);
+}
+
+
+async function adminAudit(request, env) {
+  await requireAdmin(request, env);
+  const url = new URL(request.url);
+  const limit = clampInteger(url.searchParams.get("limit"), 1, 200, 100);
+  const offset = clampInteger(url.searchParams.get("offset"), 0, 1000000, 0);
+  const event = string(url.searchParams.get("event"), 80);
+  const licenseId = string(url.searchParams.get("licenseId"), 64);
+  const conditions = [], bindings = [];
+  if (event) { conditions.push("event=?"); bindings.push(event); }
+  if (licenseId) { conditions.push("license_id=?"); bindings.push(licenseId); }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const rows = await env.DB.prepare(`SELECT id,event,license_id,device_hash,detail,created_at FROM audit_log ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(...bindings, limit, offset).all();
+  return reply({ ok: true, audit: rows.results || [], limit, offset });
+}
+
+
+async function adminDashboard(request, env) {
+  await requireAdmin(request, env);
+  const settings = await loadSettings(env);
+  const [licenses, devices, today, risk] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) total,SUM(status='active') active,SUM(status='disabled') disabled,SUM(status='expired') expired FROM licenses").first(),
+    env.DB.prepare("SELECT COUNT(*) total,SUM(revoked_at IS NULL) active FROM devices").first(),
+    env.DB.prepare("SELECT COUNT(*) count FROM licenses WHERE activated_at>=?").bind(nowSeconds() - 86400).first(),
+    env.DB.prepare("SELECT COUNT(*) count FROM devices WHERE revoked_at IS NULL AND risk_flags<>''").first(),
+  ]);
+  let runtime = null;
+  try { runtime = (await loadScriptRelease(env, settings)).manifest; } catch { runtime = null; }
+  return reply({ ok: true, settings, licenses, devices, activations24h: Number(today?.count || 0), riskDevices: Number(risk?.count || 0), runtime });
+}
+
+
+async function adminDeviceDetail(request, env) {
+  await requireAdmin(request, env);
+  const id = string(new URL(request.url).searchParams.get("id"), 64);
+  const device = await env.DB.prepare("SELECT d.*,l.key_preview,l.status license_status,l.expires_at FROM devices d JOIN licenses l ON l.id=d.license_id WHERE d.id=?").bind(id).first();
+  if (!device) throw new HttpError(404, "device_not_found", "未找到设备");
+  return reply({ ok: true, device });
+}
+
+
+async function adminGetSettings(request, env) { await requireAdmin(request, env); return reply({ ok: true, settings: await loadSettings(env, true) }); }
+
+
+async function adminLicenseBatchAction(request, env) {
+  await requireAdmin(request, env);
+  const body = await readJson(request);
+  const ids = Array.isArray(body.ids) ? [...new Set(body.ids.map((x) => string(x, 64)).filter(Boolean))].slice(0, 100) : [];
+  if (!ids.length) throw new HttpError(400, "bad_ids", "请选择卡密");
+  const action = string(body.action, 32);
+  let success = 0;
+  for (const id of ids) {
+    const license = await env.DB.prepare("SELECT * FROM licenses WHERE id=?").bind(id).first();
+    if (!license) continue;
+    const now = nowSeconds();
+    if (action === "disable") await env.DB.prepare("UPDATE licenses SET status='disabled' WHERE id=?").bind(id).run();
+    else if (action === "enable") await env.DB.prepare("UPDATE licenses SET status=? WHERE id=?").bind(license.expires_at && license.expires_at <= now ? "expired" : "active", id).run();
+    else if (action === "unbind") await revokeDevicesForLicense(env, id, now);
+    else if (action === "extend") {
+      const seconds = clampInteger(body.seconds, 60, 315360000, 2592000);
+      const base = license.expires_at && license.expires_at > now ? Number(license.expires_at) : now;
+      await env.DB.prepare("UPDATE licenses SET expires_at=?,status='active' WHERE id=?").bind(base + seconds, id).run();
+    } else throw new HttpError(400, "bad_action", "不支持的批量操作");
+    success += 1;
+  }
+  await audit(env, `license_batch_${action}`, null, null, JSON.stringify({ requested: ids.length, success }));
+  return reply({ ok: true, requested: ids.length, success });
+}
+
+
+async function adminLicenseDetail(request, env) {
+  await requireAdmin(request, env);
+  const url = new URL(request.url);
+  const license = await findLicenseForAdmin(env, { id: url.searchParams.get("id"), licenseKey: url.searchParams.get("licenseKey") });
+  if (!license) throw new HttpError(404, "license_not_found", "未找到卡密");
+  const devices = await env.DB.prepare("SELECT id,device_hash,label,created_at,last_seen_at,revoked_at,key_fingerprint,certificate_digest,risk_flags,session_version FROM devices WHERE license_id=? ORDER BY created_at DESC").bind(license.id).all();
+  return reply({ ok: true, license: await getLicenseSummary(env, license.id), devices: devices.results || [] });
+}
+
+
+async function adminLicenseUpdate(request, env) {
+  await requireAdmin(request, env);
+  const body = await readJson(request);
+  const license = await findLicenseForAdmin(env, body);
+  if (!license) throw new HttpError(404, "license_not_found", "未找到卡密");
+  const note = body.note == null ? license.note : string(body.note, 200);
+  const maxDevices = body.maxDevices == null ? Number(license.max_devices) : clampInteger(body.maxDevices, 1, 10, Number(license.max_devices));
+  let expiresAt = license.expires_at;
+  if (body.expiresAt !== undefined) expiresAt = body.expiresAt == null ? null : clampInteger(body.expiresAt, nowSeconds() + 60, 4102444800, Number(license.expires_at || nowSeconds() + 86400));
+  await env.DB.prepare("UPDATE licenses SET note=?,max_devices=?,expires_at=?,status=? WHERE id=?")
+    .bind(note, maxDevices, expiresAt, expiresAt && expiresAt <= nowSeconds() ? "expired" : (license.status === "disabled" ? "disabled" : "active"), license.id).run();
+  await audit(env, "license_updated", license.id, null, JSON.stringify({ note, maxDevices, expiresAt }));
+  return reply({ ok: true, license: await getLicenseSummary(env, license.id) });
+}
+
+
+async function adminListDevices(request, env) {
+  await requireAdmin(request, env);
+  const url = new URL(request.url);
+  const limit = clampInteger(url.searchParams.get("limit"), 1, 100, 50);
+  const offset = clampInteger(url.searchParams.get("offset"), 0, 1000000, 0);
+  const active = string(url.searchParams.get("active"), 8);
+  const risk = string(url.searchParams.get("risk"), 8);
+  const conditions = [], bindings = [];
+  if (active === "true") conditions.push("d.revoked_at IS NULL");
+  if (active === "false") conditions.push("d.revoked_at IS NOT NULL");
+  if (risk === "true") conditions.push("d.risk_flags<>''");
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const total = await env.DB.prepare(`SELECT COUNT(*) count FROM devices d ${where}`).bind(...bindings).first();
+  const rows = await env.DB.prepare(`SELECT d.id,d.license_id,l.key_preview,d.device_hash,d.label,d.created_at,d.last_seen_at,d.revoked_at,d.key_fingerprint,d.certificate_digest,d.risk_flags,d.session_version FROM devices d JOIN licenses l ON l.id=d.license_id ${where} ORDER BY d.last_seen_at DESC LIMIT ? OFFSET ?`).bind(...bindings, limit, offset).all();
+  return reply({ ok: true, total: Number(total?.count || 0), devices: rows.results || [], limit, offset });
+}
+
+
+async function adminRevokeAllDevices(request, env) {
+  await requireAdmin(request, env);
+  const body = await readJson(request);
+  const license = await findLicenseForAdmin(env, body);
+  if (!license) throw new HttpError(404, "license_not_found", "未找到卡密");
+  const count = await revokeDevicesForLicense(env, license.id, nowSeconds());
+  await audit(env, "admin_devices_revoked_all", license.id, null, JSON.stringify({ count }));
+  return reply({ ok: true, count });
+}
+
+
+async function adminRevokeAllSessions(request, env) {
+  const admin = await requireAdmin(request, env);
+  const current = await loadSettings(env, true);
+  const nextGeneration = current.sessionGeneration + 1;
+  const nextVersion = current.configVersion + 1;
+  const now = nowSeconds();
+  const next = { ...current, sessionGeneration: nextGeneration }; delete next.configVersion;
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO system_settings_history(id,config_version,settings_json,changed_at,changed_by,reason) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(), current.configVersion, JSON.stringify(stripConfigVersion(current)), now, admin.jti || "admin", "revoke-all-sessions"),
+    env.DB.prepare("UPDATE system_settings SET config_version=?,settings_json=?,updated_at=?,updated_by=? WHERE id=1").bind(nextVersion, JSON.stringify(next), now, admin.jti || "admin"),
+  ]);
+  memorySettingsCache = null;
+  await audit(env, "sessions_revoked_all", null, null, JSON.stringify({ sessionGeneration: nextGeneration }));
+  return reply({ ok: true, sessionGeneration: nextGeneration, configVersion: nextVersion });
+}
+
+
+async function adminRevokeDevice(request, env) {
+  await requireAdmin(request, env);
+  const body = await readJson(request);
+  const id = string(body.id, 64);
+  const device = await env.DB.prepare("SELECT * FROM devices WHERE id=?").bind(id).first();
+  if (!device) throw new HttpError(404, "device_not_found", "未找到设备");
+  const now = nowSeconds();
+  await env.DB.prepare("UPDATE devices SET revoked_at=?,session_version=session_version+1 WHERE id=?").bind(now, id).run();
+  await audit(env, "admin_device_revoked", device.license_id, device.device_hash, "");
+  return reply({ ok: true });
+}
+
+
+async function adminRollbackSettings(request, env) {
+  const admin = await requireAdmin(request, env);
+  const body = await readJson(request);
+  const id = string(body.historyId, 64);
+  const row = id ? await env.DB.prepare("SELECT * FROM system_settings_history WHERE id=?").bind(id).first()
+    : await env.DB.prepare("SELECT * FROM system_settings_history WHERE config_version=? ORDER BY changed_at DESC LIMIT 1").bind(clampInteger(body.configVersion, 1, 1000000000, 0)).first();
+  if (!row) throw new HttpError(404, "history_not_found", "未找到配置历史");
+  const current = await loadSettings(env, true);
+  const snapshot = safeJson(row.settings_json);
+  snapshot.sessionGeneration = Math.max(current.sessionGeneration, Number(snapshot.sessionGeneration || 1));
+  const next = await saveSettings(env, snapshot, admin.jti || "admin", `rollback:${row.config_version}`, body.expectedVersion);
+  await audit(env, "settings_rollback", null, null, JSON.stringify({ from: current.configVersion, source: row.config_version, to: next.configVersion }));
+  return reply({ ok: true, settings: next });
+}
+
+
+async function adminSettingsHistory(request, env) {
+  await requireAdmin(request, env);
+  const url = new URL(request.url);
+  const limit = clampInteger(url.searchParams.get("limit"), 1, 100, 30);
+  const rows = await env.DB.prepare("SELECT id,config_version,settings_json,changed_at,changed_by,reason FROM system_settings_history ORDER BY changed_at DESC LIMIT ?").bind(limit).all();
+  return reply({ ok: true, history: (rows.results || []).map((row) => ({ ...row, settings: safeJson(row.settings_json) })) });
+}
+
+
+async function adminUpdateSettings(request, env) {
+  const admin = await requireAdmin(request, env);
+  const body = await readJson(request);
+  const next = await saveSettings(env, body.settings || {}, admin.jti || "admin", body.reason || "", body.expectedVersion);
+  await audit(env, "settings_updated", null, null, JSON.stringify({ configVersion: next.configVersion, reason: body.reason || "" }));
+  return reply({ ok: true, settings: next });
+}
+
+
+function calculateRiskScore(flags) { return String(flags || "").split(",").map((x) => x.trim()).filter(Boolean).length; }
+
+
+async function findLicenseByKey(env, key) {
+  return env.DB.prepare("SELECT * FROM licenses WHERE key_hash=?").bind(await sha256Hex(key)).first();
+}
+
+
+async function getLicenseSummary(env, id) {
+  return env.DB.prepare(`SELECT l.id,l.key_preview,l.status,l.created_at,l.activated_at,l.expires_at,l.max_devices,l.note,l.last_seen_at,l.last_unbind_at,l.rebind_available_at,SUM(CASE WHEN d.id IS NOT NULL AND d.revoked_at IS NULL THEN 1 ELSE 0 END) active_devices FROM licenses l LEFT JOIN devices d ON d.license_id=l.id WHERE l.id=? GROUP BY l.id`).bind(id).first();
+}
+
+
+function normalizeDevice(value) { const result = String(value || "").trim().toLowerCase(); return /^[0-9a-f]{64}$/.test(result) ? result : ""; }
+
+
+async function revokeDevicesForLicense(env, licenseId, now) {
+  const result = await env.DB.prepare("UPDATE devices SET revoked_at=?,session_version=session_version+1 WHERE license_id=? AND revoked_at IS NULL").bind(now, licenseId).run();
+  return Number(result.meta?.changes || 0);
+}
+
+
+function safeJson(value) { try { return JSON.parse(String(value || "{}")); } catch { return {}; } }
+
+
+async function saveSettings(env, nextInput, actor, reason, expectedVersion = null) {
+  const current = await loadSettings(env, true);
+  if (expectedVersion != null && Number(expectedVersion) !== Number(current.configVersion)) throw new HttpError(409, "config_conflict", "配置已被其他操作修改，请刷新后重试");
+  const next = validateSettings({ ...current, ...nextInput, sessionGeneration: current.sessionGeneration }, current);
+  const nextVersion = Number(current.configVersion) + 1;
+  const now = nowSeconds();
+  const currentJson = JSON.stringify(stripConfigVersion(current));
+  const nextJson = JSON.stringify(stripConfigVersion(next));
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO system_settings_history(id,config_version,settings_json,changed_at,changed_by,reason) VALUES(?,?,?,?,?,?)")
+      .bind(crypto.randomUUID(), current.configVersion, currentJson, now, actor, string(reason, 300)),
+    env.DB.prepare("UPDATE system_settings SET config_version=?,settings_json=?,updated_at=?,updated_by=? WHERE id=1")
+      .bind(nextVersion, nextJson, now, actor),
+  ]);
+  memorySettingsCache = null;
+  memoryScriptCache = null;
+  return { ...next, configVersion: nextVersion };
+}
+
+
+function string(value, max) { return String(value == null ? "" : value).trim().slice(0, max); }
+
+
+function stripConfigVersion(settings) { const copy = { ...settings }; delete copy.configVersion; return copy; }
+
+
+function validateSettings(input, fallback) {
+  const out = { ...fallback };
+  const integer = (key, min, max) => { out[key] = clampInteger(input[key], min, max, fallback[key]); };
+  integer("minAppVersion", 1, 1000000);
+  integer("secureAppVersion", 1, 1000000);
+  integer("latestAppVersion", 1, 1000000);
+  integer("sessionSeconds", 900, 86400);
+  integer("adminSessionSeconds", 900, 86400);
+  integer("foregroundRecheckSeconds", 300, 43200);
+  integer("offlineGraceSeconds", 0, 86400);
+  integer("legacyOfflineGraceSeconds", 0, 172800);
+  integer("scriptLeaseSeconds", 300, 86400);
+  integer("challengeSeconds", 30, 300);
+  integer("riskForceOnlineThreshold", 1, 5);
+  integer("unbindPenaltySeconds", 0, 259200);
+  integer("unbindCooldownSeconds", 0, 2592000);
+  integer("unbindWindowSeconds", 86400, 7776000);
+  integer("unbindWindowLimit", 1, 30);
+  integer("sessionGeneration", 1, 1000000000);
+  integer("configCacheSeconds", 5, 300);
+  for (const key of ["forceUpdate", "globalForceOnline", "selfUnbindEnabled", "scriptDeliveryEnabled"]) out[key] = Boolean(input[key]);
+  out.updateUrl = string(input.updateUrl, 2048);
+  if (out.updateUrl && !/^https:\/\//i.test(out.updateUrl)) out.updateUrl = fallback.updateUrl || "";
+  out.updateMessage = string(input.updateMessage, 1000);
+  out.activeScriptVersion = string(input.activeScriptVersion, 64);
+  if (out.activeScriptVersion && !/^[0-9A-Za-z._-]+$/.test(out.activeScriptVersion)) out.activeScriptVersion = fallback.activeScriptVersion || "";
+  if (out.latestAppVersion < out.minAppVersion) out.latestAppVersion = out.minAppVersion;
+  if (out.secureAppVersion < out.minAppVersion) out.secureAppVersion = out.minAppVersion;
+  return out;
+}
+
+
+async function loadSettings(env, force = false) {
+  const now = Date.now();
+  if (!force && memorySettingsCache && memorySettingsCache.expiresAt > now) {
+    return memorySettingsCache.value;
+  }
+  try {
+    const row = await env.DB.prepare(
+      "SELECT config_version,settings_json FROM system_settings WHERE id=1"
+    ).first();
+    const parsed = row ? JSON.parse(row.settings_json) : {};
+    const value = validateSettings({ ...DEFAULT_SETTINGS, ...parsed }, DEFAULT_SETTINGS);
+    value.minAppVersion = Math.max(MIN_SIGNED_APP_VERSION, value.minAppVersion);
+    value.secureAppVersion = Math.max(MIN_SIGNED_APP_VERSION, value.secureAppVersion);
+    value.latestAppVersion = Math.max(12, value.latestAppVersion);
+    value.offlineGraceSeconds = Math.max(86400, Number(value.offlineGraceSeconds || 0));
+    value.legacyOfflineGraceSeconds = Math.max(86400, Number(value.legacyOfflineGraceSeconds || 0));
+    value.configVersion = Number(row?.config_version || 1);
+    memorySettingsCache = {
+      value,
+      expiresAt: now + value.configCacheSeconds * 1000,
+    };
+    return value;
+  } catch (error) {
+    console.warn("settings fallback", error);
+    return {
+      ...DEFAULT_SETTINGS,
+      offlineGraceSeconds: 86400,
+      legacyOfflineGraceSeconds: 86400,
+      configVersion: 1,
+    };
+  }
+}
+
+
+async function clientConfig(request, env) {
+  const body = await readJson(request);
+  const settings = await loadSettings(env);
+  const appVersion = appVersionOf(body);
+  return reply({
+    ok: true,
+    minAppVersion: settings.minAppVersion,
+    latestAppVersion: settings.latestAppVersion,
+    forceUpdate: settings.forceUpdate,
+    updateUrl: settings.updateUrl,
+    updateMessage: settings.updateMessage,
+    foregroundRecheckSeconds: settings.foregroundRecheckSeconds,
+    offlineGraceSeconds: settings.offlineGraceSeconds,
+    serverTime: nowSeconds(),
+    upgradeRequired: appVersion > 0 && appVersion < settings.minAppVersion,
+    configVersion: settings.configVersion,
+  });
+}
+
+
+async function fetchCurrentManifest(env) {
+  const response = await fetch(`${RUNTIME_RELEASE_BASE}manifest.json`, {
+    headers: { accept: "application/json", "user-agent": "GAMS-Control-Center/4" },
+    cf: { cacheTtl: 0, cacheEverything: false },
+  });
+  if (!response.ok) {
+    throw new HttpError(503, "runtime_unavailable", "运行服务信息暂时不可用");
+  }
+  const value = await response.json();
+  if (!value
+      || !/^[0-9A-Za-z._-]+$/.test(String(value.versionName || ""))
+      || !/^[0-9A-Za-z._-]+\.bin$/.test(String(value.file || ""))
+      || !/^[0-9a-f]{64}$/i.test(String(value.sha256 || ""))
+      || !Number.isFinite(Number(value.size))) {
+    throw new HttpError(503, "runtime_invalid", "运行服务信息异常");
+  }
+  return value;
+}
+
+
+async function rememberRuntimeRelease(env, manifest) {
+  const now = nowSeconds();
+  await env.DB.prepare(
+    `INSERT INTO script_releases
+       (version,manifest_json,file_name,sha256,size_bytes,first_seen_at,last_seen_at)
+     VALUES(?,?,?,?,?,?,?)
+     ON CONFLICT(version) DO UPDATE SET
+       manifest_json=excluded.manifest_json,
+       file_name=excluded.file_name,
+       sha256=excluded.sha256,
+       size_bytes=excluded.size_bytes,
+       last_seen_at=excluded.last_seen_at`
+  ).bind(
+    String(manifest.versionName),
+    JSON.stringify(manifest),
+    String(manifest.file),
+    String(manifest.sha256).toLowerCase(),
+    Number(manifest.size),
+    now,
+    now
+  ).run();
+}
+
+
+async function adminRuntime(request, env) {
+  await requireAdmin(request, env);
+  const settings = await loadSettings(env, true);
+  let manifest = null;
+  let error = "";
+  try {
+    manifest = await fetchCurrentManifest(env);
+    await rememberRuntimeRelease(env, manifest);
+  } catch (failure) {
+    error = failure?.message || "unavailable";
+  }
+  return reply({
+    ok: true,
+    enabled: settings.scriptDeliveryEnabled,
+    activeScriptVersion: settings.activeScriptVersion || manifest?.versionName || "",
+    manifest,
+    error,
+  });
+}
+
+
+async function adminRuntimeReleases(request, env) {
+  await requireAdmin(request, env);
+  try {
+    await rememberRuntimeRelease(env, await fetchCurrentManifest(env));
+  } catch { }
+  const rows = await env.DB.prepare(
+    "SELECT version,manifest_json,file_name,sha256,size_bytes,first_seen_at,last_seen_at " +
+    "FROM script_releases ORDER BY last_seen_at DESC LIMIT 100"
+  ).all();
+  return reply({
+    ok: true,
+    releases: (rows.results || []).map((row) => ({
+      ...row,
+      manifest: safeJson(row.manifest_json),
+    })),
+  });
+}
+
+
+async function adminRuntimeToggle(request, env, enabled) {
+  const admin = await requireAdmin(request, env);
+  const body = await readJson(request);
+  const next = await saveSettings(
+    env,
+    { scriptDeliveryEnabled: enabled },
+    admin.jti || "admin",
+    text(body.reason, 200) || (enabled ? "runtime-resume" : "runtime-pause"),
+    body.expectedVersion
+  );
+  await audit(env, enabled ? "runtime_resumed" : "runtime_paused", null, null, "");
+  return reply({ ok: true, settings: next });
+}
+
+
+async function adminRuntimeSelect(request, env) {
+  const admin = await requireAdmin(request, env);
+  const body = await readJson(request);
+  const requested = text(body.version, 64);
+  const currentManifest = await fetchCurrentManifest(env);
+  await rememberRuntimeRelease(env, currentManifest);
+  const version = requested || currentManifest.versionName;
+  const row = await env.DB.prepare("SELECT version FROM script_releases WHERE version=?")
+    .bind(version).first();
+  if (!row) throw new HttpError(404, "runtime_not_found", "未找到该运行版本");
+  if (version !== currentManifest.versionName) {
+    throw new HttpError(409, "runtime_not_available", "该历史版本当前没有可部署的加密运行包");
+  }
+  const next = await saveSettings(
+    env,
+    { activeScriptVersion: version },
+    admin.jti || "admin",
+    text(body.reason, 200) || `runtime-select:${version}`,
+    body.expectedVersion
+  );
+  await audit(env, "runtime_selected", null, null, JSON.stringify({ version }));
+  return reply({ ok: true, settings: next });
 }
 
 class HttpError extends Error {

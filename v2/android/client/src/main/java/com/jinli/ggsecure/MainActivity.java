@@ -340,7 +340,9 @@ public final class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 statusText.setText("已就绪");
                 CookieManager.getInstance().flush();
-                ensureControlScriptInjected(view, url);
+                if (!nativeDocumentStartEnabled && isTargetPage(url)) {
+                    view.evaluateJavascript(wrappedControlScript, null);
+                }
             }
 
             @Override
@@ -360,7 +362,15 @@ public final class MainActivity extends Activity {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return handleNavigationInsideGg(view, request.getUrl());
+                Uri uri = request.getUrl();
+                String scheme = uri.getScheme();
+                if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) return false;
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (Exception ignored) {
+                    Toast.makeText(MainActivity.this, "无法打开此链接", Toast.LENGTH_SHORT).show();
+                }
+                return true;
             }
 
             @Override
@@ -376,7 +386,7 @@ public final class MainActivity extends Activity {
                 if (isSuppressedEngineReadyAlert(message)) {
                     try {
                         view.evaluateJavascript(
-                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.6'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
+                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.2'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
                                 null);
                     } catch (Throwable ignored) { }
                     result.confirm();
@@ -411,44 +421,6 @@ public final class MainActivity extends Activity {
         webView.setDownloadListener(createDownloadListener());
     }
 
-    private boolean handleNavigationInsideGg(WebView view, Uri uri) {
-        if (uri == null) return true;
-        String scheme = uri.getScheme();
-        if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-            if (view != null) {
-                String target = uri.toString();
-                String current = view.getUrl();
-                if (current == null || !current.equals(target)) {
-                    view.loadUrl(target);
-                }
-            }
-            return true;
-        }
-        if ("tel".equalsIgnoreCase(scheme)
-                || "mailto".equalsIgnoreCase(scheme)
-                || "sms".equalsIgnoreCase(scheme)
-                || "smsto".equalsIgnoreCase(scheme)) {
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, uri));
-            } catch (Exception ignored) {
-                Toast.makeText(this, "无法打开此系统功能", Toast.LENGTH_SHORT).show();
-            }
-            return true;
-        }
-        if ("intent".equalsIgnoreCase(scheme)) {
-            Toast.makeText(this, "已阻止外部浏览器跳转", Toast.LENGTH_SHORT).show();
-            return true;
-        }
-        if ("about".equalsIgnoreCase(scheme)
-                || "javascript".equalsIgnoreCase(scheme)
-                || "data".equalsIgnoreCase(scheme)
-                || "blob".equalsIgnoreCase(scheme)) {
-            return false;
-        }
-        Toast.makeText(this, "已阻止未知外部链接", Toast.LENGTH_SHORT).show();
-        return true;
-    }
-
     private void installDocumentStartScript() {
         nativeDocumentStartEnabled =
                 WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
@@ -458,18 +430,6 @@ public final class MainActivity extends Activity {
                     webView, wrappedControlScript, SCRIPT_ORIGINS);
         } catch (Throwable error) {
             nativeDocumentStartEnabled = false;
-        }
-    }
-
-    private void ensureControlScriptInjected(WebView view, String url) {
-        if (view == null || wrappedControlScript == null || !isTargetPage(url)) return;
-        view.evaluateJavascript(wrappedControlScript, null);
-        long[] delays = {250L, 1200L, 3000L};
-        for (long delay : delays) {
-            view.postDelayed(() -> {
-                if (webView != view || !isTargetPage(view.getUrl())) return;
-                view.evaluateJavascript(wrappedControlScript, null);
-            }, delay);
         }
     }
 
@@ -537,14 +497,11 @@ public final class MainActivity extends Activity {
 
     private String wrapControlScript(String source) {
         return "(function(){" +
-                "if(window.__GG_V2_CONTROL_LOADED__||window.__GG_V2_CONTROL_LOADING__)return;" +
-                "window.__GG_V2_CONTROL_LOADING__=true;" +
-                "try{\n" + source + "\n" +
+                "if(window.__GG_V2_CONTROL_LOADED__)return;" +
                 "window.__GG_V2_CONTROL_LOADED__=true;" +
-                "}catch(e){" +
+                "try{\n" + source + "\n}catch(e){" +
                 "window.__GG_V2_CONTROL_LOADED__=false;" +
-                "console.error('[GG]',e);" +
-                "}finally{window.__GG_V2_CONTROL_LOADING__=false;}" +
+                "console.error('[GG]',e);}" +
                 "})();";
     }
 

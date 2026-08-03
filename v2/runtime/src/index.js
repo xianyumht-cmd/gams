@@ -91,6 +91,7 @@ async function issueChallenge(request, env) {
 }
 
 async function runtimeAccess(request, env) {
+  await requireRuntimeEnabled(env);
   const body = await readJson(request);
   const appVersion = appVersionOf(body);
   if (appVersion < MIN_V2_APP_VERSION) {
@@ -171,7 +172,9 @@ async function runtimeAccess(request, env) {
   });
 }
 
+
 async function runtimeBundle(request, env) {
+  await requireRuntimeEnabled(env);
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) {
     throw new HttpError(401, "unauthorized", "登录状态已失效");
@@ -216,6 +219,23 @@ async function runtimeBundle(request, env) {
     "x-runtime-version": manifest.versionName,
   });
   return new Response(bytes, { status: 200, headers });
+}
+
+
+async function requireRuntimeEnabled(env) {
+  try {
+    const row = await env.DB.prepare(
+      "SELECT settings_json FROM system_settings WHERE id=1"
+    ).first();
+    if (!row) return;
+    const settings = JSON.parse(row.settings_json || "{}");
+    if (settings.scriptDeliveryEnabled === false) {
+      throw new HttpError(503, "runtime_paused", "服务维护中，请稍后再试");
+    }
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    console.warn("runtime settings fallback", error);
+  }
 }
 
 async function requireActiveDevice(env, session, deviceHash) {
