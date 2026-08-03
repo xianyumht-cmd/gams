@@ -1,0 +1,167 @@
+name: Recover production Worker connectivity
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/recover-production-connectivity.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recover-production-connectivity
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      LICENSE_HOST: license.xn--8pv109c.top
+      RUNTIME_HOST: runtime.xn--8pv109c.top
+      ZONE_NAME: xn--8pv109c.top
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Attach custom domains without redeploying Worker code
+        id: repair
+        shell: bash
+        run: |
+          set -uo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN missing"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID missing"; exit 1; }
+
+          mkdir -p /tmp/gams-recovery
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/domains"
+
+          attach_domain() {
+            local host="$1"
+            local service="$2"
+            local output="/tmp/gams-recovery/${service}.json"
+            local status
+            status="$(curl -sS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
+              -o "$output" -w '%{http_code}' -X PUT \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg hostname "$host" --arg service "$service" --arg zone "$ZONE_NAME" \
+                '{hostname:$hostname,service:$service,zone_name:$zone}')" \
+              "$api" || true)"
+            printf '%s' "$status" > "/tmp/gams-recovery/${service}.http"
+            jq -e '.success == true' "$output" >/dev/null 2>&1
+          }
+
+          license_ok=false
+          runtime_ok=false
+          if attach_domain "$LICENSE_HOST" "gams-license-api"; then license_ok=true; fi
+          if attach_domain "$RUNTIME_HOST" "gams-runtime-v2"; then runtime_ok=true; fi
+
+          echo "license_attach=$license_ok" >> "$GITHUB_OUTPUT"
+          echo "runtime_attach=$runtime_ok" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for DNS and health endpoints
+        id: verify
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/gams-recovery
+
+          check_host() {
+            local name="$1"
+            local expected_service="$2"
+            local dns_ok=false
+            local health_ok=false
+            local http_code="000"
+            local body="/tmp/gams-recovery/${expected_service}-health.json"
+            local resolved=""
+
+            for attempt in $(seq 1 36); do
+              resolved="$(getent ahostsv4 "$name" 2>/dev/null | awk '{print $1}' | sort -u | paste -sd, - || true)"
+              if [[ -n "$resolved" ]]; then dns_ok=true; fi
+              http_code="$(curl -sS --connect-timeout 8 --max-time 15 \
+                -o "$body" -w '%{http_code}' "https://${name}/health" || true)"
+              if [[ "$http_code" == "200" ]] \
+                && jq -e --arg service "$expected_service" '.ok == true and .service == $service' "$body" >/dev/null 2>&1; then
+                health_ok=true
+                break
+              fi
+              sleep 5
+            done
+
+            jq -nc \
+              --arg host "$name" \
+              --arg service "$expected_service" \
+              --arg resolved "$resolved" \
+              --arg http "$http_code" \
+              --argjson dns "$dns_ok" \
+              --argjson health "$health_ok" \
+              '{host:$host,service:$service,dnsResolved:$dns,addresses:($resolved|split(",")|map(select(length>0))),httpStatus:$http,healthOk:$health}'
+          }
+
+          license_result="$(check_host "$LICENSE_HOST" "gams-license-api")"
+          runtime_result="$(check_host "$RUNTIME_HOST" "gams-runtime-v2")"
+          printf '%s\n' "$license_result" > /tmp/gams-recovery/license-result.json
+          printf '%s\n' "$runtime_result" > /tmp/gams-recovery/runtime-result.json
+
+          license_health="$(printf '%s' "$license_result" | jq -r '.healthOk')"
+          runtime_health="$(printf '%s' "$runtime_result" | jq -r '.healthOk')"
+          echo "license_health=$license_health" >> "$GITHUB_OUTPUT"
+          echo "runtime_health=$runtime_health" >> "$GITHUB_OUTPUT"
+
+      - name: Record recovery result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs /tmp/gams-recovery
+
+          safe_attach_result() {
+            local service="$1"
+            local file="/tmp/gams-recovery/${service}.json"
+            local http_file="/tmp/gams-recovery/${service}.http"
+            local http="$(cat "$http_file" 2>/dev/null || printf '000')"
+            if [[ -s "$file" ]]; then
+              jq -c --arg http "$http" '{httpStatus:$http,success:(.success // false),errors:[(.errors // [])[] | {code,message}],result:(if .success then {hostname:.result.hostname,service:.result.service,zone_name:.result.zone_name} else null end)}' "$file" 2>/dev/null \
+                || jq -nc --arg http "$http" '{httpStatus:$http,success:false,errors:[{code:"invalid_response",message:"Cloudflare response was not valid JSON"}],result:null}'
+            else
+              jq -nc --arg http "$http" '{httpStatus:$http,success:false,errors:[{code:"no_response",message:"No Cloudflare response"}],result:null}'
+            fi
+          }
+
+          license_attach="$(safe_attach_result gams-license-api)"
+          runtime_attach="$(safe_attach_result gams-runtime-v2)"
+          license_check="$(cat /tmp/gams-recovery/license-result.json 2>/dev/null || jq -nc --arg host "$LICENSE_HOST" '{host:$host,dnsResolved:false,addresses:[],httpStatus:"000",healthOk:false}')"
+          runtime_check="$(cat /tmp/gams-recovery/runtime-result.json 2>/dev/null || jq -nc --arg host "$RUNTIME_HOST" '{host:$host,dnsResolved:false,addresses:[],httpStatus:"000",healthOk:false}')"
+
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg commit "$GITHUB_SHA" \
+            --argjson licenseAttach "$license_attach" \
+            --argjson runtimeAttach "$runtime_attach" \
+            --argjson licenseCheck "$license_check" \
+            --argjson runtimeCheck "$runtime_check" \
+            '{schemaVersion:1,generatedAt:$generatedAt,triggerCommit:$commit,operation:"attach-existing-workers-to-custom-domains",license:{attach:$licenseAttach,check:$licenseCheck},runtime:{attach:$runtimeAttach,check:$runtimeCheck},secretsExposed:false}' \
+            > docs/PRODUCTION_CONNECTIVITY_RECOVERY.json
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/PRODUCTION_CONNECTIVITY_RECOVERY.json
+          git commit -m "Record production connectivity recovery" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Require both custom domains healthy
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.repair.outputs.license_attach }}" = "true"
+          test "${{ steps.repair.outputs.runtime_attach }}" = "true"
+          test "${{ steps.verify.outputs.license_health }}" = "true"
+          test "${{ steps.verify.outputs.runtime_health }}" = "true"
