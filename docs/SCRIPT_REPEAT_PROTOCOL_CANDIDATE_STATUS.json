@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T21:28:27Z",
+  "runId": 30854749079,
+  "ok": false,
+  "apk": {
+    "versionName": "2.0.9-script-candidate",
+    "versionCode": 19,
+    "sha256": "",
+    "protocolAppVersion": 19
+  },
+  "runtime": {
+    "candidateVersion": "2.0.5-script-repeat-c1",
+    "sourceSha": "",
+    "probe": {
+      "custom": {
+        "ok": false
+      },
+      "worker": {
+        "ok": false
+      },
+      "defaultChannel": {
+        "ok": false
+      }
+    }
+  },
+  "isolation": {
+    "androidMainActivityChanged": false,
+    "scriptChangedFromPreviousCandidate": false,
+    "gameChanged": false,
+    "defaultRuntimeChannelChanged": false
+  },
+  "steps": {
+    "verify": "success",
+    "source": "failure",
+    "deploy": "skipped",
+    "probe": "skipped",
+    "clientPatch": "skipped",
+    "apk": "skipped",
+    "artifact": "skipped"
+  },
+  "secretsExposed": false
+}
