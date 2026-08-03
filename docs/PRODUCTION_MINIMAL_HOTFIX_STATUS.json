@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T14:41:43Z",
+  "triggerCommit": "e564ce841cc89834473623e01cf7f0add86db00e",
+  "ok": false,
+  "steps": {
+    "inputs": "success",
+    "runtimeSourcePatch": "success",
+    "runtimeTokenSecret": "success",
+    "runtimeDeploy": "success",
+    "bothServicesHealthy": "success",
+    "signedLifecycleAcceptance": "failure"
+  },
+  "runtimeAdminPasswordOverwritten": false,
+  "cloudflareSecurityRulesChanged": false,
+  "secretsExposed": false
+}
