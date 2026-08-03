@@ -50,14 +50,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'versionCode = 14' v2/android/client/build.gradle.kts
-          grep -Fq 'versionName = "2.0.5"' v2/android/client/build.gradle.kts
+          client='v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java'
+          grep -Fq 'versionCode = 15' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.6"' v2/android/client/build.gradle.kts
           grep -Fq 'versionCode = 2' v2/android/manager/build.gradle.kts
           grep -Fq 'versionName = "2.0.1"' v2/android/manager/build.gradle.kts
-          grep -Fq 'setSupportMultipleWindows(true)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
-          grep -Fq 'boolean onCreateWindow' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
-          grep -Fq 'ensureControlScriptInjected(view, url)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
-          grep -Fq 'popup.getSettings().setJavaScriptEnabled(true)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'setSupportMultipleWindows(false)' "$client"
+          ! grep -Fq 'boolean onCreateWindow' "$client"
+          ! grep -Fq 'new WebView(MainActivity.this)' "$client"
+          grep -Fq 'ensureControlScriptInjected(view, url)' "$client"
+          grep -Fq 'view.loadUrl(target)' "$client"
           grep -Fq 'ResilientApiTransport.get' v2/android/manager/src/main/java/com/jinli/ggsecure/manager/AdminApiManager.java
 
       - name: Build and lint both release APKs
@@ -97,10 +99,10 @@ jobs:
 
           client="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
           manager="$(find v2/android/manager/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
-          sign_one "$client" /tmp/gg-formal/GG-2.0.5-code14.apk
+          sign_one "$client" /tmp/gg-formal/GG-2.0.6-code15.apk
           sign_one "$manager" /tmp/gg-formal/GG-Manager-2.0.1-code2.apk
 
-          "$aapt" dump badging /tmp/gg-formal/GG-2.0.5-code14.apk | grep -Fq "package: name='com.jinli.quickweb' versionCode='14' versionName='2.0.5'"
+          "$aapt" dump badging /tmp/gg-formal/GG-2.0.6-code15.apk | grep -Fq "package: name='com.jinli.quickweb' versionCode='15' versionName='2.0.6'"
           "$aapt" dump badging /tmp/gg-formal/GG-Manager-2.0.1-code2.apk | grep -Fq "package: name='com.jinli.ggsecure.manager' versionCode='2' versionName='2.0.1'"
           sha256sum /tmp/gg-formal/*.apk > /tmp/gg-formal/SHA256SUMS.txt
 
