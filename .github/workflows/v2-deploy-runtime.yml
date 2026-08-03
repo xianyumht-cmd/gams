@@ -8,20 +8,28 @@ on:
       - v2/runtime/src/**
       - v2/runtime/wrangler.template.jsonc
       - v2/runtime/release/**
+      - scripts/v2-lifecycle-smoke.mjs
       - .github/workflows/v2-deploy-runtime.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: production-runtime
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      ADMIN_LOGIN_SECRET: ${{ secrets.LICENSE_ADMIN_PASSWORD }}
+      LICENSE_ENDPOINT: https://gams-license-api.2320006072.workers.dev
+      RUNTIME_ENDPOINT: https://gams-runtime-v2.2320006072.workers.dev
     steps:
       - uses: actions/checkout@v4
 
@@ -29,14 +37,15 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Validate deployment secrets
+      - name: Validate deployment inputs
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
-          test -n "${TOKEN_SIGNING_SECRET:-}"
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TOKEN_SIGNING_SECRET ADMIN_LOGIN_SECRET; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
           test "${#TOKEN_SIGNING_SECRET}" -ge 32
+          node --check scripts/v2-lifecycle-smoke.mjs
 
       - name: Patch runtime token verification only
         shell: bash
@@ -82,22 +91,27 @@ jobs:
           printf '%s' "$TOKEN_SIGNING_SECRET" \
             | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc
 
-      - name: Deploy production runtime Worker
+      - name: Deploy production Runtime Worker
         working-directory: v2/runtime
         run: npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
 
-      - name: Verify production runtime endpoint
+      - name: Wait for both production services
         shell: bash
         run: |
           set -euo pipefail
-          endpoint="https://gams-runtime-v2.2320006072.workers.dev"
-          for attempt in $(seq 1 24); do
-            status="$(curl --silent --show-error --output /tmp/runtime-health.json --write-out '%{http_code}' "$endpoint/health" || true)"
-            if [[ "$status" == "200" ]] && jq -e '.ok == true and .service == "gams-runtime-v2" and .encryptedRuntime == true' /tmp/runtime-health.json >/dev/null; then
-              echo "Production runtime is ready"
+          for attempt in $(seq 1 36); do
+            license_status="$(curl -sS -o /tmp/license-health.json -w '%{http_code}' "$LICENSE_ENDPOINT/health" || true)"
+            runtime_status="$(curl -sS -o /tmp/runtime-health.json -w '%{http_code}' "$RUNTIME_ENDPOINT/health" || true)"
+            if [[ "$license_status" == "200" && "$runtime_status" == "200" ]] \
+              && jq -e '.ok == true and .version == 2 and .signedProtocol == true' /tmp/license-health.json >/dev/null \
+              && jq -e '.ok == true and .service == "gams-runtime-v2" and .encryptedRuntime == true' /tmp/runtime-health.json >/dev/null; then
               exit 0
             fi
             sleep 5
           done
+          cat /tmp/license-health.json 2>/dev/null || true
           cat /tmp/runtime-health.json 2>/dev/null || true
           exit 1
+
+      - name: Run signed production lifecycle acceptance
+        run: node scripts/v2-lifecycle-smoke.mjs
