@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "project": "xianyumht-cmd/gams",
+  "taskId": "GAMS-CLIENT-SHOP-HOTFIX-20260804",
+  "updatedAt": "2026-08-04T04:25:00+08:00",
+  "status": "awaiting_emulator_acceptance",
+  "summary": "GG 2.0.3-stable no longer white-screens and starts normally, but emulator testing found an external system-browser blank page and shop purchases only work once. A split 2.0.7-stable candidate was built to address both without restoring the previous multi-window WebView regression.",
+  "production": {
+    "branch": "main",
+    "headAtCheckpoint": "92591ccb9db31489dcae835601a34dbdc9296ee6",
+    "clientVersionName": "2.0.3-stable",
+    "clientVersionCode": 16,
+    "state": "keep_as_current_fallback",
+    "doNotReplaceUntilAcceptance": true
+  },
+  "candidate": {
+    "versionName": "2.0.7-stable",
+    "versionCode": 17,
+    "packageName": "com.jinli.quickweb",
+    "protocolAppVersion": 12,
+    "apkSha256": "799124ed7b2b0347ebd387daec309a6982a4e62b8fa0a0a9042419a33e12972b",
+    "workflowRunId": 30849473086,
+    "artifactId": 8870025435,
+    "artifactName": "GG-2.0.7-stable-client-shop-hotfix-candidate",
+    "artifactExpiresAt": "2026-09-02T20:17:41Z",
+    "artifactArchiveSha256": "54d19995c751402a474081f595f640c5785acd4ce001d8002a2a7795c07b1a5b",
+    "buildResults": {
+      "deterministicPatch": "success",
+      "androidReleaseBuild": "success",
+      "lint": "success",
+      "r8": "success",
+      "releaseSigning": "success",
+      "apkSignatureVerification": "success",
+      "packageMetadataVerification": "success",
+      "artifactUpload": "success"
+    },
+    "sourcePersistence": {
+      "branch": "hotfix/client-shop-repeat-no-external-browser-20260804",
+      "patchScriptCommit": "64d0fcb81227be14dc51cbbdcb10e8d163b4ff7e",
+      "productSourceCommitted": false,
+      "reason": "The GitHub Actions token was not allowed to push a commit that also modified .github/workflows/v2-build-apks.yml. The verified APK artifact exists, and the deterministic patch script remains on the hotfix branch.",
+      "doNotClaimMergedOrReleased": true
+    }
+  },
+  "diagnosis": {
+    "externalBlankBrowser": {
+      "confidence": "high",
+      "cause": "The restored client forwarded every non-http/https URI to Android ACTION_VIEW. Emulator WebView navigation can expose intent:, about:blank, javascript:, data: or blob: URIs differently from the Android 11 physical device, causing a system browser blank page.",
+      "candidateFix": [
+        "Handle both modern WebResourceRequest and deprecated String navigation callbacks",
+        "Keep normal http/https navigation inside the GG WebView",
+        "Keep about:, javascript:, data: and blob: internal",
+        "Block intent: and unknown external schemes",
+        "Only allow actual system schemes such as tel:, mailto:, sms: and smsto:"
+      ]
+    },
+    "repeatPurchase": {
+      "confidence": "high",
+      "cause": "The runtime still contains script 1.1.4 one-shot callback restoration, but restoring the stable Android client removed page-finish reinjection and delayed retries. After a page transition or shop re-entry the control script can therefore be absent or incompletely initialized.",
+      "candidateFix": [
+        "Retain script 1.1.4 one-shot callback restoration",
+        "Reinject the control script after target-page completion",
+        "Retry injection after 250 ms, 1200 ms and 3000 ms",
+        "Use a loading guard to prevent duplicate concurrent injection"
+      ]
+    },
+    "whiteScreenRiskBoundary": {
+      "multipleWindows": false,
+      "onCreateWindow": false,
+      "temporaryPopupWebView": false,
+      "singleWebViewOnly": true
+    }
+  },
+  "acceptanceRequired": [
+    "Launch GG and confirm startup remains fast and no white screen returns",
+    "Confirm the emulator no longer opens a system-browser blank page",
+    "Buy two different shop items consecutively without leaving the shop",
+    "Return to the story, reopen the shop and complete a third purchase"
+  ],
+  "nextDecision": {
+    "allPass": "Persist only the verified client source changes to the hotfix branch without changing a workflow file in the same automated push, review the exact diff, merge or promote, build a formal release, then remove temporary dispatch files.",
+    "externalBrowserStillFails": "Do not broaden navigation handling. Add targeted WebView navigation and Android intent logging, then provide a one-click capture script only if repository and build resources cannot reveal the URI.",
+    "repeatPurchaseStillFails": "Instrument the one-shot callback lifecycle, target-page injection state and shop navigation without changing license, runtime encryption or network endpoints.",
+    "whiteScreenReturns": "Stop promotion, reinstall 2.0.3-stable code16, and isolate the reinjection timing change from the navigation fix."
+  },
+  "protectedAreas": [
+    "Do not rotate or change TOKEN_SIGNING_SECRET, RUNTIME_MASTER_KEY or LICENSE_ADMIN_PASSWORD for this client UI task",
+    "Do not redeploy or republish the encrypted runtime unless a separate runtime integrity error is observed",
+    "Do not restore setSupportMultipleWindows(true), onCreateWindow or a temporary popup WebView",
+    "Do not state that 2.0.7-stable is formally released before emulator acceptance"
+  ]
+}
