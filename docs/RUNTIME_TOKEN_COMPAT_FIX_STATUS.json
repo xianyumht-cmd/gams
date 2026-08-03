@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T14:48:24Z",
+  "triggerCommit": "89d0016dd2a9972b503bd86f54500a5e25ec029d",
+  "ok": false,
+  "steps": {
+    "inputs": "success",
+    "patch": "success",
+    "tokenSecret": "success",
+    "deploy": "success",
+    "health": "success",
+    "lifecycle": "failure"
+  },
+  "sanitizedLog": "file:<redacted>.mjs:31\n    throw new Error(`${url} returned non-JSON HTTP ${response.status}: ${text.slice(0, 300)}`);\n          ^\n\nError: https://gams-runtime-v2.2320006072.workers.dev/v2/runtime/access returned non-JSON HTTP 500: <!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!\n    at requestJson (file:<redacted>.mjs:31:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:<redacted>.mjs:201:28\n\nNode.js v22.23.1\n",
+  "runtimeAdminPasswordOverwritten": false,
+  "cloudflareSecurityRulesChanged": false,
+  "secretsExposed": false
+}
