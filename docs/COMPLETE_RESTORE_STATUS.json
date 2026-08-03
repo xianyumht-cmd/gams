@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T19:09:29Z",
+  "runId": 30844500436,
+  "ok": false,
+  "client": {
+    "versionName": "2.0.3-stable",
+    "versionCode": 16,
+    "protocolAppVersion": 12,
+    "sha256": "",
+    "preRegressionBehavior": true
+  },
+  "manager": {
+    "versionName": "2.0.3",
+    "versionCode": 4,
+    "sha256": "",
+    "completeControlCenter": true
+  },
+  "backend": {
+    "adminRouteCount": 23,
+    "signedProtocolRetained": true,
+    "encryptedRuntimeRetained": true,
+    "databasePreserved": true
+  },
+  "commits": {
+    "candidate": "",
+    "published": ""
+  },
+  "steps": {
+    "secrets": "success",
+    "assemble": "success",
+    "source": "failure",
+    "build": "skipped",
+    "sign": "skipped",
+    "deploy": "skipped",
+    "smoke": "skipped",
+    "rollback": "skipped",
+    "push": "skipped",
+    "release": "skipped",
+    "artifact": "skipped"
+  },
+  "secretsExposed": false
+}
