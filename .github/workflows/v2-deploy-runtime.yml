@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: production-runtime
@@ -38,6 +38,7 @@ jobs:
           node-version: "22"
 
       - name: Validate deployment inputs
+        id: inputs
         shell: bash
         run: |
           set -euo pipefail
@@ -48,6 +49,7 @@ jobs:
           node --check scripts/v2-lifecycle-smoke.mjs
 
       - name: Patch runtime token verification only
+        id: patch
         shell: bash
         run: |
           set -euo pipefail
@@ -76,6 +78,7 @@ jobs:
           echo "database_id=$database_id" >> "$GITHUB_OUTPUT"
 
       - name: Generate Wrangler configuration
+        id: config
         working-directory: v2/runtime
         shell: bash
         run: |
@@ -84,6 +87,7 @@ jobs:
             wrangler.template.jsonc > wrangler.generated.jsonc
 
       - name: Configure runtime token verification secret
+        id: secret
         working-directory: v2/runtime
         shell: bash
         run: |
@@ -92,10 +96,12 @@ jobs:
             | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.generated.jsonc
 
       - name: Deploy production Runtime Worker
+        id: runtime_deploy
         working-directory: v2/runtime
         run: npx --yes wrangler@4 deploy --config wrangler.generated.jsonc
 
       - name: Wait for both production services
+        id: services
         shell: bash
         run: |
           set -euo pipefail
@@ -114,4 +120,69 @@ jobs:
           exit 1
 
       - name: Run signed production lifecycle acceptance
+        id: lifecycle
         run: node scripts/v2-lifecycle-smoke.mjs
+
+      - name: Record production hotfix status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUTS_OUTCOME: ${{ steps.inputs.outcome }}
+          PATCH_OUTCOME: ${{ steps.patch.outcome }}
+          SECRET_OUTCOME: ${{ steps.secret.outcome }}
+          RUNTIME_DEPLOY_OUTCOME: ${{ steps.runtime_deploy.outcome }}
+          SERVICES_OUTCOME: ${{ steps.services.outcome }}
+          LIFECYCLE_OUTCOME: ${{ steps.lifecycle.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/gams-status
+          overall=false
+          if [[ "$INPUTS_OUTCOME" == "success" \
+             && "$PATCH_OUTCOME" == "success" \
+             && "$SECRET_OUTCOME" == "success" \
+             && "$RUNTIME_DEPLOY_OUTCOME" == "success" \
+             && "$SERVICES_OUTCOME" == "success" \
+             && "$LIFECYCLE_OUTCOME" == "success" ]]; then
+            overall=true
+          fi
+
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg commit "$GITHUB_SHA" \
+            --arg inputs "$INPUTS_OUTCOME" \
+            --arg patch "$PATCH_OUTCOME" \
+            --arg secret "$SECRET_OUTCOME" \
+            --arg runtimeDeploy "$RUNTIME_DEPLOY_OUTCOME" \
+            --arg services "$SERVICES_OUTCOME" \
+            --arg lifecycle "$LIFECYCLE_OUTCOME" \
+            --argjson ok "$overall" \
+            '{schemaVersion:1,generatedAt:$generatedAt,triggerCommit:$commit,ok:$ok,steps:{inputs:$inputs,runtimeSourcePatch:$patch,runtimeTokenSecret:$secret,runtimeDeploy:$runtimeDeploy,bothServicesHealthy:$services,signedLifecycleAcceptance:$lifecycle},runtimeAdminPasswordOverwritten:false,cloudflareSecurityRulesChanged:false,secretsExposed:false}' \
+            > /tmp/gams-status/report.json
+
+          path="docs/PRODUCTION_MINIMAL_HOTFIX_STATUS.json"
+          content="$(base64 -w0 /tmp/gams-status/report.json)"
+          existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=main" --jq '.sha' 2>/dev/null || true)"
+          if [[ -n "$existing_sha" ]]; then
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record production minimal hotfix status' \
+              -f content="$content" \
+              -f sha="$existing_sha" \
+              -f branch=main >/dev/null
+          else
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+              -f message='Record production minimal hotfix status' \
+              -f content="$content" \
+              -f branch=main >/dev/null
+          fi
+
+      - name: Require complete production acceptance
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.inputs.outcome }}" = "success"
+          test "${{ steps.patch.outcome }}" = "success"
+          test "${{ steps.secret.outcome }}" = "success"
+          test "${{ steps.runtime_deploy.outcome }}" = "success"
+          test "${{ steps.services.outcome }}" = "success"
+          test "${{ steps.lifecycle.outcome }}" = "success"
