@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-03T21:28:27Z",
+  "generatedAt": "2026-08-03T21:35:34Z",
   "runId": 30854749079,
   "ok": false,
   "apk": {
@@ -11,16 +11,24 @@
   },
   "runtime": {
     "candidateVersion": "2.0.5-script-repeat-c1",
-    "sourceSha": "",
+    "sourceSha": "89bc56105f627531e53b8bc76b8de8f2f8be0122",
     "probe": {
       "custom": {
-        "ok": false
+        "ok": false,
+        "httpCode": "403",
+        "body": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\"><meta name=\"robots\" content=\"noindex,nofollow\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"content-security-policy\" content=\"default-src &#39;none&#39;; script-src &#39;nonce-SwfTzoOQz0udRN9KBgcwVw&#39; &#39;unsafe-eval&#39; https://challenges.cloudflare.com; script-src-attr &#39;none&#39;; style-src &#39;unsafe-inline&#39;; img-src &#39;self&#39; https://challenges",
+        "error": ""
       },
       "worker": {
-        "ok": false
+        "ok": true,
+        "httpCode": "200",
+        "body": "{\"ok\":true,\"service\":\"gams-runtime-v2\",\"version\":3,\"keyWrap\":\"RSA-OAEP-SHA1\",\"minAppVersion\":11,\"encryptedRuntime\":true,\"splitSecrets\":true,\"legacyReleaseCompatible\":true,\"candidateChannel\":true,\"candidateAppVersion\":19,\"candidateRuntimeVersion\":\"2.0.5-script-repeat-c1\"}",
+        "error": ""
       },
       "defaultChannel": {
-        "ok": false
+        "ok": false,
+        "httpCode": "403",
+        "body": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\"><meta name=\"robots\" content=\"noindex,nofollow\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"content-security-policy\" content=\"default-src &#39;none&#39;; script-src &#39;nonce-J0qOqytixIgmXxtvgnzgCL&#39; &#39;unsafe-eval&#39; https://challenges.cloudflare.com; script-src-attr &#39;none&#39;; style-src &#39;unsafe-inline&#39;; img-src &#39;self&#39; https://challenges"
       }
     }
   },
@@ -32,9 +40,9 @@
   },
   "steps": {
     "verify": "success",
-    "source": "failure",
-    "deploy": "skipped",
-    "probe": "skipped",
+    "source": "success",
+    "deploy": "success",
+    "probe": "failure",
     "clientPatch": "skipped",
     "apk": "skipped",
     "artifact": "skipped"
