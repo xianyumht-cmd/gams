@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T13:16:17Z",
+  "runId": 30912076430,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "chromium-webview-equivalent-purchase-screen-probe",
+  "apkExecuted": false,
+  "paymentCompleted": false,
+  "targetUrl": "https://m.66rpg.com/h5/1682748?ohp=v3&quality=32",
+  "tap": {
+    "x": 105,
+    "y": 650
+  },
+  "cases": [
+    {
+      "pair": "current-first-historical-second",
+      "fatal": false
+    },
+    {
+      "pair": "full-historical",
+      "fatal": false
+    }
+  ],
+  "reportAvailable": true,
+  "artifactName": "target-page-purchase-screen-probe"
+}
