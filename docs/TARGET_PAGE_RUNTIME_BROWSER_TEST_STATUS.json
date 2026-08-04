@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-04T12:27:58Z",
-  "runId": 30909192964,
+  "generatedAt": "2026-08-04T12:33:07Z",
+  "runId": 30909584933,
   "state": "running",
+  "workflow": "v2",
   "ok": false,
   "reportAvailable": false,
   "apkExecuted": false,
