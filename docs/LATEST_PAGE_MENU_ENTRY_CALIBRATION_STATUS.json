@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T16:01:33Z",
+  "runId": 30926809943,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "captureOk": true,
+  "menuEntryValidated": false,
+  "ok": false,
+  "mode": "menu-entry-calibration-capture-only",
+  "menuTap": {
+    "x": 50,
+    "y": 180
+  },
+  "summary": {
+    "totalCases": 5,
+    "fatalCases": 0,
+    "pageErrorCases": 0,
+    "runtimeLoadedCases": 5,
+    "screenshotChangedCases": 3,
+    "blockedOrderCases": 0
+  },
+  "reportAvailable": true,
+  "artifactName": "latest-page-menu-entry-calibration",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false
+}
