@@ -1,0 +1,163 @@
+name: Test latest page entry and shop calibration v2
+
+on:
+  push:
+    branches:
+      - diagnostics/latest-page-lifecycle-trace-20260804
+    paths:
+      - .github/workflows/test-latest-page-entry-shop-calibration-v2.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: latest-page-entry-shop-calibration-v2-20260805
+  cancel-in-progress: true
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      OUTPUT_DIR: latest-page-entry-shop-calibration-v2
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/latest-page-lifecycle-trace-20260804
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare corrected page-menu coordinate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$CURRENT_FIRST_PATH"
+          test -s "$CURRENT_SECOND_PATH"
+          grep -Fq '@version      1.1.4' "$CURRENT_FIRST_PATH"
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/run_latest_page_entry_shop_calibration.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = 'const pageMenuTap = { x: 320, y: 810 };'
+          new = 'const pageMenuTap = { x: 350, y: 725 };'
+          if text.count(old) != 1:
+              raise SystemExit('page menu coordinate marker mismatch')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          node --check scripts/run_latest_page_entry_shop_calibration.mjs
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute corrected five-page calibration
+        id: calibration_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/run_latest_page_entry_shop_calibration.mjs 2>&1 | tee /tmp/latest-page-entry-shop-calibration-v2.log
+
+      - name: Build strict calibration status
+        if: always()
+        shell: bash
+        env:
+          CALIBRATION_OUTCOME: ${{ steps.calibration_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/latest-page-entry-shop-calibration-v2.log && cp /tmp/latest-page-entry-shop-calibration-v2.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output_dir = Path(os.environ['OUTPUT_DIR'])
+          report_path = output_dir / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          cases = report.get('cases', []) if report else []
+          page_menu_cases = [case for case in cases if case.get('calibration') == 'page-menu']
+          conflicts = [case.get('targetId') for case in page_menu_cases if case.get('stages', {}).get('after-calibration-tap', {}).get('panelVisible')]
+          summary = dict(report.get('summary') or {}) if report else {}
+          summary['pageMenuCases'] = len(page_menu_cases)
+          summary['pageMenuRuntimePanelConflictCases'] = len(conflicts)
+          summary['pageMenuRuntimePanelConflictTargets'] = conflicts
+          ok = bool(report) and os.environ.get('CALIBRATION_OUTCOME') == 'success'
+          ok = ok and summary.get('totalCases') == 5
+          ok = ok and summary.get('fatalCases') == 0
+          ok = ok and summary.get('runtimeButtonPresentCases') == 5
+          ok = ok and summary.get('runtimeOpenCases') == 5
+          ok = ok and summary.get('runtimeCloseCases') == 5
+          ok = ok and summary.get('runtimeReopenCases') == 5
+          ok = ok and summary.get('noLoginLabelCases') == 5
+          ok = ok and summary.get('noLoginEnabledTextCases') == 5
+          ok = ok and summary.get('secondFileLoadCases') == 5
+          ok = ok and summary.get('calibrationStageCases') == 5
+          ok = ok and summary.get('blockedOrderRequestCases') == 0
+          ok = ok and summary.get('pageErrorCases') == 0
+          ok = ok and len(page_menu_cases) == 4
+          ok = ok and not conflicts
+          status = {
+              'schemaVersion': 2,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('CALIBRATION_OUTCOME', 'unknown'),
+              'ok': ok,
+              'mode': 'current-runtime-entry-and-page-shop-calibration-v2',
+              'pageMenuTap': {'x': 350, 'y': 725},
+              'summary': summary,
+              'reportAvailable': bool(report),
+              'artifactName': 'latest-page-entry-shop-calibration-v2',
+              'apkBuilt': False,
+              'productionDefaultChanged': False,
+              'runtimeFilesChanged': False,
+              'androidClientChanged': False,
+              'authorizationOutcomeModified': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/LATEST_PAGE_ENTRY_SHOP_CALIBRATION_V2_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: latest-page-entry-shop-calibration-v2
+          path: latest-page-entry-shop-calibration-v2
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish branch calibration status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/LATEST_PAGE_ENTRY_SHOP_CALIBRATION_V2_STATUS.json docs/LATEST_PAGE_ENTRY_SHOP_CALIBRATION_V2_STATUS.json
+          git add docs/LATEST_PAGE_ENTRY_SHOP_CALIBRATION_V2_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record corrected latest page entry shop calibration"
+            git push origin HEAD:diagnostics/latest-page-lifecycle-trace-20260804
+          fi
+
+      - name: Enforce corrected calibration gate
+        if: always()
+        shell: bash
+        run: jq -e '.ok == true' /tmp/LATEST_PAGE_ENTRY_SHOP_CALIBRATION_V2_STATUS.json >/dev/null
