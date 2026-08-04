@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T21:01:20Z",
+  "runId": 30950369547,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-cover-entry-hit-map-page-only",
+  "summary": {
+    "totalCases": 9,
+    "passedCases": 9,
+    "fatalCases": 0,
+    "pageErrorCases": 0,
+    "blockedOrderCases": 0,
+    "changedCases": 9,
+    "requestBurstCases": 9,
+    "maxPostTapRequestCount": 240
+  },
+  "rankedCases": [
+    {
+      "name": "title",
+      "point": {
+        "name": "title",
+        "x": 95,
+        "y": 400
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 240,
+      "postTapResourceTypes": {
+        "script": 42,
+        "fetch": 12,
+        "document": 1,
+        "stylesheet": 27,
+        "image": 137,
+        "xhr": 21
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "right-cover",
+      "point": {
+        "name": "right-cover",
+        "x": 120,
+        "y": 420
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 166,
+      "postTapResourceTypes": {
+        "document": 1,
+        "stylesheet": 27,
+        "script": 41,
+        "image": 48,
+        "xhr": 21,
+        "fetch": 28
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "viewport-center",
+      "point": {
+        "name": "viewport-center",
+        "x": 195,
+        "y": 422
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 163,
+      "postTapResourceTypes": {
+        "document": 1,
+        "stylesheet": 27,
+        "script": 41,
+        "image": 48,
+        "xhr": 21,
+        "fetch": 25
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "lower-cover",
+      "point": {
+        "name": "lower-cover",
+        "x": 150,
+        "y": 580
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 145,
+      "postTapResourceTypes": {
+        "script": 42,
+        "fetch": 6,
+        "document": 1,
+        "stylesheet": 27,
+        "image": 48,
+        "xhr": 21
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "upper-cover",
+      "point": {
+        "name": "upper-cover",
+        "x": 250,
+        "y": 270
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 138,
+      "postTapResourceTypes": {
+        "document": 1,
+        "stylesheet": 27,
+        "script": 41,
+        "image": 23,
+        "xhr": 21,
+        "fetch": 25
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "character",
+      "point": {
+        "name": "character",
+        "x": 240,
+        "y": 425
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 130,
+      "postTapResourceTypes": {
+        "script": 42,
+        "fetch": 16,
+        "document": 1,
+        "stylesheet": 27,
+        "image": 23,
+        "xhr": 21
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "left-cover",
+      "point": {
+        "name": "left-cover",
+        "x": 300,
+        "y": 420
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 39,
+      "postTapResourceTypes": {
+        "xhr": 7,
+        "fetch": 32
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "prompt",
+      "point": {
+        "name": "prompt",
+        "x": 50,
+        "y": 425
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 37,
+      "postTapResourceTypes": {
+        "xhr": 7,
+        "fetch": 30
+      },
+      "pageErrorCount": 0
+    },
+    {
+      "name": "lower-title",
+      "point": {
+        "name": "lower-title",
+        "x": 65,
+        "y": 470
+      },
+      "screenshotChanged": true,
+      "postTapRequestCount": 33,
+      "postTapResourceTypes": {
+        "xhr": 7,
+        "fetch": 26
+      },
+      "pageErrorCount": 0
+    }
+  ],
+  "reportAvailable": true,
+  "artifactName": "page5-cover-hit-map-probe",
+  "pageOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "6d51f4edfb65df4bdb27f86cce44d6a679e7f78d"
+}
