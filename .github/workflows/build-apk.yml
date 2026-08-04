@@ -4,7 +4,21 @@ on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - "docs/**"
+      - "scripts/run_latest_page_lifecycle_request_trace.mjs"
+      - "scripts/review_latest_page_lifecycle_request_trace.py"
+      - ".github/workflows/trace-latest-page-lifecycle-request.yml"
+      - ".github/workflows/run-latest-page-lifecycle-trace.yml"
+      - ".github/workflows/build-apk.yml"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "scripts/run_latest_page_lifecycle_request_trace.mjs"
+      - "scripts/review_latest_page_lifecycle_request_trace.py"
+      - ".github/workflows/trace-latest-page-lifecycle-request.yml"
+      - ".github/workflows/run-latest-page-lifecycle-trace.yml"
+      - ".github/workflows/build-apk.yml"
 
 jobs:
   build:
