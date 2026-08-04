@@ -24,7 +24,7 @@ jobs:
       OUTPUT_DIR: page5-mobile-contract-fallback-matrix
       CURRENT_FIRST_PATH: remote-script/src/noname.js
       CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
-      GENERATED_MATRIX: /tmp/run_page5_mobile_contract_fallback_matrix.mjs
+      GENERATED_MATRIX: scripts/run_page5_mobile_contract_fallback_matrix.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
