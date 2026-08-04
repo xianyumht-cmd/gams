@@ -1,0 +1,108 @@
+name: Capture page five official source temporarily
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - .github/workflows/capture-page5-official-source-temporary.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-official-source-temporary-20260805
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OUTPUT_DIR: page5-official-source-temporary
+      OFFICIAL_URL: https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607280001
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - name: Capture exact current official file
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H 'User-Agent: Mozilla/5.0 (Linux; Android 13; Mobile)' \
+            "$OFFICIAL_URL" -o "$OUTPUT_DIR/official-current.js"
+          test -s "$OUTPUT_DIR/official-current.js"
+          node --check "$OUTPUT_DIR/official-current.js"
+          stat -c '%s' "$OUTPUT_DIR/official-current.js" > "$OUTPUT_DIR/size.txt"
+          sha256sum "$OUTPUT_DIR/official-current.js" | awk '{print $1}' > "$OUTPUT_DIR/sha256.txt"
+
+      - name: Build capture status
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output = Path(os.environ['OUTPUT_DIR'])
+          size = int((output / 'size.txt').read_text().strip())
+          sha256 = (output / 'sha256.txt').read_text().strip()
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'ok': size > 0,
+              'mode': 'temporary-page5-official-source-capture',
+              'officialSize': size,
+              'officialSha256': sha256,
+              'sourceCommitted': False,
+              'artifactRetentionDays': 1,
+              'artifactName': 'page5-official-source-temporary',
+              'apkBuilt': False,
+              'productionDefaultChanged': False,
+              'runtimeFilesChanged': False,
+              'androidClientChanged': False,
+              'authorizationOutcomeModified': False,
+              'paymentCompleted': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/PAGE5_OFFICIAL_SOURCE_TEMPORARY_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: page5-official-source-temporary
+          path: page5-official-source-temporary
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Publish capture metadata only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/PAGE5_OFFICIAL_SOURCE_TEMPORARY_STATUS.json docs/PAGE5_OFFICIAL_SOURCE_TEMPORARY_STATUS.json
+          git add docs/PAGE5_OFFICIAL_SOURCE_TEMPORARY_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record temporary page five official source capture"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce capture
+        shell: bash
+        run: jq -e '.ok == true' /tmp/PAGE5_OFFICIAL_SOURCE_TEMPORARY_STATUS.json >/dev/null
