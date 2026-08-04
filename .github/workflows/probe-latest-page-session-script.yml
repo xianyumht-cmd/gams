@@ -1,0 +1,107 @@
+name: Probe latest page session script
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/probe-latest-page-session-script.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: latest-page-session-script-20260804
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SCRIPT_URL: https://c2.cgyouxi.com/website/mobile/js/ssologin.js?v=202607280001
+      OUTPUT_DIR: latest-page-session-script
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch current page session script
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          ua='Mozilla/5.0 (Linux; Android 13; Pixel 7 Build/TQ3A.230805.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/125.0.0.0 Mobile Safari/537.36'
+          code="$(curl -k -sS -L --connect-timeout 10 --max-time 40 -A "$ua" \
+            -D "$OUTPUT_DIR/session-script.headers" \
+            -o "$OUTPUT_DIR/session-script.js" \
+            -w '%{http_code}' "$SCRIPT_URL" || true)"
+          printf '%s' "$code" > "$OUTPUT_DIR/session-script.code"
+          test "$code" = 200
+          test -s "$OUTPUT_DIR/session-script.js"
+          node --check "$OUTPUT_DIR/session-script.js"
+          python3 - <<'PY'
+          import hashlib, json, os, re
+          from pathlib import Path
+          root=Path(os.environ['OUTPUT_DIR'])
+          raw=(root/'session-script.js').read_bytes()
+          text=raw.decode('utf-8',errors='replace')
+          patterns=['onSsoCheck','minicheck','notLoginCall','loginCall','ajaxLoginCall','whetherMinLogin','setConf']
+          excerpts={}
+          for pattern in patterns:
+              hits=[]
+              for m in re.finditer(re.escape(pattern), text, re.I):
+                  hits.append(text[max(0,m.start()-1200):min(len(text),m.end()+2200)])
+                  if len(hits)>=10: break
+              excerpts[pattern]=hits
+          report={
+              'schemaVersion':1,
+              'url':os.environ['SCRIPT_URL'],
+              'httpCode':(root/'session-script.code').read_text().strip(),
+              'size':len(raw),
+              'sha256':hashlib.sha256(raw).hexdigest(),
+              'excerpts':excerpts,
+          }
+          (root/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          status={
+              'schemaVersion':1,
+              'generatedAt':__import__('datetime').datetime.now(__import__('datetime').timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+              'runId':int(os.environ['GITHUB_RUN_ID']),
+              'state':'completed','ok':True,
+              'scriptSize':len(raw),'scriptSha256':hashlib.sha256(raw).hexdigest(),
+              'artifactName':'latest-page-session-script','scriptCommitted':False,
+          }
+          Path('/tmp/LATEST_PAGE_SESSION_SCRIPT_STATUS.json').write_text(json.dumps(status,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(status,ensure_ascii=False,indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: latest-page-session-script
+          path: latest-page-session-script
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish status only
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          rm -rf /tmp/session-script-status
+          git worktree add -B session-script-status /tmp/session-script-status origin/main
+          cd /tmp/session-script-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/LATEST_PAGE_SESSION_SCRIPT_STATUS.json docs/LATEST_PAGE_SESSION_SCRIPT_STATUS.json
+          git add docs/LATEST_PAGE_SESSION_SCRIPT_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record latest page session script probe"
+            git push origin HEAD:main
+          fi
+          cd "$GITHUB_WORKSPACE"
+          git worktree remove --force /tmp/session-script-status
