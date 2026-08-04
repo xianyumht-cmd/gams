@@ -25,6 +25,10 @@ def main() -> int:
             '  const newText = "(typeof SCGMenu===\'undefined\'&&!tE[\'ge\'+\'tI\'+\'ns\'+\'ta\'+\'nc\'+\'e\']()[\'is\'+\'Mo\'+\'bi\'+\'le\']()&&(tE[\'ge\'+\'tI\'+\'ns\'+\'ta\'+\'nc\'+\'e\']()[\'is\'+\'Mo\'+\'bi\'+\'le\']=function(){return!0;})),tE[\'ge\'+\'tI\'+\'ns\'+\'ta\'+\'nc\'+\'e\']()[\'is\'+\'Mo\'+\'bi\'+\'le\']()||(tT[\'sc\'+\'en\'+\'e\']=new SCGMenu()),SF[\'Tk\'+\'Kw\'+\'f\'](SAL_openMenu,";',
         ),
         (
+            '  if (!candidate.includes(newText) || candidate.includes(oldText)) throw new Error("candidate replacement verification failed");',
+            '  if (!candidate.includes(newText) || candidate === source) throw new Error("candidate replacement verification failed");',
+        ),
+        (
             'mode: "page5-mobile-menu-guard-full-entry-matrix"',
             'mode: "page5-mobile-contract-fallback-full-entry-matrix"',
         ),
