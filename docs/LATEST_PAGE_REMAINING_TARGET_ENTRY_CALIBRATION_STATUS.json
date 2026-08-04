@@ -1,12 +1,14 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedAt": "2026-08-04T16:33:07Z",
+  "reviewedAt": "2026-08-04T16:35:50Z",
   "runId": 30929501667,
-  "state": "completed",
+  "state": "completed-reviewed",
   "workflowOutcome": "success",
   "captureOk": true,
-  "visualValidationComplete": false,
+  "visualValidationComplete": true,
   "ok": false,
+  "projectPromotionAllowed": false,
   "mode": "remaining-target-entry-calibration-capture-only",
   "summary": {
     "totalCases": 2,
@@ -20,8 +22,33 @@
     "page5Title2Changed": true,
     "page5MenuChanged": true
   },
+  "perPage": {
+    "page2": {
+      "validated": true,
+      "targetTap": {
+        "x": 230,
+        "y": 540
+      },
+      "targetReadCount": 3
+    },
+    "page5": {
+      "validated": false,
+      "reason": "two title taps only completed title animation; prior common-menu coordinate missed the visible menu control"
+    }
+  },
+  "combinedValidatedPages": 4,
+  "nextCalibration": {
+    "page": 5,
+    "menuTap": {
+      "x": 351,
+      "y": 741
+    },
+    "mode": "single-safe-menu-capture",
+    "firstSecondReentrySequenceAllowed": false
+  },
   "reportAvailable": true,
   "artifactName": "latest-page-remaining-target-entry-calibration",
+  "reviewDocument": "docs/LATEST_PAGE_REMAINING_TARGET_ENTRY_CALIBRATION_REVIEW_20260804.md",
   "apkBuilt": false,
   "productionDefaultChanged": false,
   "runtimeFilesChanged": false,
