@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T17:30:23Z",
+  "runId": 30934200062,
+  "state": "completed",
+  "workflowOutcome": "skipped",
+  "captureOk": false,
+  "contractDifferenceObserved": false,
+  "correctionApplied": false,
+  "ok": false,
+  "mode": "page5-flower-contract-ab",
+  "summary": null,
+  "reportAvailable": false,
+  "artifactName": "page5-flower-contract-ab",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false
+}
