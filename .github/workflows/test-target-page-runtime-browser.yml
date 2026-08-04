@@ -1,0 +1,158 @@
+name: Test target page runtime in Chromium
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/test-target-page-runtime-browser.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: target-page-runtime-browser-20260804
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OUTPUT_DIR: target-page-runtime-browser-test
+      HISTORICAL_FIRST_PATH: /tmp/noname-1.1.1.js
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      HISTORICAL_SECOND_PATH: game-engine/release/game-1.0.2.js
+      HISTORICAL_FIRST_COMMIT: 29bf86c0e2cf87e0f1b1dfac9456bba0b27cf61c
+      HISTORICAL_SECOND_SIZE: 11589175
+      HISTORICAL_SECOND_SHA256: 51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare exact version pairs
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${HISTORICAL_FIRST_COMMIT}^{commit}"
+          git show "${HISTORICAL_FIRST_COMMIT}:remote-script/src/noname.js" > "$HISTORICAL_FIRST_PATH"
+          test -s "$HISTORICAL_FIRST_PATH"
+          test -s "$CURRENT_FIRST_PATH"
+          test -s "$HISTORICAL_SECOND_PATH"
+          test "$(stat -c%s "$HISTORICAL_SECOND_PATH")" = "$HISTORICAL_SECOND_SIZE"
+          test "$(sha256sum "$HISTORICAL_SECOND_PATH" | awk '{print $1}')" = "$HISTORICAL_SECOND_SHA256"
+          node --check scripts/run_target_page_runtime_browser_test.mjs
+          {
+            echo "historical_first_size=$(stat -c%s "$HISTORICAL_FIRST_PATH")"
+            echo "historical_first_sha=$(sha256sum "$HISTORICAL_FIRST_PATH" | awk '{print $1}')"
+            echo "current_first_size=$(stat -c%s "$CURRENT_FIRST_PATH")"
+            echo "current_first_sha=$(sha256sum "$CURRENT_FIRST_PATH" | awk '{print $1}')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install Chromium test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute ten real-page cases
+        id: browser_test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/run_target_page_runtime_browser_test.mjs 2>&1 | tee /tmp/browser-test.log
+
+      - name: Build status document
+        if: always()
+        shell: bash
+        env:
+          TEST_OUTCOME: ${{ steps.browser_test.outcome }}
+          HISTORICAL_FIRST_SIZE: ${{ steps.prepare.outputs.historical_first_size }}
+          HISTORICAL_FIRST_SHA: ${{ steps.prepare.outputs.historical_first_sha }}
+          CURRENT_FIRST_SIZE: ${{ steps.prepare.outputs.current_first_size }}
+          CURRENT_FIRST_SHA: ${{ steps.prepare.outputs.current_first_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR" docs
+          test -f /tmp/browser-test.log && cp /tmp/browser-test.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output = Path(os.environ["OUTPUT_DIR"])
+          report_path = output / "report.json"
+          report = None
+          if report_path.exists():
+              report = json.loads(report_path.read_text(encoding="utf-8"))
+          status = {
+              "schemaVersion": 1,
+              "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "runId": int(os.environ["GITHUB_RUN_ID"]),
+              "workflowOutcome": os.environ.get("TEST_OUTCOME", "unknown"),
+              "ok": bool(report) and os.environ.get("TEST_OUTCOME") == "success",
+              "mode": "chromium-document-start-with-virtual-second-route",
+              "apkExecuted": False,
+              "paymentCompleted": False,
+              "versionPairs": {
+                  "currentFirstHistoricalSecond": {
+                      "firstVersion": "1.1.4",
+                      "firstSize": int(os.environ.get("CURRENT_FIRST_SIZE") or 0),
+                      "firstSha256": os.environ.get("CURRENT_FIRST_SHA", ""),
+                      "secondVersion": "1.0.2",
+                      "secondSize": 11589175,
+                      "secondSha256": os.environ["HISTORICAL_SECOND_SHA256"],
+                  },
+                  "fullHistorical": {
+                      "firstVersion": "1.1.1",
+                      "firstCommit": os.environ["HISTORICAL_FIRST_COMMIT"],
+                      "firstSize": int(os.environ.get("HISTORICAL_FIRST_SIZE") or 0),
+                      "firstSha256": os.environ.get("HISTORICAL_FIRST_SHA", ""),
+                      "secondVersion": "1.0.2",
+                      "secondSize": 11589175,
+                      "secondSha256": os.environ["HISTORICAL_SECOND_SHA256"],
+                  },
+              },
+              "summary": report.get("summary") if report else None,
+              "reportAvailable": bool(report),
+              "artifactName": "target-page-runtime-browser-test",
+          }
+          Path("docs/TARGET_PAGE_RUNTIME_BROWSER_TEST_STATUS.json").write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: target-page-runtime-browser-test
+          path: target-page-runtime-browser-test
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add docs/TARGET_PAGE_RUNTIME_BROWSER_TEST_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record target page runtime browser test status"
+            git push origin HEAD:main
+          fi
