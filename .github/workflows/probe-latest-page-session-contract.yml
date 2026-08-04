@@ -1,0 +1,128 @@
+name: Probe latest page session contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/probe-latest-page-session-contract.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: latest-page-session-contract-20260804
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TARGET_URL: https://m.66rpg.com/h5/1682748?ohp=v3&quality=32
+      MINI_URL: https://m.66rpg.com/sso/minicheck
+      CROSS_URL: https://passport.66rpg.com/user/crosscheck.shtml?fromurl=https%3A%2F%2Fm.66rpg.com%2Fsso%2Fminicheck&auth_callback=%2F%2Fwww.66rpg.com%2Fsso%2Fauth_callback&app=www&sign=15805b2cb0cbc96ecf1d760865d175e0&login_type=0
+      OUTPUT_DIR: latest-page-session-contract
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch page and session endpoints
+        id: fetch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          ua='Mozilla/5.0 (Linux; Android 13; Pixel 7 Build/TQ3A.230805.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/125.0.0.0 Mobile Safari/537.36'
+          fetch_one() {
+            name="$1"; url="$2"
+            code="$(curl -k -sS -L --connect-timeout 10 --max-time 40 \
+              -A "$ua" -H "Referer: $TARGET_URL" \
+              -D "$OUTPUT_DIR/${name}.headers" \
+              -o "$OUTPUT_DIR/${name}.body" \
+              -w '%{http_code}' "$url" || true)"
+            printf '%s' "$code" > "$OUTPUT_DIR/${name}.code"
+          }
+          fetch_one target "$TARGET_URL"
+          fetch_one mini "$MINI_URL"
+          fetch_one cross "$CROSS_URL"
+
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          from pathlib import Path
+          from urllib.parse import urljoin
+
+          root = Path(os.environ['OUTPUT_DIR'])
+          target = os.environ['TARGET_URL']
+          result = {'schemaVersion': 1, 'targetUrl': target, 'responses': {}}
+          for name in ('target', 'mini', 'cross'):
+              body_path = root / f'{name}.body'
+              header_path = root / f'{name}.headers'
+              body = body_path.read_bytes() if body_path.exists() else b''
+              headers = header_path.read_text(encoding='utf-8', errors='replace') if header_path.exists() else ''
+              code_path = root / f'{name}.code'
+              code = code_path.read_text().strip() if code_path.exists() else ''
+              text = body.decode('utf-8', errors='replace')
+              result['responses'][name] = {
+                  'httpCode': code,
+                  'size': len(body),
+                  'sha256': hashlib.sha256(body).hexdigest(),
+                  'headers': headers[-12000:],
+                  'bodyPreview': text[:12000],
+              }
+          html = (root / 'target.body').read_text(encoding='utf-8', errors='replace') if (root / 'target.body').exists() else ''
+          scripts = []
+          for match in re.finditer(r'<script[^>]+src=["\']([^"\']+)', html, re.I):
+              scripts.append(urljoin(target, match.group(1)))
+          result['page'] = {
+              'scriptUrls': scripts[:100],
+              'sessionTokenContext': [line[:2000] for line in html.splitlines() if re.search(r'minicheck|crosscheck|auth_callback|sso', line, re.I)][:50],
+          }
+          (root / 'report.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'ok': all(result['responses'][name]['size'] > 0 for name in ('target','mini','cross')),
+              'artifactName': 'latest-page-session-contract',
+              'fullBodiesCommitted': False,
+          }
+          Path('/tmp/LATEST_PAGE_SESSION_CONTRACT_STATUS.json').write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: latest-page-session-contract
+          path: latest-page-session-contract
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish status only
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          rm -rf /tmp/session-contract-status
+          git worktree add -B session-contract-status /tmp/session-contract-status origin/main
+          cd /tmp/session-contract-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/LATEST_PAGE_SESSION_CONTRACT_STATUS.json docs/LATEST_PAGE_SESSION_CONTRACT_STATUS.json
+          git add docs/LATEST_PAGE_SESSION_CONTRACT_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record latest page session contract probe"
+            git push origin HEAD:main
+          fi
+          cd "$GITHUB_WORKSPACE"
+          git worktree remove --force /tmp/session-contract-status
