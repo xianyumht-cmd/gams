@@ -1,29 +1,22 @@
 #!/usr/bin/env node
+// Diagnostic marker: page5-flower-contract-ab
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
 
-const outputDir = process.env.OUTPUT_DIR || "page5-home-entry-probe";
+const outputDir = process.env.OUTPUT_DIR || "page5-flower-contract-ab";
 const firstPath = process.env.CURRENT_FIRST_PATH || "remote-script/src/noname.js";
 const secondPath = process.env.CURRENT_SECOND_PATH || "game-engine/release/game-1.0.5.js";
 const targetUrl = "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32";
 const targetPrefix = "https://m.66rpg.com/h5/1691512";
 const virtualSecondUrl = "https://ggv2.local/runtime/game.js";
-const probes = [
-  {
-    name: "title-progress",
-    taps: [
-      { x: 90, y: 400 },
-      { x: 90, y: 400 },
-      { x: 90, y: 400 },
-      { x: 90, y: 400 },
-    ],
-    waitAfterEachMs: 1800,
-  },
-  { name: "flower-icon", taps: [{ x: 310, y: 741 }], waitAfterEachMs: 5000 },
-  { name: "gift-icon", taps: [{ x: 245, y: 741 }], waitAfterEachMs: 5000 },
+const flowerTap = { x: 310, y: 741 };
+const casesToRun = [
+  { name: "page-only", injectCurrent: false, officialMode: "allow" },
+  { name: "current-runtime", injectCurrent: true, officialMode: "block" },
+  { name: "current-plus-official-observation", injectCurrent: true, officialMode: "allow" },
 ];
 
 fs.mkdirSync(outputDir, { recursive: true });
@@ -94,7 +87,7 @@ function redactText(value) {
   return String(value || "")
     .replace(/([?&](?:token|access_token|auth|authorization|code|ticket|session|sid|key|password|pwd)=)[^&#\s]+/gi, "$1<redacted>")
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer <redacted>")
-    .slice(0, 3000);
+    .slice(0, 4000);
 }
 
 function isTopNavigation(request) {
@@ -110,42 +103,49 @@ async function capture(page, filePath) {
   return sha256(fs.readFileSync(filePath));
 }
 
-async function pointInfo(page, point) {
-  return page.evaluate(({ x, y }) => {
-    const element = document.elementFromPoint(x, y);
-    if (!element) return null;
-    const rect = element.getBoundingClientRect();
+async function contractSnapshot(page, stage) {
+  return page.evaluate((stageName) => {
+    const value = globalThis.SCGMenu;
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "SCGMenu") || null;
     return {
-      tag: String(element.tagName || "").toLowerCase(),
-      id: String(element.id || "").slice(0, 120),
-      className: String(element.className || "").slice(0, 240),
-      text: String(element.innerText || element.getAttribute?.("aria-label") || "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 240),
-      rect: {
-        x: Math.round(rect.x),
-        y: Math.round(rect.y),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
+      stage: stageName,
+      at: Date.now(),
+      url: location.href,
+      readyState: document.readyState,
+      visibilityState: document.visibilityState,
+      contract: {
+        present: typeof value !== "undefined" && value !== null,
+        type: typeof value,
+        ownProperty: Object.prototype.hasOwnProperty.call(globalThis, "SCGMenu"),
+        descriptor: descriptor
+          ? {
+              configurable: Boolean(descriptor.configurable),
+              enumerable: Boolean(descriptor.enumerable),
+              writable: "writable" in descriptor ? Boolean(descriptor.writable) : null,
+              hasGetter: typeof descriptor.get === "function",
+              hasSetter: typeof descriptor.set === "function",
+            }
+          : null,
       },
+      trace: globalThis.__page5ContractTrace || null,
+      runtimeLoaded: Boolean(globalThis.__GG_V2_CONTROL_LOADED__),
+      navigationGuard: globalThis.__gamsNavigationGuard || null,
     };
-  }, point).catch(() => null);
+  }, stage);
 }
 
-async function runProbe(browser, probe, index) {
-  const firstRaw = fs.readFileSync(firstPath, "utf8");
+async function runCase(browser, definition, index) {
+  const firstRaw = definition.injectCurrent ? fs.readFileSync(firstPath, "utf8") : "";
   const secondBytes = fs.readFileSync(secondPath);
   const requests = [];
-  const requestFailures = [];
-  const consoleMessages = [];
   const pageErrors = [];
+  const consoleMessages = [];
+  const requestFailures = [];
   const dialogs = [];
   const blockedOrders = [];
   const blockedExternalNavigations = [];
   const mainFrameNavigation = [];
-  const popupAttempts = [];
-  const runtimeLoads = { first: 1, second: 0 };
+  const loads = { first: definition.injectCurrent ? 1 : 0, second: 0, official: 0 };
 
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -175,7 +175,11 @@ async function runProbe(browser, probe, index) {
     });
 
     if (kind === "second-file") {
-      runtimeLoads.second += 1;
+      if (!definition.injectCurrent) {
+        await route.abort("blockedbyclient");
+        return;
+      }
+      loads.second += 1;
       await route.fulfill({
         status: 200,
         contentType: "application/javascript; charset=utf-8",
@@ -184,11 +188,16 @@ async function runProbe(browser, probe, index) {
       return;
     }
     if (kind === "official-file") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/javascript; charset=utf-8",
-        body: "window.__gg_official_engine_blocked__=true;",
-      });
+      loads.official += 1;
+      if (definition.officialMode === "block") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/javascript; charset=utf-8",
+          body: "window.__gg_official_engine_blocked__=true;",
+        });
+        return;
+      }
+      await route.continue();
       return;
     }
     if (kind === "forbidden-remote-runtime") {
@@ -220,53 +229,81 @@ async function runProbe(browser, probe, index) {
   await context.addInitScript({
     content: `
       (() => {
-        const state = globalThis.__gamsNavigationGuard = globalThis.__gamsNavigationGuard || {
+        const trace = globalThis.__page5ContractTrace = globalThis.__page5ContractTrace || {
+          startedAt: Date.now(),
+          firstSeenAt: null,
+          changes: [],
+          lastType: null,
+          lastPresent: null,
+        };
+        const sample = (reason) => {
+          let value;
+          try { value = globalThis.SCGMenu; } catch (error) { value = undefined; }
+          const present = typeof value !== 'undefined' && value !== null;
+          const type = typeof value;
+          if (trace.lastType !== type || trace.lastPresent !== present || trace.changes.length === 0) {
+            trace.changes.push({ at: Date.now(), reason, present, type });
+            trace.lastType = type;
+            trace.lastPresent = present;
+          }
+          if (present && trace.firstSeenAt === null) trace.firstSeenAt = Date.now();
+        };
+        sample('init');
+        addEventListener('DOMContentLoaded', () => sample('DOMContentLoaded'));
+        addEventListener('load', () => sample('load'));
+        addEventListener('pageshow', () => sample('pageshow'));
+        addEventListener('visibilitychange', () => sample('visibilitychange'));
+        let ticks = 0;
+        const timer = setInterval(() => {
+          sample('poll');
+          ticks += 1;
+          if (ticks >= 500) clearInterval(timer);
+        }, 100);
+
+        const navigationState = globalThis.__gamsNavigationGuard = globalThis.__gamsNavigationGuard || {
           supported: false,
           blocked: [],
           allowed: [],
         };
         try {
           if (globalThis.navigation && typeof globalThis.navigation.addEventListener === 'function') {
-            state.supported = true;
+            navigationState.supported = true;
             globalThis.navigation.addEventListener('navigate', (event) => {
               try {
                 const url = new URL(event.destination.url, location.href);
                 if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-                  state.blocked.push({
+                  navigationState.blocked.push({
                     url: url.protocol + '//' + url.host + url.pathname,
                     at: Date.now(),
                   });
                   if (event.cancelable) event.preventDefault();
                   return;
                 }
-                state.allowed.push({
+                navigationState.allowed.push({
                   url: url.protocol + '//' + url.host + url.pathname,
                   at: Date.now(),
                 });
               } catch (error) {
-                state.blocked.push({
+                navigationState.blocked.push({
                   url: String(event.destination?.url || '').slice(0, 300),
                   at: Date.now(),
-                  error: String(error).slice(0, 300),
                 });
                 if (event.cancelable) event.preventDefault();
               }
             });
           }
         } catch (error) {
-          state.error = String(error).slice(0, 300);
+          navigationState.error = String(error).slice(0, 300);
         }
       })();
     `,
   });
-  await context.addInitScript({ content: wrapFirstFile(transformFirstFile(firstRaw)) });
+
+  if (definition.injectCurrent) {
+    await context.addInitScript({ content: wrapFirstFile(transformFirstFile(firstRaw)) });
+  }
 
   const page = await context.newPage();
-  context.on("page", async (popup) => {
-    if (popup === page) return;
-    popupAttempts.push({ at: Date.now(), initialUrl: safeUrl(popup.url()) });
-    await popup.close().catch(() => {});
-  });
   page.on("dialog", async (dialog) => {
     dialogs.push({ at: Date.now(), type: dialog.type(), message: redactText(dialog.message()) });
     await dialog.dismiss().catch(() => {});
@@ -277,11 +314,6 @@ async function runProbe(browser, probe, index) {
   page.on("pageerror", (error) => {
     pageErrors.push(redactText(error?.stack || error));
   });
-  page.on("framenavigated", (frame) => {
-    if (frame === page.mainFrame()) {
-      mainFrameNavigation.push({ at: Date.now(), url: safeUrl(frame.url()) });
-    }
-  });
   page.on("requestfailed", (request) => {
     requestFailures.push({
       at: Date.now(),
@@ -290,21 +322,23 @@ async function runProbe(browser, probe, index) {
       failure: request.failure()?.errorText || "",
     });
   });
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) {
+      mainFrameNavigation.push({ at: Date.now(), url: safeUrl(frame.url()) });
+    }
+  });
 
-  const prefix = `${String(index).padStart(2, "0")}-${probe.name}`;
+  const prefix = `${String(index).padStart(2, "0")}-${definition.name}`;
   const result = {
-    name: probe.name,
-    taps: probe.taps,
+    name: definition.name,
+    injectCurrent: definition.injectCurrent,
+    officialMode: definition.officialMode,
     targetUrl: safeUrl(targetUrl),
-    first: {
-      size: Buffer.byteLength(firstRaw),
-      sha256: sha256(Buffer.from(firstRaw)),
-    },
-    second: {
-      size: secondBytes.length,
-      sha256: sha256(secondBytes),
-    },
-    stages: [],
+    flowerTap,
+    first: definition.injectCurrent
+      ? { size: Buffer.byteLength(firstRaw), sha256: sha256(Buffer.from(firstRaw)) }
+      : null,
+    second: { size: secondBytes.length, sha256: sha256(secondBytes) },
     screenshots: {},
   };
 
@@ -314,82 +348,56 @@ async function runProbe(browser, probe, index) {
       timeout: 45000,
     });
     result.goto = { status: response?.status() ?? null, url: safeUrl(page.url()) };
-    await page.waitForTimeout(28000);
-    result.beforeUrl = safeUrl(page.url());
-    result.screenshots.initial = await capture(
+    await page.waitForTimeout(30000);
+    result.before = await contractSnapshot(page, "before-flower");
+    result.screenshots.before = await capture(
       page,
-      path.join(outputDir, `${prefix}-initial.png`),
+      path.join(outputDir, `${prefix}-before.png`),
     );
 
-    for (let tapIndex = 0; tapIndex < probe.taps.length; tapIndex += 1) {
-      const point = probe.taps[tapIndex];
-      const requestStart = requests.length;
-      const tapAt = Date.now();
-      const hit = await pointInfo(page, point);
-      await page.touchscreen.tap(point.x, point.y);
-      await page.waitForTimeout(probe.waitAfterEachMs);
-
-      const stageName = `after-tap-${tapIndex + 1}`;
-      const stageUrl = safeUrl(page.url());
-      const stageRequests = requests.slice(requestStart).filter((item) => item.at >= tapAt);
-      const kinds = {};
-      for (const item of stageRequests) {
-        kinds[item.kind] = (kinds[item.kind] || 0) + 1;
-      }
-      const previousName = tapIndex === 0 ? "initial" : `after-tap-${tapIndex}`;
-      result.screenshots[stageName] = await capture(
-        page,
-        path.join(outputDir, `${prefix}-${stageName}.png`),
-      );
-      result.stages.push({
-        stage: stageName,
-        point,
-        hit,
-        url: stageUrl,
-        mainFrameValid: stageUrl.startsWith(targetPrefix),
-        screenshotChangedFromPrevious:
-          result.screenshots[stageName] !== result.screenshots[previousName],
-        requestWindow: {
-          total: stageRequests.length,
-          kinds,
-          targetListCount: stageRequests.filter((item) => item.kind === "target-list-request").length,
-          targetReadCount: stageRequests.filter((item) => item.kind === "target-read-request").length,
-          orderCount: stageRequests.filter((item) => item.kind === "order-request").length,
-        },
-      });
-    }
-    result.afterUrl = safeUrl(page.url());
+    const requestStart = requests.length;
+    result.flowerTapAt = Date.now();
+    await page.touchscreen.tap(flowerTap.x, flowerTap.y);
+    await page.waitForTimeout(6000);
+    result.after = await contractSnapshot(page, "after-flower");
+    result.screenshots.after = await capture(
+      page,
+      path.join(outputDir, `${prefix}-after.png`),
+    );
+    const clickRequests = requests.slice(requestStart).filter((item) => item.at >= result.flowerTapAt);
+    const kinds = {};
+    for (const item of clickRequests) kinds[item.kind] = (kinds[item.kind] || 0) + 1;
+    result.clickWindow = {
+      total: clickRequests.length,
+      kinds,
+      targetListCount: clickRequests.filter((item) => item.kind === "target-list-request").length,
+      targetReadCount: clickRequests.filter((item) => item.kind === "target-read-request").length,
+      orderCount: clickRequests.filter((item) => item.kind === "order-request").length,
+    };
   } catch (error) {
     result.fatalError = redactText(error?.stack || error);
     await capture(page, path.join(outputDir, `${prefix}-fatal.png`)).catch(() => {});
   } finally {
     result.requests = requests.slice(0, 5000);
-    result.requestFailures = requestFailures.slice(0, 1000);
-    result.console = consoleMessages.slice(0, 600);
     result.pageErrors = pageErrors.slice(0, 200);
+    result.console = consoleMessages.slice(0, 600);
+    result.requestFailures = requestFailures.slice(0, 1000);
     result.dialogs = dialogs.slice(0, 100);
     result.blockedOrders = blockedOrders;
     result.blockedExternalNavigations = blockedExternalNavigations;
-    result.popupAttempts = popupAttempts;
-    result.runtimeLoads = runtimeLoads;
     result.mainFrameNavigation = mainFrameNavigation;
-    result.navigationGuard = await page
-      .evaluate(() => globalThis.__gamsNavigationGuard || null)
-      .catch(() => null);
+    result.loads = loads;
     await context.close();
   }
 
-  result.mainFrameValidBefore = String(result.beforeUrl || "").startsWith(targetPrefix);
-  result.mainFrameValidAfter = String(result.afterUrl || "").startsWith(targetPrefix);
+  result.mainFrameValid = String(result.after?.url || result.before?.url || "").startsWith(targetPrefix);
   result.captureOk = !result.fatalError
-    && result.pageErrors.length === 0
-    && result.runtimeLoads.first > 0
-    && result.runtimeLoads.second > 0
-    && result.blockedOrders.length === 0
-    && result.mainFrameValidBefore
-    && result.mainFrameValidAfter
-    && result.stages.length === probe.taps.length
-    && result.stages.every((stage) => stage.mainFrameValid);
+    && result.mainFrameValid
+    && Boolean(result.before)
+    && Boolean(result.after)
+    && Boolean(result.screenshots.before)
+    && Boolean(result.screenshots.after)
+    && result.blockedOrders.length === 0;
   return result;
 }
 
@@ -400,75 +408,75 @@ const browser = await chromium.launch({
 const cases = [];
 try {
   let index = 0;
-  for (const probe of probes) {
-    cases.push(await runProbe(browser, probe, ++index));
+  for (const definition of casesToRun) {
+    cases.push(await runCase(browser, definition, ++index));
     fs.writeFileSync(
       path.join(outputDir, "report.partial.json"),
-      JSON.stringify({ probes, cases }, null, 2) + "\n",
+      JSON.stringify({ casesToRun, cases }, null, 2) + "\n",
     );
   }
 } finally {
   await browser.close();
 }
 
+const byName = Object.fromEntries(cases.map((item) => [item.name, item]));
+const pageOnly = byName["page-only"];
+const currentRuntime = byName["current-runtime"];
+const currentPlusOfficial = byName["current-plus-official-observation"];
+const contractDifferenceObserved = Boolean(
+  pageOnly?.before?.contract?.present
+  && !currentRuntime?.before?.contract?.present
+  && currentRuntime?.pageErrors?.some((text) => text.includes("SCGMenu")),
+);
+const officialRestoresContract = Boolean(
+  currentPlusOfficial?.before?.contract?.present
+  || currentPlusOfficial?.after?.contract?.present,
+);
+
 const summary = {
   totalCases: cases.length,
   captureOkCases: cases.filter((item) => item.captureOk).length,
   fatalCases: cases.filter((item) => item.fatalError).length,
+  mainFrameValidCases: cases.filter((item) => item.mainFrameValid).length,
+  contractPresentBeforeCases: cases.filter((item) => item.before?.contract?.present).length,
+  contractPresentAfterCases: cases.filter((item) => item.after?.contract?.present).length,
   pageErrorCases: cases.filter((item) => item.pageErrors?.length).length,
-  runtimeLoadedCases: cases.filter(
-    (item) => item.runtimeLoads?.first > 0 && item.runtimeLoads?.second > 0,
-  ).length,
-  validMainFrameCases: cases.filter(
-    (item) => item.mainFrameValidBefore && item.mainFrameValidAfter,
-  ).length,
-  screenshotChangedCases: cases.filter((item) =>
-    item.stages?.some((stage) => stage.screenshotChangedFromPrevious),
-  ).length,
-  targetListCases: cases.filter((item) =>
-    item.stages?.some((stage) => stage.requestWindow?.targetListCount > 0),
-  ).length,
-  targetReadCases: cases.filter((item) =>
-    item.stages?.some((stage) => stage.requestWindow?.targetReadCount > 0),
-  ).length,
+  targetListCases: cases.filter((item) => item.clickWindow?.targetListCount > 0).length,
+  targetReadCases: cases.filter((item) => item.clickWindow?.targetReadCount > 0).length,
   blockedOrderCases: cases.filter((item) => item.blockedOrders?.length).length,
-  blockedExternalNavigationCases: cases.filter(
-    (item) => item.blockedExternalNavigations?.length,
-  ).length,
-  popupAttemptCases: cases.filter((item) => item.popupAttempts?.length).length,
+  officialRequestCases: cases.filter((item) => item.loads?.official > 0).length,
+  secondFileLoadCases: cases.filter((item) => item.loads?.second > 0).length,
+  contractDifferenceObserved,
+  officialRestoresContract,
 };
 
 const report = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
-  mode: "page5-isolated-home-entry-probe",
+  mode: "page5-flower-contract-ab",
   apkExecuted: false,
   paymentCompleted: false,
   authorizationOutcomeModified: false,
   runtimeFilesChanged: false,
   androidClientChanged: false,
+  correctionApplied: false,
   targetUrl: safeUrl(targetUrl),
-  probes,
+  flowerTap,
   cases,
   summary,
+  contractDifferenceObserved,
+  officialRestoresContract,
 };
-report.captureOk = summary.totalCases === probes.length
-  && summary.captureOkCases === probes.length
+report.captureOk = summary.totalCases === casesToRun.length
+  && summary.captureOkCases === casesToRun.length
   && summary.fatalCases === 0
-  && summary.pageErrorCases === 0
-  && summary.runtimeLoadedCases === probes.length
-  && summary.validMainFrameCases === probes.length
+  && summary.mainFrameValidCases === casesToRun.length
   && summary.blockedOrderCases === 0;
-report.targetEntryVisualValidated = false;
-report.ok = false;
+report.ok = report.captureOk;
 
 fs.writeFileSync(
   path.join(outputDir, "report.json"),
   JSON.stringify(report, null, 2) + "\n",
 );
-console.log(JSON.stringify({
-  captureOk: report.captureOk,
-  targetEntryVisualValidated: false,
-  ...summary,
-}, null, 2));
+console.log(JSON.stringify({ captureOk: report.captureOk, ...summary }, null, 2));
 if (!report.captureOk) process.exitCode = 1;
