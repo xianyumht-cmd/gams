@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "versionName": "2.0.7-game-baseline-ab-c1",
+  "file": "bundle-2.0.7-game-baseline-ab-c1.bin",
+  "size": 3904839,
+  "sha256": "f0bc7465fd06483c6ed644cb7224bde7e24f0ab6fb599589a022947c05450f4d",
+  "iv": "JeLYw+rpYy1I0OUs",
+  "nonameSize": 332368,
+  "nonameSha256": "707826b2049853a714740baf169fa5b61fa072ab8027ed69551b7d55813c53c0",
+  "gameSize": 11589175,
+  "gameSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43",
+  "keyIv": "eyAVMBhlbuHiela9",
+  "keyCipher": "bGuUGkx8xE5dkggMe+p1Ki4lPSNBUo67X59tiHjAn4N8F/dNshR3VSzVqwakvufp",
+  "publishedAt": "2026-08-04T11:45:36Z",
+  "signatureAlgorithm": "SHA256withECDSA",
+  "signature": "MEYCIQCCaeNYH56MgfNGqIwubXWAAxkVR3JZs8+mnwgIHdG7rgIhAI7xt/ntzJBdkTd9ISXPiIe9Wi1lc1rt5dZ/HDyqeFFa"
+}
