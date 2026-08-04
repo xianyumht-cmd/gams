@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T17:40:18Z",
+  "runId": 30934964539,
+  "state": "completed",
+  "workflowOutcome": "skipped",
+  "captureOk": false,
+  "candidatePrepared": false,
+  "candidatePassed": false,
+  "ok": false,
+  "mode": "page5-mobile-menu-guard-candidate",
+  "summary": null,
+  "reportAvailable": false,
+  "artifactName": "page5-mobile-menu-guard-candidate",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false
+}
