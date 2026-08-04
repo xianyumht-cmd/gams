@@ -1,10 +1,42 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-04T13:57:08Z",
+  "generatedAt": "2026-08-04T14:06:31Z",
   "runId": 30916381273,
-  "state": "running",
+  "state": "completed",
+  "workflowOutcome": "failure",
   "ok": false,
-  "reportAvailable": false,
+  "mode": "chromium-webview-equivalent-latest-page-compatibility",
+  "versionPair": {
+    "baseline": {
+      "firstVersion": "1.1.4",
+      "firstSize": 332428,
+      "firstSha256": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818"
+    },
+    "candidate": {
+      "firstVersion": "1.1.5",
+      "firstSize": 340196,
+      "firstSha256": "f48d2d3abc66684dbc257888ed6fd0bb16738699f8ed0e9bbbe27ce46de18cec"
+    },
+    "secondVersion": "1.0.5",
+    "secondSize": 11590534,
+    "secondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112"
+  },
+  "summary": {
+    "totalCases": 10,
+    "baselineCases": 5,
+    "candidateCases": 5,
+    "fatalCases": 0,
+    "candidateFatalCases": 0,
+    "candidatePageErrorCases": 0,
+    "candidateFirstResponseCases": 0,
+    "candidateSecondResponseCases": 0,
+    "candidateThirdResponseCases": 0,
+    "candidateRemotePurchaseRequestCases": 0,
+    "baselineRemotePurchaseRequestCases": 0,
+    "candidateBlockedNavigationCases": 5
+  },
+  "reportAvailable": true,
+  "artifactName": "latest-page-compat-acceptance",
   "apkBuilt": false,
   "productionDefaultChanged": false
 }
