@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T14:12:52Z",
+  "runId": 30917742552,
+  "state": "completed",
+  "ok": true,
+  "scriptSize": 15468,
+  "scriptSha256": "18c5c641ebcfabdd4fc96e02fed037cbe45a18dd6cfa8598a897583c0ec11bcc",
+  "artifactName": "latest-page-session-script",
+  "scriptCommitted": false
+}
