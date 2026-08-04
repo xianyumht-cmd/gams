@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T19:35:23Z",
+  "runId": 30943358852,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "current-runtime-target-entry-path-probe",
+  "summary": {
+    "totalCases": 8,
+    "fatalCases": 0,
+    "runtimeButtonPresentCases": 8,
+    "runtimeOpenCases": 8,
+    "runtimeCloseCases": 8,
+    "runtimeReopenCases": 8,
+    "noLoginEnabledCases": 8,
+    "secondFileLoadCases": 8,
+    "completedSequenceCases": 8,
+    "blockedOrderMutationCases": 0,
+    "pageErrorCases": 0
+  },
+  "reportAvailable": true,
+  "artifactName": "latest-page-target-entry-path-probe",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/latest-page-lifecycle-trace-20260804",
+  "commit": "b6dfcda699b847269eae685a3bb8fb349e234c67"
+}
