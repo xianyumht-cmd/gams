@@ -1,0 +1,106 @@
+name: Capture current second file temporarily
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - .github/workflows/capture-current-second-temporary.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: current-second-temporary-20260805
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OUTPUT_DIR: current-second-temporary
+      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - name: Copy exact current second file
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -s "$CURRENT_SECOND_PATH"
+          cp "$CURRENT_SECOND_PATH" "$OUTPUT_DIR/current-second.js"
+          node --check "$OUTPUT_DIR/current-second.js"
+          stat -c '%s' "$OUTPUT_DIR/current-second.js" > "$OUTPUT_DIR/size.txt"
+          sha256sum "$OUTPUT_DIR/current-second.js" | awk '{print $1}' > "$OUTPUT_DIR/sha256.txt"
+
+      - name: Build capture status
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output = Path(os.environ['OUTPUT_DIR'])
+          size = int((output / 'size.txt').read_text().strip())
+          sha256 = (output / 'sha256.txt').read_text().strip()
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'ok': size > 0,
+              'mode': 'temporary-current-second-capture',
+              'currentSecondSize': size,
+              'currentSecondSha256': sha256,
+              'sourceCommittedByWorkflow': False,
+              'artifactRetentionDays': 1,
+              'artifactName': 'current-second-temporary',
+              'apkBuilt': False,
+              'productionDefaultChanged': False,
+              'runtimeFilesChanged': False,
+              'androidClientChanged': False,
+              'authorizationOutcomeModified': False,
+              'paymentCompleted': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/CURRENT_SECOND_TEMPORARY_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-second-temporary
+          path: current-second-temporary
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Publish capture metadata only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/CURRENT_SECOND_TEMPORARY_STATUS.json docs/CURRENT_SECOND_TEMPORARY_STATUS.json
+          git add docs/CURRENT_SECOND_TEMPORARY_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record temporary current second file capture"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce capture
+        shell: bash
+        run: jq -e '.ok == true' /tmp/CURRENT_SECOND_TEMPORARY_STATUS.json >/dev/null
