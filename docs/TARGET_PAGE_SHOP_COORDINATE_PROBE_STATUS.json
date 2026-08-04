@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-04T13:03:10Z",
-  "runId": 30911808612,
+  "generatedAt": "2026-08-04T13:16:01Z",
+  "runId": 30912850311,
   "state": "completed",
   "workflowOutcome": "success",
   "ok": true,
@@ -10,8 +10,8 @@
   "paymentCompleted": false,
   "targetUrl": "https://m.66rpg.com/h5/1682748?ohp=v3&quality=32",
   "tap": {
-    "x": 173,
-    "y": 509
+    "x": 105,
+    "y": 650
   },
   "cases": [
     {
