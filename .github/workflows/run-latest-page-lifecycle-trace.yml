@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: latest-page-menu-entry-calibration-20260804-v2
+  group: latest-page-menu-entry-calibration-20260804-v3
   cancel-in-progress: true
 
 jobs:
@@ -22,6 +22,8 @@ jobs:
       CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
       CURRENT_SECOND_SIZE: 11590534
       CURRENT_SECOND_SHA256: ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112
+      CALIBRATION_MENU_X: 328
+      CALIBRATION_MENU_Y: 740
 
     steps:
       - uses: actions/checkout@v4
@@ -33,10 +35,23 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Verify calibration boundary
+      - name: Verify calibration boundary and apply workspace coordinate
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          script = Path("docs/diagnostics/run_latest_page_menu_entry_calibration.mjs")
+          text = script.read_text(encoding="utf-8")
+          old = "const menuTap = { x: 50, y: 180 };"
+          new = f"const menuTap = {{ x: {int(os.environ['CALIBRATION_MENU_X'])}, y: {int(os.environ['CALIBRATION_MENU_Y'])} }};"
+          if text.count(old) != 1:
+              raise SystemExit("Unexpected calibration coordinate source")
+          script.write_text(text.replace(old, new), encoding="utf-8")
+          print(new)
+          PY
           node --check docs/diagnostics/run_latest_page_menu_entry_calibration.mjs
           test -s "$CURRENT_FIRST_PATH"
           grep -Fq '@version      1.1.4' "$CURRENT_FIRST_PATH"
@@ -80,8 +95,10 @@ jobs:
           report_path = output_dir / "report.json"
           report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
           capture_ok = bool(report) and bool(report.get("captureOk")) and os.environ.get("CALIBRATION_OUTCOME") == "success"
+          fallback_tap = {"x": int(os.environ["CALIBRATION_MENU_X"]), "y": int(os.environ["CALIBRATION_MENU_Y"])}
           status = {
               "schemaVersion": 1,
+              "calibrationAttempt": 2,
               "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
               "runId": int(os.environ["GITHUB_RUN_ID"]),
               "state": "completed",
@@ -90,7 +107,7 @@ jobs:
               "menuEntryValidated": False,
               "ok": False,
               "mode": "menu-entry-calibration-capture-only",
-              "menuTap": report.get("menuTap") if report else {"x": 50, "y": 180},
+              "menuTap": report.get("menuTap") if report else fallback_tap,
               "summary": report.get("summary") if report else None,
               "reportAvailable": bool(report),
               "artifactName": "latest-page-menu-entry-calibration",
