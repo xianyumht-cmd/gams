@@ -1,12 +1,15 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedAt": "2026-08-04T16:25:47Z",
+  "reviewedAt": "2026-08-04T16:28:35Z",
   "runId": 30928725220,
-  "state": "completed",
+  "state": "completed-reviewed",
   "workflowOutcome": "success",
   "captureOk": true,
   "targetEntryVisualValidated": false,
+  "validatedPages": 3,
   "ok": false,
+  "projectPromotionAllowed": false,
   "mode": "page-specific-target-entry-calibration-capture-only",
   "summary": {
     "totalCases": 5,
@@ -19,8 +22,45 @@
     "targetReadWindowCases": 2,
     "blockedOrderCases": 0
   },
+  "perPage": {
+    "page1": {
+      "validated": true,
+      "targetReadCount": 3
+    },
+    "page2": {
+      "validated": false,
+      "reason": "candidate click produced no visual change or target request"
+    },
+    "page3": {
+      "validated": true,
+      "targetReadCount": 3
+    },
+    "page4": {
+      "validated": true,
+      "targetReadCount": 0,
+      "marker": "visually verified target screen using preloaded data"
+    },
+    "page5": {
+      "validated": false,
+      "reason": "center exploratory click only changed title animation"
+    }
+  },
+  "nextCalibration": {
+    "pages": [2, 5],
+    "page2Tap": {
+      "x": 230,
+      "y": 540
+    },
+    "page5TitleTap": {
+      "x": 90,
+      "y": 400,
+      "repeat": 2
+    },
+    "firstSecondReentrySequenceAllowed": false
+  },
   "reportAvailable": true,
   "artifactName": "latest-page-target-entry-calibration",
+  "reviewDocument": "docs/LATEST_PAGE_TARGET_ENTRY_CALIBRATION_REVIEW_20260804.md",
   "apkBuilt": false,
   "productionDefaultChanged": false,
   "runtimeFilesChanged": false,
