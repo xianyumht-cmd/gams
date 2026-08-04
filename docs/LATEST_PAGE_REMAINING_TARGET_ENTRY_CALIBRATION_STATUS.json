@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T16:33:07Z",
+  "runId": 30929501667,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "captureOk": true,
+  "visualValidationComplete": false,
+  "ok": false,
+  "mode": "remaining-target-entry-calibration-capture-only",
+  "summary": {
+    "totalCases": 2,
+    "fatalCases": 0,
+    "pageErrorCases": 0,
+    "runtimeLoadedCases": 2,
+    "blockedOrderCases": 0,
+    "page2TargetScreenChanged": true,
+    "page2TargetReadCount": 3,
+    "page5Title1Changed": true,
+    "page5Title2Changed": true,
+    "page5MenuChanged": true
+  },
+  "reportAvailable": true,
+  "artifactName": "latest-page-remaining-target-entry-calibration",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false
+}
