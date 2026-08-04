@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T19:58:02Z",
+  "runId": 30945669106,
+  "state": "completed",
+  "ok": true,
+  "mode": "temporary-current-second-capture",
+  "currentSecondSize": 11590534,
+  "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+  "sourceCommittedByWorkflow": false,
+  "artifactRetentionDays": 1,
+  "artifactName": "current-second-temporary",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "1fe4c4cf0ad2eb7ddd7af71cd5f3f87be4301adb"
+}
