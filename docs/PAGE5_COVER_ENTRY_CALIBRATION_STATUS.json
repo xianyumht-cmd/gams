@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T20:47:31Z",
+  "runId": 30949338139,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-cover-entry-calibration-page-only",
+  "coverTap": {
+    "x": 80,
+    "y": 410
+  },
+  "mainFrameValid": true,
+  "screenshotChanged": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "reportAvailable": true,
+  "artifactName": "page5-cover-entry-calibration",
+  "pageOnlyCalibration": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "98aef411c4779a2eeffbdc363eef337ec122a2e7"
+}
