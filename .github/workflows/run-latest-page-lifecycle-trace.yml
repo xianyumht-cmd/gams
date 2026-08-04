@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - .github/workflows/run-latest-page-lifecycle-trace.yml
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
