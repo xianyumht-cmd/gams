@@ -1,10 +1,53 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-04T12:41:50Z",
+  "generatedAt": "2026-08-04T12:44:44Z",
   "runId": 30910216344,
-  "state": "running",
-  "ok": false,
-  "reportAvailable": false,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "chromium-webview-equivalent-navigation-and-resource-policy",
   "apkExecuted": false,
-  "paymentCompleted": false
+  "paymentCompleted": false,
+  "versionPairs": {
+    "pageBaseline": {
+      "injected": false
+    },
+    "currentFirstHistoricalSecond": {
+      "injected": true,
+      "firstVersion": "1.1.4",
+      "firstSize": 332428,
+      "firstSha256": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818",
+      "secondVersion": "1.0.2",
+      "secondSize": 11589175,
+      "secondSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43"
+    },
+    "fullHistorical": {
+      "injected": true,
+      "firstVersion": "1.1.1",
+      "firstCommit": "29bf86c0e2cf87e0f1b1dfac9456bba0b27cf61c",
+      "firstSize": 331550,
+      "firstSha256": "5898ad5db1a3f66dfceb51b36addaf49d49b26596acdb58162caa1a3c6876917",
+      "secondVersion": "1.0.2",
+      "secondSize": 11589175,
+      "secondSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43"
+    }
+  },
+  "summary": {
+    "totalCases": 15,
+    "baselineCases": 5,
+    "injectedCases": 10,
+    "fatalCases": 0,
+    "baselineBlankCases": 0,
+    "injectedBlankCases": 0,
+    "initialLoginCases": 0,
+    "secondAttemptLoginCases": 0,
+    "reenterLoginCases": 0,
+    "injectedCasesWithSecondRouteLoad": 10,
+    "casesWithPageErrors": 0,
+    "casesWithBlockedNonHttpNavigation": 10,
+    "casesWithEntryClick": 0,
+    "casesWithActionClick": 0
+  },
+  "reportAvailable": true,
+  "artifactName": "target-page-webview-browser-test"
 }
