@@ -1,0 +1,144 @@
+name: Calibrate latest page menu entry
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: latest-page-menu-entry-calibration-20260804
+  cancel-in-progress: true
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OUTPUT_DIR: latest-page-menu-entry-calibration
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
+      CURRENT_SECOND_SIZE: 11590534
+      CURRENT_SECOND_SHA256: ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/latest-page-lifecycle-trace-20260804
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify calibration boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check docs/diagnostics/run_latest_page_menu_entry_calibration.mjs
+          test -s "$CURRENT_FIRST_PATH"
+          grep -Fq '@version      1.1.4' "$CURRENT_FIRST_PATH"
+          test "$(stat -c%s "$CURRENT_SECOND_PATH")" = "$CURRENT_SECOND_SIZE"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_SECOND_SHA256"
+          test ! -e scripts/apply_latest_page_compat_candidate.py
+          test ! -e scripts/run_latest_page_compat_acceptance.mjs
+          test ! -e .github/workflows/test-latest-page-compat-candidate.yml
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Capture common menu entry
+        id: calibration_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node docs/diagnostics/run_latest_page_menu_entry_calibration.mjs 2>&1 | tee /tmp/latest-page-menu-entry-calibration.log
+
+      - name: Build calibration status
+        if: always()
+        shell: bash
+        env:
+          CALIBRATION_OUTCOME: ${{ steps.calibration_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/latest-page-menu-entry-calibration.log && cp /tmp/latest-page-menu-entry-calibration.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          report_path = output_dir / "report.json"
+          report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+          capture_ok = bool(report) and bool(report.get("captureOk")) and os.environ.get("CALIBRATION_OUTCOME") == "success"
+          status = {
+              "schemaVersion": 1,
+              "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "runId": int(os.environ["GITHUB_RUN_ID"]),
+              "state": "completed",
+              "workflowOutcome": os.environ.get("CALIBRATION_OUTCOME", "unknown"),
+              "captureOk": capture_ok,
+              "menuEntryValidated": False,
+              "ok": False,
+              "mode": "menu-entry-calibration-capture-only",
+              "menuTap": report.get("menuTap") if report else {"x": 50, "y": 180},
+              "summary": report.get("summary") if report else None,
+              "reportAvailable": bool(report),
+              "artifactName": "latest-page-menu-entry-calibration",
+              "apkBuilt": False,
+              "productionDefaultChanged": False,
+              "runtimeFilesChanged": False,
+              "androidClientChanged": False,
+              "authorizationOutcomeModified": False,
+              "paymentCompleted": False,
+          }
+          Path("/tmp/LATEST_PAGE_MENU_ENTRY_CALIBRATION_STATUS.json").write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: latest-page-menu-entry-calibration
+          path: latest-page-menu-entry-calibration
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish calibration status to main
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          rm -rf /tmp/latest-page-menu-calibration-status
+          git worktree add -B latest-page-menu-calibration-status /tmp/latest-page-menu-calibration-status origin/main
+          cd /tmp/latest-page-menu-calibration-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/LATEST_PAGE_MENU_ENTRY_CALIBRATION_STATUS.json docs/LATEST_PAGE_MENU_ENTRY_CALIBRATION_STATUS.json
+          git add docs/LATEST_PAGE_MENU_ENTRY_CALIBRATION_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record latest page menu entry calibration status"
+            git push origin HEAD:main
+          fi
+          cd "$GITHUB_WORKSPACE"
+          git worktree remove --force /tmp/latest-page-menu-calibration-status
+
+      - name: Enforce capture gate
+        if: always()
+        shell: bash
+        run: |
+          jq -e '.captureOk == true and .menuEntryValidated == false and .apkBuilt == false' /tmp/LATEST_PAGE_MENU_ENTRY_CALIBRATION_STATUS.json >/dev/null
