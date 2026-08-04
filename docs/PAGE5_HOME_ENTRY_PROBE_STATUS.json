@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T17:22:59Z",
+  "runId": 30933402194,
+  "state": "completed",
+  "workflowOutcome": "cancelled",
+  "captureOk": false,
+  "targetEntryVisualValidated": false,
+  "ok": false,
+  "mode": "page5-isolated-home-entry-probe",
+  "summary": null,
+  "reportAvailable": false,
+  "artifactName": "page5-home-entry-probe",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false
+}
