@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-04T17:03:03Z",
+  "runId": 30931949660,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "captureOk": true,
+  "menuVisualValidated": false,
+  "ok": false,
+  "mode": "page5-menu-calibration-v2-client-equivalent-navigation",
+  "menuTap": {
+    "x": 351,
+    "y": 741
+  },
+  "mainFrameValidBefore": true,
+  "mainFrameValidAfter": true,
+  "screenshotChanged": true,
+  "blockedNavigationCount": 2,
+  "menuWindow": {
+    "total": 12,
+    "kinds": {
+      "page-request": 12
+    },
+    "targetReadCount": 0,
+    "orderCount": 0
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-menu-calibration-v2",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false
+}
