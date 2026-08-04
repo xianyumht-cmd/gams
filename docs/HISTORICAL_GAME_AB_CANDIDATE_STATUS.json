@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T11:46:49Z",
+  "runId": 30906112091,
+  "ok": true,
+  "apk": {
+    "versionName": "2.0.11-game-baseline-ab",
+    "versionCode": 21,
+    "sha256": "a0cb05a774de0f2aa7abf69369520c9385e4f3448cb8063e7f676286bdf12cf7"
+  },
+  "runtime": {
+    "version": "2.0.7-game-baseline-ab-c1",
+    "branch": "candidate-game-baseline-ab-20260804"
+  },
+  "versionPair": {
+    "firstFile": "1.1.4",
+    "secondFile": "1.0.2",
+    "secondFileSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43"
+  },
+  "probe": {
+    "worker": true,
+    "customDomainHttpCode": "403"
+  },
+  "isolation": {
+    "onlySecondFileVersionChanged": true,
+    "androidMainActivityChanged": false,
+    "clientNetworkHostsChanged": false,
+    "productionDefaultChannelChanged": false
+  },
+  "steps": {
+    "verify": "success",
+    "runtime": "success",
+    "source": "success",
+    "deploy": "success",
+    "probe": "success",
+    "clientPatch": "success",
+    "apk": "success",
+    "artifact": "success"
+  },
+  "secretsExposed": false
+}
