@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T19:56:18Z",
+  "runId": 30945516638,
+  "state": "completed",
+  "ok": true,
+  "mode": "temporary-page5-official-source-capture",
+  "officialSize": 15429579,
+  "officialSha256": "5b04795cff4c5c89e284880d389522e9f746509c6007c86c19ab5361d7d8892f",
+  "sourceCommitted": false,
+  "artifactRetentionDays": 1,
+  "artifactName": "page5-official-source-temporary",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "79def62bc7d28c875898a8cf0b5ab563ceac87fc"
+}
