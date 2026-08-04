@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-04T20:39:21Z",
-  "runId": 30948746065,
+  "generatedAt": "2026-08-04T20:42:32Z",
+  "runId": 30948990054,
   "state": "completed",
   "workflowOutcome": "success",
-  "ok": false,
+  "ok": true,
   "mode": "page5-load-entry-calibration-page-only",
-  "screenshotChangedAfterMenu": false,
-  "screenshotChangedAfterLoad": false,
+  "screenshotChangedAfterMenu": true,
+  "screenshotChangedAfterLoad": true,
   "pageErrorCount": 0,
   "blockedOrderCount": 0,
   "reportAvailable": true,
@@ -22,5 +22,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "337a41f9fe6a335d681d22639cef37b1557fc413"
+  "commit": "aa15fb046b7b3a7ec834415136d1012689296473"
 }
