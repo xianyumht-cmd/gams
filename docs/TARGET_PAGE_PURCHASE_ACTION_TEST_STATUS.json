@@ -1,10 +1,39 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-04T13:21:26Z",
+  "generatedAt": "2026-08-04T13:29:46Z",
   "runId": 30913394646,
-  "state": "running",
-  "ok": false,
-  "reportAvailable": false,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "chromium-webview-equivalent-purchase-action-probe",
   "apkExecuted": false,
-  "paymentCompleted": false
+  "paymentCompleted": false,
+  "versionPairs": {
+    "currentFirstHistoricalSecond": {
+      "firstVersion": "1.1.4",
+      "firstSize": 332428,
+      "firstSha256": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818",
+      "secondVersion": "1.0.2",
+      "secondSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43"
+    },
+    "fullHistorical": {
+      "firstVersion": "1.1.1",
+      "firstCommit": "29bf86c0e2cf87e0f1b1dfac9456bba0b27cf61c",
+      "firstSize": 331550,
+      "firstSha256": "5898ad5db1a3f66dfceb51b36addaf49d49b26596acdb58162caa1a3c6876917",
+      "secondVersion": "1.0.2",
+      "secondSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43"
+    }
+  },
+  "summary": {
+    "totalCases": 10,
+    "fatalCases": 0,
+    "casesWithPageErrors": 0,
+    "casesWithDialogs": 10,
+    "casesWithBlockedNonHttpNavigation": 10,
+    "firstSecondSameScreenshot": 2,
+    "firstThirdSameScreenshot": 1
+  },
+  "reportAvailable": true,
+  "artifactName": "target-page-purchase-action-probe"
 }
