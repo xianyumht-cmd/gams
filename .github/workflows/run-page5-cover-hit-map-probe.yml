@@ -1,0 +1,114 @@
+name: Probe page five cover hit map
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/run_page5_cover_hit_map_probe.mjs
+      - .github/workflows/run-page5-cover-hit-map-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-cover-hit-map-probe-20260805
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OUTPUT_DIR: page5-cover-hit-map-probe
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate probe script
+        run: node --check scripts/run_page5_cover_hit_map_probe.mjs
+      - name: Install Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+      - name: Execute parallel cover hit map
+        id: probe_run
+        continue-on-error: true
+        run: node scripts/run_page5_cover_hit_map_probe.mjs 2>&1 | tee /tmp/page5-cover-hit-map-probe.log
+      - name: Build status
+        if: always()
+        env:
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/page5-cover-hit-map-probe.log && cp /tmp/page5-cover-hit-map-probe.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          output=Path(os.environ['OUTPUT_DIR']); report_path=output/'report.json'
+          report=json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          ok=bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME')=='success'
+          cases=report.get('cases',[]) if report else []
+          ranked=sorted(({
+            'name':case.get('name'),
+            'point':case.get('point'),
+            'screenshotChanged':case.get('screenshotChanged'),
+            'postTapRequestCount':case.get('postTapRequestCount'),
+            'postTapResourceTypes':case.get('postTapResourceTypes'),
+            'pageErrorCount':len(case.get('pageErrors',[])),
+          } for case in cases), key=lambda item:(item.get('postTapRequestCount') or 0), reverse=True)
+          status={
+            'schemaVersion':1,
+            'generatedAt':datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+            'runId':int(os.environ['GITHUB_RUN_ID']),
+            'state':'completed',
+            'workflowOutcome':os.environ.get('PROBE_OUTCOME','unknown'),
+            'ok':ok,
+            'mode':'page5-cover-entry-hit-map-page-only',
+            'summary':report.get('summary') if report else None,
+            'rankedCases':ranked,
+            'reportAvailable':bool(report),
+            'artifactName':'page5-cover-hit-map-probe',
+            'pageOnlyProbe':True,
+            'candidateTested':False,
+            'repeatSequenceTested':False,
+            'apkBuilt':False,
+            'productionDefaultChanged':False,
+            'runtimeFilesChanged':False,
+            'androidClientChanged':False,
+            'authorizationOutcomeModified':False,
+            'paymentCompleted':False,
+            'branch':os.environ.get('GITHUB_REF_NAME',''),
+            'commit':os.environ.get('GITHUB_SHA',''),
+          }
+          Path('/tmp/PAGE5_COVER_HIT_MAP_PROBE_STATUS.json').write_text(json.dumps(status,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(status,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-cover-hit-map-probe
+          path: page5-cover-hit-map-probe
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Publish status
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/PAGE5_COVER_HIT_MAP_PROBE_STATUS.json docs/PAGE5_COVER_HIT_MAP_PROBE_STATUS.json
+          git add docs/PAGE5_COVER_HIT_MAP_PROBE_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record page five cover hit map probe"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+      - name: Enforce probe capture
+        if: always()
+        run: jq -e '.ok == true' /tmp/PAGE5_COVER_HIT_MAP_PROBE_STATUS.json >/dev/null
