@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T17:38:29Z",
+  "runId": 30934779588,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "captureOk": true,
+  "candidatePrepared": false,
+  "correctionApplied": false,
+  "ok": true,
+  "mode": "page5-handler-source-slice",
+  "summary": {
+    "occurrenceCount": 1,
+    "occurrenceIndexes": [
+      3447711
+    ],
+    "contextsWithOnClickText": 0,
+    "contextsWithUndefinedGuardBefore": 0,
+    "contextsWithTryAndCatch": 0
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-handler-source-slice",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false
+}
