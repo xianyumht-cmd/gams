@@ -1,44 +1,28 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-08-04T16:06:16Z",
-  "reviewedAt": "2026-08-04T16:09:30Z",
-  "runId": 30927101878,
-  "state": "completed-reviewed",
+  "schemaVersion": 1,
+  "calibrationAttempt": 2,
+  "generatedAt": "2026-08-04T16:14:30Z",
+  "runId": 30927876103,
+  "state": "completed",
   "workflowOutcome": "success",
   "captureOk": true,
   "menuEntryValidated": false,
-  "validatedPages": 0,
   "ok": false,
   "mode": "menu-entry-calibration-capture-only",
   "menuTap": {
-    "x": 50,
-    "y": 180
+    "x": 328,
+    "y": 740
   },
   "summary": {
     "totalCases": 5,
     "fatalCases": 0,
     "pageErrorCases": 0,
     "runtimeLoadedCases": 5,
-    "screenshotChangedCases": 3,
+    "screenshotChangedCases": 5,
     "blockedOrderCases": 0
-  },
-  "visualReview": {
-    "page1": "unchanged",
-    "page2": "unchanged",
-    "page3": "normal animation only",
-    "page4": "unrelated scene progression",
-    "page5": "normal title or text animation only",
-    "commonMenuOpenedPages": 0,
-    "coordinateValid": false
-  },
-  "nextCalibrationTap": {
-    "x": 328,
-    "y": 740,
-    "state": "unvalidated"
   },
   "reportAvailable": true,
   "artifactName": "latest-page-menu-entry-calibration",
-  "reviewDocument": "docs/LATEST_PAGE_MENU_ENTRY_CALIBRATION_REVIEW_20260804.md",
   "apkBuilt": false,
   "productionDefaultChanged": false,
   "runtimeFilesChanged": false,
