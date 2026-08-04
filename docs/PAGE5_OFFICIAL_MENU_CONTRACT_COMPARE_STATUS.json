@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T19:53:35Z",
+  "runId": 30945265540,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-official-menu-contract-bounded-compare",
+  "capture": {
+    "officialUrl": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js?v=202607280001",
+    "officialStatus": 200,
+    "officialContentType": "application/javascript; charset=utf-8",
+    "officialBodyCaptured": true,
+    "fullOfficialBodyPersisted": false
+  },
+  "official": {
+    "size": 15429579,
+    "sha256": "5b04795cff4c5c89e284880d389522e9f746509c6007c86c19ab5361d7d8892f",
+    "counts": {
+      "SCGMenu": 0,
+      "SAL_openMenu": 2,
+      "newWmMenu": 0,
+      "isMobile": 1
+    },
+    "patternCounts": {
+      "functionDeclaration": 0,
+      "classDeclaration": 0,
+      "directAssignment": 0,
+      "constructorUse": 0,
+      "typeofGuard": 0
+    }
+  },
+  "current": {
+    "size": 11590534,
+    "sha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "counts": {
+      "SCGMenu": 1,
+      "SAL_openMenu": 2,
+      "newWmMenu": 0,
+      "isMobile": 0
+    },
+    "patternCounts": {
+      "functionDeclaration": 0,
+      "classDeclaration": 0,
+      "directAssignment": 0,
+      "constructorUse": 1,
+      "typeofGuard": 0
+    }
+  },
+  "comparison": {
+    "sizeDelta": 3839045,
+    "sameSha256": false,
+    "needleCountDelta": {
+      "SCGMenu": -1,
+      "SAL_openMenu": 0,
+      "newWmMenu": 0,
+      "isMobile": 1
+    },
+    "patternCountDelta": {
+      "functionDeclaration": 0,
+      "classDeclaration": 0,
+      "directAssignment": 0,
+      "constructorUse": -1,
+      "typeofGuard": 0
+    }
+  },
+  "boundedContextsAvailable": true,
+  "fullOfficialBodyCommitted": false,
+  "artifactName": "page5-official-menu-contract-compare",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "9ec7212920cd814393f6a02c9150d219f8783266"
+}
