@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-04T20:56:29Z",
+  "runId": 30949748087,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-cover-transition-timing-probe",
+  "summary": {
+    "totalCases": 3,
+    "passedCases": 3,
+    "fatalCases": 0,
+    "pageErrorCases": 0,
+    "blockedOrderCases": 0,
+    "stronglyChangedCases": 3
+  },
+  "caseSummary": [
+    {
+      "name": "single-tap-long-wait",
+      "uniqueScreenshotCount": 5,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "name": "second-center-tap",
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "name": "second-prompt-tap",
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    }
+  ],
+  "reportAvailable": true,
+  "artifactName": "page5-cover-transition-probe",
+  "pageOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "c9aca5a57b49b1a96601a8786f45a1b6f512ba2d"
+}
