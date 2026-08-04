@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-04T18:49:38Z",
+  "runId": 30940071215,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "current-runtime-entry-and-page-shop-calibration-v2",
+  "pageMenuTap": {
+    "x": 350,
+    "y": 725
+  },
+  "summary": {
+    "totalCases": 5,
+    "fatalCases": 0,
+    "runtimeButtonPresentCases": 5,
+    "runtimeOpenCases": 5,
+    "runtimeCloseCases": 5,
+    "runtimeReopenCases": 5,
+    "noLoginLabelCases": 5,
+    "noLoginEnabledTextCases": 5,
+    "secondFileLoadCases": 5,
+    "calibrationStageCases": 5,
+    "blockedOrderRequestCases": 0,
+    "pageErrorCases": 0,
+    "pageMenuCases": 4,
+    "pageMenuRuntimePanelConflictCases": 0,
+    "pageMenuRuntimePanelConflictTargets": []
+  },
+  "reportAvailable": true,
+  "artifactName": "latest-page-entry-shop-calibration-v2",
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "branch": "diagnostics/latest-page-lifecycle-trace-20260804",
+  "commit": "9d10860834791ffdc827e953950bceb75355d1fa"
+}
