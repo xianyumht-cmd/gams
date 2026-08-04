@@ -18,6 +18,10 @@ const HISTORICAL_GAME_AB_APP_VERSION = 21;
 const HISTORICAL_GAME_AB_RUNTIME_VERSION = "2.0.7-game-baseline-ab-c1";
 const HISTORICAL_GAME_AB_RELEASE_BASE =
   "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-game-baseline-ab-20260804/candidate-runtime-game-baseline/release/";
+const FULL_HISTORICAL_AB_APP_VERSION = 22;
+const FULL_HISTORICAL_AB_RUNTIME_VERSION = "2.0.8-full-historical-ab-c1";
+const FULL_HISTORICAL_AB_RELEASE_BASE =
+  "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-full-historical-ab-20260804/candidate-runtime-full-historical/release/";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -35,6 +39,7 @@ export default {
         let candidateRuntimeVersion = null;
         let remoteEngineAbRuntimeVersion = null;
         let historicalGameAbRuntimeVersion = null;
+        let fullHistoricalAbRuntimeVersion = null;
         const candidateQuery = url.searchParams.get("candidate");
         if (candidateQuery === "1") {
           const candidateManifest = await loadReleaseManifest(CANDIDATE_RELEASE_BASE);
@@ -47,6 +52,10 @@ export default {
         if (candidateQuery === "21") {
           const historicalGameAbManifest = await loadReleaseManifest(HISTORICAL_GAME_AB_RELEASE_BASE);
           historicalGameAbRuntimeVersion = historicalGameAbManifest.versionName;
+        }
+        if (candidateQuery === "22") {
+          const fullHistoricalAbManifest = await loadReleaseManifest(FULL_HISTORICAL_AB_RELEASE_BASE);
+          fullHistoricalAbRuntimeVersion = fullHistoricalAbManifest.versionName;
         }
         return json({
           ok: true,
@@ -64,6 +73,8 @@ export default {
           remoteEngineAbRuntimeVersion,
           historicalGameAbAppVersion: HISTORICAL_GAME_AB_APP_VERSION,
           historicalGameAbRuntimeVersion,
+          fullHistoricalAbAppVersion: FULL_HISTORICAL_AB_APP_VERSION,
+          fullHistoricalAbRuntimeVersion,
         });
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/challenge") {
@@ -382,6 +393,7 @@ async function verifySignedRequest(
 }
 
 function releaseBaseForAppVersion(appVersion) {
+  if (appVersion === FULL_HISTORICAL_AB_APP_VERSION) return FULL_HISTORICAL_AB_RELEASE_BASE;
   if (appVersion === HISTORICAL_GAME_AB_APP_VERSION) return HISTORICAL_GAME_AB_RELEASE_BASE;
   if (appVersion === REMOTE_ENGINE_AB_APP_VERSION) return REMOTE_ENGINE_AB_RELEASE_BASE;
   if (appVersion === CANDIDATE_APP_VERSION) return CANDIDATE_RELEASE_BASE;
@@ -409,6 +421,12 @@ async function releaseForRequestedVersion(requestedVersion) {
     const historicalGameAbManifest = await loadReleaseManifest(HISTORICAL_GAME_AB_RELEASE_BASE);
     if (historicalGameAbManifest.versionName === requestedVersion) {
       return { manifest: historicalGameAbManifest, releaseBase: HISTORICAL_GAME_AB_RELEASE_BASE };
+    }
+  }
+  if (requestedVersion === FULL_HISTORICAL_AB_RUNTIME_VERSION) {
+    const fullHistoricalAbManifest = await loadReleaseManifest(FULL_HISTORICAL_AB_RELEASE_BASE);
+    if (fullHistoricalAbManifest.versionName === requestedVersion) {
+      return { manifest: fullHistoricalAbManifest, releaseBase: FULL_HISTORICAL_AB_RELEASE_BASE };
     }
   }
   throw new HttpError(409, "runtime_version_changed", "服务已更新，请重新启动");
