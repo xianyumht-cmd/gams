@@ -1,8 +1,10 @@
 name: Calibrate latest page menu entry
 
 on:
-  pull_request:
+  push:
     branches: [main]
+    paths:
+      - .github/workflows/run-latest-page-lifecycle-trace.yml
   workflow_dispatch:
 
 permissions:
