@@ -1,0 +1,164 @@
+name: Run page five isolated home entry probe
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-home-entry-probe-20260805
+    paths:
+      - docs/diagnostics/run_page5_home_entry_probe.mjs
+      - .github/workflows/run-page5-home-entry-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-home-entry-probe-20260805
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      OUTPUT_DIR: page5-home-entry-probe
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
+      CURRENT_SECOND_SIZE: 11590534
+      CURRENT_SECOND_SHA256: ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-home-entry-probe-20260805
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify and normalize probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('docs/diagnostics/run_page5_home_entry_probe.mjs')
+          text = path.read_text(encoding='utf-8')
+          old_listener = '''  context.on("page", async (popup) => {
+    if (popup === page) return;
+    popupAttempts.push({ at: Date.now(), initialUrl: safeUrl(popup.url()) });
+    await popup.close().catch(() => {});
+  });
+
+  const page = await context.newPage();'''
+          new_listener = '''  const page = await context.newPage();
+  context.on("page", async (popup) => {
+    if (popup === page) return;
+    popupAttempts.push({ at: Date.now(), initialUrl: safeUrl(popup.url()) });
+    await popup.close().catch(() => {});
+  });'''
+          if text.count(old_listener) != 1:
+              raise SystemExit('popup listener marker mismatch')
+          text = text.replace(old_listener, new_listener, 1)
+          old_nav = '    const topNavigation = request.isNavigationRequest() && request.frame().parentFrame() === null;'
+          new_nav = '''    let topNavigation = false;
+    try { topNavigation = request.isNavigationRequest() && request.frame().parentFrame() === null; } catch {}'''
+          if text.count(old_nav) != 1:
+              raise SystemExit('navigation marker mismatch')
+          path.write_text(text.replace(old_nav, new_nav, 1), encoding='utf-8')
+          PY
+          node --check docs/diagnostics/run_page5_home_entry_probe.mjs
+          test -s "$CURRENT_FIRST_PATH"
+          grep -Fq '@version      1.1.4' "$CURRENT_FIRST_PATH"
+          test "$(stat -c%s "$CURRENT_SECOND_PATH")" = "$CURRENT_SECOND_SIZE"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_SECOND_SHA256"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute isolated probes
+        id: probe_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node docs/diagnostics/run_page5_home_entry_probe.mjs 2>&1 | tee /tmp/page5-home-entry-probe.log
+
+      - name: Build probe status
+        if: always()
+        shell: bash
+        env:
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/page5-home-entry-probe.log && cp /tmp/page5-home-entry-probe.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output = Path(os.environ['OUTPUT_DIR'])
+          report_path = output / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          capture_ok = bool(report) and bool(report.get('captureOk')) and os.environ.get('PROBE_OUTCOME') == 'success'
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
+              'captureOk': capture_ok,
+              'targetEntryVisualValidated': False,
+              'ok': False,
+              'mode': 'page5-isolated-home-entry-probe',
+              'summary': report.get('summary') if report else None,
+              'reportAvailable': bool(report),
+              'artifactName': 'page5-home-entry-probe',
+              'apkBuilt': False,
+              'productionDefaultChanged': False,
+              'runtimeFilesChanged': False,
+              'androidClientChanged': False,
+              'authorizationOutcomeModified': False,
+              'paymentCompleted': False,
+          }
+          Path('/tmp/PAGE5_HOME_ENTRY_PROBE_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-home-entry-probe
+          path: page5-home-entry-probe
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish branch status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/PAGE5_HOME_ENTRY_PROBE_STATUS.json docs/PAGE5_HOME_ENTRY_PROBE_STATUS.json
+          git add docs/PAGE5_HOME_ENTRY_PROBE_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record page five home entry probe status"
+            git push origin HEAD:diagnostics/page5-home-entry-probe-20260805
+          fi
+
+      - name: Enforce capture-only gate
+        if: always()
+        shell: bash
+        run: |
+          jq -e '.captureOk == true and .targetEntryVisualValidated == false and .apkBuilt == false' /tmp/PAGE5_HOME_ENTRY_PROBE_STATUS.json >/dev/null
