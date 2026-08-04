@@ -1,10 +1,53 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-04T12:48:12Z",
+  "generatedAt": "2026-08-04T12:51:33Z",
   "runId": 30910719045,
-  "state": "running",
-  "ok": false,
-  "reportAvailable": false,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "chromium-webview-equivalent-menu-flow",
   "apkExecuted": false,
-  "paymentCompleted": false
+  "paymentCompleted": false,
+  "versionPairs": {
+    "currentFirstHistoricalSecond": {
+      "firstVersion": "1.1.4",
+      "firstSize": 332428,
+      "firstSha256": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818",
+      "secondVersion": "1.0.2",
+      "secondSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43"
+    },
+    "fullHistorical": {
+      "firstVersion": "1.1.1",
+      "firstCommit": "29bf86c0e2cf87e0f1b1dfac9456bba0b27cf61c",
+      "firstSize": 331550,
+      "firstSha256": "5898ad5db1a3f66dfceb51b36addaf49d49b26596acdb58162caa1a3c6876917",
+      "secondVersion": "1.0.2",
+      "secondSha256": "51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43"
+    }
+  },
+  "summary": {
+    "totalCases": 10,
+    "baselineCases": 0,
+    "injectedCases": 10,
+    "fatalCases": 0,
+    "baselineBlankCases": 0,
+    "injectedBlankCases": 0,
+    "initialLoginCases": 0,
+    "secondAttemptLoginCases": 0,
+    "reenterLoginCases": 10,
+    "injectedCasesWithSecondRouteLoad": 10,
+    "casesWithPageErrors": 0,
+    "casesWithBlockedNonHttpNavigation": 10,
+    "casesWithEntryClick": 0,
+    "casesWithActionClick": 0
+  },
+  "interactionSummary": {
+    "attempts": 30,
+    "menuClicks": 30,
+    "entryClicks": 0,
+    "actionClicks": 0,
+    "loginIndicators": 20
+  },
+  "reportAvailable": true,
+  "artifactName": "target-page-menu-flow-test"
 }
