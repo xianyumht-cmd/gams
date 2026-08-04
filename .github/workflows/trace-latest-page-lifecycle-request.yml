@@ -1,0 +1,146 @@
+name: Trace latest page lifecycle and request sequence
+
+on:
+  push:
+    branches:
+      - diagnostics/latest-page-lifecycle-trace-20260804
+    paths:
+      - .github/workflows/trace-latest-page-lifecycle-request.yml
+      - scripts/run_latest_page_lifecycle_request_trace.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: latest-page-lifecycle-request-trace-20260804
+  cancel-in-progress: true
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OUTPUT_DIR: latest-page-lifecycle-request-trace
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
+      CURRENT_SECOND_SIZE: 11590534
+      CURRENT_SECOND_SHA256: ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112
+      STATUS_BRANCH: diagnostics/latest-page-lifecycle-trace-20260804
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/latest-page-lifecycle-trace-20260804
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify diagnostics boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/run_latest_page_lifecycle_request_trace.mjs
+          test -s "$CURRENT_FIRST_PATH"
+          grep -Fq '@version      1.1.4' "$CURRENT_FIRST_PATH"
+          test "$(stat -c%s "$CURRENT_SECOND_PATH")" = "$CURRENT_SECOND_SIZE"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_SECOND_SHA256"
+          test ! -e scripts/apply_latest_page_compat_candidate.py
+          test ! -e scripts/run_latest_page_compat_acceptance.mjs
+          test ! -e .github/workflows/test-latest-page-compat-candidate.yml
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute baseline and diagnostics-only matrix
+        id: trace_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/run_latest_page_lifecycle_request_trace.mjs 2>&1 | tee /tmp/latest-page-lifecycle-request-trace.log
+
+      - name: Build status record
+        if: always()
+        shell: bash
+        env:
+          TRACE_OUTCOME: ${{ steps.trace_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/latest-page-lifecycle-request-trace.log && cp /tmp/latest-page-lifecycle-request-trace.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          report_path = output_dir / "report.json"
+          report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+          summary = report.get("summary") if report else None
+          ok = bool(report) and bool(report.get("pass")) and os.environ.get("TRACE_OUTCOME") == "success"
+          status = {
+              "schemaVersion": 1,
+              "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "runId": int(os.environ["GITHUB_RUN_ID"]),
+              "state": "completed",
+              "workflowOutcome": os.environ.get("TRACE_OUTCOME", "unknown"),
+              "ok": ok,
+              "mode": "current-baseline-vs-diagnostics-only-lifecycle-request-trace",
+              "summary": summary,
+              "reportAvailable": bool(report),
+              "artifactName": "latest-page-lifecycle-request-trace",
+              "apkBuilt": False,
+              "productionDefaultChanged": False,
+              "runtimeFilesChanged": False,
+              "androidClientChanged": False,
+              "authorizationOutcomeModified": False,
+          }
+          Path("/tmp/LATEST_PAGE_LIFECYCLE_REQUEST_TRACE_STATUS.json").write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: latest-page-lifecycle-request-trace
+          path: latest-page-lifecycle-request-trace
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish status to diagnostics branch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$STATUS_BRANCH" --quiet
+          rm -rf /tmp/latest-page-lifecycle-status
+          git worktree add -B latest-page-lifecycle-status /tmp/latest-page-lifecycle-status "origin/$STATUS_BRANCH"
+          cd /tmp/latest-page-lifecycle-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/LATEST_PAGE_LIFECYCLE_REQUEST_TRACE_STATUS.json docs/LATEST_PAGE_LIFECYCLE_REQUEST_TRACE_STATUS.json
+          git add docs/LATEST_PAGE_LIFECYCLE_REQUEST_TRACE_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record latest page lifecycle request trace status"
+            git push origin HEAD:"$STATUS_BRANCH"
+          fi
+          cd "$GITHUB_WORKSPACE"
+          git worktree remove --force /tmp/latest-page-lifecycle-status
+
+      - name: Enforce diagnostics gate
+        if: always()
+        shell: bash
+        run: |
+          jq -e '.ok == true' /tmp/LATEST_PAGE_LIFECYCLE_REQUEST_TRACE_STATUS.json >/dev/null
