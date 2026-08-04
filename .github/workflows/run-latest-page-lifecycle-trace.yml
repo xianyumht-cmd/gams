@@ -1,5 +1,4 @@
-# Trigger established after push handler installation: 2026-08-05
-name: Probe page five home entries
+name: Compare page five flower contract
 
 on:
   push:
@@ -13,15 +12,15 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-home-entry-probe-20260805
+  group: page5-flower-contract-ab-20260805
   cancel-in-progress: true
 
 jobs:
-  probe:
+  compare:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     env:
-      OUTPUT_DIR: page5-home-entry-probe
+      OUTPUT_DIR: page5-flower-contract-ab
       CURRENT_FIRST_PATH: remote-script/src/noname.js
       CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
       CURRENT_SECOND_SIZE: 11590534
@@ -37,11 +36,12 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Verify safe probe boundary
+      - name: Verify read-only A-B boundary
         shell: bash
         run: |
           set -euo pipefail
           node --check scripts/run_latest_page_lifecycle_request_trace.mjs
+          grep -Fq 'page5-flower-contract-ab' scripts/run_latest_page_lifecycle_request_trace.mjs
           test -s "$CURRENT_FIRST_PATH"
           grep -Fq '@version      1.1.4' "$CURRENT_FIRST_PATH"
           test "$(stat -c%s "$CURRENT_SECOND_PATH")" = "$CURRENT_SECOND_SIZE"
@@ -57,23 +57,23 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute isolated home-entry probes
-        id: probe_run
+      - name: Execute page-only and current-runtime comparison
+        id: compare_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node scripts/run_latest_page_lifecycle_request_trace.mjs 2>&1 | tee /tmp/page5-home-entry-probe.log
+          node scripts/run_latest_page_lifecycle_request_trace.mjs 2>&1 | tee /tmp/page5-flower-contract-ab.log
 
-      - name: Build probe status
+      - name: Build comparison status
         if: always()
         shell: bash
         env:
-          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+          COMPARE_OUTCOME: ${{ steps.compare_run.outcome }}
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-home-entry-probe.log && cp /tmp/page5-home-entry-probe.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-flower-contract-ab.log && cp /tmp/page5-flower-contract-ab.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
@@ -83,20 +83,21 @@ jobs:
           output = Path(os.environ["OUTPUT_DIR"])
           report_path = output / "report.json"
           report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
-          capture_ok = bool(report) and bool(report.get("captureOk")) and os.environ.get("PROBE_OUTCOME") == "success"
+          capture_ok = bool(report) and bool(report.get("captureOk")) and os.environ.get("COMPARE_OUTCOME") == "success"
           status = {
               "schemaVersion": 1,
               "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
               "runId": int(os.environ["GITHUB_RUN_ID"]),
               "state": "completed",
-              "workflowOutcome": os.environ.get("PROBE_OUTCOME", "unknown"),
+              "workflowOutcome": os.environ.get("COMPARE_OUTCOME", "unknown"),
               "captureOk": capture_ok,
-              "targetEntryVisualValidated": False,
-              "ok": False,
-              "mode": "page5-isolated-home-entry-probe",
+              "contractDifferenceObserved": bool(report and report.get("contractDifferenceObserved")),
+              "correctionApplied": False,
+              "ok": capture_ok,
+              "mode": "page5-flower-contract-ab",
               "summary": report.get("summary") if report else None,
               "reportAvailable": bool(report),
-              "artifactName": "page5-home-entry-probe",
+              "artifactName": "page5-flower-contract-ab",
               "apkBuilt": False,
               "productionDefaultChanged": False,
               "runtimeFilesChanged": False,
@@ -104,7 +105,7 @@ jobs:
               "authorizationOutcomeModified": False,
               "paymentCompleted": False,
           }
-          Path("/tmp/PAGE5_HOME_ENTRY_PROBE_STATUS.json").write_text(
+          Path("/tmp/PAGE5_FLOWER_CONTRACT_AB_STATUS.json").write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + "\n",
               encoding="utf-8",
           )
@@ -114,34 +115,34 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-home-entry-probe
-          path: page5-home-entry-probe
+          name: page5-flower-contract-ab
+          path: page5-flower-contract-ab
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish probe status to main
+      - name: Publish comparison status to main
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main --quiet
-          rm -rf /tmp/page5-home-entry-status
-          git worktree add -B page5-home-entry-status /tmp/page5-home-entry-status origin/main
-          cd /tmp/page5-home-entry-status
+          rm -rf /tmp/page5-flower-contract-status
+          git worktree add -B page5-flower-contract-status /tmp/page5-flower-contract-status origin/main
+          cd /tmp/page5-flower-contract-status
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_HOME_ENTRY_PROBE_STATUS.json docs/PAGE5_HOME_ENTRY_PROBE_STATUS.json
-          git add docs/PAGE5_HOME_ENTRY_PROBE_STATUS.json
+          cp /tmp/PAGE5_FLOWER_CONTRACT_AB_STATUS.json docs/PAGE5_FLOWER_CONTRACT_AB_STATUS.json
+          git add docs/PAGE5_FLOWER_CONTRACT_AB_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five home entry probe status"
+            git commit -m "Record page five flower contract comparison"
             git push origin HEAD:main
           fi
           cd "$GITHUB_WORKSPACE"
-          git worktree remove --force /tmp/page5-home-entry-status
+          git worktree remove --force /tmp/page5-flower-contract-status
 
-      - name: Enforce capture-only gate
+      - name: Enforce read-only comparison gate
         if: always()
         shell: bash
         run: |
-          jq -e '.captureOk == true and .targetEntryVisualValidated == false and .apkBuilt == false' /tmp/PAGE5_HOME_ENTRY_PROBE_STATUS.json >/dev/null
+          jq -e '.captureOk == true and .correctionApplied == false and .apkBuilt == false' /tmp/PAGE5_FLOWER_CONTRACT_AB_STATUS.json >/dev/null
