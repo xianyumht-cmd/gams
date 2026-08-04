@@ -1,10 +1,13 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedAt": "2026-08-04T15:39:03Z",
+  "reviewedAt": "2026-08-04T15:45:59Z",
   "runId": 30923549303,
-  "state": "completed",
+  "state": "completed-reviewed",
   "workflowOutcome": "success",
-  "ok": true,
+  "ok": false,
+  "traceInfrastructureOk": true,
+  "functionalSequenceOk": false,
   "mode": "current-baseline-vs-diagnostics-only-lifecycle-request-trace",
   "summary": {
     "totalCases": 10,
@@ -26,11 +29,28 @@
     "baselineBlockedNavigationCases": 5,
     "diagnosticBlockedNavigationCases": 5
   },
+  "functionalReview": {
+    "firstInteractionTargetRequestCases": 0,
+    "secondInteractionTargetRequestCases": 0,
+    "thirdInteractionTargetRequestCases": 0,
+    "universalFixedPathValidated": false,
+    "promotionGatePassed": false,
+    "reason": "The trace layer completed, but the fixed click path did not positively reach the required target request sequence on all five pages."
+  },
   "reportAvailable": true,
   "artifactName": "latest-page-lifecycle-request-trace",
+  "reviewDocument": "docs/LATEST_PAGE_LIFECYCLE_REQUEST_TRACE_REVIEW_20260804.md",
   "apkBuilt": false,
   "productionDefaultChanged": false,
   "runtimeFilesChanged": false,
   "androidClientChanged": false,
-  "authorizationOutcomeModified": false
+  "authorizationOutcomeModified": false,
+  "genericPrBuild": {
+    "triggered": true,
+    "runId": 30923548662,
+    "candidatePackage": false,
+    "merged": false,
+    "released": false,
+    "deployed": false
+  }
 }
