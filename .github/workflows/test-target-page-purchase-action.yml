@@ -1,0 +1,181 @@
+name: Test target page purchase action
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/test-target-page-purchase-action.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: target-page-purchase-action-20260804
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OUTPUT_DIR: target-page-purchase-action-probe
+      HISTORICAL_FIRST_PATH: /tmp/noname-1.1.1.js
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      HISTORICAL_SECOND_PATH: game-engine/release/game-1.0.2.js
+      HISTORICAL_FIRST_COMMIT: 29bf86c0e2cf87e0f1b1dfac9456bba0b27cf61c
+      HISTORICAL_SECOND_SIZE: 11589175
+      HISTORICAL_SECOND_SHA256: 51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare exact inputs
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show "${HISTORICAL_FIRST_COMMIT}:remote-script/src/noname.js" > "$HISTORICAL_FIRST_PATH"
+          test -s "$HISTORICAL_FIRST_PATH"
+          test -s "$CURRENT_FIRST_PATH"
+          test "$(stat -c%s "$HISTORICAL_SECOND_PATH")" = "$HISTORICAL_SECOND_SIZE"
+          test "$(sha256sum "$HISTORICAL_SECOND_PATH" | awk '{print $1}')" = "$HISTORICAL_SECOND_SHA256"
+          node --check scripts/run_target_page_purchase_action_probe.mjs
+          {
+            echo "historical_first_size=$(stat -c%s "$HISTORICAL_FIRST_PATH")"
+            echo "historical_first_sha=$(sha256sum "$HISTORICAL_FIRST_PATH" | awk '{print $1}')"
+            echo "current_first_size=$(stat -c%s "$CURRENT_FIRST_PATH")"
+            echo "current_first_sha=$(sha256sum "$CURRENT_FIRST_PATH" | awk '{print $1}')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish running marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          rm -rf /tmp/purchase-action-status
+          git worktree add -B purchase-action-status /tmp/purchase-action-status origin/main
+          cd /tmp/purchase-action-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          jq -n --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson runId "$GITHUB_RUN_ID" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,state:"running",ok:false,reportAvailable:false,apkExecuted:false,paymentCompleted:false}' \
+            > docs/TARGET_PAGE_PURCHASE_ACTION_TEST_STATUS.json
+          git add docs/TARGET_PAGE_PURCHASE_ACTION_TEST_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record target page purchase action test start"
+            git push origin HEAD:main
+          fi
+          cd "$GITHUB_WORKSPACE"
+          git worktree remove --force /tmp/purchase-action-status
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute ten purchase-action cases
+        id: browser_test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/run_target_page_purchase_action_probe.mjs 2>&1 | tee /tmp/purchase-action-test.log
+
+      - name: Build final status
+        if: always()
+        shell: bash
+        env:
+          TEST_OUTCOME: ${{ steps.browser_test.outcome }}
+          HISTORICAL_FIRST_SIZE: ${{ steps.prepare.outputs.historical_first_size }}
+          HISTORICAL_FIRST_SHA: ${{ steps.prepare.outputs.historical_first_sha }}
+          CURRENT_FIRST_SIZE: ${{ steps.prepare.outputs.current_first_size }}
+          CURRENT_FIRST_SHA: ${{ steps.prepare.outputs.current_first_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/purchase-action-test.log && cp /tmp/purchase-action-test.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          report_path = Path(os.environ["OUTPUT_DIR"]) / "report.json"
+          report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+          status = {
+              "schemaVersion": 1,
+              "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "runId": int(os.environ["GITHUB_RUN_ID"]),
+              "state": "completed",
+              "workflowOutcome": os.environ.get("TEST_OUTCOME", "unknown"),
+              "ok": bool(report) and os.environ.get("TEST_OUTCOME") == "success",
+              "mode": "chromium-webview-equivalent-purchase-action-probe",
+              "apkExecuted": False,
+              "paymentCompleted": False,
+              "versionPairs": {
+                  "currentFirstHistoricalSecond": {
+                      "firstVersion": "1.1.4",
+                      "firstSize": int(os.environ.get("CURRENT_FIRST_SIZE") or 0),
+                      "firstSha256": os.environ.get("CURRENT_FIRST_SHA", ""),
+                      "secondVersion": "1.0.2",
+                      "secondSha256": os.environ["HISTORICAL_SECOND_SHA256"],
+                  },
+                  "fullHistorical": {
+                      "firstVersion": "1.1.1",
+                      "firstCommit": os.environ["HISTORICAL_FIRST_COMMIT"],
+                      "firstSize": int(os.environ.get("HISTORICAL_FIRST_SIZE") or 0),
+                      "firstSha256": os.environ.get("HISTORICAL_FIRST_SHA", ""),
+                      "secondVersion": "1.0.2",
+                      "secondSha256": os.environ["HISTORICAL_SECOND_SHA256"],
+                  },
+              },
+              "summary": report.get("summary") if report else None,
+              "reportAvailable": bool(report),
+              "artifactName": "target-page-purchase-action-probe",
+          }
+          Path("/tmp/TARGET_PAGE_PURCHASE_ACTION_TEST_STATUS.json").write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: target-page-purchase-action-probe
+          path: target-page-purchase-action-probe
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish final status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          rm -rf /tmp/purchase-action-status
+          git worktree add -B purchase-action-status /tmp/purchase-action-status origin/main
+          cd /tmp/purchase-action-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/TARGET_PAGE_PURCHASE_ACTION_TEST_STATUS.json docs/TARGET_PAGE_PURCHASE_ACTION_TEST_STATUS.json
+          git add docs/TARGET_PAGE_PURCHASE_ACTION_TEST_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record target page purchase action test status"
+            git push origin HEAD:main
+          fi
+          cd "$GITHUB_WORKSPACE"
+          git worktree remove --force /tmp/purchase-action-status
