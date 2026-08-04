@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "sourceRunId": 30923549303,
+  "sourceGeneratedAt": "2026-08-04T15:39:03.556Z",
+  "reviewedAt": "2026-08-04T15:45:59Z",
+  "windowMs": 6000,
+  "traceInfrastructureOk": true,
+  "functionalSequenceOk": false,
+  "overallOk": false,
+  "expectedMatrixShape": true,
+  "caseCounts": {
+    "total": 10,
+    "baseline": 5,
+    "diagnostic": 5
+  },
+  "interactionStageTargetRequestCases": {
+    "interaction-first": 0,
+    "interaction-second-same-page": 0,
+    "interaction-third-after-reentry": 0
+  },
+  "unchangedTargetScreenCases": {
+    "afterFirst": 2,
+    "afterSecond": 4
+  },
+  "perPageFunctionalSequence": [
+    {
+      "page": 1,
+      "baseline": false,
+      "diagnostic": false
+    },
+    {
+      "page": 2,
+      "baseline": false,
+      "diagnostic": false
+    },
+    {
+      "page": 3,
+      "baseline": false,
+      "diagnostic": false
+    },
+    {
+      "page": 4,
+      "baseline": false,
+      "diagnostic": false
+    },
+    {
+      "page": 5,
+      "baseline": false,
+      "diagnostic": false
+    }
+  ],
+  "promotionAllowed": false,
+  "reason": "Trace infrastructure completed, but all required interaction windows lacked a positive target-request marker."
+}
