@@ -108,7 +108,7 @@ Confirmed results:
 - Its first purchase-control tap opened the item detail panel under both version pairs.
 - Its second same-page tap closed that detail panel under both version pairs.
 - Current and full-historical screenshots matched at the purchase-list and first-action stages for that calibrated target.
-- The browser session had no authenticated target-page state and the page displayed a login/network warning, so no actual purchase could complete.
+- The page displayed a login/network warning after the purchase-control tap.
 - After page re-entry, target-page resume prompts and per-page canvas layouts prevented a single fixed coordinate from producing a valid third purchase action across all five targets. Third-action screenshots must not be interpreted as a repeat-purchase result.
 
 Evidence:
@@ -123,24 +123,27 @@ Evidence:
 - Changing the second-file version from `1.0.5` to `1.0.2` does not change the device result.
 - Before and through the calibrated first purchase-control interaction, the full historical pair does not show a meaningful behavioral difference from the current-first pair.
 - The initial browser blank page was a browser-policy mismatch, not a valid reproduction of the user's device defect.
-- Both version pairs can load the supplied page, enter the purchase list and respond to a purchase-control tap in a clean browser session.
+- Both version pairs can load the supplied page and enter the purchase list.
 
-## What remains unproven
+## Superseding correction from the user
 
-The clean browser session does not contain the user's device cookies or authenticated target-page state. A successful purchase and the device's second-purchase failure require that authenticated state. Canvas layouts and resume prompts also vary between targets.
+The two runtime files provide a default-enabled no-login capability. Therefore, a missing target-page login state is not a valid reason to stop purchase testing, and the login/network warning observed in the clean browser is evidence that the current compatibility path did not complete its intended local response.
 
-Therefore, the browser evidence does not prove that a target-page flow change is the root cause. It also does not prove that the full historical pair restores repeated purchasing. The user's target-page-change theory remains plausible, but the decisive result must come from code22 on the same device and account state.
+The earlier statements that a successful purchase required the user's authenticated browser state are superseded and must not be used for future decisions.
 
-## Next valid test
+The valid acceptance rule is now:
 
-Install and test the signed code22 APK on the same device and account state used for code19–code21:
+1. continue through the purchase action in a clean browser profile;
+2. require the first local response to succeed without target-page login;
+3. require a second same-page local response;
+4. re-enter the page, handle any resume/restore prompt, and require a third local response;
+5. verify that the signed Android candidate remains in the browser and does not return to the activation screen.
 
-1. Complete the first purchase action.
-2. Repeat the action without leaving the page.
-3. Leave and re-enter the page, then repeat it.
-4. Record whether the client returns to its activation screen and how long the transition takes.
+## Updated next phase
 
-Interpretation:
+The next candidate uses the current runtime baseline (`1.1.4 + 1.0.5`) and adds an isolated latest-page compatibility layer. It must cover repeated request handling, reused script elements, property and attribute URL assignment, fetch/XHR/JSONP-style paths, and page lifecycle restoration while leaving Android MainActivity, client hosts, navigation behavior, prior white-screen-related code and the production default runtime channel unchanged.
 
-- If code22 repeats successfully, the regression lies in the first-file changes between `1.1.1` and `1.1.4`.
-- If code22 still executes only once, both historical file versions are effectively excluded and the next candidate must add read-only runtime tracing around the purchase transition, page navigation and client lifecycle without changing the two files or white-screen-related client code.
+Canonical handoff:
+
+- `docs/HANDOFF_LATEST_PAGE_ADAPTATION_20260804.md`
+- `docs/LATEST_PAGE_COMPAT_ACCEPTANCE_STATUS.json`
