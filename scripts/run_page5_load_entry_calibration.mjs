@@ -45,6 +45,32 @@ try {
     if (entry.topNavigation && !rawUrl.startsWith(targetPrefix)) { blockedNavigations.push(entry); await route.abort("blockedbyclient"); return; }
     await route.continue();
   });
+  await context.addInitScript({ content: `
+    (() => {
+      const state = globalThis.__gamsNavigationGuard = globalThis.__gamsNavigationGuard || { supported: false, blocked: [], allowed: [] };
+      try {
+        if (globalThis.navigation && typeof globalThis.navigation.addEventListener === 'function') {
+          state.supported = true;
+          globalThis.navigation.addEventListener('navigate', (event) => {
+            try {
+              const url = new URL(event.destination.url, location.href);
+              if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                state.blocked.push({ url: url.protocol + '//' + url.host + url.pathname, at: Date.now() });
+                if (event.cancelable) event.preventDefault();
+                return;
+              }
+              state.allowed.push({ url: url.protocol + '//' + url.host + url.pathname, at: Date.now() });
+            } catch (error) {
+              state.blocked.push({ url: String(event.destination?.url || '').slice(0, 300), at: Date.now() });
+              if (event.cancelable) event.preventDefault();
+            }
+          });
+        }
+      } catch (error) {
+        state.error = String(error).slice(0, 300);
+      }
+    })();
+  ` });
   const page = await context.newPage();
   page.on("pageerror", (error) => pageErrors.push(String(error?.stack || error).slice(0, 5000)));
   page.on("requestfailed", (request) => requestFailures.push({ url: safeUrl(request.url()), failure: request.failure()?.errorText || "" }));
@@ -62,7 +88,7 @@ try {
     await page.waitForTimeout(step.waitMs);
     result.screenshots[step.label] = await capture(page, `${String(i + 1).padStart(2, "0")}-${step.label}`);
   }
-  result.final = await page.evaluate(() => ({ url: location.href, title: document.title, readyState: document.readyState }));
+  result.final = await page.evaluate(() => ({ url: location.href, title: document.title, readyState: document.readyState, navigationGuard: globalThis.__gamsNavigationGuard || null }));
   result.events = events;
   result.requests = requests.slice(0, 5000);
   result.blockedOrders = blockedOrders;
@@ -70,9 +96,10 @@ try {
   result.pageErrors = pageErrors;
   result.requestFailures = requestFailures.slice(0, 500);
   result.navigation = navigation;
+  result.mainFrameValid = page.url().startsWith(targetPrefix);
   result.screenshotChangedAfterMenu = result.screenshots.initial !== result.screenshots["page-menu"];
   result.screenshotChangedAfterLoad = result.screenshots["page-menu"] !== result.screenshots["load-entry"];
-  result.pass = !pageErrors.length && !blockedOrders.length && result.screenshotChangedAfterMenu && result.screenshotChangedAfterLoad;
+  result.pass = result.mainFrameValid && !pageErrors.length && !blockedOrders.length && result.screenshotChangedAfterMenu && result.screenshotChangedAfterLoad;
   await context.close();
 } catch (error) {
   result.fatalError = String(error?.stack || error).slice(0, 8000);
@@ -82,9 +109,9 @@ try {
 }
 
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedAt: new Date().toISOString(),
-  mode: "page5-load-entry-calibration-page-only",
+  mode: "page5-load-entry-calibration-page-only-client-equivalent-navigation",
   apkExecuted: false,
   paymentCompleted: false,
   runtimeFilesChanged: false,
@@ -94,5 +121,5 @@ const report = {
   ...result,
 };
 fs.writeFileSync(path.join(outputDir, "report.json"), JSON.stringify(report, null, 2) + "\n");
-console.log(JSON.stringify({ pass: report.pass, pageErrors: report.pageErrors?.length || 0, screenshotChangedAfterMenu: report.screenshotChangedAfterMenu, screenshotChangedAfterLoad: report.screenshotChangedAfterLoad }, null, 2));
+console.log(JSON.stringify({ pass: report.pass, mainFrameValid: report.mainFrameValid, pageErrors: report.pageErrors?.length || 0, screenshotChangedAfterMenu: report.screenshotChangedAfterMenu, screenshotChangedAfterLoad: report.screenshotChangedAfterLoad }, null, 2));
 if (!report.pass) process.exitCode = 1;
