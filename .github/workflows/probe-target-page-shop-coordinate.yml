@@ -27,8 +27,8 @@ jobs:
       HISTORICAL_SECOND_SIZE: 11589175
       HISTORICAL_SECOND_SHA256: 51ae52887d0c0475870e4c985edf747a14672f0908221779826934f37b73db43
       TARGET_URL: https://m.66rpg.com/h5/1682748?ohp=v3&quality=32
-      TAP_X: 173
-      TAP_Y: 509
+      TAP_X: 105
+      TAP_Y: 650
       GH_TOKEN: ${{ github.token }}
 
     steps:
