@@ -12,12 +12,12 @@ permissions:
 
 concurrency:
   group: target-page-runtime-browser-20260804
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       OUTPUT_DIR: target-page-runtime-browser-test
       HISTORICAL_FIRST_PATH: /tmp/noname-1.1.1.js
@@ -57,6 +57,71 @@ jobs:
             echo "current_first_size=$(stat -c%s "$CURRENT_FIRST_PATH")"
             echo "current_first_sha=$(sha256sum "$CURRENT_FIRST_PATH" | awk '{print $1}')"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Publish running marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,state:"running",ok:false,reportAvailable:false,apkExecuted:false,paymentCompleted:false}' \
+            > docs/TARGET_PAGE_RUNTIME_BROWSER_TEST_STATUS.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add docs/TARGET_PAGE_RUNTIME_BROWSER_TEST_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record target page runtime browser test start"
+            git push origin HEAD:main
+          fi
+
+      - name: Bound and parallelize cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/run_target_page_runtime_browser_test.mjs')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              'await page.waitForTimeout(1800);': 'await page.waitForTimeout(900);',
+              'timeout: 90000': 'timeout: 45000',
+              'await page.waitForTimeout(20000);': 'await page.waitForTimeout(7000);',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'missing browser bound marker: {old}')
+              text = text.replace(old, new)
+          old_loop = '''  let index = 0;
+          for (const pair of pairs) {
+            for (const targetUrl of targetUrls) {
+              index += 1;
+              report.cases.push(await runCase(browser, pair, targetUrl, index));
+              fs.writeFileSync(path.join(outputDir, "report.partial.json"), JSON.stringify(report, null, 2) + "\\n");
+            }
+          }
+          '''
+          new_loop = '''  let index = 0;
+          for (const pair of pairs) {
+            const indexedTargets = targetUrls.map((targetUrl) => ({ targetUrl, caseIndex: ++index }));
+            for (let offset = 0; offset < indexedTargets.length; offset += 2) {
+              const batch = indexedTargets.slice(offset, offset + 2);
+              const completed = await Promise.all(
+                batch.map(({ targetUrl, caseIndex }) => runCase(browser, pair, targetUrl, caseIndex)),
+              );
+              report.cases.push(...completed);
+              fs.writeFileSync(path.join(outputDir, "report.partial.json"), JSON.stringify(report, null, 2) + "\\n");
+            }
+          }
+          '''
+          if old_loop not in text:
+              raise SystemExit('missing sequential browser loop')
+          path.write_text(text.replace(old_loop, new_loop, 1), encoding='utf-8')
+          PY
+          node --check scripts/run_target_page_runtime_browser_test.mjs
 
       - name: Install Chromium test runtime
         shell: bash
@@ -101,6 +166,7 @@ jobs:
               "schemaVersion": 1,
               "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
               "runId": int(os.environ["GITHUB_RUN_ID"]),
+              "state": "completed",
               "workflowOutcome": os.environ.get("TEST_OUTCOME", "unknown"),
               "ok": bool(report) and os.environ.get("TEST_OUTCOME") == "success",
               "mode": "chromium-document-start-with-virtual-second-route",
