@@ -1,16 +1,109 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:02:05Z",
-  "runId": 31028094285,
+  "generatedAt": "2026-08-05T17:10:00Z",
+  "runId": 31028486494,
   "state": "completed",
-  "workflowOutcome": "skipped",
+  "workflowOutcome": "failure",
   "ok": false,
   "mode": "target-open-menu-contract-read-only-probe",
-  "summary": {},
-  "workingPage": null,
-  "page5": null,
-  "candidatePatch": null,
-  "reportAvailable": false,
+  "summary": {
+    "totalCases": 2,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "contractInstalledCases": 2,
+    "workingCallCount": 0,
+    "workingCallbackCount": 0,
+    "workingTargetReadCount": 3,
+    "workingTargetListCount": 1,
+    "workingCallbackBooleanFields": {},
+    "page5CallCount": 1,
+    "page5CallbackCount": 1,
+    "page5TargetReadCount": 1,
+    "page5TargetListCount": 0,
+    "page5CallbackBooleanFields": {},
+    "pageErrorCases": 0,
+    "blockedOrderCases": 0,
+    "replacementCount": 1
+  },
+  "workingPage": {
+    "page": "working-page",
+    "install": {
+      "installed": true,
+      "originalType": "function",
+      "installError": null
+    },
+    "callCount": 0,
+    "callbackCount": 0,
+    "calls": [],
+    "callbacks": [],
+    "targetWindow": {
+      "total": 30,
+      "kinds": {
+        "page-request": 27,
+        "target-list-request": 1,
+        "target-read-request": 2
+      },
+      "targetReadCount": 3,
+      "targetListCount": 1,
+      "orderMutationCount": 0
+    },
+    "pageErrorCount": 0,
+    "blockedOrderCount": 0,
+    "fatalError": null
+  },
+  "page5": {
+    "page": "page5",
+    "install": {
+      "installed": true,
+      "originalType": "function",
+      "installError": null
+    },
+    "callCount": 1,
+    "callbackCount": 1,
+    "calls": [
+      {
+        "argCount": 1,
+        "callbackIndex": 0,
+        "argTypes": [
+          "function"
+        ]
+      }
+    ],
+    "callbacks": [
+      {
+        "callIndex": 0,
+        "argCount": 0,
+        "argTypes": [],
+        "secondOwnKeys": [],
+        "secondBooleanFields": {}
+      }
+    ],
+    "targetWindow": {
+      "total": 7,
+      "kinds": {
+        "target-read-request": 1,
+        "page-request": 6
+      },
+      "targetReadCount": 1,
+      "targetListCount": 0,
+      "orderMutationCount": 0
+    },
+    "pageErrorCount": 0,
+    "blockedOrderCount": 0,
+    "fatalError": null
+  },
+  "candidatePatch": {
+    "replacementCount": 1,
+    "oldTextSha256": "5fa14a7825de3547c9b2c1d9351d39928c4bf8c918548b7c1cdb8c3294933555",
+    "newTextSha256": "5b16d06cc66319b1f67cb4d3a1654323db3dde68717ec2fea7258bf9388914ab",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590688,
+    "candidateSecondSha256": "2fa456546f929561be2bceb7e469456cb0f1d74db7697ddc49a7f34dd2052c6a"
+  },
+  "reportAvailable": true,
   "artifactName": "target-open-menu-contract-probe",
   "readOnlyProbe": true,
   "callbackArgumentsForwardedUnchanged": true,
@@ -24,5 +117,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "ba5988927227467f05235c67f7d8626a7f92264b"
+  "commit": "27b1e5851378405c63b45380ba6de9ebe75df675"
 }
