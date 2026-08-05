@@ -1,24 +1,118 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T16:34:17Z",
-  "runId": 31025891604,
+  "generatedAt": "2026-08-05T16:38:48Z",
+  "runId": 31026023449,
   "state": "completed",
-  "workflowOutcome": "skipped",
+  "workflowOutcome": "failure",
   "ok": false,
   "mode": "page5-story-target-entry-probe",
-  "summary": {},
-  "currentTargetWindow": null,
-  "candidateTargetWindow": null,
+  "summary": {
+    "totalCases": 2,
+    "currentCases": 1,
+    "candidateCases": 1,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "nonPage5CurrentMarkerCases": 0,
+    "nonPage5CandidateMarkerCases": 0,
+    "nonPage5CurrentPageErrorCases": 0,
+    "nonPage5CandidatePageErrorCases": 0,
+    "currentPage5PageErrorCount": 0,
+    "currentPage5ExpectedErrorObserved": false,
+    "currentPage5TargetReadCount": 0,
+    "candidatePage5PageErrorCount": 0,
+    "candidatePage5TargetReadCount": 1,
+    "candidatePage5TargetListCount": 0,
+    "candidatePage5ScreenshotChanged": true,
+    "blockedOrderCases": 0,
+    "replacementCount": 1
+  },
+  "currentTargetWindow": {
+    "total": 0,
+    "kinds": {},
+    "targetReadCount": 0,
+    "targetListCount": 0,
+    "orderMutationCount": 0
+  },
+  "candidateTargetWindow": {
+    "total": 6,
+    "kinds": {
+      "target-read-request": 1,
+      "page-request": 5
+    },
+    "targetReadCount": 1,
+    "targetListCount": 0,
+    "orderMutationCount": 0
+  },
   "currentPageErrors": [],
   "candidatePageErrors": [],
-  "currentStages": [],
-  "candidateStages": [],
-  "currentScreenshots": {},
-  "candidateScreenshots": {},
-  "currentMainFrameNavigation": [],
-  "candidateMainFrameNavigation": [],
-  "candidatePatch": null,
-  "reportAvailable": false,
+  "currentStages": [
+    "after-01-cover-progress",
+    "after-02-title-reveal",
+    "after-03-story-entry",
+    "after-04-target-side-entry",
+    "initial-ready",
+    "runtime-close",
+    "runtime-final-close",
+    "runtime-open",
+    "runtime-reopen"
+  ],
+  "candidateStages": [
+    "after-01-cover-progress",
+    "after-02-title-reveal",
+    "after-03-story-entry",
+    "after-04-target-side-entry",
+    "initial-ready",
+    "runtime-close",
+    "runtime-final-close",
+    "runtime-open",
+    "runtime-reopen"
+  ],
+  "currentScreenshots": {
+    "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
+    "runtime-open": "47489bceefdd9989997d6061cb068ccc4e9663a35df602133621b717edaed812",
+    "runtime-close": "5b390452dd76a9743fb1826843b879c651e203ba1e271da810d37476d5edc98d",
+    "runtime-reopen": "afb8ae89124ba074cf9bd54fc914a8190264caa2e936ecb9eb651942977feb8e",
+    "runtime-final-close": "326b7c06b0594ddd87c79eed352ded17825f8498a833ad9c67e2e6c73c6ff50b",
+    "after-01-cover-progress": "7b361e01bf7e099167cb696c8b37f729584a18074fe7f59646231e34da22a322",
+    "after-02-title-reveal": "6120bfb4ce1214d3ae41d6d8b1f5ac12d3555ca8fd3a336a2191f778b115d1f9",
+    "after-03-story-entry": "b8cba19c2d71fcd85f3ed3e43ff818a03a90cf3a1655ec33f4338f58f04de1e8",
+    "after-04-target-side-entry": "ef0cab0294974cb17a3a22623d7e17c26d7b296a7eb51f0cf2c5d327506e90d9"
+  },
+  "candidateScreenshots": {
+    "initial-ready": "6b440d97847e7344f8ee3b234c0656d6363a2d4cc5cf143a9c0e78bf3aa40c9d",
+    "runtime-open": "2abc43f6f323cfbdec7034d485452f35ecdd42570d9f842f98061606eab7ac94",
+    "runtime-close": "eedf5a8a1efb527dcb29688c3894bd8384ed8385e780c71e0c5bba82ac524d12",
+    "runtime-reopen": "dce1fc581bc9223553c0352df5feb0b6c1ec84fe38721b140e031a16c98b041e",
+    "runtime-final-close": "3ff17fb91bf8d6688ab1f5fd51bf495bc419c190d512c964f463dcc8039a20ba",
+    "after-01-cover-progress": "1e7ce6563987c47a6d01b3631c35eaaab3efda2bae8cb979bd00f688018b8d45",
+    "after-02-title-reveal": "e81a49f2a2778f8f247f8491b470f2edcc57af24002fa8c70b745f1cf1ae31c8",
+    "after-03-story-entry": "2da599064c0b97422ab689db7982fbf6fcb3dd60e36bc7a6e97bded65d3e946e",
+    "after-04-target-side-entry": "31073090a47249b663b783943fbb6463a75c177b8f5fec665eaf341b17a3f9b0"
+  },
+  "currentMainFrameNavigation": [
+    {
+      "at": 1785947788673,
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    }
+  ],
+  "candidateMainFrameNavigation": [
+    {
+      "at": 1785947788627,
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    }
+  ],
+  "candidatePatch": {
+    "replacementCount": 1,
+    "oldTextSha256": "5fa14a7825de3547c9b2c1d9351d39928c4bf8c918548b7c1cdb8c3294933555",
+    "newTextSha256": "5b16d06cc66319b1f67cb4d3a1654323db3dde68717ec2fea7258bf9388914ab",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590688,
+    "candidateSecondSha256": "2fa456546f929561be2bceb7e469456cb0f1d74db7697ddc49a7f34dd2052c6a"
+  },
+  "reportAvailable": true,
   "artifactName": "page5-story-target-entry-probe",
   "entryCalibrationOnly": true,
   "candidatePersisted": false,
@@ -30,5 +124,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "794652165c23f5208a1e0e76bc68fef620e5c456"
+  "commit": "22fcc6cd43f06085209efeba3b17710c4c444e55"
 }
