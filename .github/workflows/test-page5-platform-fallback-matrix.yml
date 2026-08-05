@@ -1,12 +1,13 @@
-name: Probe page five cover-center entry via established runner
+name: Probe page five post-title element inventory
 
 on:
   push:
     branches:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
-      - scripts/prepare_page5_cover_enter_probe.py
-      - scripts/page5_cover_enter_probe.trigger
+      - scripts/run_page5_canvas_element_list_probe.mjs
+      - scripts/prepare_page5_post_title_element_inventory.py
+      - scripts/page5_post_title_element_inventory.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -14,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-cover-enter-probe-20260805
+  group: page5-post-title-element-inventory-20260805
   cancel-in-progress: true
 
 jobs:
@@ -22,10 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      OUTPUT_DIR: page5-cover-enter-probe
-      CURRENT_FIRST_PATH: remote-script/src/noname.js
-      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
-      GENERATED_PROBE: scripts/run_page5_cover_enter_probe.generated.mjs
+      OUTPUT_DIR: page5-post-title-element-inventory
+      GENERATED_PROBE: scripts/run_page5_post_title_element_inventory.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -37,20 +36,16 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare isolated cover-center entry probe
+      - name: Prepare post-title element inventory
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$CURRENT_FIRST_PATH"
-          test -s "$CURRENT_SECOND_PATH"
-          python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py scripts/prepare_page5_cover_enter_probe.py
-          python3 scripts/prepare_page5_cover_enter_probe.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_post_title_element_inventory.py
+          python3 scripts/prepare_page5_post_title_element_inventory.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-cover-center-enter-probe' "$GENERATED_PROBE"
-          grep -Fq 'title-reveal' "$GENERATED_PROBE"
-          grep -Fq 'cover-center-enter' "$GENERATED_PROBE"
-          grep -Fq 'candidatePage5FinalRequestTotal > 0' "$GENERATED_PROBE"
-          grep -Fq '30000' "$GENERATED_PROBE"
+          grep -Fq 'page5-post-title-element-list-read-only-probe' "$GENERATED_PROBE"
+          grep -Fq 'after-title-reveal' "$GENERATED_PROBE"
+          grep -Fq 'probeCssPoint' "$GENERATED_PROBE"
 
       - name: Install Chromium
         shell: bash
@@ -59,15 +54,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute current and cover-center candidate
+      - name: Execute post-title element inventory
         id: probe_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-cover-enter-probe.log
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-post-title-element-inventory.log
 
-      - name: Build cover-center entry status
+      - name: Build post-title inventory status
         if: always()
         shell: bash
         env:
@@ -75,20 +70,36 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-cover-enter-probe.log && cp /tmp/page5-cover-enter-probe.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-post-title-element-inventory.log && cp /tmp/page5-post-title-element-inventory.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
           from datetime import datetime, timezone
           from pathlib import Path
 
-          output_dir = Path(os.environ['OUTPUT_DIR'])
-          report_path = output_dir / 'report.json'
+          output = Path(os.environ['OUTPUT_DIR'])
+          report_path = output / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          summary = report.get('summary', {}) if report else {}
-          cases = report.get('cases', []) if report else []
-          current = next((case for case in cases if case.get('pair') == 'current'), None)
-          candidate = next((case for case in cases if case.get('pair') == 'candidate'), None)
+          element_list = report.get('elementList', {}) if report else {}
+          items = element_list.get('items', []) if element_list else []
+          compact = []
+          for item in items:
+              primitives = item.get('primitives', {}) or {}
+              event_map = item.get('eventListenerMap', {}) or {}
+              events = event_map.get('ownKeys', []) or []
+              if primitives.get('_visible') or events:
+                  compact.append({
+                      'index': item.get('index'),
+                      'zIndex': primitives.get('zIndex'),
+                      'visible': primitives.get('_visible'),
+                      'touchable': primitives.get('_touchable'),
+                      'blockTouch': primitives.get('_blockTouch'),
+                      'x': primitives.get('x'),
+                      'y': primitives.get('y'),
+                      'width': primitives.get('width'),
+                      'height': primitives.get('height'),
+                      'events': events,
+                  })
           ok = bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
@@ -97,19 +108,23 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-cover-center-enter-probe',
-              'summary': summary,
-              'currentTargetWindow': current.get('targetWindow') if current else None,
-              'candidateTargetWindow': candidate.get('targetWindow') if candidate else None,
-              'currentPageErrors': current.get('pageErrors', []) if current else [],
-              'candidatePageErrors': candidate.get('pageErrors', []) if candidate else [],
-              'candidateStages': sorted(candidate.get('states', {}).keys()) if candidate else [],
-              'candidateMainFrameNavigation': candidate.get('mainFrameNavigation', []) if candidate else [],
-              'candidatePatch': report.get('candidatePatch') if report else None,
+              'mode': 'page5-post-title-element-list-read-only-probe',
+              'pauseCaptured': report.get('pauseCaptured') if report else None,
+              'elementListLength': element_list.get('length') if element_list else None,
+              'serializedItemCount': len(items),
+              'compactNodes': compact,
+              'probeScreenshotChanged': report.get('probeScreenshotChanged') if report else None,
+              'mainFrameValid': report.get('mainFrameValid') if report else None,
+              'pageErrorCount': len(report.get('pageErrors', [])) if report else None,
+              'blockedOrderCount': len(report.get('blockedOrders', [])) if report else None,
+              'debuggerErrorCount': len(report.get('debuggerErrors', [])) if report else None,
+              'preStepCssPoints': report.get('preStepCssPoints') if report else None,
+              'probeCssPoint': report.get('probeCssPoint') if report else None,
               'reportAvailable': bool(report),
-              'artifactName': 'page5-cover-enter-probe',
-              'entryCalibrationOnly': True,
-              'candidatePersisted': False,
+              'artifactName': 'page5-post-title-element-inventory',
+              'readOnlyProbe': True,
+              'pageScriptModified': False,
+              'candidateTested': False,
               'repeatSequenceTested': False,
               'apkBuilt': False,
               'productionDefaultChanged': False,
@@ -120,7 +135,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_COVER_ENTER_PROBE_STATUS.json').write_text(
+          Path('/tmp/PAGE5_POST_TITLE_ELEMENT_INVENTORY_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -129,12 +144,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-cover-enter-probe
-          path: page5-cover-enter-probe
+          name: page5-post-title-element-inventory
+          path: page5-post-title-element-inventory
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish cover-center entry status
+      - name: Publish post-title inventory status
         if: always()
         shell: bash
         run: |
@@ -142,14 +157,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_COVER_ENTER_PROBE_STATUS.json docs/PAGE5_COVER_ENTER_PROBE_STATUS.json
-          git add docs/PAGE5_COVER_ENTER_PROBE_STATUS.json
+          cp /tmp/PAGE5_POST_TITLE_ELEMENT_INVENTORY_STATUS.json docs/PAGE5_POST_TITLE_ELEMENT_INVENTORY_STATUS.json
+          git add docs/PAGE5_POST_TITLE_ELEMENT_INVENTORY_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five cover-center entry probe"
+            git commit -m "Record page five post-title element inventory"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce cover-center entry capture
+      - name: Enforce post-title inventory capture
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_COVER_ENTER_PROBE_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/PAGE5_POST_TITLE_ELEMENT_INVENTORY_STATUS.json >/dev/null
