@@ -1,11 +1,11 @@
-name: Extract second purchase call-chain source slices
+name: Inspect second purchase callback state
 
 on:
   push:
     branches:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
-      - scripts/run_latest_page_lifecycle_request_trace.mjs
+      - scripts/prepare_page5_second_purchase_scope_probe.py
       - .github/workflows/run-latest-page-lifecycle-trace.yml
   workflow_dispatch:
 
@@ -13,18 +13,20 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-second-purchase-callchain-slice-20260806
+  group: page5-second-purchase-callback-scope-20260806
   cancel-in-progress: true
 
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 90
     env:
       IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
-      OUTPUT_DIR: page5-second-purchase-callchain-slice
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
       CURRENT_SECOND_PATH: /tmp/current-game-1.0.5.js
       CURRENT_SECOND_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
+      GENERATED_PROBE: scripts/run_page5_second_purchase_scope_probe.generated.mjs
+      OUTPUT_DIR: page5-second-purchase-callback-scope
 
     steps:
       - uses: actions/checkout@v4
@@ -36,86 +38,158 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Read isolated implementation runtime
+      - name: Read isolated implementation files
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
           git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$CURRENT_SECOND_PATH"
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_repeat_reentry_matrix.py" > scripts/prepare_persisted_repeat_reentry_matrix.py
           test -s "$CURRENT_SECOND_PATH"
           test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_SECOND_SHA256"
 
-      - name: Verify bounded static diagnostic
+      - name: Prepare callback scope probe
         shell: bash
         run: |
           set -euo pipefail
-          node --check scripts/run_latest_page_lifecycle_request_trace.mjs
-          grep -Fq 'page5-second-purchase-callchain-slice' scripts/run_latest_page_lifecycle_request_trace.mjs
-          grep -Fq '3522415' scripts/run_latest_page_lifecycle_request_trace.mjs
-          grep -Fq '1935617' scripts/run_latest_page_lifecycle_request_trace.mjs
-          grep -Fq '397012' scripts/run_latest_page_lifecycle_request_trace.mjs
-          grep -Fq '2035610' scripts/run_latest_page_lifecycle_request_trace.mjs
+          python3 -m py_compile \
+            scripts/prepare_five_page_missing_constructor_matrix.py \
+            scripts/prepare_page5_repeat_reentry_matrix.py \
+            scripts/prepare_persisted_repeat_reentry_matrix.py \
+            scripts/prepare_page5_purchase_action_probe.py \
+            scripts/prepare_page5_purchase_action_probe_guard.py \
+            scripts/prepare_page5_repeat_purchase_action_probe.py \
+            scripts/prepare_page5_second_purchase_scope_probe.py
+          python3 scripts/prepare_page5_second_purchase_scope_probe.py --output "$GENERATED_PROBE"
+          node --check "$GENERATED_PROBE"
+          grep -Fq 'persisted-runtime-page5-second-purchase-callback-scope-probe' "$GENERATED_PROBE"
+          grep -Fq 'purchaseScopeSnapshots' "$GENERATED_PROBE"
+          grep -Fq 'click-confirm-entry' "$GENERATED_PROBE"
+          grep -Fq 'purchase-router' "$GENERATED_PROBE"
+          grep -Fq 'login-entry' "$GENERATED_PROBE"
+          grep -Fq "$CURRENT_SECOND_SHA256" "$GENERATED_PROBE"
 
-      - name: Extract bounded call-chain contexts
-        id: inspect_run
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute callback scope probe
+        id: probe_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node scripts/run_latest_page_lifecycle_request_trace.mjs 2>&1 | tee /tmp/page5-second-purchase-callchain-slice.log
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-second-purchase-callback-scope.log
 
-      - name: Build static diagnostic status
+      - name: Build callback scope status
         if: always()
         shell: bash
         env:
-          INSPECT_OUTCOME: ${{ steps.inspect_run.outcome }}
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-second-purchase-callchain-slice.log && cp /tmp/page5-second-purchase-callchain-slice.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-second-purchase-callback-scope.log && cp /tmp/page5-second-purchase-callback-scope.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
+          from collections import Counter
           from datetime import datetime, timezone
           from pathlib import Path
 
-          output = Path(os.environ['OUTPUT_DIR'])
-          report_path = output / 'report.json'
+          report_path = Path(os.environ['OUTPUT_DIR']) / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          capture_ok = bool(report) and bool(report.get('captureOk')) and os.environ.get('INSPECT_OUTCOME') == 'success'
-          slices = (report or {}).get('slices') or []
+          cases = (report or {}).get('cases') or []
+          case = cases[0] if cases else {}
+          snapshots = case.get('purchaseScopeSnapshots') or []
+          breakpoints = case.get('purchaseScopeBreakpoints') or []
+          page_errors = case.get('pageErrors') or []
+          blocked_orders = case.get('blockedOrders') or []
+          blocked_nav = case.get('blockedExternalNavigations') or []
+          attempts = ((case.get('purchaseProbe') or {}).get('attempts') or [])
+
+          def stage_of(snapshot):
+              for frame in snapshot.get('frames') or []:
+                  values = frame.get('values') or {}
+                  if values.get('stage'):
+                      return str(values.get('stage'))
+              return 'unknown'
+
+          def compact(snapshot):
+              selected = None
+              for frame in snapshot.get('frames') or []:
+                  values = frame.get('values') or {}
+                  if values.get('Sf') is not None or values.get('SH') is not None or values.get('buyNumber') is not None:
+                      selected = {
+                          'functionName': frame.get('functionName'),
+                          'lineNumber': frame.get('lineNumber'),
+                          'columnNumber': frame.get('columnNumber'),
+                          'values': values,
+                      }
+                      break
+              return {
+                  'configuredLabel': snapshot.get('configuredLabel'),
+                  'configuredColumnNumber': snapshot.get('configuredColumnNumber'),
+                  'actualColumnNumber': snapshot.get('actualColumnNumber'),
+                  'stage': stage_of(snapshot),
+                  'selectedFrame': selected,
+              }
+
+          stage_counts = Counter(stage_of(item) for item in snapshots)
+          bound_breakpoints = sum(1 for item in breakpoints if item.get('locations'))
+          expected_stages = {'first', 'second', 'third-after-reentry'}
+          observed_stages = {key for key in stage_counts if key != 'unknown'}
+          evidence_ok = (
+              bool(report)
+              and len(snapshots) > 0
+              and bound_breakpoints > 0
+              and {'first', 'second'}.issubset(observed_stages)
+              and not page_errors
+              and not blocked_orders
+          )
           status = {
               'schemaVersion': 1,
               'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
               'runId': int(os.environ['GITHUB_RUN_ID']),
               'state': 'completed',
-              'workflowOutcome': os.environ.get('INSPECT_OUTCOME', 'unknown'),
-              'ok': capture_ok,
-              'captureOk': capture_ok,
-              'mode': 'page5-second-purchase-callchain-slice',
+              'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
+              'ok': evidence_ok,
+              'mode': 'page5-second-purchase-callback-scope-probe',
               'implementationRef': os.environ['IMPLEMENTATION_REF'],
               'runtimeSha256': os.environ['CURRENT_SECOND_SHA256'],
-              'summary': (report or {}).get('summary') or {},
-              'sliceIndex': [
+              'snapshotCount': len(snapshots),
+              'breakpointCount': len(breakpoints),
+              'boundBreakpointCount': bound_breakpoints,
+              'stageSnapshotCounts': dict(stage_counts),
+              'expectedStages': sorted(expected_stages),
+              'snapshotIndex': [compact(item) for item in snapshots[:40]],
+              'attemptIndex': [
                   {
                       'label': item.get('label'),
-                      'traceOffset': item.get('traceOffset'),
-                      'nearestTokenOffset': item.get('nearestTokenOffset'),
-                      'nearestTokenDistance': item.get('nearestTokenDistance'),
-                      'snippetSha256': item.get('snippetSha256'),
+                      'interactionObserved': bool(item.get('interactionObserved')),
+                      'screenChanged': bool(item.get('screenChanged')),
+                      'urlClass': 'browser-error' if str(item.get('url') or '').startswith('chrome-error://') else 'page',
                   }
-                  for item in slices
+                  for item in attempts
               ],
-              'artifactName': 'page5-second-purchase-callchain-slice',
+              'pageErrorCount': len(page_errors),
+              'blockedOrderCount': len(blocked_orders),
+              'blockedExternalNavigationCount': len(blocked_nav),
+              'artifactName': 'page5-second-purchase-callback-scope',
               'candidatePrepared': False,
               'correctionApplied': False,
+              'realOrderRequestsAllowed': False,
+              'paymentCompleted': False,
+              'authorizationOutcomeModified': False,
               'runtimeFilesChanged': False,
               'productionDefaultChanged': False,
               'androidClientChanged': False,
               'apkBuilt': False,
-              'paymentCompleted': False,
           }
-          Path('/tmp/PAGE5_SECOND_PURCHASE_CALLCHAIN_SLICE_STATUS.json').write_text(
+          Path('/tmp/PAGE5_SECOND_PURCHASE_CALLBACK_SCOPE_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -124,30 +198,31 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-second-purchase-callchain-slice
+          name: page5-second-purchase-callback-scope
           path: |
-            page5-second-purchase-callchain-slice
-            /tmp/PAGE5_SECOND_PURCHASE_CALLCHAIN_SLICE_STATUS.json
+            page5-second-purchase-callback-scope
+            /tmp/PAGE5_SECOND_PURCHASE_CALLBACK_SCOPE_STATUS.json
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish static diagnostic status
+      - name: Publish callback scope status
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/prepare_persisted_repeat_reentry_matrix.py "$GENERATED_PROBE"
           git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
           mkdir -p docs
-          cp /tmp/PAGE5_SECOND_PURCHASE_CALLCHAIN_SLICE_STATUS.json docs/PAGE5_SECOND_PURCHASE_CALLCHAIN_SLICE_STATUS.json
-          git add docs/PAGE5_SECOND_PURCHASE_CALLCHAIN_SLICE_STATUS.json
+          cp /tmp/PAGE5_SECOND_PURCHASE_CALLBACK_SCOPE_STATUS.json docs/PAGE5_SECOND_PURCHASE_CALLBACK_SCOPE_STATUS.json
+          git add docs/PAGE5_SECOND_PURCHASE_CALLBACK_SCOPE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record second purchase call-chain source slices"
+            git commit -m "Record second purchase callback scope"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce read-only slice gate
+      - name: Enforce read-only callback scope gate
         if: always()
         shell: bash
-        run: jq -e '.captureOk == true and .candidatePrepared == false and .correctionApplied == false and .apkBuilt == false' /tmp/PAGE5_SECOND_PURCHASE_CALLCHAIN_SLICE_STATUS.json >/dev/null
+        run: jq -e '.ok == true and .correctionApplied == false and .apkBuilt == false' /tmp/PAGE5_SECOND_PURCHASE_CALLBACK_SCOPE_STATUS.json >/dev/null
