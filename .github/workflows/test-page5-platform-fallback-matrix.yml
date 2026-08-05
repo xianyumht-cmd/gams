@@ -8,6 +8,7 @@ on:
       - scripts/run_page5_guard_full_entry_matrix.mjs
       - scripts/prepare_page5_scoped_mobile_contract_matrix.py
       - scripts/prepare_target_open_menu_contract_probe.py
+      - scripts/prepare_target_open_menu_contract_probe_fixed.py
       - scripts/target_open_menu_contract_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
@@ -45,8 +46,8 @@ jobs:
           set -euo pipefail
           test -s "$CURRENT_FIRST_PATH"
           test -s "$CURRENT_SECOND_PATH"
-          python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py scripts/prepare_target_open_menu_contract_probe.py
-          python3 scripts/prepare_target_open_menu_contract_probe.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py scripts/prepare_target_open_menu_contract_probe.py scripts/prepare_target_open_menu_contract_probe_fixed.py
+          python3 scripts/prepare_target_open_menu_contract_probe_fixed.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
           grep -Fq 'target-open-menu-contract-read-only-probe' "$GENERATED_PROBE"
           grep -Fq '__gamsOpenMenuContractProbe' "$GENERATED_PROBE"
