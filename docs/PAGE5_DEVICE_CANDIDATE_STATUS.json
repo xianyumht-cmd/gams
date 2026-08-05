@@ -1,64 +1,20 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-08-05T22:51:27Z",
-  "runId": 31054152673,
-  "state": "completed",
-  "workflowOutcome": "success",
-  "ok": true,
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T22:55:12Z",
+  "runId": 31054517129,
+  "state": "running",
+  "ok": false,
   "mode": "isolated-device-runtime-and-apk-candidate",
   "candidateBranch": "candidate-page5-runtime-device-20260806",
-  "candidateRuntimeCommit": "eb274893a8b00d371f532067486b618035066629",
   "candidateRuntimeVersion": "2.0.5-page5-device-c1",
-  "candidateRuntimeManifest": {
-    "schemaVersion": 2,
-    "versionName": "2.0.5-page5-device-c1",
-    "file": "bundle-2.0.5-page5-device-c1.bin",
-    "size": 3905533,
-    "sha256": "8b21458eae762ac1ebd5c3f49561da31cbbdc980bed12573b7db05e433308404",
-    "nonameSize": 332368,
-    "nonameSha256": "707826b2049853a714740baf169fa5b61fa072ab8027ed69551b7d55813c53c0",
-    "gameSize": 11590659,
-    "gameSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
-    "publishedAt": "2026-08-05T22:50:27Z",
-    "signatureAlgorithm": "SHA256withECDSA"
-  },
   "candidatePrefix": "/",
   "candidateRoute": "gams-runtime-v2-page5-candidate.2320006072.workers.dev/*",
-  "candidateWorkerName": "gams-runtime-v2-page5-candidate",
   "candidateWorkerHost": "gams-runtime-v2-page5-candidate.2320006072.workers.dev",
-  "primaryHost": "gams-runtime-v2-page5-candidate.2320006072.workers.dev",
-  "fallbackHost": "gams-runtime-v2-page5-candidate.2320006072.workers.dev",
-  "routeProbe": {
-    "primary": {
-      "ok": true,
-      "httpCode": "200"
-    },
-    "fallback": {
-      "ok": true,
-      "httpCode": "200"
-    }
-  },
-  "apk": {
-    "name": "GG-2.0.11-page5-candidate-code21.apk",
-    "size": 88006,
-    "sha256": "906ca5da7e68db162d578707b7de6924934b6596f5ce4ff581568fd771893ffb",
-    "packageName": "com.jinli.quickweb",
-    "versionCode": 21,
-    "versionName": "2.0.11-page5-candidate",
-    "v2SignatureVerified": true,
-    "v3SignatureVerified": true
-  },
-  "artifactName": "GG-page5-device-candidate",
-  "artifactId": 8949640074,
-  "artifactSha256": "93c8a13a03db2b8f4465bc7821318d391af534286e52ef23161d407b7012b0dd",
-  "browserValidationRunId": 31051809043,
-  "finalInteractionRunId": 31050480987,
+  "apkVersionName": "2.0.11-page5-candidate",
+  "apkVersionCode": 21,
   "productionDefaultChanged": false,
   "productionRuntimeChanged": false,
   "formalApkChanged": false,
   "candidateApkPublished": false,
-  "paymentCompleted": false,
-  "realOrderRequestsAllowed": false,
-  "diagnosticBranch": "diagnostics/page5-guard-full-entry-20260805",
-  "diagnosticCommit": "689e96c4c74e760626d9c6909395d51f82783685"
+  "paymentCompleted": false
 }
