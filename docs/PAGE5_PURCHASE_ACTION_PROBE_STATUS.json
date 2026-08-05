@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T20:28:01Z",
+  "runId": 31044008534,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "persisted-runtime-page5-safe-purchase-action-probe",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "summary": {
+    "totalCases": 1,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 1,
+    "noLoginEnabledCases": 1,
+    "secondFileLoadCount": 1,
+    "listOpenCount": 1,
+    "listTargetReadCount": 1,
+    "listTargetListCount": 1,
+    "purchaseAttemptCount": 1,
+    "purchaseInteractionObservedCount": 1,
+    "purchaseScreenChangedCount": 1,
+    "purchaseDialogCount": 0,
+    "purchaseBlockedMutationCount": 0,
+    "purchaseRequestCount": 1,
+    "candidatePageErrorCount": 0,
+    "blockedExternalNavigationCases": 0,
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "callbackReplacementCount": 1
+  },
+  "purchaseActionReached": true,
+  "purchaseResultObserved": true,
+  "requiresCompatibilityReview": false,
+  "attempt": {
+    "point": {
+      "x": 190,
+      "y": 358,
+      "label": "left-middle-purchase"
+    },
+    "screenChanged": true,
+    "requestWindow": {
+      "total": 1,
+      "kinds": {
+        "page-request": 1
+      },
+      "targetReadCount": 0,
+      "targetListCount": 0,
+      "orderMutationCount": 0
+    },
+    "dialogs": [],
+    "blockedOrders": [],
+    "pageErrors": [],
+    "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality",
+    "interactionObserved": true
+  },
+  "pageErrors": [],
+  "dialogs": [],
+  "blockedOrderCount": 0,
+  "requestFailures": [
+    {
+      "at": 1785961570333,
+      "url": "https://passport.66rpg.com/user/crosscheck.shtml?keys=app,auth_callback,fromurl,login_type,sign",
+      "resourceType": "document",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "at": 1785961596986,
+      "url": "https://dlcdn1.cgyouxi.com/shareres/c8/c893749e59bec976bec7b7df3a825d3e.mp3",
+      "resourceType": "media",
+      "failure": "net::ERR_ABORTED"
+    }
+  ],
+  "artifactName": "page5-purchase-action-probe",
+  "persistedRuntimeSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
+  "realOrderRequestsAllowed": false,
+  "paymentCompleted": false,
+  "authorizationOutcomeModified": false,
+  "productionDefaultChanged": false,
+  "androidClientChanged": false,
+  "apkBuilt": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "f7a3c3ed8315a006309895281ea7491c9ce23ecb"
+}
