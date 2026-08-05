@@ -1,13 +1,13 @@
-name: Probe page five post-title fullscreen callbacks via established runner
+name: Probe page five post-title mouse-up scope
 
 on:
   push:
     branches:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
-      - scripts/run_page5_side_button_callback_inventory.mjs
-      - scripts/prepare_page5_post_title_fullscreen_callback_inventory.py
-      - scripts/page5_post_title_fullscreen_callback_inventory.trigger
+      - scripts/run_page5_menu_callback_scope_probe.mjs
+      - scripts/prepare_page5_post_title_mouseup_scope_probe.py
+      - scripts/page5_post_title_mouseup_scope_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -15,16 +15,16 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-post-title-fullscreen-callback-inventory-established-20260805
+  group: page5-post-title-mouseup-scope-probe-20260805
   cancel-in-progress: true
 
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
-      OUTPUT_DIR: page5-post-title-fullscreen-callback-inventory
-      GENERATED_PROBE: scripts/run_page5_post_title_fullscreen_callback_inventory.generated.mjs
+      OUTPUT_DIR: page5-post-title-mouseup-scope-probe
+      GENERATED_PROBE: scripts/run_page5_post_title_mouseup_scope_probe.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -36,16 +36,16 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare fullscreen callback inventory
+      - name: Prepare post-title mouse-up scope probe
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/prepare_page5_post_title_fullscreen_callback_inventory.py
-          python3 scripts/prepare_page5_post_title_fullscreen_callback_inventory.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_post_title_mouseup_scope_probe.py
+          python3 scripts/prepare_page5_post_title_mouseup_scope_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-post-title-fullscreen-callback-inventory-read-only' "$GENERATED_PROBE"
-          grep -Fq 'const nodeIndexes = [1]' "$GENERATED_PROBE"
-          grep -Fq 'mouseDownNodeCount' "$GENERATED_PROBE"
+          grep -Fq 'page5-post-title-mouseup-scope-read-only-probe' "$GENERATED_PROBE"
+          grep -Fq "eventListenerMap['mouse up'][0].listener" "$GENERATED_PROBE"
+          grep -Fq 'const selectedNodeIndex = 1' "$GENERATED_PROBE"
           grep -Fq 'after-title-reveal' "$GENERATED_PROBE"
           grep -Fq '__gamsNavigationGuard' "$GENERATED_PROBE"
 
@@ -56,15 +56,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute fullscreen callback inventory
+      - name: Execute post-title mouse-up scope probe
         id: probe_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-post-title-fullscreen-callback-inventory.log
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-post-title-mouseup-scope-probe.log
 
-      - name: Build fullscreen callback status
+      - name: Build mouse-up scope status
         if: always()
         shell: bash
         env:
@@ -72,9 +72,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-post-title-fullscreen-callback-inventory.log && cp /tmp/page5-post-title-fullscreen-callback-inventory.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-post-title-mouseup-scope-probe.log && cp /tmp/page5-post-title-mouseup-scope-probe.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
-          import hashlib
           import json
           import os
           from datetime import datetime, timezone
@@ -83,28 +82,20 @@ jobs:
           output = Path(os.environ['OUTPUT_DIR'])
           report_path = output / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          inventory = (report.get('inventory') or []) if report else []
-          node = inventory[0] if inventory else None
-          event_summary = {}
-          if node:
-              for event_name, entries in (node.get('events') or {}).items():
-                  compact_entries = []
-                  for entry in entries or []:
-                      functions = {}
-                      for key, info in (entry.get('functions') or {}).items():
-                          source = info.get('source') or ''
-                          functions[key] = {
-                              'name': info.get('name'),
-                              'arity': info.get('length'),
-                              'sourceLength': len(source),
-                              'sourceSha256': hashlib.sha256(source.encode('utf-8')).hexdigest() if source else None,
-                          }
-                      compact_entries.append({
-                          'entryIndex': entry.get('entryIndex'),
-                          'keys': entry.get('keys', []),
-                          'functions': functions,
-                      })
-                  event_summary[event_name] = compact_entries
+          callback = (report.get('callback') or {}) if report else {}
+          structure = callback.get('structure') or {}
+          internal = structure.get('internalProperties') or []
+          scope_entry = next((item for item in internal if item.get('name') == '[[Scopes]]'), None)
+          scope_child = (scope_entry or {}).get('child') or {}
+          scope_count = scope_child.get('propertyCount')
+          scope_names = []
+          for item in scope_child.get('properties') or []:
+              value = item.get('value') or {}
+              scope_names.append({
+                  'index': item.get('name'),
+                  'description': value.get('description'),
+                  'propertyCount': ((item.get('child') or {}).get('propertyCount')),
+              })
           ok = bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
@@ -113,20 +104,20 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-post-title-fullscreen-callback-inventory-read-only',
+              'mode': 'page5-post-title-mouseup-scope-read-only-probe',
               'pauseCaptured': report.get('pauseCaptured') if report else None,
-              'fatalError': report.get('fatalError') if report else None,
-              'inventoryCount': len(inventory),
-              'nodeIndex': node.get('index') if node else None,
-              'geometry': node.get('geometry') if node else None,
-              'eventNames': sorted((node.get('events') or {}).keys()) if node else [],
-              'eventSummary': event_summary,
+              'callbackSourceLength': callback.get('sourceLength'),
+              'callbackSourceSha256': callback.get('sourceSha256'),
+              'callbackInternalPropertyNames': [item.get('name') for item in internal],
+              'scopeCount': scope_count,
+              'scopeSummary': scope_names,
               'mainFrameValid': report.get('mainFrameValid') if report else None,
               'pageErrorCount': len(report.get('pageErrors') or []) if report else None,
               'blockedOrderCount': len(report.get('blockedOrders') or []) if report else None,
               'debuggerErrorCount': len(report.get('debuggerErrors') or []) if report else None,
+              'fatalError': report.get('fatalError') if report else None,
               'reportAvailable': bool(report),
-              'artifactName': 'page5-post-title-fullscreen-callback-inventory',
+              'artifactName': 'page5-post-title-mouseup-scope-probe',
               'readOnlyProbe': True,
               'pageScriptModified': False,
               'candidateTested': False,
@@ -140,7 +131,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json').write_text(
+          Path('/tmp/PAGE5_POST_TITLE_MOUSEUP_SCOPE_PROBE_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -149,12 +140,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-post-title-fullscreen-callback-inventory
-          path: page5-post-title-fullscreen-callback-inventory
+          name: page5-post-title-mouseup-scope-probe
+          path: page5-post-title-mouseup-scope-probe
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish fullscreen callback status
+      - name: Publish mouse-up scope status
         if: always()
         shell: bash
         run: |
@@ -162,14 +153,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json docs/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json
-          git add docs/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json
+          cp /tmp/PAGE5_POST_TITLE_MOUSEUP_SCOPE_PROBE_STATUS.json docs/PAGE5_POST_TITLE_MOUSEUP_SCOPE_PROBE_STATUS.json
+          git add docs/PAGE5_POST_TITLE_MOUSEUP_SCOPE_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record post-title fullscreen callback inventory"
+            git commit -m "Record post-title mouse-up scope probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce fullscreen callback capture
+      - name: Enforce mouse-up scope capture
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/PAGE5_POST_TITLE_MOUSEUP_SCOPE_PROBE_STATUS.json >/dev/null
