@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T22:29:05Z",
+  "generatedAt": "2026-08-05T22:29:07Z",
   "runId": 31052897768,
-  "state": "running",
+  "state": "completed",
+  "workflowOutcome": "skipped",
   "ok": false,
   "mode": "isolated-final-apk-candidate-build",
   "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
@@ -10,8 +11,14 @@
   "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
   "browserValidationRunId": 31051809043,
   "finalInteractionRunId": 31050480987,
+  "signingCertificateSha256": "70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34",
+  "apks": [],
+  "artifactName": "GG-page5-final-runtime-candidate",
   "productionDefaultChanged": false,
   "implementationMerged": false,
   "apkPublished": false,
-  "paymentCompleted": false
+  "paymentCompleted": false,
+  "realOrderRequestsAllowed": false,
+  "diagnosticBranch": "diagnostics/page5-guard-full-entry-20260805",
+  "diagnosticCommit": "d372613d8968727a5662152cda30d0e95db736da"
 }
