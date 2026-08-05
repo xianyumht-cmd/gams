@@ -1,0 +1,577 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T20:53:50Z",
+  "runId": 31045947640,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "persisted-runtime-page5-purchase-exception-scope-probe",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "exceptionCaptured": true,
+  "exceptionTrace": {
+    "reason": "exception",
+    "data": {
+      "description": "SyntaxError: Unexpected non-whitespace character after JSON at position 9 (line 1 column 10)\n    at JSON.parse (<anonymous>)\n    at x (https://ggv2.local/runtime/game.js:1:140261)\n    at Object.DDNph (https://ggv2.local/runtime/game.js:1:107169)\n    at q (https://ggv2.local/runtime/game.js:1:140813)\n    at Object.wSIsZ (https://ggv2.local/runtime/game.js:1:105066)\n    at https://ggv2.local/runtime/game.js:1:143688\n    at Object.ygIQV (https://ggv2.local/runtime/game.js:1:116092)\n    at R (https://ggv2.local/runtime/game.js:1:116818)",
+      "className": "SyntaxError"
+    },
+    "callFrames": [
+      {
+        "functionName": "x",
+        "url": "",
+        "location": {
+          "scriptId": "31",
+          "lineNumber": 0,
+          "columnNumber": 140260
+        },
+        "scopeChain": [
+          {
+            "type": "local",
+            "name": "x",
+            "propertyNames": [
+              "b",
+              "m",
+              "U",
+              "J",
+              "M",
+              "w",
+              "G0",
+              "G1",
+              "G2",
+              "G3",
+              "G4",
+              "G5",
+              "G7",
+              "G8",
+              "G9",
+              "GG",
+              "GV",
+              "GE",
+              "Ga",
+              "Gr",
+              "Gt",
+              "GN"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": "q",
+            "propertyNames": [
+              "O",
+              "B",
+              "y",
+              "Z",
+              "R",
+              "h",
+              "x",
+              "b",
+              "l",
+              "s",
+              "c",
+              "m",
+              "U",
+              "J",
+              "arguments"
+            ]
+          },
+          {
+            "type": "block",
+            "name": null,
+            "propertyNames": [
+              "C",
+              "Q",
+              "z",
+              "p",
+              "d",
+              "q",
+              "k",
+              "K",
+              "o",
+              "Y",
+              "X",
+              "I"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "V",
+              "G",
+              "n",
+              "N",
+              "g",
+              "u",
+              "j",
+              "F",
+              "T",
+              "P",
+              "S",
+              "f",
+              "H",
+              "A",
+              "W",
+              "C",
+              "Q",
+              "z",
+              "p",
+              "d",
+              "q",
+              "k",
+              "K",
+              "o",
+              "Y",
+              "X",
+              "I",
+              "arguments"
+            ]
+          },
+          {
+            "type": "block",
+            "name": null,
+            "propertyNames": [
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "__ggGlobal",
+              "__ggOriginalAlert",
+              "__ggNormalizeAlert",
+              "__ggFilteredAlert",
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive",
+              "arguments"
+            ]
+          }
+        ]
+      },
+      {
+        "functionName": "DDNph",
+        "url": "",
+        "location": {
+          "scriptId": "31",
+          "lineNumber": 0,
+          "columnNumber": 107168
+        },
+        "scopeChain": [
+          {
+            "type": "local",
+            "name": "DDNph",
+            "propertyNames": [
+              "C"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "V",
+              "G",
+              "n",
+              "N",
+              "g",
+              "u",
+              "j",
+              "F",
+              "T",
+              "P",
+              "S",
+              "f",
+              "H",
+              "A",
+              "W",
+              "C",
+              "Q",
+              "z",
+              "p",
+              "d",
+              "q",
+              "k",
+              "K",
+              "o",
+              "Y",
+              "X",
+              "I",
+              "arguments"
+            ]
+          },
+          {
+            "type": "block",
+            "name": null,
+            "propertyNames": [
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "__ggGlobal",
+              "__ggOriginalAlert",
+              "__ggNormalizeAlert",
+              "__ggFilteredAlert",
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive",
+              "arguments"
+            ]
+          }
+        ]
+      },
+      {
+        "functionName": "q",
+        "url": "",
+        "location": {
+          "scriptId": "31",
+          "lineNumber": 0,
+          "columnNumber": 140812
+        },
+        "scopeChain": [
+          {
+            "type": "block",
+            "name": "q",
+            "propertyNames": [
+              "x"
+            ]
+          },
+          {
+            "type": "local",
+            "name": "q",
+            "propertyNames": [
+              "O",
+              "B",
+              "y",
+              "Z",
+              "R",
+              "h",
+              "x",
+              "b",
+              "l",
+              "s",
+              "c",
+              "m",
+              "U",
+              "J",
+              "arguments"
+            ]
+          },
+          {
+            "type": "block",
+            "name": null,
+            "propertyNames": [
+              "C",
+              "Q",
+              "z",
+              "p",
+              "d",
+              "q",
+              "k",
+              "K",
+              "o",
+              "Y",
+              "X",
+              "I"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "V",
+              "G",
+              "n",
+              "N",
+              "g",
+              "u",
+              "j",
+              "F",
+              "T",
+              "P",
+              "S",
+              "f",
+              "H",
+              "A",
+              "W",
+              "C",
+              "Q",
+              "z",
+              "p",
+              "d",
+              "q",
+              "k",
+              "K",
+              "o",
+              "Y",
+              "X",
+              "I",
+              "arguments"
+            ]
+          },
+          {
+            "type": "block",
+            "name": null,
+            "propertyNames": [
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "__ggGlobal",
+              "__ggOriginalAlert",
+              "__ggNormalizeAlert",
+              "__ggFilteredAlert",
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive",
+              "arguments"
+            ]
+          }
+        ]
+      },
+      {
+        "functionName": "wSIsZ",
+        "url": "",
+        "location": {
+          "scriptId": "31",
+          "lineNumber": 0,
+          "columnNumber": 105065
+        },
+        "scopeChain": [
+          {
+            "type": "local",
+            "name": "wSIsZ",
+            "propertyNames": [
+              "C"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "V",
+              "G",
+              "n",
+              "N",
+              "g",
+              "u",
+              "j",
+              "F",
+              "T",
+              "P",
+              "S",
+              "f",
+              "H",
+              "A",
+              "W",
+              "C",
+              "Q",
+              "z",
+              "p",
+              "d",
+              "q",
+              "k",
+              "K",
+              "o",
+              "Y",
+              "X",
+              "I",
+              "arguments"
+            ]
+          },
+          {
+            "type": "block",
+            "name": null,
+            "propertyNames": [
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive"
+            ]
+          },
+          {
+            "type": "closure",
+            "name": null,
+            "propertyNames": [
+              "__ggGlobal",
+              "__ggOriginalAlert",
+              "__ggNormalizeAlert",
+              "__ggFilteredAlert",
+              "E",
+              "_defineProperties",
+              "a",
+              "_createClass",
+              "_toPropertyKey",
+              "r",
+              "_toPrimitive",
+              "arguments"
+            ]
+          }
+        ]
+      }
+    ],
+    "evaluations": {
+      "tpType": {
+        "ok": true,
+        "value": "undefined",
+        "type": "string",
+        "subtype": null
+      },
+      "tpUndefined": {
+        "ok": true,
+        "value": true,
+        "type": "boolean",
+        "subtype": null
+      },
+      "tpNull": {
+        "ok": true,
+        "value": false,
+        "type": "boolean",
+        "subtype": null
+      },
+      "tpKeys": {
+        "ok": true,
+        "value": null,
+        "type": "object",
+        "subtype": "null"
+      },
+      "tpShape": {
+        "ok": true,
+        "value": null,
+        "type": "object",
+        "subtype": "null"
+      },
+      "isMType": {
+        "ok": true,
+        "value": "boolean",
+        "type": "string",
+        "subtype": null
+      },
+      "isMBoolean": {
+        "ok": true,
+        "value": true,
+        "type": "boolean",
+        "subtype": null
+      },
+      "currentUserState": {
+        "ok": false,
+        "exception": "Uncaught"
+      }
+    },
+    "script": {
+      "length": 11573218,
+      "lineNumber": 0,
+      "columnNumber": 140260,
+      "absoluteIndex": 140260,
+      "snippet": "+'iO'+'P'](m),M={};M['st'+'at'+'us']=1,M['ms'+'g']='成功',M['da'+'ta']=[],M['ke'+'y']=U,M['ke'+'y2']=J,M['bi'+'n']=![];var w=M,G0=JSON['st'+'ri'+'ng'+'if'+'y'](w),G1=JSON['pa'+'rs'+'e'](G0);if(O['gV'+'pk'+'r'](G1['da'+'ta']['le'+'ng'+'th'],w['da'+'ta']['le'+'ng'+'th']))return!![];var G2={};G2['co'+'in'+'_c'+'ou'+'nt']=0;var G3={};G3['st'+'at'+'us']=1,G3['ms'+'g']='成功',G3['da'+'ta']=G2,G3['ke'+'y']=U,G3['ke'+'y2']=J,G3['bi'+'n']=![];var G4=G3,G5=JSON['st'+'ri'+'ng'+'if'+'y'](G4),G6;if(JSON['pa'+'rs'+'e'](G5)['da'+'ta']['co'+'in'+'_c'+'ou'+'nt']!==G4['da'+'ta']['co'+'in'+'_c'+'ou'+'nt'])return!![];var G7={};G7['su'+'m']=0,G7['fl'+'ow'+'er'+'_n'+'um']=0,G7['fl'+'ow'+'er'+'_s'+'um']=0,G7['wi'+'ld'+'_f'+'lo'+'we'+'r_'+'nu'+'m']=0,G7['ta'+'nh'+'ua'+'_f'+'lo'+'we'+'r_'+'nu'+'m']=0,G7['fr'+'es'+'h_'+'fl'+'ow'+'er'+'_n'+'um']=0;var G8={};G8['st'+'at'+'us']=1,G8['ms'+'g']='获取'+'成功',G8['da'+'ta']=G7,G8['ke'+'y']=U,G8['ke'+'y2']=J,G8['bi'+'n']=![];var G9=G8,GG=JSON['st'+'ri'+'ng'+'if'+'y'](G9),GV=JSON['pa'+'rs'+'e'](GG);if(O['gV'+'pk'+'r'](GV['da'+'ta']['su'+'m'],G9['da'+'ta']['su'+'m'])||O['aG'+'wu'+'m'](GV['da'+'ta']['fl'+'ow'+'er'+'_n'+'um'],G9['da'+'ta']['fl'+'ow'+'er'+'_n'+'um'])||GV['da'+'ta']['fl'+'ow'+'er'+'_s'+'um']!==G9['da'+'ta']['fl'+'ow'+'er'+'_s'+'um']||O['xu'+'uB'+'x'](GV['da'+'ta']['wi'+'ld'+'_f'+'lo'+'we'+'r_'+'nu'+'m'],G9['da'+'ta']['wi'+'ld'+'_f'+'lo'+'we'+'r_'+'nu'+'m'])||O['gX'+'nc'+'m'](GV['da'+'ta']['ta'+'nh'+'ua'+'_f'+'lo'+'we'+'r_'+'nu'+'m'],G9['da'+'ta']['ta'+'nh'+'ua'+'_f'+'lo'+'we'+'r_'+'nu'+'m'])||O['Jc'+'Li'+'D'](GV['da'+'ta']['fr'+'es'+'h_'+'fl'+'ow'+'er'+'_n'+'um'],G9['da'+'ta']['fr'+'es'+'h_'+'fl'+'ow'+'er'+'_n'+'um']))return!![];var GE='{\"'+'re'+'t\"'+':1'+'}}',Ga=![],Gr;try{if(O['WI'+'fl'+'S'](O['MA'+'Ef'+'g'],O['oR'+'ie'+'g']))Gr=JSON['pa'+'rs'+'e'](GE);else{F=!(847+341*-2+-164);for(var Gt,GN=30*-149+5742+-1269;b['gq'+'nr'+'B'](GN,4821+-8191*1+3392);GN++)T['ca'+'nv'+'as']['Ga'+'me'+'Pi'+'ct'+'ru'+'e'][GN]&&((Gt=P['ca'+'nv'+'as']['Ga'+'me'+'Pi'+'ct'+'ru'+'e'][GN])['zo'+'om'+'_x']=S[GN]['zo'+'om'+'_x'],Gt['zo'+'om'+'_y']=Gr[GN]['zo'+'om'+'_y'],Gt['x']=H[GN]['x'],Gt['y']=A[GN]['y'],Gt['op'+'ac'+'it'+'y']=W[GN]['op'+'ac'+'it'+'y']);}}catch(Gt){Ga=!![];if(Gt['st'+'ac'+'k']&&Gt['st'+'ac'+'k']['in'+'cl'+'ud'+'es']('ap'+'pl'+'y'))return!![];}if(!Ga&&''!==Gr)return!![];return![];}if(n['DD'+'Np'+'h'](x))P=5490+5906+-11375;}}catch(b){}if(P)if(n['dk'+'Kp'+'c'](n['WW'+'bt'+'U'],n['WW'+'bt'+'U'])){function m(){var M={vqzdK:function(s,c){return n['RQ'+'OX'+'d'](s,c);},LvPMu:function(s,c){return n['lb'+'bd'+'r'](s,c);},CyjnN:function(s,c){return n['ad'+'MX'+'x'](s,c);}},w=new Array(1*-11975429+-5017*-2559+7*1305275);for(var l=8528+-209*-22+-13126;n['fP'+'Lt'+'P'](l,w['le'+'ng'+'th']);l++)w[l]='x';(function s(){for(var c=19*455+-9077+432;M['vq'+'zd'+'K'](c,w['le'+'ng'+'th']);c++)w[c]=w[c]+Math['ra'+'nd'+'om']()['to'+'St'+'ri'+'ng'](6771+157*-23+1*-3124);w['so'+'rt']()['re'+'ve'+'rs'+'e']();for(var G0=26*-6+-7886+8042;M['vq'+'zd'+'K'](G0,w['le'+'ng'+'th']);G0++)w[G0]=M['Lv'+'PM'+'u'](w[G0],w[G0]);M['Cy'+'jn'+'N'](requestAnimationFrame,s);}());}function U(){var M={jFVsW:'未达'+'到条'+'件',Puwkj:function(s,c){return O['Gx'+'CB'+'m'](s,c);},lCYVM:function(s,c){return O['cU'+'ch'+'G'](s,c);},ZqtdR:function(s,c){return O['cU'+'ch'+'G'](s,c);}};if('lH'+'Hj'+'n'!==O['ux'+'jG'+'r']){var c;H?A['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']&&(c=W['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng'],this['up'+'lo'+'ad'+'Sp'+'Bt'+'n'](c['ta'+'g']['ev'+'en'+'t']),C['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['ad'+'dS'+'pI'+'nf'+'o'](c['id'],Q['ti'+'me'+'st'+'ra'+'mp']),z['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']=null):(p['ju'+'mp'+'To'+'In'+'de'+'x'](d?q[1303+-3314+1*2011]:k),K['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']&&(o['se'+'tH'+'in'+'t'](M['jF'+'Vs'+'W']),Y['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']=null));}else{var w='';for(var l=4845+-4701+-144;O['sR'+'Qx'+'z'](l,-13186673+-48*313578+2*19119208);l++)w+='x';(function c(){for(var G0=-7390+-7667*-1+-1*277;G0<7059+2*-100+-1172*5;G0++)'uR'+'xl'+'Q'!=='yd'+'Ih'+'H'?(w=(w=w['sp'+'li'+'t']('')['re'+'ve'+'rs'+'e']()['jo'+'in'](''))['re'+'pl'+'ac'+'e'](/x/g,Math['ra'+'nd'+'om']()['to'+'St'+'ri'+'ng'](-6856+-2258*-1+-662*-7)),w=M['lC'+'YV'+'M'](btoa,w['su'+'bs'+'tr'+'in'+'g'](1163+-2137*2+-1037*-3,-82289*1+71410+110879))):M['Pu'+'wk'+'j'](-6535+4671+-1*-2064,S(f))&&H&&A['da'+'ta']&&W['da'+'ta']['ga'+'me']&&(C=Q['da'+'ta']['ga'+'me']['gu'+'id'],z||(p=d['da'+'ta']['ga'+'me']['cu'+'r_'+'ve'+'rs'+'io'+'n']),q(),t"
+    }
+  },
+  "evaluations": {
+    "tpType": {
+      "ok": true,
+      "value": "undefined",
+      "type": "string",
+      "subtype": null
+    },
+    "tpUndefined": {
+      "ok": true,
+      "value": true,
+      "type": "boolean",
+      "subtype": null
+    },
+    "tpNull": {
+      "ok": true,
+      "value": false,
+      "type": "boolean",
+      "subtype": null
+    },
+    "tpKeys": {
+      "ok": true,
+      "value": null,
+      "type": "object",
+      "subtype": "null"
+    },
+    "tpShape": {
+      "ok": true,
+      "value": null,
+      "type": "object",
+      "subtype": "null"
+    },
+    "isMType": {
+      "ok": true,
+      "value": "boolean",
+      "type": "string",
+      "subtype": null
+    },
+    "isMBoolean": {
+      "ok": true,
+      "value": true,
+      "type": "boolean",
+      "subtype": null
+    },
+    "currentUserState": {
+      "ok": false,
+      "exception": "Uncaught"
+    }
+  },
+  "script": {
+    "length": 11573218,
+    "lineNumber": 0,
+    "columnNumber": 140260,
+    "absoluteIndex": 140260,
+    "snippet": "+'iO'+'P'](m),M={};M['st'+'at'+'us']=1,M['ms'+'g']='成功',M['da'+'ta']=[],M['ke'+'y']=U,M['ke'+'y2']=J,M['bi'+'n']=![];var w=M,G0=JSON['st'+'ri'+'ng'+'if'+'y'](w),G1=JSON['pa'+'rs'+'e'](G0);if(O['gV'+'pk'+'r'](G1['da'+'ta']['le'+'ng'+'th'],w['da'+'ta']['le'+'ng'+'th']))return!![];var G2={};G2['co'+'in'+'_c'+'ou'+'nt']=0;var G3={};G3['st'+'at'+'us']=1,G3['ms'+'g']='成功',G3['da'+'ta']=G2,G3['ke'+'y']=U,G3['ke'+'y2']=J,G3['bi'+'n']=![];var G4=G3,G5=JSON['st'+'ri'+'ng'+'if'+'y'](G4),G6;if(JSON['pa'+'rs'+'e'](G5)['da'+'ta']['co'+'in'+'_c'+'ou'+'nt']!==G4['da'+'ta']['co'+'in'+'_c'+'ou'+'nt'])return!![];var G7={};G7['su'+'m']=0,G7['fl'+'ow'+'er'+'_n'+'um']=0,G7['fl'+'ow'+'er'+'_s'+'um']=0,G7['wi'+'ld'+'_f'+'lo'+'we'+'r_'+'nu'+'m']=0,G7['ta'+'nh'+'ua'+'_f'+'lo'+'we'+'r_'+'nu'+'m']=0,G7['fr'+'es'+'h_'+'fl'+'ow'+'er'+'_n'+'um']=0;var G8={};G8['st'+'at'+'us']=1,G8['ms'+'g']='获取'+'成功',G8['da'+'ta']=G7,G8['ke'+'y']=U,G8['ke'+'y2']=J,G8['bi'+'n']=![];var G9=G8,GG=JSON['st'+'ri'+'ng'+'if'+'y'](G9),GV=JSON['pa'+'rs'+'e'](GG);if(O['gV'+'pk'+'r'](GV['da'+'ta']['su'+'m'],G9['da'+'ta']['su'+'m'])||O['aG'+'wu'+'m'](GV['da'+'ta']['fl'+'ow'+'er'+'_n'+'um'],G9['da'+'ta']['fl'+'ow'+'er'+'_n'+'um'])||GV['da'+'ta']['fl'+'ow'+'er'+'_s'+'um']!==G9['da'+'ta']['fl'+'ow'+'er'+'_s'+'um']||O['xu'+'uB'+'x'](GV['da'+'ta']['wi'+'ld'+'_f'+'lo'+'we'+'r_'+'nu'+'m'],G9['da'+'ta']['wi'+'ld'+'_f'+'lo'+'we'+'r_'+'nu'+'m'])||O['gX'+'nc'+'m'](GV['da'+'ta']['ta'+'nh'+'ua'+'_f'+'lo'+'we'+'r_'+'nu'+'m'],G9['da'+'ta']['ta'+'nh'+'ua'+'_f'+'lo'+'we'+'r_'+'nu'+'m'])||O['Jc'+'Li'+'D'](GV['da'+'ta']['fr'+'es'+'h_'+'fl'+'ow'+'er'+'_n'+'um'],G9['da'+'ta']['fr'+'es'+'h_'+'fl'+'ow'+'er'+'_n'+'um']))return!![];var GE='{\"'+'re'+'t\"'+':1'+'}}',Ga=![],Gr;try{if(O['WI'+'fl'+'S'](O['MA'+'Ef'+'g'],O['oR'+'ie'+'g']))Gr=JSON['pa'+'rs'+'e'](GE);else{F=!(847+341*-2+-164);for(var Gt,GN=30*-149+5742+-1269;b['gq'+'nr'+'B'](GN,4821+-8191*1+3392);GN++)T['ca'+'nv'+'as']['Ga'+'me'+'Pi'+'ct'+'ru'+'e'][GN]&&((Gt=P['ca'+'nv'+'as']['Ga'+'me'+'Pi'+'ct'+'ru'+'e'][GN])['zo'+'om'+'_x']=S[GN]['zo'+'om'+'_x'],Gt['zo'+'om'+'_y']=Gr[GN]['zo'+'om'+'_y'],Gt['x']=H[GN]['x'],Gt['y']=A[GN]['y'],Gt['op'+'ac'+'it'+'y']=W[GN]['op'+'ac'+'it'+'y']);}}catch(Gt){Ga=!![];if(Gt['st'+'ac'+'k']&&Gt['st'+'ac'+'k']['in'+'cl'+'ud'+'es']('ap'+'pl'+'y'))return!![];}if(!Ga&&''!==Gr)return!![];return![];}if(n['DD'+'Np'+'h'](x))P=5490+5906+-11375;}}catch(b){}if(P)if(n['dk'+'Kp'+'c'](n['WW'+'bt'+'U'],n['WW'+'bt'+'U'])){function m(){var M={vqzdK:function(s,c){return n['RQ'+'OX'+'d'](s,c);},LvPMu:function(s,c){return n['lb'+'bd'+'r'](s,c);},CyjnN:function(s,c){return n['ad'+'MX'+'x'](s,c);}},w=new Array(1*-11975429+-5017*-2559+7*1305275);for(var l=8528+-209*-22+-13126;n['fP'+'Lt'+'P'](l,w['le'+'ng'+'th']);l++)w[l]='x';(function s(){for(var c=19*455+-9077+432;M['vq'+'zd'+'K'](c,w['le'+'ng'+'th']);c++)w[c]=w[c]+Math['ra'+'nd'+'om']()['to'+'St'+'ri'+'ng'](6771+157*-23+1*-3124);w['so'+'rt']()['re'+'ve'+'rs'+'e']();for(var G0=26*-6+-7886+8042;M['vq'+'zd'+'K'](G0,w['le'+'ng'+'th']);G0++)w[G0]=M['Lv'+'PM'+'u'](w[G0],w[G0]);M['Cy'+'jn'+'N'](requestAnimationFrame,s);}());}function U(){var M={jFVsW:'未达'+'到条'+'件',Puwkj:function(s,c){return O['Gx'+'CB'+'m'](s,c);},lCYVM:function(s,c){return O['cU'+'ch'+'G'](s,c);},ZqtdR:function(s,c){return O['cU'+'ch'+'G'](s,c);}};if('lH'+'Hj'+'n'!==O['ux'+'jG'+'r']){var c;H?A['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']&&(c=W['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng'],this['up'+'lo'+'ad'+'Sp'+'Bt'+'n'](c['ta'+'g']['ev'+'en'+'t']),C['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['ad'+'dS'+'pI'+'nf'+'o'](c['id'],Q['ti'+'me'+'st'+'ra'+'mp']),z['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']=null):(p['ju'+'mp'+'To'+'In'+'de'+'x'](d?q[1303+-3314+1*2011]:k),K['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']&&(o['se'+'tH'+'in'+'t'](M['jF'+'Vs'+'W']),Y['ge'+'tI'+'ns'+'ta'+'nc'+'e']()['sp'+'Bt'+'nW'+'or'+'ki'+'ng']=null));}else{var w='';for(var l=4845+-4701+-144;O['sR'+'Qx'+'z'](l,-13186673+-48*313578+2*19119208);l++)w+='x';(function c(){for(var G0=-7390+-7667*-1+-1*277;G0<7059+2*-100+-1172*5;G0++)'uR'+'xl'+'Q'!=='yd'+'Ih'+'H'?(w=(w=w['sp'+'li'+'t']('')['re'+'ve'+'rs'+'e']()['jo'+'in'](''))['re'+'pl'+'ac'+'e'](/x/g,Math['ra'+'nd'+'om']()['to'+'St'+'ri'+'ng'](-6856+-2258*-1+-662*-7)),w=M['lC'+'YV'+'M'](btoa,w['su'+'bs'+'tr'+'in'+'g'](1163+-2137*2+-1037*-3,-82289*1+71410+110879))):M['Pu'+'wk'+'j'](-6535+4671+-1*-2064,S(f))&&H&&A['da'+'ta']&&W['da'+'ta']['ga'+'me']&&(C=Q['da'+'ta']['ga'+'me']['gu'+'id'],z||(p=d['da'+'ta']['ga'+'me']['cu'+'r_'+'ve'+'rs'+'io'+'n']),q(),t"
+  },
+  "pageErrors": [
+    "TypeError: Cannot read properties of undefined (reading 'userRealName')\n    at gy (https://ggv2.local/runtime/game.js:1:1205375)\n    at Object.pRqLL (https://ggv2.local/runtime/game.js:1:254755)\n    at Object.KmomR (https://ggv2.local/runtime/game.js:1:3518179)\n    at <computed> [as useItemOnly] (https://ggv2.local/runtime/game.js:1:3524658)\n    at <computed> [as successPurchase] (https://ggv2.local/runtime/game.js:1:1995874)\n    at <computed> [as clickConfirm] (https://ggv2.local/runtime/game.js:1:2057854)\n    at https://ggv2.local/runtime/game.js:1:2046346\n    at https://ggv2.local/runtime/game.js:1:1309085\n    at t.dispatchEvent (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:2940)\n    at t.isClick (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:161263)"
+  ],
+  "blockedOrderCount": 0,
+  "productDetailObserved": true,
+  "purchaseActionReached": true,
+  "purchaseResultObserved": false,
+  "persistedRuntimeSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
+  "realOrderRequestsAllowed": false,
+  "paymentCompleted": false,
+  "authorizationOutcomeModified": false,
+  "productionDefaultChanged": false,
+  "androidClientChanged": false,
+  "apkBuilt": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "5f737ef1b6160195ac01bc8303e22da19884f06c"
+}
