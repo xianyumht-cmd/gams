@@ -1,4 +1,4 @@
-name: Probe page five dynamic target-node touch bridge
+name: Probe page five dynamic target-button touch bridge
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
       - scripts/prepare_page5_direct_node_bridge_probe.py
       - scripts/prepare_page5_direct_node_sequence_bridge_probe.py
       - scripts/prepare_page5_dynamic_node_tap_bridge_probe.py
+      - scripts/prepare_page5_dynamic_target_button_bridge_probe.py
       - scripts/page5_direct_node_bridge_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
@@ -17,7 +18,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-dynamic-node-touch-bridge-probe-20260806
+  group: page5-dynamic-target-button-bridge-probe-20260806
   cancel-in-progress: true
 
 jobs:
@@ -40,7 +41,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare dynamic target-node touch probe
+      - name: Prepare dynamic target-button touch probe
         shell: bash
         run: |
           set -euo pipefail
@@ -49,13 +50,14 @@ jobs:
           python3 -m py_compile \
             scripts/prepare_page5_direct_node_bridge_probe.py \
             scripts/prepare_page5_direct_node_sequence_bridge_probe.py \
-            scripts/prepare_page5_dynamic_node_tap_bridge_probe.py
-          python3 scripts/prepare_page5_dynamic_node_tap_bridge_probe.py --output "$GENERATED_PROBE"
+            scripts/prepare_page5_dynamic_node_tap_bridge_probe.py \
+            scripts/prepare_page5_dynamic_target_button_bridge_probe.py
+          python3 scripts/prepare_page5_dynamic_target_button_bridge_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-dynamic-node-touch-empty-callback-bridge-probe' "$GENERATED_PROBE"
+          grep -Fq 'page5-dynamic-target-button-empty-callback-bridge-probe' "$GENERATED_PROBE"
           grep -Fq '__gamsDirectCanvasEngine' "$GENERATED_PROBE"
           grep -Fq 'dynamic-rotated-real-node-touch' "$GENERATED_PROBE"
-          grep -Fq 'nativeCenter' "$GENERATED_PROBE"
+          grep -Fq 'nodeIndex: 10' "$GENERATED_PROBE"
           grep -Fq 'candidateTargetListCount > 0' "$GENERATED_PROBE"
 
       - name: Install Chromium
@@ -65,7 +67,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute dynamic target-node touch comparison
+      - name: Execute dynamic target-button touch comparison
         id: probe_run
         continue-on-error: true
         shell: bash
@@ -73,7 +75,7 @@ jobs:
           set -o pipefail
           node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-direct-node-bridge-probe.log
 
-      - name: Build dynamic target-node status
+      - name: Build dynamic target-button status
         if: always()
         shell: bash
         env:
@@ -121,14 +123,14 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-dynamic-node-touch-empty-callback-bridge-probe',
+              'mode': 'page5-dynamic-target-button-empty-callback-bridge-probe',
               'summary': summary,
               'current': compact('current'),
               'candidate': compact('candidate'),
               'candidatePatch': (report or {}).get('candidatePatch'),
               'reportAvailable': bool(report),
               'artifactName': 'page5-direct-node-bridge-probe',
-              'directNodeIndex': 9,
+              'directNodeIndex': 10,
               'realTouchUsed': True,
               'isolatedCandidateOnly': True,
               'candidatePersisted': False,
@@ -156,7 +158,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish dynamic target-node status
+      - name: Publish dynamic target-button status
         if: always()
         shell: bash
         run: |
@@ -167,11 +169,11 @@ jobs:
           cp /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           git add docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five dynamic target-node touch probe"
+            git commit -m "Record page five dynamic target-button touch probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce dynamic target-node bridge gate
+      - name: Enforce dynamic target-button bridge gate
         if: always()
         shell: bash
         run: jq -e '.ok == true' /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json >/dev/null
