@@ -60,22 +60,42 @@ def main() -> int:
     new_trigger = '''    result.directNodeTrigger = await page.evaluate(() => {
       const engine = globalThis.__gamsDirectCanvasEngine;
       const node = engine?._elementList?.[9];
+      const logicalRoot = engine?._elementList?.find?.((item) => item && item.width >= 1000 && item.height >= 600);
       const canvas = document.querySelector("canvas#canvas") || document.querySelector("canvas");
       if (!engine || !node || !canvas) return { ok: false, reason: "engine, node, or canvas unavailable" };
       const rect = canvas.getBoundingClientRect();
-      if (!(canvas.width > 0 && canvas.height > 0 && rect.width > 0 && rect.height > 0)) {
-        return { ok: false, reason: "invalid canvas geometry" };
+      const logicalWidth = Number(logicalRoot?.width || 1280);
+      const logicalHeight = Number(logicalRoot?.height || 720);
+      if (!(logicalWidth > 0 && logicalHeight > 0 && canvas.width > 0 && canvas.height > 0 && rect.width > 0 && rect.height > 0)) {
+        return { ok: false, reason: "invalid logical or canvas geometry" };
       }
       const nativeCenter = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
-      const cssPoint = {
-        x: rect.x + nativeCenter.x / canvas.width * rect.width,
-        y: rect.y + nativeCenter.y / canvas.height * rect.height,
-      };
+      const dimensionsSwapped = Math.abs(canvas.width - logicalHeight) < 2 && Math.abs(canvas.height - logicalWidth) < 2;
+      let cssPoint;
+      let transform;
+      if (dimensionsSwapped) {
+        cssPoint = {
+          x: rect.x + (logicalHeight - nativeCenter.y) / logicalHeight * rect.width,
+          y: rect.y + nativeCenter.x / logicalWidth * rect.height,
+        };
+        transform = "logical-landscape-to-css-portrait-ccw";
+      } else {
+        cssPoint = {
+          x: rect.x + nativeCenter.x / logicalWidth * rect.width,
+          y: rect.y + nativeCenter.y / logicalHeight * rect.height,
+        };
+        transform = "logical-direct";
+      }
+      const insideViewport = cssPoint.x >= 0 && cssPoint.x <= innerWidth && cssPoint.y >= 0 && cssPoint.y <= innerHeight;
       return {
-        ok: Number.isFinite(cssPoint.x) && Number.isFinite(cssPoint.y),
-        mode: "dynamic-real-touch",
+        ok: Number.isFinite(cssPoint.x) && Number.isFinite(cssPoint.y) && insideViewport,
+        mode: "dynamic-rotated-real-touch",
+        transform,
+        dimensionsSwapped,
+        logical: { width: logicalWidth, height: logicalHeight },
         nativeCenter,
         cssPoint,
+        insideViewport,
         canvas: { width: canvas.width, height: canvas.height },
         rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
         viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },
@@ -83,7 +103,7 @@ def main() -> int:
     });
     if (!result.directNodeTrigger?.ok) throw new Error(`dynamic target point failed: ${JSON.stringify(result.directNodeTrigger)}`);
     await page.touchscreen.tap(result.directNodeTrigger.cssPoint.x, result.directNodeTrigger.cssPoint.y);
-    events.push({ at: Date.now(), type: "dynamic-real-node-touch", nodeIndex: 9, result: result.directNodeTrigger });'''
+    events.push({ at: Date.now(), type: "dynamic-rotated-real-node-touch", nodeIndex: 9, result: result.directNodeTrigger });'''
     text = replace_once(text, old_trigger, new_trigger, "dynamic target trigger")
     text = text.replace(
         'mode: "page5-direct-node-sequence-empty-callback-bridge-probe"',
