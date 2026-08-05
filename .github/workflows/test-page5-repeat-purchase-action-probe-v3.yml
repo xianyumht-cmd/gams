@@ -1,0 +1,209 @@
+name: Probe repeated final purchase actions safely v3
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/prepare_page5_repeat_purchase_action_probe.py
+      - .github/workflows/test-page5-repeat-purchase-action-probe-v3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-repeat-final-purchase-action-probe-v3-20260806
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: /tmp/persisted-game-1.0.5.js
+      CURRENT_RUNTIME_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
+      GENERATED_PROBE: scripts/run_page5_repeat_purchase_action_probe_v3.generated.mjs
+      OUTPUT_DIR: page5-repeat-purchase-action-probe-v3
+      STATUS_PATH: docs/PAGE5_REPEAT_PURCHASE_ACTION_PROBE_V3_STATUS.json
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - name: Publish running marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          status = {
+              'schemaVersion': 3,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'running',
+              'ok': False,
+              'mode': 'page5-first-second-reentry-third-final-purchase-probe',
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'runtimeSha256': os.environ['CURRENT_RUNTIME_SHA256'],
+              'realOrderRequestsAllowed': False,
+              'paymentCompleted': False,
+              'productionDefaultChanged': False,
+              'androidClientChanged': False,
+              'apkBuilt': False,
+          }
+          path = Path(os.environ['STATUS_PATH'])
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+          git add "$STATUS_PATH"
+          if ! git diff --cached --quiet; then
+            git commit -m "Mark repeated purchase probe v3 running"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Read current implementation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$CURRENT_SECOND_PATH"
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_repeat_reentry_matrix.py" > scripts/prepare_persisted_repeat_reentry_matrix.py
+          test -s "$CURRENT_SECOND_PATH"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_RUNTIME_SHA256"
+
+      - name: Prepare repeated final purchase probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/prepare_five_page_missing_constructor_matrix.py \
+            scripts/prepare_page5_repeat_reentry_matrix.py \
+            scripts/prepare_persisted_repeat_reentry_matrix.py \
+            scripts/prepare_page5_purchase_action_probe.py \
+            scripts/prepare_page5_purchase_action_probe_guard.py \
+            scripts/prepare_page5_repeat_purchase_action_probe.py
+          python3 scripts/prepare_page5_repeat_purchase_action_probe.py --output "$GENERATED_PROBE"
+          node --check "$GENERATED_PROBE"
+          grep -Fq 'persisted-runtime-page5-first-second-reentry-third-purchase-probe' "$GENERATED_PROBE"
+          grep -Fq 'second-result-confirm' "$GENERATED_PROBE"
+          grep -Fq 'third-after-reentry' "$GENERATED_PROBE"
+          grep -Fq 'summary.purchaseAttemptCount === 3' "$GENERATED_PROBE"
+          grep -Fq "$CURRENT_RUNTIME_SHA256" "$GENERATED_PROBE"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute repeated final purchase probe
+        id: probe_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-repeat-purchase-action-probe-v3.log
+
+      - name: Build repeated purchase status
+        if: always()
+        shell: bash
+        env:
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/page5-repeat-purchase-action-probe-v3.log && cp /tmp/page5-repeat-purchase-action-probe-v3.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          report_path = Path(os.environ['OUTPUT_DIR']) / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          cases = (report or {}).get('cases') or []
+          case = cases[0] if cases else {}
+          probe = case.get('purchaseProbe') or {}
+          status = {
+              'schemaVersion': 3,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
+              'ok': bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success',
+              'mode': (report or {}).get('mode') or 'page5-first-second-reentry-third-final-purchase-probe',
+              'summary': (report or {}).get('summary') or {},
+              'productDetailObserved': bool((report or {}).get('productDetailObserved')),
+              'purchaseActionReached': bool((report or {}).get('purchaseActionReached')),
+              'purchaseResultObserved': bool((report or {}).get('purchaseResultObserved')),
+              'requiresCompatibilityReview': bool((report or {}).get('requiresCompatibilityReview')),
+              'productDetails': probe.get('productDetails') or [],
+              'attempts': probe.get('attempts') or [],
+              'resultConfirmations': probe.get('resultConfirmations') or [],
+              'reentry': case.get('reentry') or {},
+              'pageErrors': case.get('pageErrors') or [],
+              'dialogs': case.get('dialogs') or [],
+              'blockedOrderCount': len(case.get('blockedOrders') or []),
+              'blockedExternalNavigationCount': len(case.get('blockedExternalNavigations') or []),
+              'requestFailures': case.get('requestFailures') or [],
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'runtimeSha256': os.environ['CURRENT_RUNTIME_SHA256'],
+              'realOrderRequestsAllowed': False,
+              'paymentCompleted': False,
+              'authorizationOutcomeModified': False,
+              'productionDefaultChanged': False,
+              'androidClientChanged': False,
+              'apkBuilt': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/PAGE5_REPEAT_PURCHASE_ACTION_PROBE_V3_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-repeat-purchase-action-probe-v3
+          path: |
+            page5-repeat-purchase-action-probe-v3
+            /tmp/PAGE5_REPEAT_PURCHASE_ACTION_PROBE_V3_STATUS.json
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish repeated purchase status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/prepare_persisted_repeat_reentry_matrix.py "$GENERATED_PROBE"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          cp /tmp/PAGE5_REPEAT_PURCHASE_ACTION_PROBE_V3_STATUS.json "$STATUS_PATH"
+          git add "$STATUS_PATH"
+          if ! git diff --cached --quiet; then
+            git commit -m "Record repeated final purchase action probe v3"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce repeated purchase gate
+        if: always()
+        shell: bash
+        run: jq -e '.ok == true' /tmp/PAGE5_REPEAT_PURCHASE_ACTION_PROBE_V3_STATUS.json >/dev/null
