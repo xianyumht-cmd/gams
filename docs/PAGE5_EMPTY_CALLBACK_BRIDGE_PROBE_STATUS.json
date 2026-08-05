@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:15:40Z",
-  "runId": 31029038096,
+  "generatedAt": "2026-08-05T17:17:47Z",
+  "runId": 31029213481,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
@@ -25,15 +25,19 @@
     "emptyCallbackReplacementCount": 1
   },
   "currentTargetWindow": {
-    "total": 0,
-    "kinds": {},
+    "total": 1,
+    "kinds": {
+      "page-request": 1
+    },
     "targetReadCount": 0,
     "targetListCount": 0,
     "orderMutationCount": 0
   },
   "candidateTargetWindow": {
-    "total": 0,
-    "kinds": {},
+    "total": 2,
+    "kinds": {
+      "page-request": 2
+    },
     "targetReadCount": 0,
     "targetListCount": 0,
     "orderMutationCount": 0
@@ -43,18 +47,18 @@
   "currentScreenshots": {
     "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
     "runtime-open": "47489bceefdd9989997d6061cb068ccc4e9663a35df602133621b717edaed812",
-    "runtime-close": "ecfb8e32959a414a19cf52c32772d4104781527ca97a77879e7582c6eb676e5d",
-    "runtime-reopen": "492afea34ed168a7f3e6f87a28a0b3d46ef0234e6a87721db0517d9d02521a93",
-    "runtime-final-close": "8d927399c8e15ec49c2a796816f7fd6c6bac6ad8788042a99958a9736bde76fb",
-    "after-01-target-entry": "374e6f0c6a26a43896023df833eee18d2aa908fb3e4613c41e5e97de5240b231"
+    "runtime-close": "6ab6134955f375cdaf765b9b6c9199e22073d46d7c73e34e5f8ed31c2e74fec5",
+    "runtime-reopen": "dc87ecb031b80090ace49968da2e51bb9b7955c26b61ffbf826ec46275f93305",
+    "runtime-final-close": "326b7c06b0594ddd87c79eed352ded17825f8498a833ad9c67e2e6c73c6ff50b",
+    "after-01-target-entry": "2cf22d684b7d8fe4096158b18611969a7d34b45da80b5f8ad3f8e0319ffb3ec4"
   },
   "candidateScreenshots": {
     "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
-    "runtime-open": "7d7c1d21b6e92f61b6b3a961dd74f59e8c5b6100d178aa570e16a667ea887841",
-    "runtime-close": "1549ff1e6881a7a5f8c3c2543bba0900a9f7c3c4c9406c4af8e0a1dda44ba8ad",
-    "runtime-reopen": "c0340dd4ba3c388b9266cb50f787db8b397801419a01600cc77e4ef9e02a10c4",
-    "runtime-final-close": "3f85644456ba5549ca17021f4d4bc3f52feb0a255538949ec7612f7aa0907b11",
-    "after-01-target-entry": "0e117d2b8fcc77708742e8143c5879360dd6571b7f4efc4c7956c879d5bd88fa"
+    "runtime-open": "47489bceefdd9989997d6061cb068ccc4e9663a35df602133621b717edaed812",
+    "runtime-close": "b86de62579c7101a5b8ac42bb3393c672e6682496ff9d9f8c87aad36db337d8b",
+    "runtime-reopen": "b369aea95448806abe9af44e4256f3eac5eef8701d8412f9fb5beab1b4b5e74f",
+    "runtime-final-close": "ca891f5ebe6bcf33e06bcc575b5a1387f5d842412957edf0cbeac9f193858ffe",
+    "after-01-target-entry": "ee313ec9a7c6eed9a994936717c4524e3a559a6a1c946c3d966b034d617d3216"
   },
   "candidatePatch": {
     "replacementCount": 2,
@@ -79,5 +83,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "7370c997178b30544d5897a852538be8da7f32a2"
+  "commit": "a0e2ea5e1c8a61e462ab8900f779d416e957c3c3"
 }
