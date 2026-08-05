@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T13:35:44Z",
+  "runId": 31010816165,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-candidate-post-title-element-list-read-only-probe",
+  "elementListLength": 18,
+  "serializedItemCount": 18,
+  "viewWidth": 1280,
+  "viewHeight": 720,
+  "deviceRatio": 1,
+  "compactNodes": [
+    {
+      "index": 0,
+      "zIndex": 0,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": []
+    },
+    {
+      "index": 1,
+      "zIndex": 1000,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": false,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": [
+        "mouse down",
+        "mouse move",
+        "mouse up",
+        "mouse out"
+      ]
+    },
+    {
+      "index": 6,
+      "zIndex": 3900,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse click",
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 7,
+      "zIndex": 4999,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": []
+    },
+    {
+      "index": 8,
+      "zIndex": 5500,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 1197,
+      "y": 0,
+      "width": 82.66666666666666,
+      "height": 720,
+      "events": []
+    },
+    {
+      "index": 9,
+      "zIndex": 6000,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": []
+    },
+    {
+      "index": 10,
+      "zIndex": 7000,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse move",
+        "mouse click"
+      ]
+    },
+    {
+      "index": 11,
+      "zIndex": 7900,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 12,
+      "zIndex": 8000,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 15,
+      "zIndex": 9999,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": [
+        "mouse click",
+        "mouse down",
+        "mouse up",
+        "mouse move",
+        "mouse out"
+      ]
+    },
+    {
+      "index": 16,
+      "zIndex": 10000,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1256,
+      "height": 690,
+      "events": [
+        "mouse click",
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 17,
+      "zIndex": 100000,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": []
+    }
+  ],
+  "canvasListener": {
+    "type": "touchstart",
+    "scriptId": "27",
+    "lineNumber": 0,
+    "columnNumber": 121976,
+    "breakpointId": "4:0:121976:27",
+    "actualLocation": {
+      "scriptId": "27",
+      "lineNumber": 0,
+      "columnNumber": 121996
+    }
+  },
+  "canvasPause": {
+    "reason": "other",
+    "hitBreakpoints": [
+      "4:0:121976:27"
+    ],
+    "functionName": "t.onMouseDown",
+    "location": {
+      "scriptId": "27",
+      "lineNumber": 0,
+      "columnNumber": 121996
+    }
+  },
+  "goto": {
+    "status": 200,
+    "url": "https://m.66rpg.com/h5/1691512"
+  },
+  "final": {
+    "url": "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32",
+    "title": "帝昭策·高自由皇帝养成沙盒世界",
+    "readyState": "complete"
+  },
+  "fatalError": null,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "candidatePatch": {
+    "replacementCount": 1,
+    "oldTextSha256": "5fa14a7825de3547c9b2c1d9351d39928c4bf8c918548b7c1cdb8c3294933555",
+    "newTextSha256": "5b16d06cc66319b1f67cb4d3a1654323db3dde68717ec2fea7258bf9388914ab",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590688,
+    "candidateSecondSha256": "2fa456546f929561be2bceb7e469456cb0f1d74db7697ddc49a7f34dd2052c6a"
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-candidate-post-title-inventory",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidatePersisted": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "9b47324be30cf3e40ebc67ab094bf4f3d4eeb51b"
+}
