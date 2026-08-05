@@ -1,15 +1,79 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T22:12:27Z",
+  "generatedAt": "2026-08-05T22:22:47Z",
   "runId": 31051809043,
-  "state": "running",
-  "ok": false,
+  "state": "completed",
+  "workflowOutcome": {
+    "fivePage": "success",
+    "repeatReentry": "success",
+    "finalInteraction": "verified-status"
+  },
+  "ok": true,
   "mode": "final-persisted-runtime-browser-validation",
   "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
   "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "resultGuardCount": 1,
+  "fivePage": {
+    "pass": true,
+    "summary": {
+      "totalCases": 5,
+      "fatalCases": 0,
+      "runtimeEntryCompleteCases": 5,
+      "noLoginEnabledCases": 5,
+      "secondFileLoadCases": 5,
+      "candidateMarkerCount": 5,
+      "candidatePageErrorCases": 0,
+      "candidatePage5TargetReadCount": 4,
+      "candidatePage5TargetListCount": 1,
+      "candidatePage5DynamicTargetOk": true,
+      "blockedOrderCases": 0,
+      "replacementCount": 2,
+      "guardReplacementCount": 1,
+      "callbackReplacementCount": 1
+    }
+  },
+  "repeatReentry": {
+    "pass": true,
+    "summary": {
+      "totalCases": 1,
+      "fatalCases": 0,
+      "runtimeEntryCompleteCases": 1,
+      "reentryRuntimeCompleteCases": 1,
+      "noLoginEnabledCases": 1,
+      "secondFileLoadCount": 2,
+      "openCount": 3,
+      "openScreenChangedCount": 3,
+      "openTargetReadCount": 3,
+      "openTargetListCount": 3,
+      "returnCount": 2,
+      "returnScreenChangedCount": 2,
+      "returnNodeRestoredCount": 2,
+      "candidatePageErrorCount": 0,
+      "blockedOrderCases": 0,
+      "blockedExternalNavigationCases": 0,
+      "replacementCount": 2,
+      "guardReplacementCount": 1,
+      "callbackReplacementCount": 1
+    },
+    "returnCssPoint": {
+      "x": 35,
+      "y": 423
+    }
+  },
+  "finalInteraction": {
+    "pass": true,
+    "runId": 31050480987,
+    "actionReached": true,
+    "resultObserved": true,
+    "pageErrors": [],
+    "blockedOrderCount": 0
+  },
+  "realOrderRequestsAllowed": false,
+  "paymentCompleted": false,
+  "authorizationOutcomeModified": false,
   "productionDefaultChanged": false,
   "androidClientChanged": false,
   "apkBuilt": false,
-  "realOrderRequestsAllowed": false,
-  "paymentCompleted": false
+  "diagnosticBranch": "diagnostics/page5-guard-full-entry-20260805",
+  "diagnosticCommit": "a582cc713f498224c5039fb56a3ab0201a248c60"
 }
