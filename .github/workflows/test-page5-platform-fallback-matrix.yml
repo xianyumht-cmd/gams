@@ -1,4 +1,4 @@
-name: Probe page five direct target-node bridge
+name: Probe page five direct target-node event sequence bridge
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     paths:
       - scripts/run_page5_guard_full_entry_matrix.mjs
       - scripts/prepare_page5_direct_node_bridge_probe.py
+      - scripts/prepare_page5_direct_node_sequence_bridge_probe.py
       - scripts/page5_direct_node_bridge_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
@@ -15,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-direct-node-bridge-probe-20260806
+  group: page5-direct-node-sequence-bridge-probe-20260806
   cancel-in-progress: true
 
 jobs:
@@ -38,18 +39,19 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare direct target-node bridge probe
+      - name: Prepare direct target-node event sequence probe
         shell: bash
         run: |
           set -euo pipefail
           test -s "$CURRENT_FIRST_PATH"
           test -s "$CURRENT_SECOND_PATH"
-          python3 -m py_compile scripts/prepare_page5_direct_node_bridge_probe.py
-          python3 scripts/prepare_page5_direct_node_bridge_probe.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_direct_node_bridge_probe.py scripts/prepare_page5_direct_node_sequence_bridge_probe.py
+          python3 scripts/prepare_page5_direct_node_sequence_bridge_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-direct-node-empty-callback-bridge-probe' "$GENERATED_PROBE"
+          grep -Fq 'page5-direct-node-sequence-empty-callback-bridge-probe' "$GENERATED_PROBE"
           grep -Fq '__gamsDirectCanvasEngine' "$GENERATED_PROBE"
-          grep -Fq 'direct-node-click' "$GENERATED_PROBE"
+          grep -Fq 'direct-node-sequence' "$GENERATED_PROBE"
+          grep -Fq 'eventContracts' "$GENERATED_PROBE"
           grep -Fq 'candidateTargetListCount > 0' "$GENERATED_PROBE"
 
       - name: Install Chromium
@@ -59,7 +61,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute direct target-node bridge comparison
+      - name: Execute direct target-node sequence comparison
         id: probe_run
         continue-on-error: true
         shell: bash
@@ -67,7 +69,7 @@ jobs:
           set -o pipefail
           node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-direct-node-bridge-probe.log
 
-      - name: Build direct target-node status
+      - name: Build direct target-node sequence status
         if: always()
         shell: bash
         env:
@@ -92,11 +94,35 @@ jobs:
               item = next((case for case in cases if case.get('pair') == pair), None)
               if not item:
                   return None
+              inventory = item.get('directNodeInventory') or {}
+              contracts = []
+              for event in inventory.get('eventContracts') or []:
+                  source = event.get('listenerSource') or ''
+                  contracts.append({
+                      'eventName': event.get('eventName'),
+                      'entryAvailable': event.get('entryAvailable'),
+                      'entryKeys': event.get('entryKeys') or [],
+                      'listenerType': event.get('listenerType'),
+                      'listenerName': event.get('listenerName'),
+                      'listenerArity': event.get('listenerArity'),
+                      'listenerSourceLength': len(source),
+                      'caller': event.get('caller'),
+                      'param': event.get('param'),
+                      'hasOwnCaller': event.get('hasOwnCaller'),
+                      'hasOwnParam': event.get('hasOwnParam'),
+                  })
               return {
                   'pair': pair,
                   'engineCapture': item.get('engineCapture'),
                   'engineCaptureError': item.get('engineCaptureError'),
-                  'directNodeInventory': item.get('directNodeInventory'),
+                  'directNodeInventory': {
+                      'engineAvailable': inventory.get('engineAvailable'),
+                      'listLength': inventory.get('listLength'),
+                      'nodeAvailable': inventory.get('nodeAvailable'),
+                      'geometry': inventory.get('geometry'),
+                      'eventNames': inventory.get('eventNames') or [],
+                      'eventContracts': contracts,
+                  },
                   'directNodeTrigger': item.get('directNodeTrigger'),
                   'targetWindow': item.get('targetWindow'),
                   'pageErrorCount': len(item.get('pageErrors') or []),
@@ -113,7 +139,7 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-direct-node-empty-callback-bridge-probe',
+              'mode': 'page5-direct-node-sequence-empty-callback-bridge-probe',
               'summary': summary,
               'current': compact('current'),
               'candidate': compact('candidate'),
@@ -121,6 +147,7 @@ jobs:
               'reportAvailable': bool(report),
               'artifactName': 'page5-direct-node-bridge-probe',
               'directNodeIndex': 9,
+              'eventSequence': ['mouse down', 'mouse up', 'mouse click'],
               'isolatedCandidateOnly': True,
               'candidatePersisted': False,
               'repeatSequenceTested': False,
@@ -147,7 +174,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish direct target-node status
+      - name: Publish direct target-node sequence status
         if: always()
         shell: bash
         run: |
@@ -158,11 +185,11 @@ jobs:
           cp /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           git add docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five direct target-node bridge probe"
+            git commit -m "Record page five direct target-node event sequence probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce direct target-node bridge gate
+      - name: Enforce direct target-node sequence bridge gate
         if: always()
         shell: bash
         run: jq -e '.ok == true' /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json >/dev/null
