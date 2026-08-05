@@ -1,26 +1,79 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T13:15:31Z",
-  "runId": 31009333333,
+  "generatedAt": "2026-08-05T13:18:21Z",
+  "runId": 31009377783,
   "state": "completed",
-  "workflowOutcome": "skipped",
+  "workflowOutcome": "failure",
   "ok": false,
   "mode": "page5-candidate-mouseup-state-read-only-probe-v4",
   "pauseCount": 0,
   "pauses": [],
-  "listener": null,
-  "beforeCoreBreakpoint": null,
-  "afterDecisionBreakpoint": null,
-  "canvasListener": null,
-  "goto": null,
-  "final": null,
+  "listener": {
+    "sourceLength": 1278,
+    "sourceSha256": "8c4369715f263e16bd3d3e4654f19a51d58a66b6fc0138c446dfbde66c0cf913",
+    "functionLocation": {
+      "scriptId": "31",
+      "lineNumber": 0,
+      "columnNumber": 1185258
+    },
+    "sourceStart": 1185247,
+    "beforeOffset": 1033,
+    "afterOffset": 1219
+  },
+  "beforeCoreBreakpoint": {
+    "breakpointId": "4:0:1186280:31",
+    "requestedColumn": 1186280,
+    "actualLocation": {
+      "scriptId": "31",
+      "lineNumber": 0,
+      "columnNumber": 1186280
+    }
+  },
+  "afterDecisionBreakpoint": {
+    "breakpointId": "4:0:1186466:31",
+    "requestedColumn": 1186466,
+    "actualLocation": {
+      "scriptId": "31",
+      "lineNumber": 0,
+      "columnNumber": 1186468
+    }
+  },
+  "canvasListener": {
+    "type": "touchstart",
+    "scriptId": "29",
+    "lineNumber": 0,
+    "columnNumber": 121976,
+    "breakpointId": "4:0:121976:29",
+    "actualLocation": {
+      "scriptId": "29",
+      "lineNumber": 0,
+      "columnNumber": 121996
+    }
+  },
+  "goto": {
+    "status": 200,
+    "url": "https://m.66rpg.com/h5/1691512"
+  },
+  "final": {
+    "url": "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32",
+    "title": "帝昭策·高自由皇帝养成沙盒世界",
+    "readyState": "complete"
+  },
   "fatalError": null,
-  "mainFrameValid": null,
-  "pageErrorCount": null,
-  "blockedOrderCount": null,
-  "debuggerErrorCount": null,
-  "candidatePatch": null,
-  "reportAvailable": false,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "candidatePatch": {
+    "replacementCount": 1,
+    "oldTextSha256": "5fa14a7825de3547c9b2c1d9351d39928c4bf8c918548b7c1cdb8c3294933555",
+    "newTextSha256": "5b16d06cc66319b1f67cb4d3a1654323db3dde68717ec2fea7258bf9388914ab",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590688,
+    "candidateSecondSha256": "2fa456546f929561be2bceb7e469456cb0f1d74db7697ddc49a7f34dd2052c6a"
+  },
+  "reportAvailable": true,
   "artifactName": "page5-candidate-mouseup-state-probe-v4",
   "readOnlyProbe": true,
   "pageScriptModified": false,
@@ -33,5 +86,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "5a13bad6fd7dca91963ed63b2215bd621b033f2d"
+  "commit": "ad9efe74492341b913321b786f80752898d53c5f"
 }
