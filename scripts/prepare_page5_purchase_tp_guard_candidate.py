@@ -85,15 +85,17 @@ def main() -> int:
         'mode: "page5-browser-only-purchase-result-state-guard-candidate"',
         "mode",
     )
-    text = text.replace(
-        'replacementCount: candidatePatch.count,\n    guardReplacementCount: candidatePatch.guardCount,\n    callbackReplacementCount: candidatePatch.callbackCount,',
-        'replacementCount: candidatePatch.count,\n    guardReplacementCount: candidatePatch.guardCount,\n    callbackReplacementCount: candidatePatch.callbackCount,\n    tpGuardCount: candidatePatch.tpGuardCount,',
-        1,
+    text = replace_once(
+        text,
+        '  callbackReplacementCount: candidatePatch.callbackCount,\n};\n\nconst report = {',
+        '  callbackReplacementCount: candidatePatch.callbackCount,\n  tpGuardCount: candidatePatch.tpGuardCount,\n};\n\nconst report = {',
+        "summary tp guard count",
     )
-    text = text.replace(
+    text = replace_once(
+        text,
         'callbackReplacementCount: candidatePatch.callbackCount,\n    oldTextSha256:',
         'callbackReplacementCount: candidatePatch.callbackCount,\n    tpGuardCount: candidatePatch.tpGuardCount,\n    targetAccessOrdinal: candidatePatch.targetAccessOrdinal,\n    targetAccessIndex: candidatePatch.targetAccessIndex,\n    functionStart: candidatePatch.functionStart,\n    insertion: candidatePatch.insertion,\n    guardText: candidatePatch.guardText,\n    oldTextSha256:',
-        1,
+        "candidate patch report",
     )
     text = replace_once(
         text,
