@@ -1,0 +1,943 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T03:20:37Z",
+  "runId": 30971897263,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-input-registration-read-only-probe",
+  "inventoryCounts": {
+    "window": 18,
+    "document": 18,
+    "body": 13,
+    "canvas": 4
+  },
+  "listenerTypeCounts": {
+    "window:pointerdown": 1,
+    "window:pointerup": 1,
+    "window:touchstart": 1,
+    "window:touchend": 1,
+    "window:mousedown": 1,
+    "window:mouseup": 1,
+    "window:click": 1,
+    "window:keydown": 1,
+    "window:offline": 1,
+    "window:online": 1,
+    "window:load": 1,
+    "window:resize": 1,
+    "window:blur": 1,
+    "window:focus": 1,
+    "window:popstate": 1,
+    "window:scroll": 1,
+    "window:unload": 1,
+    "window:message": 1,
+    "document:click": 9,
+    "document:keydown": 1,
+    "document:keyup": 1,
+    "document:visibilitychange": 2,
+    "document:contextmenu": 1,
+    "document:touchstart": 1,
+    "document:touchend": 1,
+    "document:touchcancel": 1,
+    "document:touchmove": 1,
+    "body:contextmenu": 1,
+    "body:click": 8,
+    "body:touchstart": 1,
+    "body:touchend": 1,
+    "body:touchcancel": 1,
+    "body:touchmove": 1,
+    "canvas:touchstart": 1,
+    "canvas:touchend": 1,
+    "canvas:touchcancel": 1,
+    "canvas:touchmove": 1
+  },
+  "registrationCount": 33,
+  "registrationTypeCounts": {
+    "Navigation:#:navigate": 1,
+    "Window:#:offline": 1,
+    "Window:#:online": 1,
+    "HTMLDocument:#:DOMContentLoaded": 1,
+    "Window:#:load": 1,
+    "HTMLDivElement:DIV#:click": 1,
+    "HTMLLIElement:LI#:click": 4,
+    "HTMLDivElement:DIV#share-modal:click": 1,
+    "HTMLButtonElement:BUTTON#:click": 2,
+    "HTMLCanvasElement:CANVAS#canvas:touchstart": 1,
+    "HTMLCanvasElement:CANVAS#canvas:touchend": 1,
+    "HTMLCanvasElement:CANVAS#canvas:touchcancel": 1,
+    "HTMLCanvasElement:CANVAS#canvas:touchmove": 1,
+    "HTMLDocument:#:visibilitychange": 2,
+    "Window:#:blur": 1,
+    "Window:#:focus": 1,
+    "Window:#:popstate": 1,
+    "HTMLDocument:#:click": 1,
+    "Window:#:scroll": 1,
+    "Window:#:unload": 1,
+    "Window:#:message": 1,
+    "Window:#:keydown": 1,
+    "HTMLAudioElement:AUDIO#:ended": 2,
+    "HTMLAudioElement:AUDIO#:canplaythrough": 2,
+    "HTMLAudioElement:AUDIO#:progress": 2
+  },
+  "menuEventTypes": [
+    "pointerdown",
+    "touchstart",
+    "pointerup",
+    "touchend",
+    "mousedown",
+    "mouseup",
+    "click"
+  ],
+  "listeners": [
+    {
+      "target": "window",
+      "type": "pointerdown",
+      "scriptId": "14",
+      "lineNumber": 37,
+      "columnNumber": 27,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 588,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "pointerup",
+      "scriptId": "14",
+      "lineNumber": 37,
+      "columnNumber": 27,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 588,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "touchstart",
+      "scriptId": "14",
+      "lineNumber": 37,
+      "columnNumber": 27,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 588,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "touchend",
+      "scriptId": "14",
+      "lineNumber": 37,
+      "columnNumber": 27,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 588,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "mousedown",
+      "scriptId": "14",
+      "lineNumber": 37,
+      "columnNumber": 27,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 588,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "mouseup",
+      "scriptId": "14",
+      "lineNumber": 37,
+      "columnNumber": 27,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 588,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "click",
+      "scriptId": "14",
+      "lineNumber": 37,
+      "columnNumber": 27,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 588,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "keydown",
+      "scriptId": "18",
+      "lineNumber": 0,
+      "columnNumber": 15320229,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 448,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "offline",
+      "scriptId": "20",
+      "lineNumber": 85,
+      "columnNumber": 52,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 91,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "online",
+      "scriptId": "20",
+      "lineNumber": 89,
+      "columnNumber": 50,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 89,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "load",
+      "scriptId": "18",
+      "lineNumber": 0,
+      "columnNumber": 15387474,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 18495,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "resize",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 129075,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 83,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "blur",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 41984,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 20,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "focus",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 42038,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 20,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "popstate",
+      "scriptId": "70",
+      "lineNumber": 0,
+      "columnNumber": 4667,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 49,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "scroll",
+      "scriptId": "70",
+      "lineNumber": 0,
+      "columnNumber": 4667,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 49,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "unload",
+      "scriptId": "70",
+      "lineNumber": 0,
+      "columnNumber": 4667,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 49,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "window",
+      "type": "message",
+      "scriptId": "70",
+      "lineNumber": 4,
+      "columnNumber": 21487,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 299,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "70",
+      "lineNumber": 0,
+      "columnNumber": 4667,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 49,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "keydown",
+      "scriptId": "20",
+      "lineNumber": 77,
+      "columnNumber": 37,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 136,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "keyup",
+      "scriptId": "20",
+      "lineNumber": 81,
+      "columnNumber": 35,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 134,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "visibilitychange",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 42087,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 97,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "visibilitychange",
+      "scriptId": "18",
+      "lineNumber": 0,
+      "columnNumber": 15308558,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 1232,
+        "functionName": "_0x254f5f",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "contextmenu",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 117088,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 46,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "touchstart",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 121976,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 1144,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "touchend",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 124925,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 91,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "touchcancel",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 125040,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 575,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "document",
+      "type": "touchmove",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 125640,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 1191,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "contextmenu",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 117088,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 46,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "click",
+      "scriptId": "15",
+      "lineNumber": 1,
+      "columnNumber": 24967,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 106,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "touchstart",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 121976,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 1144,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "touchend",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 124925,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 91,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "touchcancel",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 125040,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 575,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "body",
+      "type": "touchmove",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 125640,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 1191,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "canvas",
+      "type": "touchstart",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 121976,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 1144,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "canvas",
+      "type": "touchend",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 124925,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 91,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "canvas",
+      "type": "touchcancel",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 125040,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 575,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    },
+    {
+      "target": "canvas",
+      "type": "touchmove",
+      "scriptId": "25",
+      "lineNumber": 0,
+      "columnNumber": 125640,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "descriptionLength": 1191,
+        "functionName": "",
+        "hasObjectId": true
+      }
+    }
+  ],
+  "propertyHandlersBefore": {
+    "window": {
+      "onpointerdown": null,
+      "onpointerup": null,
+      "ontouchstart": null,
+      "ontouchend": null,
+      "onmousedown": null,
+      "onmouseup": null,
+      "onclick": null
+    },
+    "document": {
+      "onpointerdown": null,
+      "onpointerup": null,
+      "ontouchstart": null,
+      "ontouchend": null,
+      "onmousedown": null,
+      "onmouseup": null,
+      "onclick": null
+    },
+    "body": {
+      "onpointerdown": null,
+      "onpointerup": null,
+      "ontouchstart": null,
+      "ontouchend": null,
+      "onmousedown": null,
+      "onmouseup": null,
+      "onclick": null
+    },
+    "canvas": {
+      "onpointerdown": null,
+      "onpointerup": null,
+      "ontouchstart": null,
+      "ontouchend": null,
+      "onmousedown": null,
+      "onmouseup": null,
+      "onclick": null
+    }
+  },
+  "menuScreenshotChanged": true,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "reportAvailable": true,
+  "artifactName": "page5-input-registration-probe",
+  "readOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "b5b28044f593ddfc92a9b4d0e922dceb7e55a8b1"
+}
