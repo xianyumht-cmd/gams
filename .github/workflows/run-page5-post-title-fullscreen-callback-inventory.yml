@@ -1,0 +1,173 @@
+name: Probe page five post-title fullscreen callbacks
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/run_page5_side_button_callback_inventory.mjs
+      - scripts/prepare_page5_post_title_fullscreen_callback_inventory.py
+      - scripts/page5_post_title_fullscreen_callback_inventory.trigger
+      - .github/workflows/run-page5-post-title-fullscreen-callback-inventory.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-post-title-fullscreen-callback-inventory-20260805
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OUTPUT_DIR: page5-post-title-fullscreen-callback-inventory
+      GENERATED_PROBE: scripts/run_page5_post_title_fullscreen_callback_inventory.generated.mjs
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare fullscreen callback inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/prepare_page5_post_title_fullscreen_callback_inventory.py
+          python3 scripts/prepare_page5_post_title_fullscreen_callback_inventory.py --output "$GENERATED_PROBE"
+          node --check "$GENERATED_PROBE"
+          grep -Fq 'page5-post-title-fullscreen-callback-inventory-read-only' "$GENERATED_PROBE"
+          grep -Fq 'const nodeIndexes = [1]' "$GENERATED_PROBE"
+          grep -Fq 'mouseDownNodeCount' "$GENERATED_PROBE"
+          grep -Fq 'after-title-reveal' "$GENERATED_PROBE"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute fullscreen callback inventory
+        id: probe_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-post-title-fullscreen-callback-inventory.log
+
+      - name: Build fullscreen callback status
+        if: always()
+        shell: bash
+        env:
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/page5-post-title-fullscreen-callback-inventory.log && cp /tmp/page5-post-title-fullscreen-callback-inventory.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output = Path(os.environ['OUTPUT_DIR'])
+          report_path = output / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          inventory = report.get('inventory', []) if report else []
+          node = inventory[0] if inventory else None
+          event_summary = {}
+          if node:
+              for event_name, entries in (node.get('events') or {}).items():
+                  compact_entries = []
+                  for entry in entries or []:
+                      functions = {}
+                      for key, info in (entry.get('functions') or {}).items():
+                          source = info.get('source') or ''
+                          functions[key] = {
+                              'name': info.get('name'),
+                              'arity': info.get('length'),
+                              'sourceLength': len(source),
+                              'sourceSha256': hashlib.sha256(source.encode('utf-8')).hexdigest() if source else None,
+                          }
+                      compact_entries.append({
+                          'entryIndex': entry.get('entryIndex'),
+                          'keys': entry.get('keys', []),
+                          'functions': functions,
+                      })
+                  event_summary[event_name] = compact_entries
+          ok = bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success'
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
+              'ok': ok,
+              'mode': 'page5-post-title-fullscreen-callback-inventory-read-only',
+              'pauseCaptured': report.get('pauseCaptured') if report else None,
+              'inventoryCount': len(inventory),
+              'nodeIndex': node.get('index') if node else None,
+              'geometry': node.get('geometry') if node else None,
+              'eventNames': sorted((node.get('events') or {}).keys()) if node else [],
+              'eventSummary': event_summary,
+              'mainFrameValid': report.get('mainFrameValid') if report else None,
+              'pageErrorCount': len(report.get('pageErrors', [])) if report else None,
+              'blockedOrderCount': len(report.get('blockedOrders', [])) if report else None,
+              'debuggerErrorCount': len(report.get('debuggerErrors', [])) if report else None,
+              'reportAvailable': bool(report),
+              'artifactName': 'page5-post-title-fullscreen-callback-inventory',
+              'readOnlyProbe': True,
+              'pageScriptModified': False,
+              'candidateTested': False,
+              'repeatSequenceTested': False,
+              'apkBuilt': False,
+              'productionDefaultChanged': False,
+              'runtimeFilesChanged': False,
+              'androidClientChanged': False,
+              'authorizationOutcomeModified': False,
+              'paymentCompleted': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-post-title-fullscreen-callback-inventory
+          path: page5-post-title-fullscreen-callback-inventory
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish fullscreen callback status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json docs/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json
+          git add docs/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record post-title fullscreen callback inventory"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce fullscreen callback capture
+        if: always()
+        shell: bash
+        run: jq -e '.ok == true' /tmp/PAGE5_POST_TITLE_FULLSCREEN_CALLBACK_INVENTORY_STATUS.json >/dev/null
