@@ -49,7 +49,8 @@ def main() -> int:
     url: "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32",
     steps: [
       { label: "cover-progress", x: 195, y: 422 },
-      { label: "target-side-entry", x: 258, y: 732 },
+      { label: "target-side-init", x: 258, y: 732 },
+      { label: "target-side-open", x: 258, y: 732 },
     ],
     marker: "target-read",
   },
