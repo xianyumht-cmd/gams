@@ -1,104 +1,70 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T14:32:49Z",
-  "runId": 31015546302,
+  "generatedAt": "2026-08-05T15:09:00Z",
+  "runId": 31018568472,
   "state": "completed",
-  "workflowOutcome": "success",
-  "ok": true,
+  "workflowOutcome": "failure",
+  "ok": false,
   "mode": "page5-post-title-fullscreen-callback-inventory-read-only",
-  "pauseCaptured": true,
+  "pauseCaptured": null,
   "inventoryCount": 1,
-  "nodeIndex": 1,
+  "nodeIndex": 0,
   "geometry": {
-    "x": 0,
-    "y": 0,
-    "width": 1280,
-    "height": 720,
-    "zIndex": 1000,
-    "visible": true,
-    "touchable": true
+    "totalCases": 2,
+    "currentCases": 1,
+    "candidateCases": 1,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "nonPage5CurrentMarkerCases": 0,
+    "nonPage5CandidateMarkerCases": 0,
+    "nonPage5CurrentPageErrorCases": 0,
+    "nonPage5CandidatePageErrorCases": 0,
+    "currentPage5PageErrorCount": 0,
+    "currentPage5ExpectedErrorObserved": false,
+    "currentPage5TargetReadCount": 0,
+    "candidatePage5PageErrorCount": 0,
+    "candidatePage5TargetReadCount": 1,
+    "candidatePage5TargetListCount": 0,
+    "candidatePage5ScreenshotChanged": true,
+    "blockedOrderCases": 0,
+    "replacementCount": 1
   },
   "eventNames": [
-    "mouse down",
-    "mouse move",
-    "mouse out",
-    "mouse up"
+    "story-target-summary"
   ],
   "eventSummary": {
-    "mouse down": [
+    "story-target-summary": [
       {
         "entryIndex": 0,
         "keys": [
-          "listener",
-          "param",
-          "caller"
+          "totalCases",
+          "currentCases",
+          "candidateCases",
+          "fatalCases",
+          "runtimeEntryCompleteCases",
+          "noLoginEnabledCases",
+          "secondFileLoadCases",
+          "nonPage5CurrentMarkerCases",
+          "nonPage5CandidateMarkerCases",
+          "nonPage5CurrentPageErrorCases",
+          "nonPage5CandidatePageErrorCases",
+          "currentPage5PageErrorCount",
+          "currentPage5ExpectedErrorObserved",
+          "currentPage5TargetReadCount",
+          "candidatePage5PageErrorCount",
+          "candidatePage5TargetReadCount",
+          "candidatePage5TargetListCount",
+          "candidatePage5ScreenshotChanged",
+          "blockedOrderCases",
+          "replacementCount"
         ],
-        "functions": {
-          "listener": {
-            "name": "_0x35218c",
-            "arity": 1,
-            "sourceLength": 434,
-            "sourceSha256": "0ad7b19d66870f9d217cb710df1ee24ef1141bb2643d7285e791a427724dfbd9"
-          }
-        }
-      }
-    ],
-    "mouse move": [
-      {
-        "entryIndex": 0,
-        "keys": [
-          "listener",
-          "param",
-          "caller"
-        ],
-        "functions": {
-          "listener": {
-            "name": "_0x8c338a",
-            "arity": 1,
-            "sourceLength": 334,
-            "sourceSha256": "c3fc3350eebf748a193a4ef831c0c71f866f4e032b1e09b32d8f4fcaea2fda19"
-          }
-        }
-      }
-    ],
-    "mouse up": [
-      {
-        "entryIndex": 0,
-        "keys": [
-          "listener",
-          "param",
-          "caller"
-        ],
-        "functions": {
-          "listener": {
-            "name": "_0x26827e",
-            "arity": 1,
-            "sourceLength": 399,
-            "sourceSha256": "d54f137a1702dd770e7deee888c4d13fa3866f45fad01d1b59c9c4b14ddc94a8"
-          }
-        }
-      }
-    ],
-    "mouse out": [
-      {
-        "entryIndex": 0,
-        "keys": [
-          "listener",
-          "param",
-          "caller"
-        ],
-        "functions": {
-          "listener": {
-            "name": "_0x26827e",
-            "arity": 1,
-            "sourceLength": 399,
-            "sourceSha256": "d54f137a1702dd770e7deee888c4d13fa3866f45fad01d1b59c9c4b14ddc94a8"
-          }
-        }
+        "functions": {}
       }
     ]
   },
-  "mainFrameValid": true,
+  "mainFrameValid": null,
   "pageErrorCount": 0,
   "blockedOrderCount": 0,
   "debuggerErrorCount": 0,
@@ -115,5 +81,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "84d07e8aef840af77b007b041ad3cbbac1ecf337"
+  "commit": "a1a42ed4812bfcf00e95ef96e76b1952bb550df4"
 }
