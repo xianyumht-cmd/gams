@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T15:09:00Z",
-  "runId": 31018568472,
+  "generatedAt": "2026-08-05T15:14:55Z",
+  "runId": 31015136763,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
@@ -80,6 +80,6 @@
   "androidClientChanged": false,
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
-  "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "a1a42ed4812bfcf00e95ef96e76b1952bb550df4"
+  "branch": "34/merge",
+  "commit": "8d0bc89381c3bbca2465f51e1642946ce1465f65"
 }
