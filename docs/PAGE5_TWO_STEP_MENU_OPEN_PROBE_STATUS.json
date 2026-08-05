@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T11:22:08Z",
+  "runId": 31001036720,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-two-step-menu-open-probe",
+  "summary": {
+    "totalCases": 2,
+    "currentCases": 1,
+    "candidateCases": 1,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "nonPage5CurrentMarkerCases": 0,
+    "nonPage5CandidateMarkerCases": 0,
+    "nonPage5CurrentPageErrorCases": 0,
+    "nonPage5CandidatePageErrorCases": 0,
+    "currentPage5PageErrorCount": 0,
+    "currentPage5ExpectedErrorObserved": false,
+    "currentPage5TargetReadCount": 0,
+    "candidatePage5PageErrorCount": 0,
+    "candidatePage5TargetReadCount": 0,
+    "candidatePage5TargetListCount": 0,
+    "candidatePage5ScreenshotChanged": true,
+    "blockedOrderCases": 0,
+    "replacementCount": 1
+  },
+  "candidateStages": [
+    "after-01-cover-progress",
+    "after-02-menu-open",
+    "initial-ready",
+    "runtime-close",
+    "runtime-final-close",
+    "runtime-open",
+    "runtime-reopen"
+  ],
+  "candidateTargetWindow": {
+    "total": 13,
+    "kinds": {
+      "page-request": 13
+    },
+    "targetReadCount": 0,
+    "targetListCount": 0,
+    "orderMutationCount": 0
+  },
+  "candidatePageErrors": [],
+  "reportAvailable": true,
+  "artifactName": "page5-two-step-menu-open-probe",
+  "entryCalibrationOnly": true,
+  "candidatePersisted": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "d35d1307e474cfce9325468347548bb1b8128a98"
+}
