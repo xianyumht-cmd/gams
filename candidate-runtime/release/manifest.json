@@ -3,15 +3,15 @@
   "versionName": "2.0.5-page5-device-c1",
   "file": "bundle-2.0.5-page5-device-c1.bin",
   "size": 3905533,
-  "sha256": "69fdca5d704a728b1dce839cd521afb44c2ac864bad26afbaa660c6ddd7d59fa",
-  "iv": "BjigPLb5IBRtfSvU",
+  "sha256": "30550295f873c645c5ebad2eba232bf64dd7ba9e72dd37587f04e55c0ff7a9d5",
+  "iv": "ve7I8wkmLSyACrU8",
   "nonameSize": 332368,
   "nonameSha256": "707826b2049853a714740baf169fa5b61fa072ab8027ed69551b7d55813c53c0",
   "gameSize": 11590659,
   "gameSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
-  "keyIv": "ClCQA4lkCt8BNUsJ",
-  "keyCipher": "QtChslXn5SnlJ7e44rdBma63eVNxjtlawRtyES04nMwSrKzkgYWxgx38rZAksZtM",
-  "publishedAt": "2026-08-05T22:43:59Z",
+  "keyIv": "an//X3pzFDymAffG",
+  "keyCipher": "oDkhM14bIcX8NYYcBl5swppQdHggiOSTEX1e8DWjQJP/iTaG+cHbgbQypNZdRDpc",
+  "publishedAt": "2026-08-05T22:44:39Z",
   "signatureAlgorithm": "SHA256withECDSA",
-  "signature": "MEUCIGU3zRgLJUB4JC+oDk3KkJSB8GdW3H03C2GOQyi9mR5bAiEA/x7vd7CJJNlUu/yafhBwiBG3VL7A3UHwj587u89k+Dg="
+  "signature": "MEQCIC4RbWHvOdHhdBY44zKBh09yVB49Rb8LbW1TzeaiWOWaAiBwk8SKf2VCh7Yp6mLV4ofxwV4DetWv4fR2R0zHsmtf0g=="
 }
