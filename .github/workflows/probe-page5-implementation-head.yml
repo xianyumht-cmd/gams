@@ -1,0 +1,80 @@
+name: Probe page five implementation head
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - .github/workflows/probe-page5-implementation-head.yml
+      - scripts/page5_implementation_head.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-implementation-head-probe-20260806
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - name: Read implementation head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > /tmp/current-game-1.0.5.js
+          implementation_commit="$(git rev-parse "origin/$IMPLEMENTATION_REF")"
+          runtime_sha="$(sha256sum /tmp/current-game-1.0.5.js | awk '{print $1}')"
+          runtime_size="$(wc -c < /tmp/current-game-1.0.5.js | tr -d ' ')"
+          latest_subject="$(git log -1 --format=%s "origin/$IMPLEMENTATION_REF")"
+          IMPLEMENTATION_COMMIT="$implementation_commit" RUNTIME_SHA="$runtime_sha" RUNTIME_SIZE="$runtime_size" LATEST_SUBJECT="$latest_subject" python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'implementationCommit': os.environ['IMPLEMENTATION_COMMIT'],
+              'latestSubject': os.environ['LATEST_SUBJECT'],
+              'runtimeSha256': os.environ['RUNTIME_SHA'],
+              'runtimeSize': int(os.environ['RUNTIME_SIZE']),
+              'knownBridgeSha256': '9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca',
+              'knownGuardCandidateSha256': '57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72',
+              'matchesKnownBridge': os.environ['RUNTIME_SHA'] == '9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca',
+              'matchesKnownGuardCandidate': os.environ['RUNTIME_SHA'] == '57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72',
+              'productionDefaultChanged': False,
+              'androidClientChanged': False,
+              'apkBuilt': False,
+          }
+          Path('/tmp/PAGE5_IMPLEMENTATION_HEAD_STATUS.json').write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Publish implementation head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          mkdir -p docs
+          cp /tmp/PAGE5_IMPLEMENTATION_HEAD_STATUS.json docs/PAGE5_IMPLEMENTATION_HEAD_STATUS.json
+          git add docs/PAGE5_IMPLEMENTATION_HEAD_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record implementation head integrity"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
