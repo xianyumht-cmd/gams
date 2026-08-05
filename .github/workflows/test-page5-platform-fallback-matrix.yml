@@ -1,12 +1,12 @@
-name: Analyze second-file old baseline delta
+name: Inspect runtime bundle format and decryptor paths
 
 on:
   push:
     branches:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
-      - scripts/analyze_second_file_baseline_delta.py
-      - scripts/second_file_baseline_delta.trigger
+      - scripts/inspect_runtime_bundle_format.py
+      - scripts/runtime_bundle_format.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -14,17 +14,18 @@ permissions:
   contents: write
 
 concurrency:
-  group: second-file-old-baseline-delta-20260805
+  group: runtime-bundle-format-discovery-20260805
   cancel-in-progress: true
 
 jobs:
-  analyze:
+  inspect:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      OUTPUT_DIR: second-file-old-baseline-delta
-      BASELINE_PATH: /tmp/old-clean-baseline.js
-      CURRENT_PATH: game-engine/release/game-1.0.5.js
+      OUTPUT_DIR: runtime-bundle-format-discovery
+      BUNDLE_PATH: /tmp/old-baseline-bundle.bin
+      MANIFEST_PATH: /tmp/old-baseline-manifest.json
+      SEARCH_PATH: /tmp/decryptor-search.txt
 
     steps:
       - uses: actions/checkout@v4
@@ -32,35 +33,43 @@ jobs:
           ref: diagnostics/page5-guard-full-entry-20260805
           fetch-depth: 0
 
-      - name: Validate delta analyzer
+      - name: Capture bundle, manifest, and decryptor references
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/analyze_second_file_baseline_delta.py
-          test -s "$CURRENT_PATH"
-          git show origin/candidate-game-baseline-ab-20260804:candidate-runtime-game-baseline/release/game-1.0.5.js > "$BASELINE_PATH"
-          test -s "$BASELINE_PATH"
+          python3 -m py_compile scripts/inspect_runtime_bundle_format.py
+          git show origin/candidate-game-baseline-ab-20260804:candidate-runtime-game-baseline/release/bundle-2.0.7-game-baseline-ab-c1.bin > "$BUNDLE_PATH"
+          git show origin/candidate-game-baseline-ab-20260804:candidate-runtime-game-baseline/release/manifest.json > "$MANIFEST_PATH"
+          test -s "$BUNDLE_PATH"
+          test -s "$MANIFEST_PATH"
+          {
+            git grep -n -I -E 'keyCipher|keyIv|AES/GCM|GCMParameterSpec|Cipher\.getInstance|SecretKeySpec|bundle.*decrypt|decrypt.*bundle' HEAD -- . || true
+            git grep -n -I -E 'keyCipher|keyIv|AES/GCM|GCMParameterSpec|Cipher\.getInstance|SecretKeySpec|bundle.*decrypt|decrypt.*bundle' origin/main -- . || true
+          } | sort -u > "$SEARCH_PATH"
+          test -s "$SEARCH_PATH"
 
-      - name: Analyze old baseline to current delta
-        id: delta_run
+      - name: Inspect bundle format
+        id: inspect_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          python3 scripts/analyze_second_file_baseline_delta.py \
-            --baseline "$BASELINE_PATH" \
-            --current "$CURRENT_PATH" \
-            --output "$OUTPUT_DIR" 2>&1 | tee /tmp/second-file-old-baseline-delta.log
+          python3 scripts/inspect_runtime_bundle_format.py \
+            --bundle "$BUNDLE_PATH" \
+            --manifest "$MANIFEST_PATH" \
+            --search-results "$SEARCH_PATH" \
+            --output "$OUTPUT_DIR" 2>&1 | tee /tmp/runtime-bundle-format-discovery.log
 
-      - name: Build baseline delta status
+      - name: Build bundle discovery status
         if: always()
         shell: bash
         env:
-          DELTA_OUTCOME: ${{ steps.delta_run.outcome }}
+          INSPECT_OUTCOME: ${{ steps.inspect_run.outcome }}
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/second-file-old-baseline-delta.log && cp /tmp/second-file-old-baseline-delta.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/runtime-bundle-format-discovery.log && cp /tmp/runtime-bundle-format-discovery.log "$OUTPUT_DIR/workflow.log" || true
+          test -f "$SEARCH_PATH" && cp "$SEARCH_PATH" "$OUTPUT_DIR/decryptor-search-raw.txt" || true
           python3 - <<'PY'
           import json
           import os
@@ -70,25 +79,21 @@ jobs:
           output = Path(os.environ['OUTPUT_DIR'])
           report_path = output / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          ok = bool(report) and bool(report.get('pass')) and os.environ.get('DELTA_OUTCOME') == 'success'
+          ok = bool(report) and bool(report.get('pass')) and os.environ.get('INSPECT_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
               'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
               'runId': int(os.environ['GITHUB_RUN_ID']),
               'state': 'completed',
-              'workflowOutcome': os.environ.get('DELTA_OUTCOME', 'unknown'),
+              'workflowOutcome': os.environ.get('INSPECT_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'second-file-old-baseline-delta-analysis',
-              'baseline': report.get('baseline') if report else None,
-              'current': report.get('current') if report else None,
-              'sizeDelta': report.get('sizeDelta') if report else None,
-              'commonPrefixLength': report.get('commonPrefixLength') if report else None,
-              'commonSuffixLength': report.get('commonSuffixLength') if report else None,
-              'baselineMiddle': report.get('baselineMiddle') if report else None,
-              'currentMiddle': report.get('currentMiddle') if report else None,
-              'singleContiguousDelta': report.get('singleContiguousDelta') if report else None,
+              'mode': 'runtime-bundle-format-and-decryptor-discovery',
+              'bundle': report.get('bundle') if report else None,
+              'manifest': report.get('manifest') if report else None,
+              'searchResultCount': report.get('searchResultCount') if report else None,
+              'searchPaths': report.get('searchPaths') if report else [],
               'reportAvailable': bool(report),
-              'artifactName': 'second-file-old-baseline-delta',
+              'artifactName': 'runtime-bundle-format-discovery',
               'readOnlyAnalysis': True,
               'candidatePersisted': False,
               'repeatSequenceTested': False,
@@ -101,7 +106,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/SECOND_FILE_OLD_BASELINE_DELTA_STATUS.json').write_text(
+          Path('/tmp/RUNTIME_BUNDLE_FORMAT_DISCOVERY_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -110,12 +115,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: second-file-old-baseline-delta
-          path: second-file-old-baseline-delta
+          name: runtime-bundle-format-discovery
+          path: runtime-bundle-format-discovery
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish baseline delta status
+      - name: Publish bundle discovery status
         if: always()
         shell: bash
         run: |
@@ -123,14 +128,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/SECOND_FILE_OLD_BASELINE_DELTA_STATUS.json docs/SECOND_FILE_OLD_BASELINE_DELTA_STATUS.json
-          git add docs/SECOND_FILE_OLD_BASELINE_DELTA_STATUS.json
+          cp /tmp/RUNTIME_BUNDLE_FORMAT_DISCOVERY_STATUS.json docs/RUNTIME_BUNDLE_FORMAT_DISCOVERY_STATUS.json
+          git add docs/RUNTIME_BUNDLE_FORMAT_DISCOVERY_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record second-file old baseline delta"
+            git commit -m "Record runtime bundle format discovery"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce baseline delta analysis
+      - name: Enforce bundle discovery capture
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/SECOND_FILE_OLD_BASELINE_DELTA_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/RUNTIME_BUNDLE_FORMAT_DISCOVERY_STATUS.json >/dev/null
