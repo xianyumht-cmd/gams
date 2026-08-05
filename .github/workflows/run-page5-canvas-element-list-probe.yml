@@ -6,6 +6,7 @@ on:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
       - scripts/run_page5_side_button_callback_inventory.mjs
+      - scripts/page5_side_button_callback_inventory.trigger
       - .github/workflows/run-page5-canvas-element-list-probe.yml
   workflow_dispatch:
 
