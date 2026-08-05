@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T18:19:09Z",
+  "runId": 31033578389,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "five-page-missing-constructor-mobile-bridge-matrix",
+  "summary": {
+    "totalCases": 10,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 10,
+    "noLoginEnabledCases": 10,
+    "secondFileLoadCases": 10,
+    "currentFirstFourMarkerCount": 4,
+    "candidateFirstFourMarkerCount": 4,
+    "currentPage5PageErrorCount": 1,
+    "currentPage5TargetReadCount": 0,
+    "currentPage5TargetListCount": 0,
+    "candidatePageErrorCases": 0,
+    "candidatePage5TargetReadCount": 4,
+    "candidatePage5TargetListCount": 1,
+    "candidatePage5DynamicTargetOk": true,
+    "blockedOrderCases": 0,
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "callbackReplacementCount": 1
+  },
+  "cases": [
+    {
+      "pair": "current",
+      "page": "page1",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 30,
+        "kinds": {
+          "page-request": 27,
+          "target-list-request": 1,
+          "target-read-request": 2
+        },
+        "targetReadCount": 3,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "candidate",
+      "page": "page1",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 30,
+        "kinds": {
+          "page-request": 27,
+          "target-list-request": 1,
+          "target-read-request": 2
+        },
+        "targetReadCount": 3,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "current",
+      "page": "page2",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 28,
+        "kinds": {
+          "page-request": 25,
+          "target-list-request": 1,
+          "target-read-request": 2
+        },
+        "targetReadCount": 3,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "candidate",
+      "page": "page2",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 28,
+        "kinds": {
+          "page-request": 25,
+          "target-list-request": 1,
+          "target-read-request": 2
+        },
+        "targetReadCount": 3,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "current",
+      "page": "page3",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 34,
+        "kinds": {
+          "page-request": 31,
+          "target-list-request": 1,
+          "target-read-request": 2
+        },
+        "targetReadCount": 3,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "candidate",
+      "page": "page3",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 34,
+        "kinds": {
+          "page-request": 31,
+          "target-list-request": 1,
+          "target-read-request": 2
+        },
+        "targetReadCount": 3,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "current",
+      "page": "page4",
+      "marker": "visual-change",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 5,
+        "kinds": {
+          "page-request": 5
+        },
+        "targetReadCount": 0,
+        "targetListCount": 0,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "candidate",
+      "page": "page4",
+      "marker": "visual-change",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 5,
+        "kinds": {
+          "page-request": 5
+        },
+        "targetReadCount": 0,
+        "targetListCount": 0,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": null,
+      "engineCapture": null,
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "current",
+      "page": "page5",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 1,
+        "kinds": {
+          "page-request": 1
+        },
+        "targetReadCount": 0,
+        "targetListCount": 0,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": {
+        "ok": true,
+        "nodeIndex": 10,
+        "nodeGeometry": {
+          "x": 1198,
+          "y": 145,
+          "width": 46,
+          "height": 64,
+          "visible": true,
+          "touchable": true
+        },
+        "nativeCenter": {
+          "x": 1221,
+          "y": 177
+        },
+        "cssPoint": {
+          "x": 294.125,
+          "y": 736.6981567382812
+        },
+        "transform": "logical-landscape-to-css-portrait-ccw",
+        "dimensionsSwapped": true,
+        "logical": {
+          "width": 1280,
+          "height": 720
+        },
+        "canvas": {
+          "width": 720,
+          "height": 1280
+        },
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        }
+      },
+      "engineCapture": {
+        "length": 20
+      },
+      "pageErrorCount": 1,
+      "pageErrors": [
+        "ReferenceError: SCGMenu is not defined\n    at PF.<computed> [as onClick] (https://ggv2.local/runtime/game.js:1:3447712)\n    at https://ggv2.local/runtime/game.js:1:1309085\n    at t.dispatchEvent (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:2940)\n    at t.onMouseClick (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124674)\n    at t.onTouchEnd (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124992)"
+      ],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    },
+    {
+      "pair": "candidate",
+      "page": "page5",
+      "marker": "target-read",
+      "targetScreenChanged": true,
+      "targetWindow": {
+        "total": 33,
+        "kinds": {
+          "target-read-request": 3,
+          "page-request": 29,
+          "target-list-request": 1
+        },
+        "targetReadCount": 4,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "dynamicTarget": {
+        "ok": true,
+        "nodeIndex": 10,
+        "nodeGeometry": {
+          "x": 1198,
+          "y": 145,
+          "width": 46,
+          "height": 64,
+          "visible": true,
+          "touchable": true
+        },
+        "nativeCenter": {
+          "x": 1221,
+          "y": 177
+        },
+        "cssPoint": {
+          "x": 294.125,
+          "y": 736.6981567382812
+        },
+        "transform": "logical-landscape-to-css-portrait-ccw",
+        "dimensionsSwapped": true,
+        "logical": {
+          "width": 1280,
+          "height": 720
+        },
+        "canvas": {
+          "width": 720,
+          "height": 1280
+        },
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        }
+      },
+      "engineCapture": {
+        "length": 20
+      },
+      "pageErrorCount": 0,
+      "pageErrors": [],
+      "blockedOrderCount": 0,
+      "fatalError": null
+    }
+  ],
+  "candidatePatch": {
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "callbackReplacementCount": 1,
+    "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
+    "newTextSha256": "143e8fa46bfab66ae80c0a2f411a7434247ca735aa9d4e8a6426a076ba47645e",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590615,
+    "candidateSecondSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca"
+  },
+  "reportAvailable": true,
+  "artifactName": "five-page-missing-constructor-matrix",
+  "currentCandidateCompared": true,
+  "candidatePersisted": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "9cf048837a3a8c2ec5660393424cd256d542be58"
+}
