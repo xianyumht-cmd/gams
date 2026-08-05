@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T23:04:11Z",
+  "runId": 31055050294,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "captureOk": true,
+  "mode": "page5-second-purchase-callchain-slice",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "summary": {
+    "sliceCount": 7,
+    "targetCount": 7,
+    "exactTokenTargets": 4,
+    "exactTokenMatches": 4,
+    "runtimeFilesChanged": false,
+    "productionDefaultChanged": false,
+    "androidClientChanged": false,
+    "apkBuilt": false,
+    "paymentCompleted": false
+  },
+  "sliceIndex": [
+    {
+      "label": "SAL_Login",
+      "traceOffset": 3522415,
+      "nearestTokenOffset": 3522415,
+      "nearestTokenDistance": 0,
+      "snippetSha256": "990081c3cbeb6643ace642244be48878abb37d66bff07a814817c96f140a97a8"
+    },
+    {
+      "label": "jH",
+      "traceOffset": 1935617,
+      "nearestTokenOffset": 1933923,
+      "nearestTokenDistance": -1694,
+      "snippetSha256": "666dd3fb02a682bfb60f0d1fe06027a06529ccd75084a3149d723581abe134c6"
+    },
+    {
+      "label": "scxSa",
+      "traceOffset": 397012,
+      "nearestTokenOffset": 396977,
+      "nearestTokenDistance": -35,
+      "snippetSha256": "31c859cfc22c16b9ab63e42bf85138113a54a948afbcd2234a0dd4405f69902c"
+    },
+    {
+      "label": "CxiCB",
+      "traceOffset": 2035610,
+      "nearestTokenOffset": 2035558,
+      "nearestTokenDistance": -52,
+      "snippetSha256": "f25c8eede013444df92203259ce946fbf2b205f191b4a56be458134a1dfce004"
+    },
+    {
+      "label": "anonymous-after-CxiCB",
+      "traceOffset": 2058919,
+      "nearestTokenOffset": null,
+      "nearestTokenDistance": null,
+      "snippetSha256": "fb0df23c97860a2d2bd0828777ff27930f4a6e8fb11c9aa8b5a796e15b3991c5"
+    },
+    {
+      "label": "anonymous-before-CxiCB",
+      "traceOffset": 2046389,
+      "nearestTokenOffset": null,
+      "nearestTokenDistance": null,
+      "snippetSha256": "3b1794ae08554d5c9ca880b5f8c04cc8ca6b0e952aa7789ee26198f6a1b6fecd"
+    },
+    {
+      "label": "runtime-event-callback",
+      "traceOffset": 1309128,
+      "nearestTokenOffset": null,
+      "nearestTokenDistance": null,
+      "snippetSha256": "af61c0192ee025488000aa56c80a3723cab1c9d0123c7aa2df971cf85d72e0a3"
+    }
+  ],
+  "artifactName": "page5-second-purchase-callchain-slice",
+  "candidatePrepared": false,
+  "correctionApplied": false,
+  "runtimeFilesChanged": false,
+  "productionDefaultChanged": false,
+  "androidClientChanged": false,
+  "apkBuilt": false,
+  "paymentCompleted": false
+}
