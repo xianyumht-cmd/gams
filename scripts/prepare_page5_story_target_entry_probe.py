@@ -53,6 +53,7 @@ def main() -> int:
         label: "story-entry",
         x: 195,
         y: 422,
+        longPressMs: 800,
         followupTap: { x: 228, y: 418, delayMs: 800 },
       },
       { label: "target-side-entry", x: 258, y: 732 },
@@ -63,6 +64,22 @@ def main() -> int:
     text, count = re.subn(r"const routes = \[.*?\n\];", route_block, text, count=1, flags=re.S)
     if count != 1:
         raise SystemExit(f"route block mismatch: {count}")
+
+    tap_marker = "      await page.touchscreen.tap(step.x, step.y);\n"
+    tap_replacement = '''      if (Number(step.longPressMs || 0) > 0) {
+        const inputSession = await page.context().newCDPSession(page);
+        await inputSession.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: step.x, y: step.y, radiusX: 1, radiusY: 1, force: 1, id: 0 }],
+        });
+        await page.waitForTimeout(Number(step.longPressMs));
+        await inputSession.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        await inputSession.detach().catch(() => {});
+      } else {
+        await page.touchscreen.tap(step.x, step.y);
+      }
+'''
+    text = replace_once(text, tap_marker, tap_replacement, "long press")
 
     event_marker = "      events.push({ at: Date.now(), type: \"route-tap\", stepIndex, ...step });\n"
     event_replacement = event_marker + '''      if (step.followupTap) {
