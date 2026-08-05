@@ -32,7 +32,18 @@ def main() -> int:
     page: "page5",
     targetId: "1691512",
     url: "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32",
-    steps: [{ label: "target-entry", x: 258, y: 732 }],
+    steps: [
+      { label: "cover-progress", x: 195, y: 422 },
+      { label: "title-reveal", x: 50, y: 420 },
+      {
+        label: "target-precondition",
+        x: 195,
+        y: 422,
+        longPressMs: 800,
+        followupTap: { x: 228, y: 418, delayMs: 800 },
+      },
+      { label: "target-entry", x: 258, y: 732 },
+    ],
     marker: "target-read",
   },
 ];'''
@@ -64,6 +75,46 @@ def main() -> int:
     text, count = make_pattern.subn(lambda _m: make_candidate, text, count=1)
     if count != 1:
         raise SystemExit(f"makeCandidate block mismatch: {count}")
+
+    tap_marker = "      await page.touchscreen.tap(step.x, step.y);\n"
+    tap_replacement = '''      if (Number(step.longPressMs || 0) > 0) {
+        const inputSession = await page.context().newCDPSession(page);
+        await inputSession.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: step.x, y: step.y, radiusX: 1, radiusY: 1, force: 1, id: 0 }],
+        });
+        await page.waitForTimeout(Number(step.longPressMs));
+        await inputSession.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        await inputSession.detach().catch(() => {});
+      } else {
+        await page.touchscreen.tap(step.x, step.y);
+      }
+'''
+    text = replace_once(text, tap_marker, tap_replacement, "long press")
+
+    event_marker = "      events.push({ at: Date.now(), type: \"route-tap\", stepIndex, ...step });\n"
+    event_replacement = event_marker + '''      if (step.followupTap) {
+        await page.waitForTimeout(Number(step.followupTap.delayMs || 0));
+        await page.touchscreen.tap(step.followupTap.x, step.followupTap.y);
+        events.push({
+          at: Date.now(),
+          type: "route-followup-tap",
+          stepIndex,
+          label: `${step.label}-followup`,
+          x: step.followupTap.x,
+          y: step.followupTap.y,
+          delayMs: Number(step.followupTap.delayMs || 0),
+        });
+      }
+'''
+    text = replace_once(text, event_marker, event_replacement, "follow-up tap")
+
+    wait_old = "      await page.waitForTimeout(isFinal ? 10000 : 5000);"
+    wait_new = '''      const stepWaitMs = step.label === "target-precondition"
+        ? 10000
+        : (isFinal ? 15000 : 7000);
+      await page.waitForTimeout(stepWaitMs);'''
+    text = replace_once(text, wait_old, wait_new, "step wait")
 
     tail_pattern = re.compile(r"function markerPassed\(item\).*\Z", re.S)
     tail = '''function markerPassed(item) {
