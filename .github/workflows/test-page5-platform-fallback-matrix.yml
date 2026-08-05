@@ -6,7 +6,7 @@ on:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
       - scripts/page5_device_candidate.trigger
-      - scripts/run_page5_device_candidate.sh
+      - scripts/run_page5_device_candidate_worker.sh
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-device-candidate-20260806
+  group: page5-device-candidate-workers-dev-20260806
   cancel-in-progress: true
 
 jobs:
@@ -27,10 +27,11 @@ jobs:
       EXPECTED_GAME_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
       CANDIDATE_RUNTIME_VERSION: 2.0.5-page5-device-c1
       CANDIDATE_WORKER_NAME: gams-runtime-v2-page5-candidate
-      PRIMARY_HOST: runtime.xn--8pv109c.top
+      CANDIDATE_WORKER_HOST: gams-runtime-v2-page5-candidate.2320006072.workers.dev
+      PRIMARY_HOST: gams-runtime-v2-page5-candidate.2320006072.workers.dev
       FALLBACK_HOST: gams-runtime-v2-page5-candidate.2320006072.workers.dev
-      CANDIDATE_PREFIX: /gams-page5-candidate-20260806
-      CANDIDATE_ROUTE: runtime.xn--8pv109c.top/gams-page5-candidate-20260806/*
+      CANDIDATE_PREFIX: /
+      CANDIDATE_ROUTE: gams-runtime-v2-page5-candidate.2320006072.workers.dev/*
       APK_VERSION_NAME: 2.0.11-page5-candidate
       APK_VERSION_CODE: 21
       WORKTREE: /tmp/gams-page5-device-candidate
@@ -69,6 +70,7 @@ jobs:
               'candidateRuntimeVersion': os.environ['CANDIDATE_RUNTIME_VERSION'],
               'candidatePrefix': os.environ['CANDIDATE_PREFIX'],
               'candidateRoute': os.environ['CANDIDATE_ROUTE'],
+              'candidateWorkerHost': os.environ['CANDIDATE_WORKER_HOST'],
               'apkVersionName': os.environ['APK_VERSION_NAME'],
               'apkVersionCode': int(os.environ['APK_VERSION_CODE']),
               'productionDefaultChanged': False,
@@ -87,7 +89,7 @@ jobs:
           cp /tmp/PAGE5_DEVICE_CANDIDATE_STATUS.json docs/PAGE5_DEVICE_CANDIDATE_STATUS.json
           git add docs/PAGE5_DEVICE_CANDIDATE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Mark isolated device candidate running"
+            git commit -m "Mark isolated Workers.dev device candidate running"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
@@ -106,8 +108,8 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          chmod +x scripts/run_page5_device_candidate.sh
-          scripts/run_page5_device_candidate.sh 2>&1 | tee /tmp/page5-device-candidate.log
+          chmod +x scripts/run_page5_device_candidate_worker.sh
+          scripts/run_page5_device_candidate_worker.sh 2>&1 | tee /tmp/page5-device-candidate.log
 
       - name: Build completed candidate status
         if: always()
@@ -171,6 +173,7 @@ jobs:
               'candidatePrefix': os.environ['CANDIDATE_PREFIX'],
               'candidateRoute': os.environ['CANDIDATE_ROUTE'],
               'candidateWorkerName': os.environ['CANDIDATE_WORKER_NAME'],
+              'candidateWorkerHost': os.environ['CANDIDATE_WORKER_HOST'],
               'primaryHost': os.environ['PRIMARY_HOST'],
               'fallbackHost': os.environ['FALLBACK_HOST'],
               'routeProbe': route,
@@ -214,7 +217,7 @@ jobs:
           cp /tmp/PAGE5_DEVICE_CANDIDATE_STATUS.json docs/PAGE5_DEVICE_CANDIDATE_STATUS.json
           git add docs/PAGE5_DEVICE_CANDIDATE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record isolated device candidate build"
+            git commit -m "Record isolated Workers.dev device candidate build"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
