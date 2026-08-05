@@ -56,7 +56,7 @@ def main() -> int:
         longPressMs: 800,
         followupTap: { x: 228, y: 418, delayMs: 800 },
       },
-      { label: "story-continue", x: 287, y: 733 },
+      { label: "story-continue", x: 352, y: 740 },
       { label: "target-side-entry", x: 258, y: 732 },
     ],
     marker: "target-read",
