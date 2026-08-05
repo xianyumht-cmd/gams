@@ -1,4 +1,4 @@
-name: Probe page five missing-state target-button bridge
+name: Diagnose page five stable target-button bridge
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
       - scripts/prepare_page5_dynamic_node_tap_bridge_probe.py
       - scripts/prepare_page5_dynamic_target_button_bridge_probe.py
       - scripts/prepare_page5_dynamic_target_button_sa_bridge_probe.py
+      - scripts/prepare_page5_stable_target_button_bridge_diagnostic.py
       - scripts/page5_direct_node_bridge_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
@@ -19,13 +20,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-missing-state-target-button-bridge-probe-20260806
+  group: page5-stable-target-button-bridge-diagnostic-20260806
   cancel-in-progress: true
 
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     env:
       OUTPUT_DIR: page5-direct-node-bridge-probe
       CURRENT_FIRST_PATH: remote-script/src/noname.js
@@ -42,7 +43,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare missing-state target-button probe
+      - name: Prepare stable target-button diagnostic
         shell: bash
         run: |
           set -euo pipefail
@@ -53,13 +54,14 @@ jobs:
             scripts/prepare_page5_direct_node_sequence_bridge_probe.py \
             scripts/prepare_page5_dynamic_node_tap_bridge_probe.py \
             scripts/prepare_page5_dynamic_target_button_bridge_probe.py \
-            scripts/prepare_page5_dynamic_target_button_sa_bridge_probe.py
-          python3 scripts/prepare_page5_dynamic_target_button_sa_bridge_probe.py --output "$GENERATED_PROBE"
+            scripts/prepare_page5_dynamic_target_button_sa_bridge_probe.py \
+            scripts/prepare_page5_stable_target_button_bridge_diagnostic.py
+          python3 scripts/prepare_page5_stable_target_button_bridge_diagnostic.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-dynamic-target-button-missing-state-bridge-probe' "$GENERATED_PROBE"
-          grep -Fq "SA===void 0" "$GENERATED_PROBE"
-          grep -Fq 'dynamic-rotated-real-node-touch' "$GENERATED_PROBE"
-          grep -Fq 'nodeIndex: 10' "$GENERATED_PROBE"
+          grep -Fq 'page5-stable-target-button-bridge-diagnostic' "$GENERATED_PROBE"
+          grep -Fq '__gamsTargetBridgeDiag' "$GENERATED_PROBE"
+          grep -Fq 'before-stable-dynamic-target-touch' "$GENERATED_PROBE"
+          grep -Fq 'openSceneCalls' "$GENERATED_PROBE"
           grep -Fq 'candidateTargetListCount > 0' "$GENERATED_PROBE"
 
       - name: Install Chromium
@@ -69,7 +71,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute missing-state target-button comparison
+      - name: Execute stable target-button diagnostic
         id: probe_run
         continue-on-error: true
         shell: bash
@@ -77,7 +79,7 @@ jobs:
           set -o pipefail
           node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-direct-node-bridge-probe.log
 
-      - name: Build missing-state target-button status
+      - name: Build stable target-button status
         if: always()
         shell: bash
         env:
@@ -110,7 +112,9 @@ jobs:
                   'nodeGeometry': inventory.get('geometry'),
                   'nodeEventNames': inventory.get('eventNames') or [],
                   'dynamicTouch': item.get('directNodeTrigger'),
+                  'targetBridgeDiagnostic': item.get('targetBridgeDiagnostic'),
                   'targetWindow': item.get('targetWindow'),
+                  'screenshots': item.get('screenshots') or {},
                   'pageErrorCount': len(item.get('pageErrors') or []),
                   'pageErrors': item.get('pageErrors') or [],
                   'blockedOrderCount': len(item.get('blockedOrders') or []),
@@ -125,7 +129,7 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-dynamic-target-button-missing-state-bridge-probe',
+              'mode': 'page5-stable-target-button-bridge-diagnostic',
               'summary': summary,
               'current': compact('current'),
               'candidate': compact('candidate'),
@@ -134,8 +138,9 @@ jobs:
               'artifactName': 'page5-direct-node-bridge-probe',
               'directNodeIndex': 10,
               'realTouchUsed': True,
-              'missingStateCondition': 'SA is undefined',
-              'isolatedCandidateOnly': True,
+              'preTouchStableWaitMs': 22000,
+              'postTouchObservationMs': 25000,
+              'diagnosticOnly': True,
               'candidatePersisted': False,
               'repeatSequenceTested': False,
               'apkBuilt': False,
@@ -161,7 +166,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish missing-state target-button status
+      - name: Publish stable target-button status
         if: always()
         shell: bash
         run: |
@@ -172,11 +177,11 @@ jobs:
           cp /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           git add docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five missing-state target-button probe"
+            git commit -m "Record page five stable target-button bridge diagnostic"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce missing-state target-button gate
+      - name: Enforce stable target-button gate
         if: always()
         shell: bash
         run: jq -e '.ok == true' /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json >/dev/null
