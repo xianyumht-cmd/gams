@@ -56,6 +56,7 @@ def main() -> int:
         longPressMs: 800,
         followupTap: { x: 228, y: 418, delayMs: 800 },
       },
+      { label: "story-continue", x: 287, y: 733 },
       { label: "target-side-entry", x: 258, y: 732 },
     ],
     marker: "target-read",
@@ -99,9 +100,9 @@ def main() -> int:
     text = replace_once(text, event_marker, event_replacement, "follow-up tap")
 
     wait_old = "      await page.waitForTimeout(isFinal ? 10000 : 5000);"
-    wait_new = '''      const stepWaitMs = step.label === "story-entry"
+    wait_new = '''      const stepWaitMs = step.label === "story-continue"
         ? 30000
-        : (isFinal ? 15000 : 7000);
+        : (step.label === "story-entry" ? 10000 : (isFinal ? 15000 : 7000));
       await page.waitForTimeout(stepWaitMs);'''
     text = replace_once(text, wait_old, wait_new, "step wait")
 
