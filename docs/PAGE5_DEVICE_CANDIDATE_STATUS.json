@@ -1,20 +1,75 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-05T22:55:12Z",
+  "schemaVersion": 3,
+  "generatedAt": "2026-08-05T22:57:09Z",
   "runId": 31054517129,
-  "state": "running",
-  "ok": false,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
   "mode": "isolated-device-runtime-and-apk-candidate",
   "candidateBranch": "candidate-page5-runtime-device-20260806",
+  "candidateRuntimeCommit": "ed4d8d312ed51dd126ad9b86626217938658d942",
   "candidateRuntimeVersion": "2.0.5-page5-device-c1",
+  "candidateRuntimeManifest": {
+    "schemaVersion": 2,
+    "versionName": "2.0.5-page5-device-c1",
+    "file": "bundle-2.0.5-page5-device-c1.bin",
+    "size": 3905533,
+    "sha256": "1b1e421f14de22720cea8e603aa054ddacd415427e94c30d5ae28df260e66f30",
+    "nonameSize": 332368,
+    "nonameSha256": "707826b2049853a714740baf169fa5b61fa072ab8027ed69551b7d55813c53c0",
+    "gameSize": 11590659,
+    "gameSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+    "publishedAt": "2026-08-05T22:55:47Z",
+    "signatureAlgorithm": "SHA256withECDSA"
+  },
   "candidatePrefix": "/",
   "candidateRoute": "gams-runtime-v2-page5-candidate.2320006072.workers.dev/*",
+  "candidateWorkerName": "gams-runtime-v2-page5-candidate",
   "candidateWorkerHost": "gams-runtime-v2-page5-candidate.2320006072.workers.dev",
-  "apkVersionName": "2.0.11-page5-candidate",
-  "apkVersionCode": 21,
+  "primaryHost": "gams-runtime-v2-page5-candidate.2320006072.workers.dev",
+  "fallbackHost": "gams-runtime-v2-page5-candidate.2320006072.workers.dev",
+  "routeProbe": {
+    "primary": {
+      "ok": true,
+      "httpCode": "200"
+    },
+    "fallback": {
+      "ok": true,
+      "httpCode": "200"
+    }
+  },
+  "apk": {
+    "name": "GG-2.0.12-page5-candidate-code25.apk",
+    "size": 88006,
+    "sha256": "84c68ea97f459cf0fbdfb814416ba501b4b176130f0347b199d2fdf61d363b75",
+    "packageName": "com.jinli.quickweb",
+    "versionCode": 25,
+    "versionName": "2.0.12-page5-candidate",
+    "minimumSdk": 24,
+    "targetSdk": 35,
+    "v2SignatureVerified": true,
+    "v3SignatureVerified": true,
+    "signingCertificateSha256": "70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34"
+  },
+  "localArtifactVerification": {
+    "apkSha256Matched": true,
+    "candidateWorkerHostOccurrencesInApk": 2,
+    "productionRuntimeHostOccurrencesInApk": 0,
+    "runtimeGameSha256Matched": true,
+    "packageAndVersionMatched": true
+  },
+  "artifactName": "GG-page5-device-candidate",
+  "artifactId": 8949766666,
+  "artifactSha256": "e1d3eea13dc96ed07859ad15f3f6e319c38a99d8cf3488700ff6a792bbe44955",
+  "browserValidationRunId": 31051809043,
+  "finalInteractionRunId": 31050480987,
   "productionDefaultChanged": false,
   "productionRuntimeChanged": false,
   "formalApkChanged": false,
   "candidateApkPublished": false,
-  "paymentCompleted": false
+  "paymentCompleted": false,
+  "realOrderRequestsAllowed": false,
+  "sameDeviceValidationCompleted": false,
+  "diagnosticBranch": "diagnostics/page5-guard-full-entry-20260805",
+  "diagnosticCommit": "6f06201f411f4ec09287994a78e995ce0e140236"
 }
