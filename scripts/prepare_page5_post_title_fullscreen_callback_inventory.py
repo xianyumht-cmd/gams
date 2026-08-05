@@ -46,6 +46,37 @@ const nodeIndexes = [1];''',
         "mode",
     )
 
+    page_marker = "  const page = await context.newPage();"
+    page_replacement = '''  await context.addInitScript({ content: `
+    (() => {
+      const state = globalThis.__gamsNavigationGuard = globalThis.__gamsNavigationGuard || { supported: false, blocked: [], allowed: [] };
+      try {
+        if (globalThis.navigation && typeof globalThis.navigation.addEventListener === 'function') {
+          state.supported = true;
+          globalThis.navigation.addEventListener('navigate', (event) => {
+            try {
+              const url = new URL(event.destination.url, location.href);
+              if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                state.blocked.push({ url: url.protocol + '//' + url.host + url.pathname, at: Date.now() });
+                if (event.cancelable) event.preventDefault();
+                return;
+              }
+              state.allowed.push({ url: url.protocol + '//' + url.host + url.pathname, at: Date.now() });
+            } catch (error) {
+              state.blocked.push({ url: String(event.destination?.url || '').slice(0, 300), at: Date.now() });
+              if (event.cancelable) event.preventDefault();
+            }
+          });
+        }
+      } catch (error) {
+        state.error = String(error).slice(0, 300);
+      }
+    })();
+  ` });
+
+  const page = await context.newPage();'''
+    text = replace_once(text, page_marker, page_replacement, "navigation guard")
+
     geometry_marker = '''  report.geometry = await canvasGeometry(page);
   if (!report.geometry) throw new Error("canvas geometry unavailable");
   report.triggerCssPoint = toCss(report.geometry, triggerPoint);
