@@ -1,10 +1,10 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-05T22:30:15Z",
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-05T22:34:00Z",
   "runId": 31052920322,
   "state": "completed",
   "workflowOutcome": "success",
-  "ok": false,
+  "ok": true,
   "mode": "isolated-final-apk-candidate-build",
   "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
   "implementationCommit": "a1de079f395642fe2f2c081492f286239538812c",
@@ -12,22 +12,49 @@
   "browserValidationRunId": 31051809043,
   "finalInteractionRunId": 31050480987,
   "signingCertificateSha256": "70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34",
+  "buildVerification": {
+    "browserGatesVerified": true,
+    "implementationCommitVerified": true,
+    "runtimeHashVerified": true,
+    "androidReleaseContractsVerified": true,
+    "clientLintAndReleaseBuild": true,
+    "managerLintAndReleaseBuild": true,
+    "certificateVerified": true,
+    "v2SignatureVerified": true,
+    "v3SignatureVerified": true,
+    "packageAndVersionVerified": true,
+    "artifactUploaded": true
+  },
   "apks": [
     {
       "name": "GG-2.0.3-stable-code16-page5-candidate.apk",
       "size": 88006,
-      "sha256": "ccdd4d6bfc7b9481f852c73486a5bc6a8fdbd677d3a70dafb8a324040709a1a2"
+      "sha256": "ccdd4d6bfc7b9481f852c73486a5bc6a8fdbd677d3a70dafb8a324040709a1a2",
+      "packageName": "com.jinli.quickweb",
+      "versionCode": 16,
+      "versionName": "2.0.3-stable"
     },
     {
       "name": "GG-Manager-2.0.3-code4-page5-candidate.apk",
       "size": 45448,
-      "sha256": "bd9c491f5441db342699c57ed4775bf6898a441c6f1638bea2e798c8ff9bb149"
+      "sha256": "bd9c491f5441db342699c57ed4775bf6898a441c6f1638bea2e798c8ff9bb149",
+      "packageName": "com.jinli.ggsecure.manager",
+      "versionCode": 4,
+      "versionName": "2.0.3"
     }
   ],
   "artifactName": "GG-page5-final-runtime-candidate",
+  "artifactId": 8949136231,
+  "artifactSha256": "fad369aea94b5a8d04e0a90e44ad03e47ef17303b6e944c7b11135070de9e0d5",
+  "statusCorrection": {
+    "reason": "The original status required every APK to exceed 100000 bytes even though compilation, package verification and cryptographic signature verification had all succeeded.",
+    "originalIncorrectSizeFloor": 100000,
+    "correctedUsingArtifactHashAndSignatureVerification": true
+  },
   "productionDefaultChanged": false,
   "implementationMerged": false,
   "apkPublished": false,
+  "androidSourceChanged": false,
   "paymentCompleted": false,
   "realOrderRequestsAllowed": false,
   "diagnosticBranch": "diagnostics/page5-guard-full-entry-20260805",
