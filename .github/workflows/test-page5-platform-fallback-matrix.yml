@@ -9,12 +9,6 @@ on:
       - scripts/prepare_page5_post_title_fullscreen_callback_inventory.py
       - scripts/page5_post_title_fullscreen_callback_inventory.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
-  pull_request:
-    branches:
-      - diagnostics/page5-guard-full-entry-20260805
-    paths:
-      - scripts/page5_post_title_fullscreen_callback_inventory.trigger
-      - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
 permissions:
@@ -53,6 +47,7 @@ jobs:
           grep -Fq 'const nodeIndexes = [1]' "$GENERATED_PROBE"
           grep -Fq 'mouseDownNodeCount' "$GENERATED_PROBE"
           grep -Fq 'after-title-reveal' "$GENERATED_PROBE"
+          grep -Fq '__gamsNavigationGuard' "$GENERATED_PROBE"
 
       - name: Install Chromium
         shell: bash
@@ -88,7 +83,7 @@ jobs:
           output = Path(os.environ['OUTPUT_DIR'])
           report_path = output / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          inventory = report.get('inventory', []) if report else []
+          inventory = (report.get('inventory') or []) if report else []
           node = inventory[0] if inventory else None
           event_summary = {}
           if node:
@@ -120,15 +115,16 @@ jobs:
               'ok': ok,
               'mode': 'page5-post-title-fullscreen-callback-inventory-read-only',
               'pauseCaptured': report.get('pauseCaptured') if report else None,
+              'fatalError': report.get('fatalError') if report else None,
               'inventoryCount': len(inventory),
               'nodeIndex': node.get('index') if node else None,
               'geometry': node.get('geometry') if node else None,
               'eventNames': sorted((node.get('events') or {}).keys()) if node else [],
               'eventSummary': event_summary,
               'mainFrameValid': report.get('mainFrameValid') if report else None,
-              'pageErrorCount': len(report.get('pageErrors', [])) if report else None,
-              'blockedOrderCount': len(report.get('blockedOrders', [])) if report else None,
-              'debuggerErrorCount': len(report.get('debuggerErrors', [])) if report else None,
+              'pageErrorCount': len(report.get('pageErrors') or []) if report else None,
+              'blockedOrderCount': len(report.get('blockedOrders') or []) if report else None,
+              'debuggerErrorCount': len(report.get('debuggerErrors') or []) if report else None,
               'reportAvailable': bool(report),
               'artifactName': 'page5-post-title-fullscreen-callback-inventory',
               'readOnlyProbe': True,
