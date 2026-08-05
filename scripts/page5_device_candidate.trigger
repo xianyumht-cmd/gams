@@ -1,2 +1,2 @@
-trigger=2026-08-06T06:45:00+08:00
-purpose=build isolated runtime path and signed device candidate APK
+trigger=2026-08-06T06:46:00+08:00
+purpose=retrigger isolated runtime path and signed device candidate APK build
