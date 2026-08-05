@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T17:15:40Z",
+  "runId": 31029038096,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-empty-callback-bridge-probe",
+  "summary": {
+    "totalCases": 2,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "currentPageErrorCount": 0,
+    "currentTargetReadCount": 0,
+    "currentTargetListCount": 0,
+    "candidatePageErrorCount": 0,
+    "candidateTargetReadCount": 0,
+    "candidateTargetListCount": 0,
+    "candidateScreenshotChanged": true,
+    "blockedOrderCases": 0,
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "emptyCallbackReplacementCount": 1
+  },
+  "currentTargetWindow": {
+    "total": 0,
+    "kinds": {},
+    "targetReadCount": 0,
+    "targetListCount": 0,
+    "orderMutationCount": 0
+  },
+  "candidateTargetWindow": {
+    "total": 0,
+    "kinds": {},
+    "targetReadCount": 0,
+    "targetListCount": 0,
+    "orderMutationCount": 0
+  },
+  "currentPageErrors": [],
+  "candidatePageErrors": [],
+  "currentScreenshots": {
+    "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
+    "runtime-open": "47489bceefdd9989997d6061cb068ccc4e9663a35df602133621b717edaed812",
+    "runtime-close": "ecfb8e32959a414a19cf52c32772d4104781527ca97a77879e7582c6eb676e5d",
+    "runtime-reopen": "492afea34ed168a7f3e6f87a28a0b3d46ef0234e6a87721db0517d9d02521a93",
+    "runtime-final-close": "8d927399c8e15ec49c2a796816f7fd6c6bac6ad8788042a99958a9736bde76fb",
+    "after-01-target-entry": "374e6f0c6a26a43896023df833eee18d2aa908fb3e4613c41e5e97de5240b231"
+  },
+  "candidateScreenshots": {
+    "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
+    "runtime-open": "7d7c1d21b6e92f61b6b3a961dd74f59e8c5b6100d178aa570e16a667ea887841",
+    "runtime-close": "1549ff1e6881a7a5f8c3c2543bba0900a9f7c3c4c9406c4af8e0a1dda44ba8ad",
+    "runtime-reopen": "c0340dd4ba3c388b9266cb50f787db8b397801419a01600cc77e4ef9e02a10c4",
+    "runtime-final-close": "3f85644456ba5549ca17021f4d4bc3f52feb0a255538949ec7612f7aa0907b11",
+    "after-01-target-entry": "0e117d2b8fcc77708742e8143c5879360dd6571b7f4efc4c7956c879d5bd88fa"
+  },
+  "candidatePatch": {
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "emptyCallbackReplacementCount": 1,
+    "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
+    "newTextSha256": "37fe35703e40793d24fd8d80e2e40e59170def41c13e32eeade8570845cb7c0a",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590592,
+    "candidateSecondSha256": "713b4e2019cf323ce366a8d5e68399d1d733a21bcae81b43a9569fda49aec975"
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-empty-callback-bridge-probe",
+  "isolatedCandidateOnly": true,
+  "candidatePersisted": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "7370c997178b30544d5897a852538be8da7f32a2"
+}
