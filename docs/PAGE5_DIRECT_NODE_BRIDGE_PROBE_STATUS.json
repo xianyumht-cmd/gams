@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:47:32Z",
-  "runId": 31031521896,
+  "generatedAt": "2026-08-05T17:54:12Z",
+  "runId": 31031957189,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
-  "mode": "page5-dynamic-target-button-empty-callback-bridge-probe",
+  "mode": "page5-dynamic-target-button-missing-state-bridge-probe",
   "summary": {
     "totalCases": 2,
     "fatalCases": 0,
@@ -173,16 +173,17 @@
     "guardReplacementCount": 1,
     "emptyCallbackReplacementCount": 1,
     "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
-    "newTextSha256": "37fe35703e40793d24fd8d80e2e40e59170def41c13e32eeade8570845cb7c0a",
+    "newTextSha256": "92391ed3c25d81c7077133add5096b149d5c4c8bb735dc439f21bb9c2eb6361c",
     "currentSecondSize": 11590534,
     "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
-    "candidateSecondSize": 11590592,
-    "candidateSecondSha256": "713b4e2019cf323ce366a8d5e68399d1d733a21bcae81b43a9569fda49aec975"
+    "candidateSecondSize": 11590583,
+    "candidateSecondSha256": "b2bdcba0099b80db48d982dd44efac7c0ee5652b7f26f091543b52c950da0389"
   },
   "reportAvailable": true,
   "artifactName": "page5-direct-node-bridge-probe",
   "directNodeIndex": 10,
   "realTouchUsed": true,
+  "missingStateCondition": "SA is undefined",
   "isolatedCandidateOnly": true,
   "candidatePersisted": false,
   "repeatSequenceTested": false,
@@ -193,5 +194,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "19d36d8a29ca7e19253937c41a9649bc9dde2e6e"
+  "commit": "8d11911d41ddf8b0fbc5314497beba8f7c0365de"
 }
