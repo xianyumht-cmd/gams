@@ -1,0 +1,176 @@
+name: Probe guarded runtime final purchase action v3
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/prepare_page5_purchase_action_probe.py
+      - scripts/prepare_page5_purchase_action_probe_guard.py
+      - scripts/page5_purchase_action_probe_v3.trigger
+      - .github/workflows/test-page5-purchase-action-probe-v3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-guarded-final-purchase-action-probe-v3-20260806
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: /tmp/persisted-game-1.0.5.js
+      CURRENT_RUNTIME_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
+      GENERATED_PROBE: scripts/run_page5_purchase_action_probe_v3.generated.mjs
+      OUTPUT_DIR: page5-purchase-action-probe-v3
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Read guarded implementation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$CURRENT_SECOND_PATH"
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_repeat_reentry_matrix.py" > scripts/prepare_persisted_repeat_reentry_matrix.py
+          test -s "$CURRENT_SECOND_PATH"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_RUNTIME_SHA256"
+
+      - name: Prepare guarded final purchase probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/prepare_five_page_missing_constructor_matrix.py \
+            scripts/prepare_page5_repeat_reentry_matrix.py \
+            scripts/prepare_persisted_repeat_reentry_matrix.py \
+            scripts/prepare_page5_purchase_action_probe.py \
+            scripts/prepare_page5_purchase_action_probe_guard.py
+          python3 scripts/prepare_page5_purchase_action_probe_guard.py --output "$GENERATED_PROBE"
+          node --check "$GENERATED_PROBE"
+          grep -Fq 'persisted-runtime-page5-safe-final-purchase-action-probe' "$GENERATED_PROBE"
+          grep -Fq 'left-middle-purchase' "$GENERATED_PROBE"
+          grep -Fq 'product-detail-final-buy' "$GENERATED_PROBE"
+          grep -Fq 'blocked-order-mutation' "$GENERATED_PROBE"
+          grep -Fq "$CURRENT_RUNTIME_SHA256" "$GENERATED_PROBE"
+          grep -Fq 'safeProbeCompleted' "$GENERATED_PROBE"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute guarded final purchase probe
+        id: probe_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-purchase-action-probe-v3.log
+
+      - name: Build guarded final status
+        if: always()
+        shell: bash
+        env:
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/page5-purchase-action-probe-v3.log && cp /tmp/page5-purchase-action-probe-v3.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          report_path = Path(os.environ['OUTPUT_DIR']) / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          cases = (report or {}).get('cases') or []
+          case = cases[0] if cases else {}
+          probe = case.get('purchaseProbe') or {}
+          attempts = probe.get('attempts') or []
+          summary = (report or {}).get('summary') or {}
+          ok = bool(report) and bool(report.get('safeProbeCompleted')) and os.environ.get('PROBE_OUTCOME') == 'success'
+          status = {
+              'schemaVersion': 3,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
+              'ok': ok,
+              'mode': (report or {}).get('mode'),
+              'summary': summary,
+              'productDetailObserved': bool((report or {}).get('productDetailObserved')),
+              'purchaseActionReached': bool((report or {}).get('purchaseActionReached')),
+              'purchaseResultObserved': bool((report or {}).get('purchaseResultObserved')),
+              'requiresCompatibilityReview': bool((report or {}).get('requiresCompatibilityReview')),
+              'productDetail': probe.get('productDetail'),
+              'attempt': attempts[0] if attempts else None,
+              'pageErrors': case.get('pageErrors') or [],
+              'dialogs': case.get('dialogs') or [],
+              'blockedOrderCount': len(case.get('blockedOrders') or []),
+              'requestFailures': case.get('requestFailures') or [],
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'runtimeSha256': os.environ['CURRENT_RUNTIME_SHA256'],
+              'realOrderRequestsAllowed': False,
+              'paymentCompleted': False,
+              'authorizationOutcomeModified': False,
+              'productionDefaultChanged': False,
+              'androidClientChanged': False,
+              'apkBuilt': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-purchase-action-probe-v3
+          path: |
+            page5-purchase-action-probe-v3
+            /tmp/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish guarded final status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/prepare_persisted_repeat_reentry_matrix.py "$GENERATED_PROBE"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          mkdir -p docs
+          cp /tmp/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json docs/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json
+          git add docs/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record guarded final purchase action probe"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce guarded probe gate
+        if: always()
+        shell: bash
+        run: jq -e '.ok == true' /tmp/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json >/dev/null
