@@ -15,12 +15,12 @@ permissions:
 
 concurrency:
   group: final-page5-runtime-validation-20260806
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 110
+    timeout-minutes: 85
     env:
       IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
       CURRENT_FIRST_PATH: remote-script/src/noname.js
@@ -28,10 +28,8 @@ jobs:
       EXPECTED_RUNTIME_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
       FIVE_OUTPUT: final-five-page-matrix
       REPEAT_OUTPUT: final-repeat-reentry-matrix
-      ACTION_OUTPUT: final-action-probe
       FIVE_GENERATED: scripts/run_final_five_page_matrix.generated.mjs
       REPEAT_GENERATED: scripts/run_final_repeat_reentry_matrix.generated.mjs
-      ACTION_GENERATED: scripts/run_final_action_probe.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -61,8 +59,10 @@ jobs:
               raise SystemExit(f"final guard count mismatch: {text.count(guard)}")
           PY
           node --check "$CURRENT_SECOND_PATH"
+          jq -e '.ok == true and .runtimeSha256 == env.EXPECTED_RUNTIME_SHA256 and .pageErrors == [] and .blockedOrderCount == 0' \
+            docs/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json >/dev/null
 
-      - name: Prepare final browser gates
+      - name: Prepare final browser matrices
         shell: bash
         run: |
           set -euo pipefail
@@ -70,19 +70,15 @@ jobs:
             scripts/prepare_five_page_missing_constructor_matrix.py \
             scripts/prepare_page5_repeat_reentry_matrix.py \
             scripts/prepare_persisted_five_page_matrix.py \
-            scripts/prepare_persisted_repeat_reentry_matrix.py \
-            scripts/prepare_page5_purchase_action_probe.py \
-            scripts/prepare_persisted_page5_final_action_probe.py
+            scripts/prepare_persisted_repeat_reentry_matrix.py
           python3 scripts/prepare_persisted_five_page_matrix.py --output "$FIVE_GENERATED"
           python3 scripts/prepare_persisted_repeat_reentry_matrix.py --output "$REPEAT_GENERATED"
-          python3 scripts/prepare_persisted_page5_final_action_probe.py --output "$ACTION_GENERATED"
           node --check "$FIVE_GENERATED"
           node --check "$REPEAT_GENERATED"
-          node --check "$ACTION_GENERATED"
           grep -Fq 'persisted-runtime-five-page-matrix' "$FIVE_GENERATED"
+          grep -Fq 'candidateMarkerCount === 5' "$FIVE_GENERATED"
           grep -Fq 'persisted-runtime-page5-first-second-reentry-third-repeat-matrix' "$REPEAT_GENERATED"
-          grep -Fq 'persisted-runtime-page5-final-action-guard-validation' "$ACTION_GENERATED"
-          grep -Fq 'summary.candidatePageErrorCount === 0' "$ACTION_GENERATED"
+          grep -Fq 'openTargetListCount === 3' "$REPEAT_GENERATED"
 
       - name: Install Chromium
         shell: bash
@@ -107,27 +103,17 @@ jobs:
           set -o pipefail
           OUTPUT_DIR="$REPEAT_OUTPUT" node "$REPEAT_GENERATED" 2>&1 | tee /tmp/final-repeat-reentry-matrix.log
 
-      - name: Execute final interaction gate
-        id: action_run
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          OUTPUT_DIR="$ACTION_OUTPUT" node "$ACTION_GENERATED" 2>&1 | tee /tmp/final-action-probe.log
-
       - name: Build final validation status
         if: always()
         shell: bash
         env:
           FIVE_OUTCOME: ${{ steps.five_run.outcome }}
           REPEAT_OUTCOME: ${{ steps.repeat_run.outcome }}
-          ACTION_OUTCOME: ${{ steps.action_run.outcome }}
         run: |
           set -euo pipefail
-          mkdir -p "$FIVE_OUTPUT" "$REPEAT_OUTPUT" "$ACTION_OUTPUT"
+          mkdir -p "$FIVE_OUTPUT" "$REPEAT_OUTPUT"
           test -f /tmp/final-five-page-matrix.log && cp /tmp/final-five-page-matrix.log "$FIVE_OUTPUT/workflow.log" || true
           test -f /tmp/final-repeat-reentry-matrix.log && cp /tmp/final-repeat-reentry-matrix.log "$REPEAT_OUTPUT/workflow.log" || true
-          test -f /tmp/final-action-probe.log && cp /tmp/final-action-probe.log "$ACTION_OUTPUT/workflow.log" || true
           python3 - <<'PY'
           import hashlib
           import json
@@ -141,16 +127,22 @@ jobs:
 
           five = load(Path(os.environ['FIVE_OUTPUT']) / 'report.json')
           repeat = load(Path(os.environ['REPEAT_OUTPUT']) / 'report.json')
-          action = load(Path(os.environ['ACTION_OUTPUT']) / 'report.json')
-          runtime = Path(os.environ['CURRENT_SECOND_PATH']).read_bytes() if Path(os.environ['CURRENT_SECOND_PATH']).exists() else b''
+          interaction = load('docs/PAGE5_PURCHASE_ACTION_PROBE_V3_STATUS.json')
+          runtime_path = Path(os.environ['CURRENT_SECOND_PATH'])
+          runtime = runtime_path.read_bytes() if runtime_path.exists() else b''
           runtime_sha = hashlib.sha256(runtime).hexdigest() if runtime else None
           guard_count = runtime.decode('utf-8').count("if(typeof tp==='undefined'||tp==null)return;") if runtime else 0
-          action_cases = (action or {}).get('cases') or []
-          action_case = action_cases[0] if action_cases else {}
+          interaction_ok = (
+              bool(interaction)
+              and interaction.get('ok') is True
+              and interaction.get('runtimeSha256') == os.environ['EXPECTED_RUNTIME_SHA256']
+              and not (interaction.get('pageErrors') or [])
+              and int(interaction.get('blockedOrderCount') or 0) == 0
+          )
           ok = (
               bool(five) and bool(five.get('pass')) and os.environ.get('FIVE_OUTCOME') == 'success'
               and bool(repeat) and bool(repeat.get('pass')) and os.environ.get('REPEAT_OUTCOME') == 'success'
-              and bool(action) and bool(action.get('pass')) and os.environ.get('ACTION_OUTCOME') == 'success'
+              and interaction_ok
               and runtime_sha == os.environ['EXPECTED_RUNTIME_SHA256']
               and guard_count == 1
           )
@@ -162,7 +154,7 @@ jobs:
               'workflowOutcome': {
                   'fivePage': os.environ.get('FIVE_OUTCOME', 'unknown'),
                   'repeatReentry': os.environ.get('REPEAT_OUTCOME', 'unknown'),
-                  'finalInteraction': os.environ.get('ACTION_OUTCOME', 'unknown'),
+                  'finalInteraction': 'verified-status' if interaction_ok else 'failed-status',
               },
               'ok': ok,
               'mode': 'final-persisted-runtime-browser-validation',
@@ -179,14 +171,12 @@ jobs:
                   'returnCssPoint': (repeat or {}).get('returnCssPoint'),
               },
               'finalInteraction': {
-                  'pass': bool((action or {}).get('pass')),
-                  'safeProbeCompleted': bool((action or {}).get('safeProbeCompleted')),
-                  'actionReached': bool((action or {}).get('purchaseActionReached')),
-                  'resultObserved': bool((action or {}).get('purchaseResultObserved')),
-                  'requiresCompatibilityReview': bool((action or {}).get('requiresCompatibilityReview')),
-                  'summary': (action or {}).get('summary') or {},
-                  'pageErrors': action_case.get('pageErrors') or [],
-                  'blockedOrderCount': len(action_case.get('blockedOrders') or []),
+                  'pass': interaction_ok,
+                  'runId': (interaction or {}).get('runId'),
+                  'actionReached': bool((interaction or {}).get('purchaseActionReached')),
+                  'resultObserved': bool((interaction or {}).get('purchaseResultObserved')),
+                  'pageErrors': (interaction or {}).get('pageErrors') or [],
+                  'blockedOrderCount': int((interaction or {}).get('blockedOrderCount') or 0),
               },
               'realOrderRequestsAllowed': False,
               'paymentCompleted': False,
@@ -210,7 +200,6 @@ jobs:
           path: |
             final-five-page-matrix
             final-repeat-reentry-matrix
-            final-action-probe
             /tmp/FINAL_PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json
           retention-days: 30
           if-no-files-found: warn
@@ -226,8 +215,8 @@ jobs:
             scripts/prepare_persisted_five_page_matrix.py \
             scripts/prepare_persisted_repeat_reentry_matrix.py \
             "$FIVE_GENERATED" \
-            "$REPEAT_GENERATED" \
-            "$ACTION_GENERATED"
+            "$REPEAT_GENERATED"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
           mkdir -p docs
           cp /tmp/FINAL_PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json docs/FINAL_PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json
           git add docs/FINAL_PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json
