@@ -1,32 +1,33 @@
-name: Test page five repeat and reentry sequence
+name: Validate persisted runtime bridge from implementation branch
 
 on:
   push:
     branches:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
-      - scripts/run_page5_guard_full_entry_matrix.mjs
-      - scripts/prepare_five_page_missing_constructor_matrix.py
-      - scripts/prepare_page5_repeat_reentry_matrix.py
-      - scripts/page5_repeat_reentry_matrix.trigger
+      - scripts/persisted_runtime_validation.trigger
+      - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: page5-repeat-reentry-matrix-20260806
-  cancel-in-progress: true
+  group: persisted-runtime-browser-validation-20260806
+  cancel-in-progress: false
 
 jobs:
-  matrix:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 70
     env:
-      OUTPUT_DIR: page5-repeat-reentry-matrix
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
       CURRENT_FIRST_PATH: remote-script/src/noname.js
-      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
-      GENERATED_MATRIX: scripts/run_page5_repeat_reentry_matrix.generated.mjs
+      CURRENT_SECOND_PATH: /tmp/persisted-game-1.0.5.js
+      FIVE_OUTPUT: persisted-five-page-matrix
+      REPEAT_OUTPUT: persisted-repeat-reentry-matrix
+      FIVE_GENERATED: scripts/run_persisted_five_page_matrix.generated.mjs
+      REPEAT_GENERATED: scripts/run_persisted_repeat_reentry_matrix.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -38,23 +39,34 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare repeat and reentry matrix
+      - name: Read persisted implementation files
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$CURRENT_FIRST_PATH"
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$CURRENT_SECOND_PATH"
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_five_page_matrix.py" > scripts/prepare_persisted_five_page_matrix.py
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_repeat_reentry_matrix.py" > scripts/prepare_persisted_repeat_reentry_matrix.py
           test -s "$CURRENT_SECOND_PATH"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca"
+
+      - name: Prepare persisted browser matrices
+        shell: bash
+        run: |
+          set -euo pipefail
           python3 -m py_compile \
             scripts/prepare_five_page_missing_constructor_matrix.py \
-            scripts/prepare_page5_repeat_reentry_matrix.py
-          python3 scripts/prepare_page5_repeat_reentry_matrix.py --output "$GENERATED_MATRIX"
-          node --check "$GENERATED_MATRIX"
-          grep -Fq 'page5-first-second-reentry-third-repeat-matrix' "$GENERATED_MATRIX"
-          grep -Fq 'first-open' "$GENERATED_MATRIX"
-          grep -Fq 'second-open' "$GENERATED_MATRIX"
-          grep -Fq 'third-open-after-reentry' "$GENERATED_MATRIX"
-          grep -Fq 'returnCssPoint = { x: 35, y: 423 }' "$GENERATED_MATRIX"
-          grep -Fq 'openTargetListCount === 3' "$GENERATED_MATRIX"
+            scripts/prepare_page5_repeat_reentry_matrix.py \
+            scripts/prepare_persisted_five_page_matrix.py \
+            scripts/prepare_persisted_repeat_reentry_matrix.py
+          python3 scripts/prepare_persisted_five_page_matrix.py --output "$FIVE_GENERATED"
+          python3 scripts/prepare_persisted_repeat_reentry_matrix.py --output "$REPEAT_GENERATED"
+          node --check "$FIVE_GENERATED"
+          node --check "$REPEAT_GENERATED"
+          grep -Fq 'persisted-runtime-five-page-matrix' "$FIVE_GENERATED"
+          grep -Fq 'candidateMarkerCount === 5' "$FIVE_GENERATED"
+          grep -Fq 'persisted-runtime-page5-first-second-reentry-third-repeat-matrix' "$REPEAT_GENERATED"
+          grep -Fq 'openTargetListCount === 3' "$REPEAT_GENERATED"
 
       - name: Install Chromium
         shell: bash
@@ -63,70 +75,83 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute repeat and reentry matrix
-        id: matrix_run
+      - name: Execute persisted five-page matrix
+        id: five_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_MATRIX" 2>&1 | tee /tmp/page5-repeat-reentry-matrix.log
+          OUTPUT_DIR="$FIVE_OUTPUT" node "$FIVE_GENERATED" 2>&1 | tee /tmp/persisted-five-page-matrix.log
 
-      - name: Build repeat and reentry status
+      - name: Execute persisted repeat and reentry matrix
+        id: repeat_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          OUTPUT_DIR="$REPEAT_OUTPUT" node "$REPEAT_GENERATED" 2>&1 | tee /tmp/persisted-repeat-reentry-matrix.log
+
+      - name: Build persisted validation status
         if: always()
         shell: bash
         env:
-          MATRIX_OUTCOME: ${{ steps.matrix_run.outcome }}
+          FIVE_OUTCOME: ${{ steps.five_run.outcome }}
+          REPEAT_OUTCOME: ${{ steps.repeat_run.outcome }}
         run: |
           set -euo pipefail
-          mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-repeat-reentry-matrix.log && cp /tmp/page5-repeat-reentry-matrix.log "$OUTPUT_DIR/workflow.log" || true
+          mkdir -p "$FIVE_OUTPUT" "$REPEAT_OUTPUT"
+          test -f /tmp/persisted-five-page-matrix.log && cp /tmp/persisted-five-page-matrix.log "$FIVE_OUTPUT/workflow.log" || true
+          test -f /tmp/persisted-repeat-reentry-matrix.log && cp /tmp/persisted-repeat-reentry-matrix.log "$REPEAT_OUTPUT/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
           from datetime import datetime, timezone
           from pathlib import Path
 
-          output = Path(os.environ['OUTPUT_DIR'])
-          report_path = output / 'report.json'
-          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          summary = (report or {}).get('summary') or {}
-          cases = (report or {}).get('cases') or []
-          case = cases[0] if cases else None
-          ok = bool(report) and bool(report.get('pass')) and os.environ.get('MATRIX_OUTCOME') == 'success'
+          def load(path):
+              p = Path(path)
+              return json.loads(p.read_text(encoding='utf-8')) if p.exists() else None
+
+          five = load(Path(os.environ['FIVE_OUTPUT']) / 'report.json')
+          repeat = load(Path(os.environ['REPEAT_OUTPUT']) / 'report.json')
+          ok = (
+              bool(five) and bool(five.get('pass')) and os.environ.get('FIVE_OUTCOME') == 'success'
+              and bool(repeat) and bool(repeat.get('pass')) and os.environ.get('REPEAT_OUTCOME') == 'success'
+          )
           status = {
               'schemaVersion': 1,
               'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
               'runId': int(os.environ['GITHUB_RUN_ID']),
               'state': 'completed',
-              'workflowOutcome': os.environ.get('MATRIX_OUTCOME', 'unknown'),
+              'workflowOutcome': {
+                  'fivePage': os.environ.get('FIVE_OUTCOME', 'unknown'),
+                  'repeatReentry': os.environ.get('REPEAT_OUTCOME', 'unknown'),
+              },
               'ok': ok,
-              'mode': 'page5-first-second-reentry-third-repeat-matrix',
-              'summary': summary,
-              'repeatSequence': (case or {}).get('repeatSequence') or [],
-              'returnSequence': (case or {}).get('returnSequence') or [],
-              'reentry': (case or {}).get('reentry') or {},
-              'runtimeLoads': (case or {}).get('runtimeLoads') or {},
-              'pageErrorCount': len((case or {}).get('pageErrors') or []),
-              'pageErrors': (case or {}).get('pageErrors') or [],
-              'blockedOrderCount': len((case or {}).get('blockedOrders') or []),
-              'blockedExternalNavigationCount': len((case or {}).get('blockedExternalNavigations') or []),
-              'fatalError': (case or {}).get('fatalError'),
-              'returnCssPoint': (report or {}).get('returnCssPoint'),
-              'candidatePatch': (report or {}).get('candidatePatch'),
-              'reportAvailable': bool(report),
-              'artifactName': 'page5-repeat-reentry-matrix',
-              'candidatePersisted': False,
-              'repeatSequenceTested': bool(report),
-              'apkBuilt': False,
+              'mode': 'persisted-runtime-browser-validation',
+              'implementationRef': os.environ.get('IMPLEMENTATION_REF', ''),
+              'fivePage': {
+                  'pass': bool((five or {}).get('pass')),
+                  'summary': (five or {}).get('summary') or {},
+                  'candidatePatch': (five or {}).get('candidatePatch'),
+              },
+              'repeatReentry': {
+                  'pass': bool((repeat or {}).get('pass')),
+                  'summary': (repeat or {}).get('summary') or {},
+                  'candidatePatch': (repeat or {}).get('candidatePatch'),
+                  'returnCssPoint': (repeat or {}).get('returnCssPoint'),
+              },
+              'persistedRuntimeSha256': '9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca',
+              'runtimeFilesChangedOnImplementationBranch': True,
               'productionDefaultChanged': False,
-              'runtimeFilesChanged': False,
               'androidClientChanged': False,
+              'apkBuilt': False,
               'authorizationOutcomeModified': False,
               'paymentCompleted': False,
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json').write_text(
+          Path('/tmp/PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -135,27 +160,35 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-repeat-reentry-matrix
-          path: page5-repeat-reentry-matrix
+          name: persisted-runtime-browser-validation
+          path: |
+            persisted-five-page-matrix
+            persisted-repeat-reentry-matrix
+            /tmp/PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish repeat and reentry status
+      - name: Publish persisted validation status
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f \
+            scripts/prepare_persisted_five_page_matrix.py \
+            scripts/prepare_persisted_repeat_reentry_matrix.py \
+            "$FIVE_GENERATED" \
+            "$REPEAT_GENERATED"
           mkdir -p docs
-          cp /tmp/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json docs/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json
-          git add docs/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json
+          cp /tmp/PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json docs/PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json
+          git add docs/PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five repeat and reentry matrix"
+            git commit -m "Record persisted runtime browser validation"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce repeat and reentry gate
+      - name: Enforce persisted validation gate
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/PERSISTED_RUNTIME_BROWSER_VALIDATION_STATUS.json >/dev/null
