@@ -67,24 +67,49 @@ def main() -> int:
       await stage("before-purchase-list-open");
       const listOpen = await openTarget("purchase-list-open");
 
-      const purchasePoint = { x: 190, y: 358, label: "left-middle-purchase" };
-      const requestStart = requests.length;
-      const dialogStart = dialogs.length;
-      const blockedStart = blockedOrders.length;
-      const errorStart = pageErrors.length;
-      const beforeHash = await capture(page, path.join(outputDir, `${prefix}-before-purchase-button.png`));
-      await page.touchscreen.tap(purchasePoint.x, purchasePoint.y);
-      events.push({ at: Date.now(), type: "purchase-button-touch", ...purchasePoint });
-      await page.waitForTimeout(8000);
-      await stage("after-purchase-button");
-      const purchaseWindow = requestWindow(requests, requestStart);
+      const productPoint = { x: 190, y: 358, label: "left-middle-purchase" };
+      const productRequestStart = requests.length;
+      const productDialogStart = dialogs.length;
+      const productBlockedStart = blockedOrders.length;
+      const productErrorStart = pageErrors.length;
+      const beforeProductHash = await capture(page, path.join(outputDir, `${prefix}-before-product-detail.png`));
+      await page.touchscreen.tap(productPoint.x, productPoint.y);
+      events.push({ at: Date.now(), type: "product-card-purchase-touch", ...productPoint });
+      await page.waitForTimeout(7000);
+      await stage("after-product-detail");
+      const productDetail = {
+        point: productPoint,
+        screenChanged: beforeProductHash !== result.screenshots["after-product-detail"],
+        requestWindow: requestWindow(requests, productRequestStart),
+        dialogs: dialogs.slice(productDialogStart),
+        blockedOrders: blockedOrders.slice(productBlockedStart),
+        pageErrors: pageErrors.slice(productErrorStart),
+        url: safeUrl(page.url()),
+      };
+      productDetail.interactionObserved = Boolean(
+        productDetail.screenChanged
+        || productDetail.dialogs.length
+        || productDetail.blockedOrders.length
+        || productDetail.requestWindow.total > 0
+      );
+
+      const finalBuyPoint = { x: 115, y: 465, label: "product-detail-final-buy" };
+      const finalRequestStart = requests.length;
+      const finalDialogStart = dialogs.length;
+      const finalBlockedStart = blockedOrders.length;
+      const finalErrorStart = pageErrors.length;
+      const beforeFinalHash = await capture(page, path.join(outputDir, `${prefix}-before-final-buy.png`));
+      await page.touchscreen.tap(finalBuyPoint.x, finalBuyPoint.y);
+      events.push({ at: Date.now(), type: "final-purchase-touch", ...finalBuyPoint });
+      await page.waitForTimeout(10000);
+      await stage("after-final-buy");
       const attempt = {
-        point: purchasePoint,
-        screenChanged: beforeHash !== result.screenshots["after-purchase-button"],
-        requestWindow: purchaseWindow,
-        dialogs: dialogs.slice(dialogStart),
-        blockedOrders: blockedOrders.slice(blockedStart),
-        pageErrors: pageErrors.slice(errorStart),
+        point: finalBuyPoint,
+        screenChanged: beforeFinalHash !== result.screenshots["after-final-buy"],
+        requestWindow: requestWindow(requests, finalRequestStart),
+        dialogs: dialogs.slice(finalDialogStart),
+        blockedOrders: blockedOrders.slice(finalBlockedStart),
+        pageErrors: pageErrors.slice(finalErrorStart),
         url: safeUrl(page.url()),
       };
       attempt.interactionObserved = Boolean(
@@ -94,8 +119,9 @@ def main() -> int:
         || attempt.requestWindow.total > 0
       );
       result.purchaseProbe.listOpen = listOpen;
+      result.purchaseProbe.productDetail = productDetail;
       result.purchaseProbe.attempts.push(attempt);
-      result.targetWindow = purchaseWindow;
+      result.targetWindow = attempt.requestWindow;
       result.targetScreenChanged = attempt.screenChanged;'''
     text, count = execution_pattern.subn(lambda _m: execution, text, count=1)
     if count != 1:
@@ -103,6 +129,7 @@ def main() -> int:
 
     tail_pattern = re.compile(r"const candidateCase = cases\.find\(.*\Z", re.S)
     tail = '''const candidateCase = cases.find((item) => item.pair === "candidate" && item.page === "page5");
+const productDetail = candidateCase?.purchaseProbe?.productDetail || null;
 const attempts = candidateCase?.purchaseProbe?.attempts || [];
 const attempt = attempts[0] || null;
 const opens = candidateCase?.repeatSequence || [];
@@ -115,6 +142,8 @@ const summary = {
   listOpenCount: opens.length,
   listTargetReadCount: opens.filter((item) => Number(item.targetWindow?.targetReadCount || 0) > 0).length,
   listTargetListCount: opens.filter((item) => Number(item.targetWindow?.targetListCount || 0) > 0).length,
+  productDetailInteractionObservedCount: productDetail?.interactionObserved ? 1 : 0,
+  productDetailScreenChangedCount: productDetail?.screenChanged ? 1 : 0,
   purchaseAttemptCount: attempts.length,
   purchaseInteractionObservedCount: attempts.filter((item) => item.interactionObserved).length,
   purchaseScreenChangedCount: attempts.filter((item) => item.screenChanged).length,
@@ -129,9 +158,9 @@ const summary = {
 };
 
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedAt: new Date().toISOString(),
-  mode: "persisted-runtime-page5-safe-purchase-action-probe",
+  mode: "persisted-runtime-page5-safe-final-purchase-action-probe",
   candidatePatch: {
     replacementCount: candidatePatch.count,
     guardReplacementCount: candidatePatch.guardCount,
@@ -142,7 +171,8 @@ const report = {
     currentSecondSize: Buffer.byteLength(currentSecond),
     currentSecondSha256: sha256(Buffer.from(currentSecond)),
   },
-  purchasePoint: { x: 190, y: 358, label: "left-middle-purchase" },
+  productPoint: { x: 190, y: 358, label: "left-middle-purchase" },
+  finalBuyPoint: { x: 115, y: 465, label: "product-detail-final-buy" },
   cases,
   summary,
   apkExecuted: false,
@@ -161,12 +191,15 @@ report.safeProbeCompleted = summary.totalCases === 1
   && summary.listOpenCount === 1
   && summary.listTargetReadCount === 1
   && summary.listTargetListCount === 1
+  && summary.productDetailInteractionObservedCount === 1
+  && summary.productDetailScreenChangedCount === 1
   && summary.purchaseAttemptCount === 1
   && summary.blockedExternalNavigationCases === 0
   && summary.replacementCount === 2
   && summary.guardReplacementCount === 1
   && summary.callbackReplacementCount === 1
   && candidatePatch.persistedSha256 === "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca";
+report.productDetailObserved = Boolean(productDetail?.interactionObserved && productDetail?.screenChanged);
 report.purchaseActionReached = Boolean(attempt?.interactionObserved);
 report.purchaseResultObserved = Boolean(attempt?.screenChanged || attempt?.dialogs?.length);
 report.requiresCompatibilityReview = summary.candidatePageErrorCount > 0 || !report.purchaseActionReached;
@@ -176,6 +209,7 @@ fs.writeFileSync(path.join(outputDir, "report.json"), JSON.stringify(report, nul
 console.log(JSON.stringify({
   pass: report.pass,
   safeProbeCompleted: report.safeProbeCompleted,
+  productDetailObserved: report.productDetailObserved,
   purchaseActionReached: report.purchaseActionReached,
   purchaseResultObserved: report.purchaseResultObserved,
   requiresCompatibilityReview: report.requiresCompatibilityReview,
