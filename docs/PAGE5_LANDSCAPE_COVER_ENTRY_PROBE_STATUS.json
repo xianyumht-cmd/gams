@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T02:45:52Z",
+  "runId": 30970034183,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-landscape-cover-entry-probe-page-only",
+  "summary": {
+    "totalCases": 3,
+    "passedCases": 3,
+    "fatalCases": 0,
+    "pageErrorCases": 0,
+    "blockedOrderCases": 0,
+    "entryRequestCases": 1,
+    "entryDocumentRequestCases": 0
+  },
+  "caseSummary": [
+    {
+      "name": "prompt",
+      "geometry": {
+        "id": "canvas",
+        "width": 1280,
+        "height": 720,
+        "rect": {
+          "x": 75.328125,
+          "y": 0,
+          "width": 693.328125,
+          "height": 390
+        },
+        "viewport": {
+          "width": 844,
+          "height": 390,
+          "devicePixelRatio": 2
+        },
+        "orientation": "landscape-primary"
+      },
+      "entryPoint": {
+        "x": 421.9921875,
+        "y": 335.83333333333337
+      },
+      "entryRequestCount": 0,
+      "entryDocumentRequestCount": 0,
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "name": "title",
+      "geometry": {
+        "id": "canvas",
+        "width": 1280,
+        "height": 720,
+        "rect": {
+          "x": 75.328125,
+          "y": 0,
+          "width": 693.328125,
+          "height": 390
+        },
+        "viewport": {
+          "width": 844,
+          "height": 390,
+          "devicePixelRatio": 2
+        },
+        "orientation": "landscape-primary"
+      },
+      "entryPoint": {
+        "x": 411.158935546875,
+        "y": 297.91666666666663
+      },
+      "entryRequestCount": 1,
+      "entryDocumentRequestCount": 0,
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "name": "cover-center",
+      "geometry": {
+        "id": "canvas",
+        "width": 1280,
+        "height": 720,
+        "rect": {
+          "x": 75.328125,
+          "y": 0,
+          "width": 693.328125,
+          "height": 390
+        },
+        "viewport": {
+          "width": 844,
+          "height": 390,
+          "devicePixelRatio": 2
+        },
+        "orientation": "landscape-primary"
+      },
+      "entryPoint": {
+        "x": 421.9921875,
+        "y": 195
+      },
+      "entryRequestCount": 0,
+      "entryDocumentRequestCount": 0,
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    }
+  ],
+  "reportAvailable": true,
+  "artifactName": "page5-landscape-cover-entry-probe",
+  "pageOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "36337f6192b99d9db141a443bfd36a6f9521a167"
+}
