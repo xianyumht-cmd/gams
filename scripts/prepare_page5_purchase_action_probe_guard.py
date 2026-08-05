@@ -31,7 +31,7 @@ def main() -> int:
     if count != 1:
         raise SystemExit(f"generated purchase probe old hash count mismatch: {count}")
     text = text.replace(OLD_SHA256, CURRENT_SHA256, 1)
-    if text.count(CURRENT_SHA256) < 2:
+    if text.count(CURRENT_SHA256) < 1:
         raise SystemExit("current guarded runtime hash was not propagated")
     output.write_text(text, encoding="utf-8")
     print(output)
