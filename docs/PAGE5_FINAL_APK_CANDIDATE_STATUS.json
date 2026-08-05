@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T22:29:18Z",
+  "generatedAt": "2026-08-05T22:30:15Z",
   "runId": 31052920322,
-  "state": "running",
+  "state": "completed",
+  "workflowOutcome": "success",
   "ok": false,
   "mode": "isolated-final-apk-candidate-build",
   "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
@@ -10,8 +11,25 @@
   "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
   "browserValidationRunId": 31051809043,
   "finalInteractionRunId": 31050480987,
+  "signingCertificateSha256": "70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34",
+  "apks": [
+    {
+      "name": "GG-2.0.3-stable-code16-page5-candidate.apk",
+      "size": 88006,
+      "sha256": "ccdd4d6bfc7b9481f852c73486a5bc6a8fdbd677d3a70dafb8a324040709a1a2"
+    },
+    {
+      "name": "GG-Manager-2.0.3-code4-page5-candidate.apk",
+      "size": 45448,
+      "sha256": "bd9c491f5441db342699c57ed4775bf6898a441c6f1638bea2e798c8ff9bb149"
+    }
+  ],
+  "artifactName": "GG-page5-final-runtime-candidate",
   "productionDefaultChanged": false,
   "implementationMerged": false,
   "apkPublished": false,
-  "paymentCompleted": false
+  "paymentCompleted": false,
+  "realOrderRequestsAllowed": false,
+  "diagnosticBranch": "diagnostics/page5-guard-full-entry-20260805",
+  "diagnosticCommit": "b5aaa012fb5cfb89ab50c3a46ab4c7d2a151673a"
 }
