@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T03:36:44Z",
+  "runId": 30972674102,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-menu-callback-breakpoint-read-only-probe",
+  "canvasPauseCaptured": true,
+  "callbackPauseCaptured": false,
+  "selectedNodeIndex": 8,
+  "candidateNodes": [
+    {
+      "index": 8,
+      "x": 1198,
+      "y": 40,
+      "width": 46,
+      "height": 64,
+      "zIndex": 5500,
+      "visible": true,
+      "touchable": true,
+      "eventNames": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ],
+      "distance": 11
+    },
+    {
+      "index": 10,
+      "x": 1198,
+      "y": 145,
+      "width": 46,
+      "height": 64,
+      "zIndex": 5502,
+      "visible": true,
+      "touchable": true,
+      "eventNames": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ],
+      "distance": 30
+    },
+    {
+      "index": 9,
+      "x": 1180,
+      "y": 250,
+      "width": 74,
+      "height": 69,
+      "zIndex": 5501,
+      "visible": true,
+      "touchable": true,
+      "eventNames": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ],
+      "distance": 135
+    },
+    {
+      "index": 1,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "zIndex": 1000,
+      "visible": true,
+      "touchable": true,
+      "eventNames": [
+        "mouse down",
+        "mouse move",
+        "mouse up",
+        "mouse out"
+      ],
+      "distance": 1232.377377267207
+    }
+  ],
+  "callbackBreakpointCount": 3,
+  "matchedCallbacks": null,
+  "callbackTopFrame": {
+    "functionName": null,
+    "url": null,
+    "location": null
+  },
+  "menuScreenshotChanged": true,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "reportAvailable": true,
+  "artifactName": "page5-menu-callback-breakpoint-probe",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "2567ce8812c2aeb361a274eae12127dc690802e8"
+}
