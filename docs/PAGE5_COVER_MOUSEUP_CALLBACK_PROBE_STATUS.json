@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T12:35:22Z",
+  "runId": 31006017958,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-cover-mouseup-callback-scope-read-only-probe",
+  "pauseCaptured": true,
+  "selectedNodeIndex": 1,
+  "callbackSourceLength": 399,
+  "callbackSourceSha256": "d54f137a1702dd770e7deee888c4d13fa3866f45fad01d1b59c9c4b14ddc94a8",
+  "callbackInternalPropertyNames": [
+    "[[FunctionLocation]]",
+    "[[Prototype]]",
+    "[[Scopes]]"
+  ],
+  "callbackRemote": {
+    "type": "function",
+    "subtype": null,
+    "className": "Function",
+    "description": "function _0x26827e(_0x3a0a60){_0x4809da=!(-4491*1+-58*-130+3049*-1);var _0x49de7c=_0x8c6ff6,_0x229f86=_0x174c2a,_0x4a51d9=_0xfc6c96;_0x344e98(),_0x49de7c?_0x424746=!(3514+-618*13+4521):_0x4a51d9&&_0x5be36d['rd'+'nf'+'I'](_0x229f86,_0x5be36d['ld'+'Sn'+'c'](-709",
+    "hasObjectId": true
+  },
+  "coverScreenshotChanged": true,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "preStepCssPoints": {
+    "coverCenter": {
+      "x": 421.9921875,
+      "y": 195
+    },
+    "coverPrompt": {
+      "x": 427.4088134765625,
+      "y": 341.25
+    }
+  },
+  "probeCssPoint": {
+    "x": 421.9921875,
+    "y": 195
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-cover-mouseup-callback-probe",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "1230de9f6802eb5e692fea8654d1a1b68bad20e7"
+}
