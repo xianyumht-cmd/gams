@@ -1,4 +1,4 @@
-name: Diagnose page five stable target-button bridge
+name: Probe page five missing-constructor mobile bridge
 
 on:
   push:
@@ -12,6 +12,7 @@ on:
       - scripts/prepare_page5_dynamic_target_button_bridge_probe.py
       - scripts/prepare_page5_dynamic_target_button_sa_bridge_probe.py
       - scripts/prepare_page5_stable_target_button_bridge_diagnostic.py
+      - scripts/prepare_page5_missing_constructor_mobile_bridge_probe.py
       - scripts/page5_direct_node_bridge_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
@@ -20,7 +21,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-stable-target-button-bridge-diagnostic-20260806
+  group: page5-missing-constructor-mobile-bridge-probe-20260806
   cancel-in-progress: true
 
 jobs:
@@ -43,7 +44,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare stable target-button diagnostic
+      - name: Prepare missing-constructor mobile bridge probe
         shell: bash
         run: |
           set -euo pipefail
@@ -55,12 +56,13 @@ jobs:
             scripts/prepare_page5_dynamic_node_tap_bridge_probe.py \
             scripts/prepare_page5_dynamic_target_button_bridge_probe.py \
             scripts/prepare_page5_dynamic_target_button_sa_bridge_probe.py \
-            scripts/prepare_page5_stable_target_button_bridge_diagnostic.py
-          python3 scripts/prepare_page5_stable_target_button_bridge_diagnostic.py --output "$GENERATED_PROBE"
+            scripts/prepare_page5_stable_target_button_bridge_diagnostic.py \
+            scripts/prepare_page5_missing_constructor_mobile_bridge_probe.py
+          python3 scripts/prepare_page5_missing_constructor_mobile_bridge_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-stable-target-button-bridge-diagnostic' "$GENERATED_PROBE"
+          grep -Fq 'page5-missing-constructor-mobile-bridge-probe' "$GENERATED_PROBE"
+          grep -Fq "typeof SCGMenu==='undefined'" "$GENERATED_PROBE"
           grep -Fq '__gamsTargetBridgeDiag' "$GENERATED_PROBE"
-          grep -Fq 'before-stable-dynamic-target-touch' "$GENERATED_PROBE"
           grep -Fq 'openSceneCalls' "$GENERATED_PROBE"
           grep -Fq 'candidateTargetListCount > 0' "$GENERATED_PROBE"
 
@@ -71,7 +73,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute stable target-button diagnostic
+      - name: Execute missing-constructor mobile bridge probe
         id: probe_run
         continue-on-error: true
         shell: bash
@@ -79,7 +81,7 @@ jobs:
           set -o pipefail
           node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-direct-node-bridge-probe.log
 
-      - name: Build stable target-button status
+      - name: Build missing-constructor mobile bridge status
         if: always()
         shell: bash
         env:
@@ -129,7 +131,7 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-stable-target-button-bridge-diagnostic',
+              'mode': 'page5-missing-constructor-mobile-bridge-probe',
               'summary': summary,
               'current': compact('current'),
               'candidate': compact('candidate'),
@@ -138,9 +140,9 @@ jobs:
               'artifactName': 'page5-direct-node-bridge-probe',
               'directNodeIndex': 10,
               'realTouchUsed': True,
+              'pageScopedFallbackCondition': 'legacy constructor unavailable',
               'preTouchStableWaitMs': 22000,
               'postTouchObservationMs': 25000,
-              'diagnosticOnly': True,
               'candidatePersisted': False,
               'repeatSequenceTested': False,
               'apkBuilt': False,
@@ -166,7 +168,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish stable target-button status
+      - name: Publish missing-constructor mobile bridge status
         if: always()
         shell: bash
         run: |
@@ -177,11 +179,11 @@ jobs:
           cp /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           git add docs/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five stable target-button bridge diagnostic"
+            git commit -m "Record page five missing-constructor mobile bridge probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce stable target-button gate
+      - name: Enforce missing-constructor mobile bridge gate
         if: always()
         shell: bash
         run: jq -e '.ok == true' /tmp/PAGE5_DIRECT_NODE_BRIDGE_PROBE_STATUS.json >/dev/null
