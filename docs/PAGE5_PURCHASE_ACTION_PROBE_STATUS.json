@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-05T20:35:13Z",
-  "runId": 31044564431,
+  "generatedAt": "2026-08-05T20:38:14Z",
+  "runId": 31044786458,
   "state": "completed",
   "workflowOutcome": "success",
   "ok": true,
@@ -20,7 +20,7 @@
     "productDetailScreenChangedCount": 1,
     "purchaseAttemptCount": 1,
     "purchaseInteractionObservedCount": 1,
-    "purchaseScreenChangedCount": 0,
+    "purchaseScreenChangedCount": 1,
     "purchaseDialogCount": 0,
     "purchaseBlockedMutationCount": 0,
     "purchaseRequestCount": 1,
@@ -32,7 +32,7 @@
   },
   "productDetailObserved": true,
   "purchaseActionReached": true,
-  "purchaseResultObserved": false,
+  "purchaseResultObserved": true,
   "requiresCompatibilityReview": true,
   "productDetail": {
     "point": {
@@ -62,7 +62,7 @@
       "y": 465,
       "label": "product-detail-final-buy"
     },
-    "screenChanged": false,
+    "screenChanged": true,
     "requestWindow": {
       "total": 1,
       "kinds": {
@@ -87,20 +87,14 @@
   "blockedOrderCount": 0,
   "requestFailures": [
     {
-      "at": 1785961992371,
-      "url": "https://m.66rpg.com/sso/minicheck",
+      "at": 1785962170452,
+      "url": "https://passport.66rpg.com/user/crosscheck.shtml?keys=app,auth_callback,fromurl,login_type,sign",
       "resourceType": "document",
       "failure": "net::ERR_ABORTED"
     },
     {
-      "at": 1785962017399,
+      "at": 1785962199148,
       "url": "https://dlcdn1.cgyouxi.com/shareres/c8/c893749e59bec976bec7b7df3a825d3e.mp3",
-      "resourceType": "media",
-      "failure": "net::ERR_ABORTED"
-    },
-    {
-      "at": 1785962042179,
-      "url": "https://dlcdn1.cgyouxi.com/shareres/aa/aa8e197e9d17273608a083917dc4b6e1.mp3",
       "resourceType": "media",
       "failure": "net::ERR_ABORTED"
     }
@@ -114,5 +108,5 @@
   "androidClientChanged": false,
   "apkBuilt": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "28248af7ca7543c8dde9263f568c5b0ffd4eec5f"
+  "commit": "e0104565c88040bdbc6c5b7b06a1762d9d0d59aa"
 }
