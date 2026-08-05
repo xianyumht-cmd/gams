@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T16:38:48Z",
-  "runId": 31026023449,
+  "generatedAt": "2026-08-05T16:44:05Z",
+  "runId": 31026427674,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
@@ -18,8 +18,8 @@
     "nonPage5CandidateMarkerCases": 0,
     "nonPage5CurrentPageErrorCases": 0,
     "nonPage5CandidatePageErrorCases": 0,
-    "currentPage5PageErrorCount": 0,
-    "currentPage5ExpectedErrorObserved": false,
+    "currentPage5PageErrorCount": 2,
+    "currentPage5ExpectedErrorObserved": true,
     "currentPage5TargetReadCount": 0,
     "candidatePage5PageErrorCount": 0,
     "candidatePage5TargetReadCount": 1,
@@ -29,8 +29,10 @@
     "replacementCount": 1
   },
   "currentTargetWindow": {
-    "total": 0,
-    "kinds": {},
+    "total": 1,
+    "kinds": {
+      "page-request": 1
+    },
     "targetReadCount": 0,
     "targetListCount": 0,
     "orderMutationCount": 0
@@ -45,13 +47,17 @@
     "targetListCount": 0,
     "orderMutationCount": 0
   },
-  "currentPageErrors": [],
+  "currentPageErrors": [
+    "ReferenceError: SCGMenu is not defined\n    at PF.<computed> [as onClick] (https://ggv2.local/runtime/game.js:1:3447712)\n    at https://ggv2.local/runtime/game.js:1:1309085\n    at t.dispatchEvent (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:2940)\n    at t.onMouseClick (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124674)\n    at t.onTouchEnd (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124992)",
+    "ReferenceError: SCGMenu is not defined\n    at PF.<computed> [as onClick] (https://ggv2.local/runtime/game.js:1:3447712)\n    at https://ggv2.local/runtime/game.js:1:1309085\n    at t.dispatchEvent (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:2940)\n    at t.onMouseClick (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124674)\n    at t.onTouchEnd (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124992)"
+  ],
   "candidatePageErrors": [],
   "currentStages": [
     "after-01-cover-progress",
     "after-02-title-reveal",
     "after-03-story-entry",
-    "after-04-target-side-entry",
+    "after-04-story-continue",
+    "after-05-target-side-entry",
     "initial-ready",
     "runtime-close",
     "runtime-final-close",
@@ -62,7 +68,8 @@
     "after-01-cover-progress",
     "after-02-title-reveal",
     "after-03-story-entry",
-    "after-04-target-side-entry",
+    "after-04-story-continue",
+    "after-05-target-side-entry",
     "initial-ready",
     "runtime-close",
     "runtime-final-close",
@@ -72,34 +79,36 @@
   "currentScreenshots": {
     "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
     "runtime-open": "47489bceefdd9989997d6061cb068ccc4e9663a35df602133621b717edaed812",
-    "runtime-close": "5b390452dd76a9743fb1826843b879c651e203ba1e271da810d37476d5edc98d",
-    "runtime-reopen": "afb8ae89124ba074cf9bd54fc914a8190264caa2e936ecb9eb651942977feb8e",
+    "runtime-close": "8a73ae7da192bcf744afdd0a86977e97762ac02ae49cb912e0ebd531b3cc2fb2",
+    "runtime-reopen": "dc87ecb031b80090ace49968da2e51bb9b7955c26b61ffbf826ec46275f93305",
     "runtime-final-close": "326b7c06b0594ddd87c79eed352ded17825f8498a833ad9c67e2e6c73c6ff50b",
-    "after-01-cover-progress": "7b361e01bf7e099167cb696c8b37f729584a18074fe7f59646231e34da22a322",
+    "after-01-cover-progress": "7029d995eec637d49d64204190cfad054b5b6af671d7eeb7d538e5a3a7daa672",
     "after-02-title-reveal": "6120bfb4ce1214d3ae41d6d8b1f5ac12d3555ca8fd3a336a2191f778b115d1f9",
-    "after-03-story-entry": "b8cba19c2d71fcd85f3ed3e43ff818a03a90cf3a1655ec33f4338f58f04de1e8",
-    "after-04-target-side-entry": "ef0cab0294974cb17a3a22623d7e17c26d7b296a7eb51f0cf2c5d327506e90d9"
+    "after-03-story-entry": "c707d94d088e41dbf3b841afe9abcb03ac85279a8157326b4255dd376ed9a718",
+    "after-04-story-continue": "6b23d9863977683bc7cf6b80d43626e658817a8a802ca4fa95894068457a1798",
+    "after-05-target-side-entry": "1e6ade693c9a040fe1a0ffa6ba36a0cbefa4ec7fde19ed4e6825fcef15a4dd80"
   },
   "candidateScreenshots": {
     "initial-ready": "6b440d97847e7344f8ee3b234c0656d6363a2d4cc5cf143a9c0e78bf3aa40c9d",
     "runtime-open": "2abc43f6f323cfbdec7034d485452f35ecdd42570d9f842f98061606eab7ac94",
-    "runtime-close": "eedf5a8a1efb527dcb29688c3894bd8384ed8385e780c71e0c5bba82ac524d12",
-    "runtime-reopen": "dce1fc581bc9223553c0352df5feb0b6c1ec84fe38721b140e031a16c98b041e",
-    "runtime-final-close": "3ff17fb91bf8d6688ab1f5fd51bf495bc419c190d512c964f463dcc8039a20ba",
-    "after-01-cover-progress": "1e7ce6563987c47a6d01b3631c35eaaab3efda2bae8cb979bd00f688018b8d45",
-    "after-02-title-reveal": "e81a49f2a2778f8f247f8491b470f2edcc57af24002fa8c70b745f1cf1ae31c8",
-    "after-03-story-entry": "2da599064c0b97422ab689db7982fbf6fcb3dd60e36bc7a6e97bded65d3e946e",
-    "after-04-target-side-entry": "31073090a47249b663b783943fbb6463a75c177b8f5fec665eaf341b17a3f9b0"
+    "runtime-close": "4e06f441fd7ca440ea335d0c66f01322d8fbb6aa0dc9d733db49c4ddaaed658e",
+    "runtime-reopen": "9ca58ce29ad2a9e27fd1b6b82b04254ba35912ceb63b574fb63aefa6db6b6936",
+    "runtime-final-close": "5d8412b412cc34b2426c803c34926f603eb50999a70a076cba37bfedb3a158b2",
+    "after-01-cover-progress": "dec4bf646a019e54d7bd60306f6d19ca36dc43364ccaa74a793b2470c8d95680",
+    "after-02-title-reveal": "4306c0e00de6d235682cbc3fa3a229ebedb036017f60d93835af0ec2b97c7a77",
+    "after-03-story-entry": "31073090a47249b663b783943fbb6463a75c177b8f5fec665eaf341b17a3f9b0",
+    "after-04-story-continue": "c0479e002616ef03cdebe7a9b6fd6796a311d2f4560983744a4939f0af3e03a0",
+    "after-05-target-side-entry": "9a7912e72ac9f4d98bace75f87f6bb1d8d5cf9dae24d78885b6c3b7a36ae603e"
   },
   "currentMainFrameNavigation": [
     {
-      "at": 1785947788673,
+      "at": 1785948089495,
       "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
     }
   ],
   "candidateMainFrameNavigation": [
     {
-      "at": 1785947788627,
+      "at": 1785948089538,
       "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
     }
   ],
@@ -124,5 +133,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "22fcc6cd43f06085209efeba3b17710c4c444e55"
+  "commit": "ba1a4aafd3c1fc5317ddad321f1942e2f50ee713"
 }
