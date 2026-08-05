@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T02:57:47Z",
+  "runId": 30970788464,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-official-scene-contract-read-only-probe-v2",
+  "patchInfo": {
+    "matched": true,
+    "replacementCount": 1,
+    "originalSha256": "5b04795cff4c5c89e284880d389522e9f746509c6007c86c19ab5361d7d8892f",
+    "patchedSha256": "13222883e102f9e20df9318ff8167d58467ddf14d7188dc6659a1771af943d57",
+    "originalSize": 15429579,
+    "patchedSize": 15429754,
+    "identifiers": {
+      "controllerVar": "_0x45614c",
+      "runtimeVar": "_0x403a55",
+      "menuCtorVar": "_0x5d3f67"
+    }
+  },
+  "contractAvailable": false,
+  "interactiveNodeCount": 0,
+  "previousSceneOwnKeyCount": 0,
+  "currentSceneOwnKeyCount": 0,
+  "mainFrameValid": null,
+  "pageErrorCount": 1,
+  "blockedOrderCount": 0,
+  "reportAvailable": true,
+  "artifactName": "page5-official-scene-contract-probe-v2",
+  "readOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "305046139148277b1db31a24b119c95cc4384086"
+}
