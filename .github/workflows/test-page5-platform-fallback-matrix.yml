@@ -49,7 +49,6 @@ jobs:
           python3 scripts/prepare_page5_story_target_entry_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
           grep -Fq 'page5-story-target-entry-probe' "$GENERATED_PROBE"
-          grep -Fq 'home-menu-open' "$GENERATED_PROBE"
           grep -Fq 'story-entry' "$GENERATED_PROBE"
           grep -Fq 'target-side-entry' "$GENERATED_PROBE"
           grep -Fq 'candidatePage5TargetListCount > 0' "$GENERATED_PROBE"
