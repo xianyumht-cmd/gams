@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T02:14:47Z",
+  "runId": 30968665264,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-title-entry-settle-probe-page-only",
+  "entryTap": {
+    "x": 95,
+    "y": 400
+  },
+  "mainFrameValid": true,
+  "uniqueScreenshotCount": 5,
+  "requestWindows": [
+    {
+      "stage": "after-15s",
+      "elapsedMs": 15000,
+      "requestCount": 1,
+      "cumulativePostTapRequestCount": 1
+    },
+    {
+      "stage": "after-30s",
+      "elapsedMs": 30000,
+      "requestCount": 0,
+      "cumulativePostTapRequestCount": 1
+    },
+    {
+      "stage": "after-45s",
+      "elapsedMs": 45000,
+      "requestCount": 0,
+      "cumulativePostTapRequestCount": 1
+    },
+    {
+      "stage": "after-60s",
+      "elapsedMs": 60000,
+      "requestCount": 0,
+      "cumulativePostTapRequestCount": 1
+    }
+  ],
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "blockedNavigationCount": 0,
+  "reportAvailable": true,
+  "artifactName": "page5-title-entry-settle-probe",
+  "pageOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "36af05fe37b0662fea8dfc0c2bb151ab1d76ff84"
+}
