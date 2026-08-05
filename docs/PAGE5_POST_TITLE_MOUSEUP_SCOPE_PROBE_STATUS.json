@@ -1,23 +1,38 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T14:36:54Z",
-  "runId": 31016075379,
+  "generatedAt": "2026-08-05T14:41:04Z",
+  "runId": 31016231501,
   "state": "completed",
-  "workflowOutcome": "skipped",
-  "ok": false,
+  "workflowOutcome": "success",
+  "ok": true,
   "mode": "page5-post-title-mouseup-scope-read-only-probe",
-  "pauseCaptured": null,
-  "callbackSourceLength": null,
-  "callbackSourceSha256": null,
-  "callbackInternalPropertyNames": [],
-  "scopeCount": null,
-  "scopeSummary": [],
-  "mainFrameValid": null,
-  "pageErrorCount": null,
-  "blockedOrderCount": null,
-  "debuggerErrorCount": null,
+  "pauseCaptured": true,
+  "callbackSourceLength": 399,
+  "callbackSourceSha256": "d54f137a1702dd770e7deee888c4d13fa3866f45fad01d1b59c9c4b14ddc94a8",
+  "callbackInternalPropertyNames": [
+    "[[FunctionLocation]]",
+    "[[Prototype]]",
+    "[[Scopes]]"
+  ],
+  "scopeCount": 2,
+  "scopeSummary": [
+    {
+      "index": "0",
+      "description": "Closure (_)",
+      "propertyCount": 749
+    },
+    {
+      "index": "1",
+      "description": "Global",
+      "propertyCount": 1525
+    }
+  ],
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
   "fatalError": null,
-  "reportAvailable": false,
+  "reportAvailable": true,
   "artifactName": "page5-post-title-mouseup-scope-probe",
   "readOnlyProbe": true,
   "pageScriptModified": false,
@@ -30,5 +45,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "484ab296674c58ba64d8d148c248482c78a9bd60"
+  "commit": "6695323831e284aea78a76a71d16decef2de7dee"
 }
