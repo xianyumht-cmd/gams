@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T03:40:36Z",
+  "runId": 30972858566,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-menu-callback-source-breakpoint-read-only-probe-v2",
+  "canvasPauseCaptured": true,
+  "callbackPauseCaptured": false,
+  "selectedNodeIndex": 8,
+  "callbackBreakpoints": [
+    {
+      "label": "mouse click[0].listener",
+      "eventName": "mouse click",
+      "breakpointId": "4:0:1818344:21",
+      "requestedLocation": {
+        "scriptId": "21",
+        "lineNumber": 0,
+        "columnNumber": 1818344
+      },
+      "actualLocation": {
+        "scriptId": "21",
+        "lineNumber": 0,
+        "columnNumber": 1818370
+      },
+      "script": {
+        "scriptId": "21",
+        "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/game.js",
+        "startLine": 0,
+        "startColumn": 0,
+        "endLine": 0,
+        "endColumn": 15406475
+      },
+      "remote": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function(_0x20abc2){var _0x5b0fdc;_0x403a55['da'+'ta']&&_0x403a55['da'+'ta']['Sy'+'st'+'em']&&_0x403a55['da'+'ta']['Sy'+'st'+'em']['SE'+'Cl'+'ic'+'k']&&(_0x5b0fdc=_0x403a55['da'+'ta']['Sy'+'st'+'em']['SE'+'Cl'+'ic'+'k'],",
+        "hasObjectId": true
+      },
+      "internalProperties": [
+        {
+          "name": "[[FunctionLocation]]",
+          "value": {
+            "type": "object",
+            "subtype": "internal#location",
+            "className": null,
+            "description": "Object",
+            "hasObjectId": false,
+            "rawValue": {
+              "scriptId": "21",
+              "lineNumber": 0,
+              "columnNumber": 1818344
+            }
+          }
+        },
+        {
+          "name": "[[Prototype]]",
+          "value": {
+            "type": "function",
+            "subtype": null,
+            "className": "Function",
+            "description": "function () { [native code] }",
+            "hasObjectId": true
+          }
+        },
+        {
+          "name": "[[Scopes]]",
+          "value": {
+            "type": "object",
+            "subtype": "internal#scopeList",
+            "className": "Array",
+            "description": "Scopes[4]",
+            "hasObjectId": true
+          }
+        }
+      ]
+    }
+  ],
+  "matchedCallbacks": null,
+  "callbackTopFrame": {
+    "functionName": null,
+    "url": null,
+    "location": null
+  },
+  "menuScreenshotChanged": true,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "reportAvailable": true,
+  "artifactName": "page5-menu-callback-breakpoint-probe-v2",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "4c88cfaa373fc56c06b5a522be8735464cef5c68"
+}
