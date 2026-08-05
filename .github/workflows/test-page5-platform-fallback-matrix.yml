@@ -9,6 +9,12 @@ on:
       - scripts/prepare_page5_post_title_fullscreen_callback_inventory.py
       - scripts/page5_post_title_fullscreen_callback_inventory.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
+  pull_request:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/page5_post_title_fullscreen_callback_inventory.trigger
+      - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
 permissions:
