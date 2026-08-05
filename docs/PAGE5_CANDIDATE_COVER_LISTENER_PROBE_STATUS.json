@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T13:12:40Z",
+  "runId": 31008956946,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-candidate-cover-listener-read-only-probe",
+  "listenerCaptured": true,
+  "listenerSourceLength": 1278,
+  "listenerSourceSha256": "8c4369715f263e16bd3d3e4654f19a51d58a66b6fc0138c446dfbde66c0cf913",
+  "listenerFunctionLocation": {
+    "scriptId": "31",
+    "lineNumber": 0,
+    "columnNumber": 1185258
+  },
+  "listenerScopeCount": 4,
+  "listenerRemote": {
+    "type": "function",
+    "className": "Function",
+    "description": "function gp(Sg){void function(){var G=window,V='gp',E={};!G[V]&&(G[V]=E);;if(G[V]['hasOwnProperty']('gp'))return;;G[V]['gp']=!(-2088+601*4+-316);var a=Function['prototype']['toString']['call'](gp)['length'],n=parseInt('0x004fe');a!==n&&function(){for(var t=-3*410+282+-158*-6;t<6672+9233+-15900;t++){var N=new Array(7581434+11208474+-8789909);for(var u=-8661+-1*-5413+3248*1;u<N['length'];u++){N[u]='x';};(function j(){for(var F=-51*-95+-4485+120*-3;F<N['length'];F++){N[F]=N[F]+Math['random']()['toS"
+  },
+  "listenerInternalPropertyNames": [
+    "[[FunctionLocation]]",
+    "[[Prototype]]",
+    "[[Scopes]]"
+  ],
+  "canvasListener": {
+    "type": "touchstart",
+    "scriptId": "27",
+    "lineNumber": 0,
+    "columnNumber": 121976,
+    "breakpointId": "4:0:121976:27",
+    "actualLocation": {
+      "scriptId": "27",
+      "lineNumber": 0,
+      "columnNumber": 121996
+    }
+  },
+  "canvasPause": {
+    "reason": "other",
+    "hitBreakpoints": [
+      "4:0:121976:27"
+    ],
+    "functionName": "t.onMouseDown",
+    "location": {
+      "scriptId": "27",
+      "lineNumber": 0,
+      "columnNumber": 121996
+    }
+  },
+  "goto": {
+    "status": 200,
+    "url": "https://m.66rpg.com/h5/1691512"
+  },
+  "final": {
+    "url": "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32",
+    "title": "帝昭策·高自由皇帝养成沙盒世界",
+    "readyState": "complete"
+  },
+  "fatalError": null,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "candidatePatch": {
+    "replacementCount": 1,
+    "oldTextSha256": "5fa14a7825de3547c9b2c1d9351d39928c4bf8c918548b7c1cdb8c3294933555",
+    "newTextSha256": "5b16d06cc66319b1f67cb4d3a1654323db3dde68717ec2fea7258bf9388914ab",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590688,
+    "candidateSecondSha256": "2fa456546f929561be2bceb7e469456cb0f1d74db7697ddc49a7f34dd2052c6a"
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-candidate-cover-listener-probe",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidatePersisted": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "aa9ed6afc8d9f8c53a8c2f4a3cbb1876776b7208"
+}
