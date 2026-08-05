@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T02:37:20Z",
+  "runId": 30969620312,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-post-unlock-entry-probe-page-only",
+  "summary": {
+    "totalCases": 3,
+    "passedCases": 3,
+    "fatalCases": 0,
+    "pageErrorCases": 0,
+    "blockedOrderCases": 0,
+    "entryRequestCases": 0,
+    "entryDocumentRequestCases": 0
+  },
+  "caseSummary": [
+    {
+      "name": "prompt",
+      "entryPoint": {
+        "name": "prompt",
+        "x": 50,
+        "y": 425
+      },
+      "entryRequestCount": 0,
+      "entryDocumentRequestCount": 0,
+      "entryMediaRequestCount": 0,
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "name": "title",
+      "entryPoint": {
+        "name": "title",
+        "x": 95,
+        "y": 400
+      },
+      "entryRequestCount": 0,
+      "entryDocumentRequestCount": 0,
+      "entryMediaRequestCount": 0,
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "name": "cover-center",
+      "entryPoint": {
+        "name": "cover-center",
+        "x": 195,
+        "y": 422
+      },
+      "entryRequestCount": 0,
+      "entryDocumentRequestCount": 0,
+      "entryMediaRequestCount": 0,
+      "uniqueScreenshotCount": 4,
+      "mainFrameValid": true,
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    }
+  ],
+  "reportAvailable": true,
+  "artifactName": "page5-post-unlock-entry-probe",
+  "pageOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "679ced73221bf96b47f3505867796fa4328ac61c"
+}
