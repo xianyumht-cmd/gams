@@ -24,7 +24,6 @@ jobs:
     env:
       IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
       WORKTREE: /tmp/gams-page5-purchase-result-guard
-      OLD_RUNTIME_SHA256: 9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca
       NEW_RUNTIME_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
 
     steps:
@@ -37,7 +36,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Apply guarded runtime change to implementation worktree
+      - name: Verify or apply guarded runtime change
         id: apply_guard
         shell: bash
         run: |
@@ -58,24 +57,31 @@ jobs:
             "$WORKTREE/scripts/prepare_persisted_repeat_reentry_matrix.py"
           grep -Fq "$NEW_RUNTIME_SHA256" "$WORKTREE/scripts/prepare_persisted_five_page_matrix.py"
           grep -Fq "$NEW_RUNTIME_SHA256" "$WORKTREE/scripts/prepare_persisted_repeat_reentry_matrix.py"
+
           cd "$WORKTREE"
           git diff --check
           mapfile -t changed < <(git diff --name-only | sort)
-          printf '%s\n' "${changed[@]}" > /tmp/page5-purchase-result-guard-files.txt
-          expected=(
-            game-engine/release/game-1.0.5.js
-            scripts/prepare_persisted_five_page_matrix.py
-            scripts/prepare_persisted_repeat_reentry_matrix.py
-          )
-          mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | sort)
-          test "${changed[*]}" = "${expected_sorted[*]}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "${expected[@]}"
-          git commit -m "Guard missing purchase result state"
-          implementation_commit="$(git rev-parse HEAD)"
+          printf '%s\n' "${changed[@]}" | sed '/^$/d' > /tmp/page5-purchase-result-guard-files.txt
+          already_applied="$(jq -r '.alreadyApplied' /tmp/page5-purchase-result-guard-apply.json)"
+          if [[ "$already_applied" == "true" ]]; then
+            test "${#changed[@]}" -eq 0
+            implementation_commit="$(git rev-parse HEAD)"
+          else
+            expected=(
+              game-engine/release/game-1.0.5.js
+              scripts/prepare_persisted_five_page_matrix.py
+              scripts/prepare_persisted_repeat_reentry_matrix.py
+            )
+            mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | sort)
+            test "${changed[*]}" = "${expected_sorted[*]}"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "${expected[@]}"
+            git commit -m "Guard missing purchase result state"
+            implementation_commit="$(git rev-parse HEAD)"
+            git push origin "HEAD:$IMPLEMENTATION_REF"
+          fi
           printf '%s\n' "$implementation_commit" > /tmp/page5-purchase-result-guard-commit.txt
-          git push origin "HEAD:$IMPLEMENTATION_REF"
 
       - name: Build apply status
         if: always()
