@@ -1,0 +1,74 @@
+name: Slice page five purchase callback source
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/slice_page5_purchase_callback.py
+      - scripts/page5_purchase_callback_slice.trigger
+      - .github/workflows/slice-page5-purchase-callback.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-purchase-callback-source-slice-20260806
+  cancel-in-progress: true
+
+jobs:
+  slice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+      SOURCE_PATH: /tmp/persisted-game-1.0.5.js
+      OUTPUT_PATH: /tmp/PAGE5_PURCHASE_CALLBACK_SOURCE_SLICE.json
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - name: Read persisted implementation file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$SOURCE_PATH"
+          test -s "$SOURCE_PATH"
+          test "$(sha256sum "$SOURCE_PATH" | awk '{print $1}')" = "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca"
+
+      - name: Slice bounded purchase callback source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/slice_page5_purchase_callback.py
+          python3 scripts/slice_page5_purchase_callback.py \
+            --source "$SOURCE_PATH" \
+            --output "$OUTPUT_PATH" \
+            --needle userRealName \
+            --radius 3000
+          jq -e '.occurrenceCount > 0 and .sourceSha256 == "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca"' "$OUTPUT_PATH" >/dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: page5-purchase-callback-source-slice
+          path: /tmp/PAGE5_PURCHASE_CALLBACK_SOURCE_SLICE.json
+          retention-days: 30
+
+      - name: Publish bounded source slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp "$OUTPUT_PATH" docs/PAGE5_PURCHASE_CALLBACK_SOURCE_SLICE.json
+          git add docs/PAGE5_PURCHASE_CALLBACK_SOURCE_SLICE.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record bounded purchase callback source slice"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
