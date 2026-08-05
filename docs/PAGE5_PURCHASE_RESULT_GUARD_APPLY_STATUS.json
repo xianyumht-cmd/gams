@@ -1,16 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T21:47:35Z",
-  "runId": 31050135013,
+  "generatedAt": "2026-08-05T21:49:13Z",
+  "runId": 31050217833,
   "state": "completed",
-  "workflowOutcome": "failure",
-  "ok": false,
+  "workflowOutcome": "success",
+  "ok": true,
   "mode": "persist-page5-purchase-result-state-guard",
   "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
-  "implementationCommit": null,
-  "changedFiles": [
-    ""
-  ],
+  "implementationCommit": "a1de079f395642fe2f2c081492f286239538812c",
+  "changedFiles": [],
   "metadata": {
     "schemaVersion": 1,
     "alreadyApplied": true,
@@ -29,5 +27,5 @@
   "paymentCompleted": false,
   "authorizationOutcomeModified": false,
   "diagnosticBranch": "diagnostics/page5-guard-full-entry-20260805",
-  "diagnosticCommit": "8736fc519d0bfe8c6bb7f7ccdb834beb3575cbd4"
+  "diagnosticCommit": "d7ed829554f3636be8370036cb81e980602a652d"
 }
