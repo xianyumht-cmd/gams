@@ -181,6 +181,88 @@ def main() -> int:
         "mode",
     )
 
+    page_anchor = '  const page = await context.newPage();'
+    page_injection = '''  const page = await context.newPage();
+  const purchaseTraceCdp = await context.newCDPSession(page);
+  await purchaseTraceCdp.send("Network.enable");
+  await purchaseTraceCdp.send("Runtime.enable");
+  await purchaseTraceCdp.send("Debugger.enable", { maxScriptsCacheSize: 30_000_000 });
+  await purchaseTraceCdp.send("Debugger.setAsyncCallStackDepth", { maxDepth: 32 }).catch(() => {});
+  const loginInitiators = [];
+
+  const classifyPurchaseTraceUrl = (raw) => {
+    const value = String(raw || "");
+    const lower = value.toLowerCase();
+    if (lower === virtualSecondUrl.toLowerCase()) return "runtime-second";
+    if (lower.includes("/bin/official/game.js")) return "official-page-runtime";
+    if (lower.includes("webgllib.js")) return "official-render-library";
+    if (lower.startsWith(targetPrefix.toLowerCase())) return "target-page";
+    if (lower.startsWith("chrome-error://")) return "browser-error";
+    if (!value) return "missing";
+    return "other-script";
+  };
+
+  const flattenPurchaseTraceStack = (root) => {
+    const frames = [];
+    let stack = root || null;
+    let depth = 0;
+    while (stack && frames.length < 40 && depth < 16) {
+      for (const frame of stack.callFrames || []) {
+        frames.push({
+          functionName: String(frame.functionName || "").slice(0, 180),
+          sourceClass: classifyPurchaseTraceUrl(frame.url),
+          lineNumber: Number.isFinite(frame.lineNumber) ? frame.lineNumber : null,
+          columnNumber: Number.isFinite(frame.columnNumber) ? frame.columnNumber : null,
+          scriptId: String(frame.scriptId || "").slice(0, 80),
+        });
+        if (frames.length >= 40) break;
+      }
+      stack = stack.parent || null;
+      depth += 1;
+    }
+    return frames;
+  };
+
+  purchaseTraceCdp.on("Network.requestWillBeSent", (event) => {
+    try {
+      const raw = String(event.request?.url || "");
+      const lower = raw.toLowerCase();
+      const relevant = lower.includes("/sso/")
+        || lower.includes("login")
+        || lower.includes("crosscheck")
+        || lower.includes("passport.");
+      if (!relevant) return;
+      const frames = flattenPurchaseTraceStack(event.initiator?.stack || null);
+      loginInitiators.push({
+        at: Date.now(),
+        initiatorType: event.initiator?.type || null,
+        requestMethod: event.request?.method || null,
+        requestClass: "login-or-session",
+        documentClass: classifyPurchaseTraceUrl(event.documentURL),
+        frameCount: frames.length,
+        frames,
+      });
+    } catch (error) {
+      loginInitiators.push({
+        at: Date.now(),
+        initiatorType: "trace-error",
+        requestClass: "login-or-session",
+        error: redactText(error?.stack || error),
+        frameCount: 0,
+        frames: [],
+      });
+    }
+  });'''
+    text = replace_once(text, page_anchor, page_injection, "purchase login trace page anchor")
+
+    final_anchor = '''    result.blockedExternalNavigations = blockedExternalNavigations; result.mainFrameNavigation = mainFrameNavigation; result.runtimeLoads = runtimeLoads;
+    await context.close();'''
+    final_replacement = '''    result.blockedExternalNavigations = blockedExternalNavigations; result.mainFrameNavigation = mainFrameNavigation; result.runtimeLoads = runtimeLoads;
+    result.loginInitiators = loginInitiators.slice(0, 80);
+    await purchaseTraceCdp.detach().catch(() => {});
+    await context.close();'''
+    text = replace_once(text, final_anchor, final_replacement, "purchase login trace finalizer")
+
     output.write_text(text, encoding="utf-8")
     print(output)
     return 0
