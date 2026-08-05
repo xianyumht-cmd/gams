@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T13:29:36Z",
+  "runId": 31010305254,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-candidate-immediate-return-read-only-probe-v6",
+  "listener": {
+    "sourceLength": 1278,
+    "sourceSha256": "8c4369715f263e16bd3d3e4654f19a51d58a66b6fc0138c446dfbde66c0cf913",
+    "functionLocation": {
+      "scriptId": "31",
+      "lineNumber": 0,
+      "columnNumber": 1185258
+    },
+    "scopeCount": 4
+  },
+  "functionCallBreakpoint": {
+    "breakpointId": "7:1"
+  },
+  "functionCallPause": null,
+  "returnPause": null,
+  "scopeAtTouchStart": [
+    {
+      "index": 0,
+      "description": "Closure (_)",
+      "values": {
+        "tR": {
+          "type": "number",
+          "value": -1,
+          "description": "-1"
+        },
+        "tO": {
+          "type": "boolean",
+          "value": false,
+          "description": ""
+        },
+        "tm": {
+          "type": "boolean",
+          "value": false,
+          "description": ""
+        },
+        "tB": {
+          "type": "boolean",
+          "value": false,
+          "description": ""
+        },
+        "tv": {
+          "type": "number",
+          "value": -1,
+          "description": "-1"
+        },
+        "tU": {
+          "type": "boolean",
+          "value": false,
+          "description": ""
+        },
+        "tb": {
+          "type": "boolean",
+          "value": false,
+          "description": ""
+        },
+        "tx": {
+          "type": "number",
+          "value": 0,
+          "description": "0"
+        },
+        "NN": {
+          "type": "number",
+          "value": 60,
+          "description": "60"
+        }
+      }
+    },
+    {
+      "index": 1,
+      "description": "Block",
+      "values": {}
+    },
+    {
+      "index": 2,
+      "description": "Closure",
+      "values": {}
+    },
+    {
+      "index": 3,
+      "description": "Global",
+      "values": {}
+    }
+  ],
+  "scopeAtFunctionEntry": [],
+  "scopeImmediatelyAfterReturn": [],
+  "trackedTransitions": {
+    "NN": {
+      "touchStart": {
+        "type": "number",
+        "value": 60,
+        "description": "60"
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tB": {
+      "touchStart": {
+        "type": "boolean",
+        "value": false,
+        "description": ""
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tO": {
+      "touchStart": {
+        "type": "boolean",
+        "value": false,
+        "description": ""
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tR": {
+      "touchStart": {
+        "type": "number",
+        "value": -1,
+        "description": "-1"
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tU": {
+      "touchStart": {
+        "type": "boolean",
+        "value": false,
+        "description": ""
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tb": {
+      "touchStart": {
+        "type": "boolean",
+        "value": false,
+        "description": ""
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tm": {
+      "touchStart": {
+        "type": "boolean",
+        "value": false,
+        "description": ""
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tv": {
+      "touchStart": {
+        "type": "number",
+        "value": -1,
+        "description": "-1"
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    },
+    "tx": {
+      "touchStart": {
+        "type": "number",
+        "value": 0,
+        "description": "0"
+      },
+      "functionEntry": null,
+      "afterReturn": null
+    }
+  },
+  "goto": {
+    "status": 200,
+    "url": "https://m.66rpg.com/h5/1691512"
+  },
+  "final": {
+    "url": "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32",
+    "title": "帝昭策·高自由皇帝养成沙盒世界",
+    "readyState": "complete"
+  },
+  "fatalError": null,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "candidatePatch": {
+    "replacementCount": 1,
+    "oldTextSha256": "5fa14a7825de3547c9b2c1d9351d39928c4bf8c918548b7c1cdb8c3294933555",
+    "newTextSha256": "5b16d06cc66319b1f67cb4d3a1654323db3dde68717ec2fea7258bf9388914ab",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590688,
+    "candidateSecondSha256": "2fa456546f929561be2bceb7e469456cb0f1d74db7697ddc49a7f34dd2052c6a"
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-candidate-immediate-return-probe-v6",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidatePersisted": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "976a860614669a75877d18965d99df175f4e4c67"
+}
