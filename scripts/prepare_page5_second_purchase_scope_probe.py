@@ -31,12 +31,33 @@ def main() -> int:
     instrumentation = r'''  const loginInitiators = [];
   const purchaseScopeSnapshots = [];
   const purchaseScopeBreakpoints = [];
+  const purchaseScopeBreakpointById = new Map();
+  const purchaseScopeRuntimeScripts = [];
   const purchaseScopeOffsets = [
-    { label: "click-confirm-entry", columnNumber: 2057560 },
-    { label: "click-confirm-branch", columnNumber: 2058919 },
+    { label: "click-confirm-before-router", columnNumber: 2046389 },
+    { label: "click-confirm-after-router", columnNumber: 2058919 },
     { label: "purchase-router", columnNumber: 1935617 },
     { label: "login-entry", columnNumber: 3522415 },
   ];
+  let resolvePurchaseRuntimeScript;
+  const purchaseRuntimeScriptReady = new Promise((resolve) => { resolvePurchaseRuntimeScript = resolve; });
+
+  purchaseTraceCdp.on("Debugger.scriptParsed", (event) => {
+    const url = String(event.url || "");
+    const lower = url.toLowerCase();
+    if (lower === virtualSecondUrl.toLowerCase() || lower.includes("ggv2.local/runtime/game.js")) {
+      const item = {
+        scriptId: String(event.scriptId || ""),
+        url,
+        startLine: event.startLine,
+        startColumn: event.startColumn,
+        endLine: event.endLine,
+        endColumn: event.endColumn,
+      };
+      purchaseScopeRuntimeScripts.push(item);
+      if (item.scriptId) resolvePurchaseRuntimeScript(item);
+    }
+  });
 
   const purchaseScopeExpression = `
     (function(){
@@ -76,30 +97,47 @@ def main() -> int:
     }).call(this)
   `;
 
-  for (const target of purchaseScopeOffsets) {
-    try {
-      const response = await purchaseTraceCdp.send("Debugger.setBreakpointByUrl", {
-        lineNumber: 0,
-        columnNumber: target.columnNumber,
-        url: virtualSecondUrl,
-      });
-      purchaseScopeBreakpoints.push({
-        ...target,
-        breakpointId: response.breakpointId || null,
-        locations: response.locations || [],
-      });
-    } catch (error) {
-      purchaseScopeBreakpoints.push({ ...target, error: redactText(error?.stack || error), locations: [] });
+  const bindPurchaseScopeBreakpoints = async () => {
+    if (purchaseScopeBreakpoints.length) return;
+    const runtimeScript = await Promise.race([
+      purchaseRuntimeScriptReady,
+      new Promise((resolve) => setTimeout(() => resolve(null), 15000)),
+    ]);
+    if (!runtimeScript?.scriptId) throw new Error("purchase runtime script id unavailable");
+    for (const target of purchaseScopeOffsets) {
+      try {
+        const response = await purchaseTraceCdp.send("Debugger.setBreakpoint", {
+          location: {
+            scriptId: runtimeScript.scriptId,
+            lineNumber: 0,
+            columnNumber: target.columnNumber,
+          },
+        });
+        const item = {
+          ...target,
+          scriptId: runtimeScript.scriptId,
+          breakpointId: response.breakpointId || null,
+          locations: response.actualLocation ? [response.actualLocation] : [],
+        };
+        purchaseScopeBreakpoints.push(item);
+        if (item.breakpointId) purchaseScopeBreakpointById.set(item.breakpointId, item);
+      } catch (error) {
+        purchaseScopeBreakpoints.push({
+          ...target,
+          scriptId: runtimeScript.scriptId,
+          error: redactText(error?.stack || error),
+          locations: [],
+        });
+      }
     }
-  }
+  };
 
   purchaseTraceCdp.on("Debugger.paused", async (event) => {
+    const matchedId = (event.hitBreakpoints || []).find((id) => purchaseScopeBreakpointById.has(id));
+    if (!matchedId) return;
+    const configured = purchaseScopeBreakpointById.get(matchedId);
     const top = event.callFrames?.[0] || null;
     const actualColumnNumber = Number(top?.location?.columnNumber ?? -1);
-    const configured = purchaseScopeOffsets.reduce((best, item) => {
-      if (!best) return item;
-      return Math.abs(item.columnNumber - actualColumnNumber) < Math.abs(best.columnNumber - actualColumnNumber) ? item : best;
-    }, null);
     const frames = [];
     try {
       for (const frame of (event.callFrames || []).slice(0, 8)) {
@@ -125,6 +163,7 @@ def main() -> int:
       purchaseScopeSnapshots.push({
         at: Date.now(),
         reason: event.reason || null,
+        hitBreakpointId: matchedId,
         configuredLabel: configured?.label || null,
         configuredColumnNumber: configured?.columnNumber ?? null,
         actualColumnNumber,
@@ -135,6 +174,11 @@ def main() -> int:
     }
   });'''
     text = replace_once(text, anchor, instrumentation, "scope instrumentation anchor")
+
+    list_open_anchor = '      const listOpen = await openTarget("purchase-list-open");'
+    list_open_replacement = '''      const listOpen = await openTarget("purchase-list-open");
+      await bindPurchaseScopeBreakpoints();'''
+    text = replace_once(text, list_open_anchor, list_open_replacement, "breakpoint binding stage")
 
     tap_marker = "await page.touchscreen.tap(finalBuyPoint.x, finalBuyPoint.y);"
     parts = text.split(tap_marker)
@@ -153,6 +197,7 @@ def main() -> int:
     finalizer = '''    result.loginInitiators = loginInitiators.slice(0, 80);
     await purchaseTraceCdp.detach().catch(() => {});'''
     finalizer_replacement = '''    result.loginInitiators = loginInitiators.slice(0, 80);
+    result.purchaseScopeRuntimeScripts = purchaseScopeRuntimeScripts.slice(0, 20);
     result.purchaseScopeBreakpoints = purchaseScopeBreakpoints;
     result.purchaseScopeSnapshots = purchaseScopeSnapshots.slice(0, 120);
     await purchaseTraceCdp.detach().catch(() => {});'''
