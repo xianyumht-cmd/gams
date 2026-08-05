@@ -50,7 +50,7 @@ def main() -> int:
     steps: [
       { label: "cover-progress", x: 195, y: 422 },
       { label: "title-reveal", x: 50, y: 420 },
-      { label: "cover-enter", x: 50, y: 420 },
+      { label: "cover-center-enter", x: 195, y: 422 },
     ],
     marker: "visual-change",
   },
@@ -69,9 +69,15 @@ def main() -> int:
     text = replace_once(
         text,
         'mode: "page5-scoped-mobile-contract-full-entry-matrix"',
-        'mode: "page5-cover-enter-probe"',
+        'mode: "page5-cover-center-enter-probe"',
         "mode",
     )
+
+    summary_marker = "  candidatePage5ScreenshotChanged: Boolean(candidatePage5?.targetScreenChanged),\n"
+    summary_addition = summary_marker + '''  candidatePage5FinalStage: candidatePage5?.states?.["after-03-cover-center-enter"] || null,
+  candidatePage5FinalRequestTotal: candidatePage5?.targetWindow?.total || 0,
+'''
+    text = replace_once(text, summary_marker, summary_addition, "summary")
 
     pass_pattern = re.compile(
         r"report\.pass = .*?\n  && summary\.replacementCount === 1;",
@@ -84,6 +90,7 @@ def main() -> int:
   && summary.secondFileLoadCases === 2
   && summary.candidatePage5PageErrorCount === 0
   && summary.candidatePage5ScreenshotChanged
+  && summary.candidatePage5FinalRequestTotal > 0
   && summary.blockedOrderCases === 0
   && summary.replacementCount === 1;'''
     text, count = pass_pattern.subn(pass_block, text, count=1)
