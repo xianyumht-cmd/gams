@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T22:43:45Z",
+  "runId": 31053828394,
+  "state": "running",
+  "ok": false,
+  "mode": "isolated-device-runtime-and-apk-candidate",
+  "candidateBranch": "candidate-page5-runtime-device-20260806",
+  "candidateRuntimeVersion": "2.0.5-page5-device-c1",
+  "candidatePrefix": "/gams-page5-candidate-20260806",
+  "candidateRoute": "runtime.xn--8pv109c.top/gams-page5-candidate-20260806/*",
+  "apkVersionName": "2.0.11-page5-candidate",
+  "apkVersionCode": 21,
+  "productionDefaultChanged": false,
+  "productionRuntimeChanged": false,
+  "formalApkChanged": false,
+  "candidateApkPublished": false,
+  "paymentCompleted": false
+}
