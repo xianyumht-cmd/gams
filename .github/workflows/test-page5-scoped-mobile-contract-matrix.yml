@@ -1,0 +1,142 @@
+name: Test page five scoped mobile contract matrix
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/prepare_page5_scoped_mobile_contract_matrix.py
+      - .github/workflows/test-page5-scoped-mobile-contract-matrix.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-scoped-mobile-contract-matrix-20260805
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OUTPUT_DIR: page5-scoped-mobile-contract-matrix
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
+      GENERATED_MATRIX: scripts/run_page5_scoped_mobile_contract_matrix.generated.mjs
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare isolated scoped mobile contract matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$CURRENT_FIRST_PATH"
+          test -s "$CURRENT_SECOND_PATH"
+          python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py
+          python3 scripts/prepare_page5_scoped_mobile_contract_matrix.py --output "$GENERATED_MATRIX"
+          node --check "$GENERATED_MATRIX"
+          grep -Fq 'page5-scoped-mobile-contract-full-entry-matrix' "$GENERATED_MATRIX"
+          grep -Fq '/h5/1691512' "$GENERATED_MATRIX"
+          grep -Fq 'candidatePage5TargetListCount > 0' "$GENERATED_MATRIX"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute current and scoped mobile contract matrix
+        id: matrix_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node "$GENERATED_MATRIX" 2>&1 | tee /tmp/page5-scoped-mobile-contract-matrix.log
+
+      - name: Build scoped mobile contract status
+        if: always()
+        shell: bash
+        env:
+          MATRIX_OUTCOME: ${{ steps.matrix_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          test -f /tmp/page5-scoped-mobile-contract-matrix.log && cp /tmp/page5-scoped-mobile-contract-matrix.log "$OUTPUT_DIR/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output_dir = Path(os.environ['OUTPUT_DIR'])
+          report_path = output_dir / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          ok = bool(report) and bool(report.get('pass')) and os.environ.get('MATRIX_OUTCOME') == 'success'
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('MATRIX_OUTCOME', 'unknown'),
+              'ok': ok,
+              'mode': 'page5-scoped-mobile-contract-full-entry-matrix',
+              'summary': report.get('summary') if report else None,
+              'candidatePatch': report.get('candidatePatch') if report else None,
+              'reportAvailable': bool(report),
+              'artifactName': 'page5-scoped-mobile-contract-matrix',
+              'entryMatrixOnly': True,
+              'repeatSequenceTested': False,
+              'candidatePersisted': False,
+              'apkBuilt': False,
+              'productionDefaultChanged': False,
+              'runtimeFilesChanged': False,
+              'androidClientChanged': False,
+              'authorizationOutcomeModified': False,
+              'paymentCompleted': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/PAGE5_SCOPED_MOBILE_CONTRACT_MATRIX_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-scoped-mobile-contract-matrix
+          path: page5-scoped-mobile-contract-matrix
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish scoped mobile contract status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs
+          cp /tmp/PAGE5_SCOPED_MOBILE_CONTRACT_MATRIX_STATUS.json docs/PAGE5_SCOPED_MOBILE_CONTRACT_MATRIX_STATUS.json
+          git add docs/PAGE5_SCOPED_MOBILE_CONTRACT_MATRIX_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record page five scoped mobile contract matrix"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce scoped mobile contract gate
+        if: always()
+        shell: bash
+        run: jq -e '.ok == true' /tmp/PAGE5_SCOPED_MOBILE_CONTRACT_MATRIX_STATUS.json >/dev/null
