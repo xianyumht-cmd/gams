@@ -1,50 +1,90 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T20:00:00Z",
+  "generatedAt": "2026-08-05T20:01:02Z",
+  "runId": 31041058546,
   "state": "completed",
+  "workflowOutcome": {
+    "fivePage": "success",
+    "repeatReentry": "success"
+  },
   "ok": true,
-  "mode": "persisted-runtime-exact-byte-equivalence-gate",
-  "validationMethod": "exact-byte-equivalence",
-  "actualPersistedBrowserRerunExecuted": false,
-  "reason": "The browser-tested five-page candidate, browser-tested repeat/reentry candidate, and branch-persisted second file have the same size and SHA-256 digest.",
+  "mode": "persisted-runtime-browser-validation",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
   "fivePage": {
     "pass": true,
-    "runId": 31033578389,
-    "candidateSecondSize": 11590615,
-    "candidateSecondSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
-    "firstFourPreserved": true,
-    "pageFiveTargetListCount": 1,
-    "candidatePageErrorCases": 0,
-    "blockedOrderCases": 0
+    "summary": {
+      "totalCases": 5,
+      "fatalCases": 0,
+      "runtimeEntryCompleteCases": 5,
+      "noLoginEnabledCases": 5,
+      "secondFileLoadCases": 5,
+      "candidateMarkerCount": 5,
+      "candidatePageErrorCases": 0,
+      "candidatePage5TargetReadCount": 4,
+      "candidatePage5TargetListCount": 1,
+      "candidatePage5DynamicTargetOk": true,
+      "blockedOrderCases": 0,
+      "replacementCount": 2,
+      "guardReplacementCount": 1,
+      "callbackReplacementCount": 1
+    },
+    "candidatePatch": {
+      "replacementCount": 2,
+      "guardReplacementCount": 1,
+      "callbackReplacementCount": 1,
+      "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
+      "newTextSha256": "143e8fa46bfab66ae80c0a2f411a7434247ca735aa9d4e8a6426a076ba47645e",
+      "persistedSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
+      "persistedSize": 11590615
+    }
   },
   "repeatReentry": {
     "pass": true,
-    "runId": 31038012039,
-    "candidateSecondSize": 11590615,
-    "candidateSecondSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
-    "openCount": 3,
-    "openTargetListCount": 3,
-    "returnCount": 2,
-    "returnNodeRestoredCount": 2,
-    "pageErrorCount": 0,
-    "blockedOrderCount": 0,
-    "blockedExternalNavigationCount": 0
-  },
-  "implementation": {
-    "pass": true,
-    "runId": 31038819333,
-    "branch": "fix/page5-missing-constructor-mobile-bridge-20260806",
-    "sourceCommit": "0c984c5f1fa118be949522c297579bad983beea0",
-    "target": "game-engine/release/game-1.0.5.js",
-    "replacementCount": 2,
-    "persistedSize": 11590615,
-    "persistedSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca"
+    "summary": {
+      "totalCases": 1,
+      "fatalCases": 0,
+      "runtimeEntryCompleteCases": 1,
+      "reentryRuntimeCompleteCases": 1,
+      "noLoginEnabledCases": 1,
+      "secondFileLoadCount": 2,
+      "openCount": 3,
+      "openScreenChangedCount": 3,
+      "openTargetReadCount": 3,
+      "openTargetListCount": 3,
+      "returnCount": 2,
+      "returnScreenChangedCount": 2,
+      "returnNodeRestoredCount": 2,
+      "candidatePageErrorCount": 0,
+      "blockedOrderCases": 0,
+      "blockedExternalNavigationCases": 0,
+      "replacementCount": 2,
+      "guardReplacementCount": 1,
+      "callbackReplacementCount": 1
+    },
+    "candidatePatch": {
+      "replacementCount": 2,
+      "guardReplacementCount": 1,
+      "callbackReplacementCount": 1,
+      "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
+      "newTextSha256": "143e8fa46bfab66ae80c0a2f411a7434247ca735aa9d4e8a6426a076ba47645e",
+      "persistedSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
+      "currentSecondSize": 11590615,
+      "currentSecondSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
+      "candidateSecondSize": 11590615,
+      "candidateSecondSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca"
+    },
+    "returnCssPoint": {
+      "x": 35,
+      "y": 423
+    }
   },
   "persistedRuntimeSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca",
-  "allComparedBytesIdentical": true,
+  "runtimeFilesChangedOnImplementationBranch": true,
   "productionDefaultChanged": false,
   "androidClientChanged": false,
   "apkBuilt": false,
   "authorizationOutcomeModified": false,
-  "paymentCompleted": false
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "4f23c4faf56086cbc47e1554c7c7f094065a4671"
 }
