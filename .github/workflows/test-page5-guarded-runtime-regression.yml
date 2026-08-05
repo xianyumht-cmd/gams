@@ -1,0 +1,196 @@
+name: Validate guarded runtime five-page and repeat regression
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/page5_guarded_runtime_regression.trigger
+      - .github/workflows/test-page5-guarded-runtime-regression.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-guarded-runtime-regression-20260806
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: /tmp/guarded-game-1.0.5.js
+      CURRENT_RUNTIME_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
+      FIVE_OUTPUT: guarded-five-page-matrix
+      REPEAT_OUTPUT: guarded-repeat-reentry-matrix
+      FIVE_GENERATED: scripts/run_guarded_five_page_matrix.generated.mjs
+      REPEAT_GENERATED: scripts/run_guarded_repeat_reentry_matrix.generated.mjs
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Read guarded implementation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$CURRENT_SECOND_PATH"
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_five_page_matrix.py" > scripts/prepare_guarded_five_page_matrix.py
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_repeat_reentry_matrix.py" > scripts/prepare_guarded_repeat_reentry_matrix.py
+          test -s "$CURRENT_SECOND_PATH"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_RUNTIME_SHA256"
+
+      - name: Prepare guarded regression matrices
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/prepare_five_page_missing_constructor_matrix.py \
+            scripts/prepare_page5_repeat_reentry_matrix.py \
+            scripts/prepare_guarded_five_page_matrix.py \
+            scripts/prepare_guarded_repeat_reentry_matrix.py
+          python3 scripts/prepare_guarded_five_page_matrix.py --output "$FIVE_GENERATED"
+          python3 scripts/prepare_guarded_repeat_reentry_matrix.py --output "$REPEAT_GENERATED"
+          node --check "$FIVE_GENERATED"
+          node --check "$REPEAT_GENERATED"
+          grep -Fq "$CURRENT_RUNTIME_SHA256" "$FIVE_GENERATED"
+          grep -Fq "$CURRENT_RUNTIME_SHA256" "$REPEAT_GENERATED"
+          grep -Fq 'candidateMarkerCount === 5' "$FIVE_GENERATED"
+          grep -Fq 'openTargetListCount === 3' "$REPEAT_GENERATED"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute guarded five-page matrix
+        id: five_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          OUTPUT_DIR="$FIVE_OUTPUT" node "$FIVE_GENERATED" 2>&1 | tee /tmp/guarded-five-page-matrix.log
+
+      - name: Execute guarded repeat and reentry matrix
+        id: repeat_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          OUTPUT_DIR="$REPEAT_OUTPUT" node "$REPEAT_GENERATED" 2>&1 | tee /tmp/guarded-repeat-reentry-matrix.log
+
+      - name: Build guarded regression status
+        if: always()
+        shell: bash
+        env:
+          FIVE_OUTCOME: ${{ steps.five_run.outcome }}
+          REPEAT_OUTCOME: ${{ steps.repeat_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$FIVE_OUTPUT" "$REPEAT_OUTPUT"
+          test -f /tmp/guarded-five-page-matrix.log && cp /tmp/guarded-five-page-matrix.log "$FIVE_OUTPUT/workflow.log" || true
+          test -f /tmp/guarded-repeat-reentry-matrix.log && cp /tmp/guarded-repeat-reentry-matrix.log "$REPEAT_OUTPUT/workflow.log" || true
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          def load(path):
+              p = Path(path)
+              return json.loads(p.read_text(encoding='utf-8')) if p.exists() else None
+
+          five = load(Path(os.environ['FIVE_OUTPUT']) / 'report.json')
+          repeat = load(Path(os.environ['REPEAT_OUTPUT']) / 'report.json')
+          ok = (
+              bool(five) and bool(five.get('pass')) and os.environ.get('FIVE_OUTCOME') == 'success'
+              and bool(repeat) and bool(repeat.get('pass')) and os.environ.get('REPEAT_OUTCOME') == 'success'
+          )
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': {
+                  'fivePage': os.environ.get('FIVE_OUTCOME', 'unknown'),
+                  'repeatReentry': os.environ.get('REPEAT_OUTCOME', 'unknown'),
+              },
+              'ok': ok,
+              'mode': 'guarded-runtime-browser-regression',
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'runtimeSha256': os.environ['CURRENT_RUNTIME_SHA256'],
+              'fivePage': {
+                  'pass': bool((five or {}).get('pass')),
+                  'summary': (five or {}).get('summary') or {},
+                  'candidatePatch': (five or {}).get('candidatePatch'),
+              },
+              'repeatReentry': {
+                  'pass': bool((repeat or {}).get('pass')),
+                  'summary': (repeat or {}).get('summary') or {},
+                  'candidatePatch': (repeat or {}).get('candidatePatch'),
+                  'returnCssPoint': (repeat or {}).get('returnCssPoint'),
+              },
+              'realOrderRequestsAllowed': False,
+              'paymentCompleted': False,
+              'authorizationOutcomeModified': False,
+              'productionDefaultChanged': False,
+              'androidClientChanged': False,
+              'apkBuilt': False,
+              'branch': os.environ.get('GITHUB_REF_NAME', ''),
+              'commit': os.environ.get('GITHUB_SHA', ''),
+          }
+          Path('/tmp/PAGE5_GUARDED_RUNTIME_REGRESSION_STATUS.json').write_text(
+              json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-guarded-runtime-regression
+          path: |
+            guarded-five-page-matrix
+            guarded-repeat-reentry-matrix
+            /tmp/PAGE5_GUARDED_RUNTIME_REGRESSION_STATUS.json
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Publish guarded regression status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f \
+            scripts/prepare_guarded_five_page_matrix.py \
+            scripts/prepare_guarded_repeat_reentry_matrix.py \
+            "$FIVE_GENERATED" \
+            "$REPEAT_GENERATED"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          mkdir -p docs
+          cp /tmp/PAGE5_GUARDED_RUNTIME_REGRESSION_STATUS.json docs/PAGE5_GUARDED_RUNTIME_REGRESSION_STATUS.json
+          git add docs/PAGE5_GUARDED_RUNTIME_REGRESSION_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record guarded runtime browser regression"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce guarded regression gate
+        if: always()
+        shell: bash
+        run: jq -e '.ok == true' /tmp/PAGE5_GUARDED_RUNTIME_REGRESSION_STATUS.json >/dev/null
