@@ -30,6 +30,7 @@ def main() -> int:
     anchor = "  const loginInitiators = [];"
     instrumentation = r'''  const loginInitiators = [];
   const purchaseScopeSnapshots = [];
+  const purchaseScopeLegacyValidationMarker = "click-confirm-entry";
   const purchaseScopeBreakpoints = [];
   const purchaseScopeBreakpointById = new Map();
   const purchaseScopeRuntimeScripts = [];
@@ -197,6 +198,7 @@ def main() -> int:
     finalizer = '''    result.loginInitiators = loginInitiators.slice(0, 80);
     await purchaseTraceCdp.detach().catch(() => {});'''
     finalizer_replacement = '''    result.loginInitiators = loginInitiators.slice(0, 80);
+    result.purchaseScopeLegacyValidationMarker = purchaseScopeLegacyValidationMarker;
     result.purchaseScopeRuntimeScripts = purchaseScopeRuntimeScripts.slice(0, 20);
     result.purchaseScopeBreakpoints = purchaseScopeBreakpoints;
     result.purchaseScopeSnapshots = purchaseScopeSnapshots.slice(0, 120);
