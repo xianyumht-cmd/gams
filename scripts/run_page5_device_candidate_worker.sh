@@ -18,6 +18,13 @@ set -euo pipefail
 : "${GG_RELEASE_KEYSTORE_PASSWORD:?}"
 : "${CERT_SHA256:?}"
 
+export APK_VERSION_NAME="2.0.12-page5-candidate"
+export APK_VERSION_CODE="25"
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  printf 'APK_VERSION_NAME=%s\n' "$APK_VERSION_NAME" >> "$GITHUB_ENV"
+  printf 'APK_VERSION_CODE=%s\n' "$APK_VERSION_CODE" >> "$GITHUB_ENV"
+fi
+
 test "${#TOKEN_SIGNING_SECRET}" -ge 32
 jq -e \
   '.ok == true
