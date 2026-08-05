@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T11:28:21Z",
-  "runId": 31001444039,
+  "generatedAt": "2026-08-05T11:34:44Z",
+  "runId": 31001889030,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
@@ -22,27 +22,26 @@
     "currentPage5ExpectedErrorObserved": false,
     "currentPage5TargetReadCount": 0,
     "candidatePage5PageErrorCount": 0,
-    "candidatePage5TargetReadCount": 0,
+    "candidatePage5TargetReadCount": 1,
     "candidatePage5TargetListCount": 0,
     "candidatePage5ScreenshotChanged": true,
     "blockedOrderCases": 0,
     "replacementCount": 1
   },
   "currentTargetWindow": {
-    "total": 3,
-    "kinds": {
-      "page-request": 3
-    },
+    "total": 0,
+    "kinds": {},
     "targetReadCount": 0,
     "targetListCount": 0,
     "orderMutationCount": 0
   },
   "candidateTargetWindow": {
-    "total": 2,
+    "total": 8,
     "kinds": {
-      "page-request": 2
+      "target-read-request": 1,
+      "page-request": 7
     },
-    "targetReadCount": 0,
+    "targetReadCount": 1,
     "targetListCount": 0,
     "orderMutationCount": 0
   },
@@ -78,5 +77,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "75f5026f669e9959e0f1463f4e4f707eb8699f9a"
+  "commit": "715cdd72abe948964e67d82351fa120e2571cb78"
 }
