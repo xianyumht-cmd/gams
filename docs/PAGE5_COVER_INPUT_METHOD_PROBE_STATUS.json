@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T02:28:06Z",
+  "runId": 30969176376,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-cover-input-method-probe-page-only",
+  "summary": {
+    "totalCases": 4,
+    "passedCases": 4,
+    "fatalCases": 0,
+    "pageErrorCases": 0,
+    "blockedOrderCases": 0,
+    "documentReloadCases": 0,
+    "requestCases": 1
+  },
+  "caseSummary": [
+    {
+      "method": "touchscreen",
+      "postInputRequestCount": 1,
+      "postInputDocumentRequests": 0,
+      "screenshotChanged": true,
+      "mainFrameValid": true,
+      "target": {
+        "tag": "CANVAS",
+        "id": "canvas",
+        "className": "",
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "pointerEvents": "auto",
+        "transform": "none",
+        "zIndex": "auto"
+      },
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "method": "mouse",
+      "postInputRequestCount": 0,
+      "postInputDocumentRequests": 0,
+      "screenshotChanged": true,
+      "mainFrameValid": true,
+      "target": {
+        "tag": "CANVAS",
+        "id": "canvas",
+        "className": "",
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "pointerEvents": "auto",
+        "transform": "none",
+        "zIndex": "auto"
+      },
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "method": "dom-click",
+      "postInputRequestCount": 0,
+      "postInputDocumentRequests": 0,
+      "screenshotChanged": true,
+      "mainFrameValid": true,
+      "target": {
+        "tag": "CANVAS",
+        "id": "canvas",
+        "className": "",
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "pointerEvents": "auto",
+        "transform": "none",
+        "zIndex": "auto"
+      },
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    },
+    {
+      "method": "pointer-mouse",
+      "postInputRequestCount": 0,
+      "postInputDocumentRequests": 0,
+      "screenshotChanged": true,
+      "mainFrameValid": true,
+      "target": {
+        "tag": "CANVAS",
+        "id": "canvas",
+        "className": "",
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "pointerEvents": "auto",
+        "transform": "none",
+        "zIndex": "auto"
+      },
+      "pageErrorCount": 0,
+      "blockedOrderCount": 0
+    }
+  ],
+  "reportAvailable": true,
+  "artifactName": "page5-cover-input-method-probe",
+  "pageOnlyProbe": true,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "ad4208398a991681d20ec1f9329d3d9935b63619"
+}
