@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T12:24:40Z",
+  "runId": 31005314231,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-post-title-element-list-read-only-probe",
+  "pauseCaptured": true,
+  "elementListLength": 20,
+  "serializedItemCount": 20,
+  "compactNodes": [
+    {
+      "index": 0,
+      "zIndex": 0,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": []
+    },
+    {
+      "index": 1,
+      "zIndex": 1000,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": false,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": [
+        "mouse down",
+        "mouse move",
+        "mouse up",
+        "mouse out"
+      ]
+    },
+    {
+      "index": 6,
+      "zIndex": 3900,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse click",
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 7,
+      "zIndex": 4999,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": []
+    },
+    {
+      "index": 8,
+      "zIndex": 5500,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 1198,
+      "y": 40,
+      "width": 46,
+      "height": 64,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ]
+    },
+    {
+      "index": 9,
+      "zIndex": 5501,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 1180,
+      "y": 250,
+      "width": 74,
+      "height": 69,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ]
+    },
+    {
+      "index": 10,
+      "zIndex": 5502,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 1198,
+      "y": 145,
+      "width": 46,
+      "height": 64,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ]
+    },
+    {
+      "index": 11,
+      "zIndex": 6000,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": []
+    },
+    {
+      "index": 12,
+      "zIndex": 7000,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse move",
+        "mouse click"
+      ]
+    },
+    {
+      "index": 13,
+      "zIndex": 7900,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 14,
+      "zIndex": 8000,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": [
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 17,
+      "zIndex": 9999,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "events": [
+        "mouse click",
+        "mouse down",
+        "mouse up",
+        "mouse move",
+        "mouse out"
+      ]
+    },
+    {
+      "index": 18,
+      "zIndex": 10000,
+      "visible": false,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 1256,
+      "height": 690,
+      "events": [
+        "mouse click",
+        "mouse down",
+        "mouse up",
+        "mouse move"
+      ]
+    },
+    {
+      "index": 19,
+      "zIndex": 100000,
+      "visible": true,
+      "touchable": true,
+      "blockTouch": true,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "events": []
+    }
+  ],
+  "probeScreenshotChanged": true,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "preStepCssPoints": {
+    "coverCenter": {
+      "x": 421.9921875,
+      "y": 195
+    },
+    "coverPrompt": {
+      "x": 427.4088134765625,
+      "y": 341.25
+    }
+  },
+  "probeCssPoint": {
+    "x": 421.9921875,
+    "y": 195
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-post-title-element-inventory",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "e898f8584f8c525b6513bbc596ba1c434059a7a8"
+}
