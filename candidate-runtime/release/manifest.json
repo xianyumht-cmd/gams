@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "versionName": "2.0.5-page5-device-c1",
+  "file": "bundle-2.0.5-page5-device-c1.bin",
+  "size": 3905533,
+  "sha256": "69fdca5d704a728b1dce839cd521afb44c2ac864bad26afbaa660c6ddd7d59fa",
+  "iv": "BjigPLb5IBRtfSvU",
+  "nonameSize": 332368,
+  "nonameSha256": "707826b2049853a714740baf169fa5b61fa072ab8027ed69551b7d55813c53c0",
+  "gameSize": 11590659,
+  "gameSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "keyIv": "ClCQA4lkCt8BNUsJ",
+  "keyCipher": "QtChslXn5SnlJ7e44rdBma63eVNxjtlawRtyES04nMwSrKzkgYWxgx38rZAksZtM",
+  "publishedAt": "2026-08-05T22:43:59Z",
+  "signatureAlgorithm": "SHA256withECDSA",
+  "signature": "MEUCIGU3zRgLJUB4JC+oDk3KkJSB8GdW3H03C2GOQyi9mR5bAiEA/x7vd7CJJNlUu/yafhBwiBG3VL7A3UHwj587u89k+Dg="
+}
