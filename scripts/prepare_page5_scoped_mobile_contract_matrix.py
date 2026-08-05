@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+# Explicit trigger after the workflow file exists on the diagnostic branch.
 import argparse
 import re
 from pathlib import Path
