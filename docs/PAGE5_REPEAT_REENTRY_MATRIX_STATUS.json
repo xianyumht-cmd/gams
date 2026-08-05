@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T19:13:31Z",
+  "runId": 31038012039,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-first-second-reentry-third-repeat-matrix",
+  "summary": {
+    "totalCases": 1,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 1,
+    "reentryRuntimeCompleteCases": 1,
+    "noLoginEnabledCases": 1,
+    "secondFileLoadCount": 2,
+    "openCount": 3,
+    "openScreenChangedCount": 3,
+    "openTargetReadCount": 3,
+    "openTargetListCount": 3,
+    "returnCount": 2,
+    "returnScreenChangedCount": 2,
+    "returnNodeRestoredCount": 2,
+    "candidatePageErrorCount": 0,
+    "blockedOrderCases": 0,
+    "blockedExternalNavigationCases": 0,
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "callbackReplacementCount": 1
+  },
+  "repeatSequence": [
+    {
+      "label": "first-open",
+      "point": {
+        "ok": true,
+        "nodeIndex": 10,
+        "nodeGeometry": {
+          "x": 1198,
+          "y": 145,
+          "width": 46,
+          "height": 64,
+          "visible": true,
+          "touchable": true
+        },
+        "nativeCenter": {
+          "x": 1221,
+          "y": 177
+        },
+        "cssPoint": {
+          "x": 294.125,
+          "y": 736.6981567382812
+        },
+        "transform": "logical-landscape-to-css-portrait-ccw",
+        "dimensionsSwapped": true,
+        "logical": {
+          "width": 1280,
+          "height": 720
+        },
+        "canvas": {
+          "width": 720,
+          "height": 1280
+        },
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        }
+      },
+      "screenChanged": true,
+      "targetWindow": {
+        "total": 33,
+        "kinds": {
+          "target-read-request": 3,
+          "page-request": 29,
+          "target-list-request": 1
+        },
+        "targetReadCount": 4,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    },
+    {
+      "label": "second-open",
+      "point": {
+        "ok": true,
+        "nodeIndex": 10,
+        "nodeGeometry": {
+          "x": 1198,
+          "y": 145,
+          "width": 46,
+          "height": 64,
+          "visible": true,
+          "touchable": true
+        },
+        "nativeCenter": {
+          "x": 1221,
+          "y": 177
+        },
+        "cssPoint": {
+          "x": 294.125,
+          "y": 736.6981567382812
+        },
+        "transform": "logical-landscape-to-css-portrait-ccw",
+        "dimensionsSwapped": true,
+        "logical": {
+          "width": 1280,
+          "height": 720
+        },
+        "canvas": {
+          "width": 720,
+          "height": 1280
+        },
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        }
+      },
+      "screenChanged": true,
+      "targetWindow": {
+        "total": 8,
+        "kinds": {
+          "target-read-request": 3,
+          "page-request": 4,
+          "target-list-request": 1
+        },
+        "targetReadCount": 4,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    },
+    {
+      "label": "third-open-after-reentry",
+      "point": {
+        "ok": true,
+        "nodeIndex": 10,
+        "nodeGeometry": {
+          "x": 1198,
+          "y": 145,
+          "width": 46,
+          "height": 64,
+          "visible": true,
+          "touchable": true
+        },
+        "nativeCenter": {
+          "x": 1221,
+          "y": 177
+        },
+        "cssPoint": {
+          "x": 294.125,
+          "y": 736.6981567382812
+        },
+        "transform": "logical-landscape-to-css-portrait-ccw",
+        "dimensionsSwapped": true,
+        "logical": {
+          "width": 1280,
+          "height": 720
+        },
+        "canvas": {
+          "width": 720,
+          "height": 1280
+        },
+        "rect": {
+          "x": 0,
+          "y": 75.328125,
+          "width": 390,
+          "height": 693.328125
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        }
+      },
+      "screenChanged": true,
+      "targetWindow": {
+        "total": 33,
+        "kinds": {
+          "target-read-request": 3,
+          "page-request": 29,
+          "target-list-request": 1
+        },
+        "targetReadCount": 4,
+        "targetListCount": 1,
+        "orderMutationCount": 0
+      },
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    }
+  ],
+  "returnSequence": [
+    {
+      "label": "first-return",
+      "returnCssPoint": {
+        "x": 35,
+        "y": 423
+      },
+      "screenChanged": true,
+      "state": {
+        "engineAvailable": true,
+        "node10Available": true,
+        "node10Visible": true,
+        "node10Touchable": true
+      },
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    },
+    {
+      "label": "second-return",
+      "returnCssPoint": {
+        "x": 35,
+        "y": 423
+      },
+      "screenChanged": true,
+      "state": {
+        "engineAvailable": true,
+        "node10Available": true,
+        "node10Visible": true,
+        "node10Touchable": true
+      },
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    }
+  ],
+  "reentry": {
+    "goto": {
+      "status": 200,
+      "url": "https://m.66rpg.com/h5/1691512?keys=ohp,quality"
+    },
+    "engineCapture": {
+      "length": 20
+    },
+    "runtimeLoadsDelta": {
+      "first": 0,
+      "second": 1,
+      "official": 1
+    }
+  },
+  "runtimeLoads": {
+    "first": 1,
+    "second": 2,
+    "official": 2
+  },
+  "pageErrorCount": 0,
+  "pageErrors": [],
+  "blockedOrderCount": 0,
+  "blockedExternalNavigationCount": 0,
+  "fatalError": null,
+  "returnCssPoint": {
+    "x": 35,
+    "y": 423
+  },
+  "candidatePatch": {
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "callbackReplacementCount": 1,
+    "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
+    "newTextSha256": "143e8fa46bfab66ae80c0a2f411a7434247ca735aa9d4e8a6426a076ba47645e",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590615,
+    "candidateSecondSha256": "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca"
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-repeat-reentry-matrix",
+  "candidatePersisted": false,
+  "repeatSequenceTested": true,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "2925f65b6f72a4f7a662c1ea7d1c8c1f56a6a376"
+}
