@@ -54,7 +54,7 @@ jobs:
           node --check "$GENERATED_PROBE"
           grep -Fq 'page5-dynamic-node-touch-empty-callback-bridge-probe' "$GENERATED_PROBE"
           grep -Fq '__gamsDirectCanvasEngine' "$GENERATED_PROBE"
-          grep -Fq 'dynamic-real-node-touch' "$GENERATED_PROBE"
+          grep -Fq 'dynamic-rotated-real-node-touch' "$GENERATED_PROBE"
           grep -Fq 'nativeCenter' "$GENERATED_PROBE"
           grep -Fq 'candidateTargetListCount > 0' "$GENERATED_PROBE"
 
