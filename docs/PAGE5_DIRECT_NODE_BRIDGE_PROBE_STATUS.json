@@ -1,16 +1,182 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:39:16Z",
-  "runId": 31031003382,
+  "generatedAt": "2026-08-05T17:42:38Z",
+  "runId": 31031148516,
   "state": "completed",
-  "workflowOutcome": "skipped",
+  "workflowOutcome": "failure",
   "ok": false,
   "mode": "page5-dynamic-node-touch-empty-callback-bridge-probe",
-  "summary": {},
-  "current": null,
-  "candidate": null,
-  "candidatePatch": null,
-  "reportAvailable": false,
+  "summary": {
+    "totalCases": 2,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "engineCapturedCases": 2,
+    "directTriggerOkCases": 2,
+    "currentPageErrorCount": 0,
+    "currentTargetReadCount": 0,
+    "currentTargetListCount": 0,
+    "candidatePageErrorCount": 0,
+    "candidateTargetReadCount": 0,
+    "candidateTargetListCount": 0,
+    "blockedOrderCases": 0,
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "emptyCallbackReplacementCount": 1
+  },
+  "current": {
+    "pair": "current",
+    "engineCapture": {
+      "length": 20
+    },
+    "engineCaptureError": null,
+    "nodeGeometry": {
+      "x": 1180,
+      "y": 250,
+      "width": 74,
+      "height": 69,
+      "visible": true,
+      "touchable": true
+    },
+    "nodeEventNames": [
+      "mouse down",
+      "mouse up",
+      "mouse over",
+      "mouse move",
+      "mouse out",
+      "mouse click"
+    ],
+    "dynamicTouch": {
+      "ok": true,
+      "mode": "dynamic-rotated-real-touch",
+      "transform": "logical-landscape-to-css-portrait-ccw",
+      "dimensionsSwapped": true,
+      "logical": {
+        "width": 1280,
+        "height": 720
+      },
+      "nativeCenter": {
+        "x": 1217,
+        "y": 284.5
+      },
+      "cssPoint": {
+        "x": 235.89583333333331,
+        "y": 734.5315063476563
+      },
+      "insideViewport": true,
+      "canvas": {
+        "width": 720,
+        "height": 1280
+      },
+      "rect": {
+        "x": 0,
+        "y": 75.328125,
+        "width": 390,
+        "height": 693.328125
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "devicePixelRatio": 2
+      }
+    },
+    "targetWindow": {
+      "total": 3,
+      "kinds": {
+        "page-request": 3
+      },
+      "targetReadCount": 0,
+      "targetListCount": 0,
+      "orderMutationCount": 0
+    },
+    "pageErrorCount": 0,
+    "pageErrors": [],
+    "blockedOrderCount": 0,
+    "fatalError": null
+  },
+  "candidate": {
+    "pair": "candidate",
+    "engineCapture": {
+      "length": 20
+    },
+    "engineCaptureError": null,
+    "nodeGeometry": {
+      "x": 1180,
+      "y": 250,
+      "width": 74,
+      "height": 69,
+      "visible": true,
+      "touchable": true
+    },
+    "nodeEventNames": [
+      "mouse down",
+      "mouse up",
+      "mouse over",
+      "mouse move",
+      "mouse out",
+      "mouse click"
+    ],
+    "dynamicTouch": {
+      "ok": true,
+      "mode": "dynamic-rotated-real-touch",
+      "transform": "logical-landscape-to-css-portrait-ccw",
+      "dimensionsSwapped": true,
+      "logical": {
+        "width": 1280,
+        "height": 720
+      },
+      "nativeCenter": {
+        "x": 1217,
+        "y": 284.5
+      },
+      "cssPoint": {
+        "x": 235.89583333333331,
+        "y": 734.5315063476563
+      },
+      "insideViewport": true,
+      "canvas": {
+        "width": 720,
+        "height": 1280
+      },
+      "rect": {
+        "x": 0,
+        "y": 75.328125,
+        "width": 390,
+        "height": 693.328125
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "devicePixelRatio": 2
+      }
+    },
+    "targetWindow": {
+      "total": 3,
+      "kinds": {
+        "page-request": 3
+      },
+      "targetReadCount": 0,
+      "targetListCount": 0,
+      "orderMutationCount": 0
+    },
+    "pageErrorCount": 0,
+    "pageErrors": [],
+    "blockedOrderCount": 0,
+    "fatalError": null
+  },
+  "candidatePatch": {
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "emptyCallbackReplacementCount": 1,
+    "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
+    "newTextSha256": "37fe35703e40793d24fd8d80e2e40e59170def41c13e32eeade8570845cb7c0a",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590592,
+    "candidateSecondSha256": "713b4e2019cf323ce366a8d5e68399d1d733a21bcae81b43a9569fda49aec975"
+  },
+  "reportAvailable": true,
   "artifactName": "page5-direct-node-bridge-probe",
   "directNodeIndex": 9,
   "realTouchUsed": true,
@@ -24,5 +190,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "d6ee6443c2bf6e01d20ff0221ce72efd5daf9e72"
+  "commit": "1ea454cf8d2ab679b7587350154c8c3a8c183e75"
 }
