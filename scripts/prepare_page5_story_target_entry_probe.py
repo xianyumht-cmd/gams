@@ -49,8 +49,12 @@ def main() -> int:
     steps: [
       { label: "cover-progress", x: 195, y: 422 },
       { label: "title-reveal", x: 50, y: 420 },
-      { label: "home-menu-open", x: 195, y: 422 },
-      { label: "story-entry", x: 228, y: 418 },
+      {
+        label: "story-entry",
+        x: 195,
+        y: 422,
+        followupTap: { x: 228, y: 418, delayMs: 800 },
+      },
       { label: "target-side-entry", x: 258, y: 732 },
     ],
     marker: "target-read",
@@ -60,10 +64,27 @@ def main() -> int:
     if count != 1:
         raise SystemExit(f"route block mismatch: {count}")
 
+    event_marker = "      events.push({ at: Date.now(), type: \"route-tap\", stepIndex, ...step });\n"
+    event_replacement = event_marker + '''      if (step.followupTap) {
+        await page.waitForTimeout(Number(step.followupTap.delayMs || 0));
+        await page.touchscreen.tap(step.followupTap.x, step.followupTap.y);
+        events.push({
+          at: Date.now(),
+          type: "route-followup-tap",
+          stepIndex,
+          label: `${step.label}-followup`,
+          x: step.followupTap.x,
+          y: step.followupTap.y,
+          delayMs: Number(step.followupTap.delayMs || 0),
+        });
+      }
+'''
+    text = replace_once(text, event_marker, event_replacement, "follow-up tap")
+
     wait_old = "      await page.waitForTimeout(isFinal ? 10000 : 5000);"
-    wait_new = '''      const stepWaitMs = step.label === "home-menu-open"
-        ? 1200
-        : (step.label === "story-entry" ? 30000 : (isFinal ? 15000 : 7000));
+    wait_new = '''      const stepWaitMs = step.label === "story-entry"
+        ? 30000
+        : (isFinal ? 15000 : 7000);
       await page.waitForTimeout(stepWaitMs);'''
     text = replace_once(text, wait_old, wait_new, "step wait")
 
