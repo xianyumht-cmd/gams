@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T22:29:05Z",
+  "runId": 31052897768,
+  "state": "running",
+  "ok": false,
+  "mode": "isolated-final-apk-candidate-build",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "implementationCommit": "a1de079f395642fe2f2c081492f286239538812c",
+  "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "browserValidationRunId": 31051809043,
+  "finalInteractionRunId": 31050480987,
+  "productionDefaultChanged": false,
+  "implementationMerged": false,
+  "apkPublished": false,
+  "paymentCompleted": false
+}
