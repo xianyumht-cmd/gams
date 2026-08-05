@@ -1,19 +1,98 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T12:51:44Z",
-  "runId": 31007450019,
+  "generatedAt": "2026-08-05T12:55:35Z",
+  "runId": 31007593814,
   "state": "completed",
-  "workflowOutcome": "skipped",
-  "ok": false,
+  "workflowOutcome": "success",
+  "ok": true,
   "mode": "page5-simplified-mouseup-cover-probe",
-  "summary": {},
-  "currentTargetWindow": null,
-  "candidateTargetWindow": null,
+  "summary": {
+    "totalCases": 2,
+    "currentCases": 1,
+    "candidateCases": 1,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "nonPage5CurrentMarkerCases": 0,
+    "nonPage5CandidateMarkerCases": 0,
+    "nonPage5CurrentPageErrorCases": 0,
+    "nonPage5CandidatePageErrorCases": 0,
+    "currentPage5PageErrorCount": 0,
+    "currentPage5ExpectedErrorObserved": false,
+    "currentPage5TargetReadCount": 0,
+    "candidatePage5PageErrorCount": 0,
+    "candidatePage5TargetReadCount": 0,
+    "candidatePage5TargetListCount": 0,
+    "candidatePage5ScreenshotChanged": true,
+    "candidatePage5FinalRequestTotal": 3,
+    "candidatePage5FinalStage": {
+      "stage": "after-03-cover-center-enter",
+      "at": 1785934531622,
+      "url": "https://m.66rpg.com/h5/1691512?ohp=v3&quality=32",
+      "readyState": "complete",
+      "visibilityState": "visible",
+      "runtimeLoaded": true,
+      "runtimeButtonPresent": true,
+      "runtimeButtonVisible": true,
+      "runtimePanelVisible": false,
+      "noLoginEnabledTextPresent": true,
+      "navigationGuard": {
+        "supported": true,
+        "blocked": [
+          {
+            "url": "about://blank",
+            "at": 1785934423057
+          },
+          {
+            "url": "about://blank",
+            "at": 1785934436152
+          }
+        ],
+        "allowed": []
+      }
+    },
+    "blockedOrderCases": 0,
+    "replacementCount": 2
+  },
+  "currentTargetWindow": {
+    "total": 0,
+    "kinds": {},
+    "targetReadCount": 0,
+    "targetListCount": 0,
+    "orderMutationCount": 0
+  },
+  "candidateTargetWindow": {
+    "total": 3,
+    "kinds": {
+      "page-request": 3
+    },
+    "targetReadCount": 0,
+    "targetListCount": 0,
+    "orderMutationCount": 0
+  },
   "currentPageErrors": [],
   "candidatePageErrors": [],
-  "candidateStages": [],
-  "candidatePatch": null,
-  "reportAvailable": false,
+  "candidateStages": [
+    "after-01-cover-progress",
+    "after-02-title-reveal",
+    "after-03-cover-center-enter",
+    "initial-ready",
+    "runtime-close",
+    "runtime-final-close",
+    "runtime-open",
+    "runtime-reopen"
+  ],
+  "candidatePatch": {
+    "replacementCount": 2,
+    "oldTextSha256": "57d861a00e3c8ab2f088172eb7cbacb498b3f3a3c35bfba814422e8476901d35",
+    "newTextSha256": "dd945ae308b3cebfa66436255cd88be01e1b183ba3c0a1321e300c4e123924de",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11589554,
+    "candidateSecondSha256": "44f92236815d864b66ec9382ff4fadcdc5e49c2f3016a2fa881f9361cfba3caa"
+  },
+  "reportAvailable": true,
   "artifactName": "page5-simplified-mouseup-cover-probe",
   "browserCandidateOnly": true,
   "manualScreenshotReviewRequired": true,
@@ -26,5 +105,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "4e481b1d1533d71b74db9d969590a07e36b7bc33"
+  "commit": "1d171724fdced24fe9f95b78c319347c82e8eeb3"
 }
