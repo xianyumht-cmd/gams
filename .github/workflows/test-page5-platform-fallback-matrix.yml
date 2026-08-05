@@ -1,4 +1,4 @@
-name: Probe page five candidate cover listener
+name: Probe page five candidate mouse-up state v4
 
 on:
   push:
@@ -8,7 +8,8 @@ on:
       - scripts/run_page5_candidate_mouseup_state_probe.mjs
       - scripts/prepare_page5_candidate_mouseup_state_probe_v2.py
       - scripts/prepare_page5_candidate_cover_listener_probe.py
-      - scripts/page5_candidate_cover_listener_probe.trigger
+      - scripts/prepare_page5_candidate_mouseup_state_probe_v4.py
+      - scripts/page5_candidate_mouseup_state_probe_v4.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -16,7 +17,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-candidate-cover-listener-probe-20260805
+  group: page5-candidate-mouseup-state-probe-v4-20260805
   cancel-in-progress: true
 
 jobs:
@@ -24,10 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      OUTPUT_DIR: page5-candidate-cover-listener-probe
+      OUTPUT_DIR: page5-candidate-mouseup-state-probe-v4
       CURRENT_FIRST_PATH: remote-script/src/noname.js
       CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
-      GENERATED_PROBE: scripts/run_page5_candidate_cover_listener_probe.generated.mjs
+      GENERATED_PROBE: scripts/run_page5_candidate_mouseup_state_probe_v4.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -39,19 +40,20 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare candidate cover listener probe
+      - name: Prepare candidate mouse-up state probe v4
         shell: bash
         run: |
           set -euo pipefail
           test -s "$CURRENT_FIRST_PATH"
           test -s "$CURRENT_SECOND_PATH"
-          python3 -m py_compile scripts/prepare_page5_candidate_mouseup_state_probe_v2.py scripts/prepare_page5_candidate_cover_listener_probe.py
-          python3 scripts/prepare_page5_candidate_cover_listener_probe.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_candidate_mouseup_state_probe_v2.py scripts/prepare_page5_candidate_cover_listener_probe.py scripts/prepare_page5_candidate_mouseup_state_probe_v4.py
+          python3 scripts/prepare_page5_candidate_mouseup_state_probe_v4.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-candidate-cover-listener-read-only-probe' "$GENERATED_PROBE"
+          grep -Fq 'page5-candidate-mouseup-state-read-only-probe-v4' "$GENERATED_PROBE"
           grep -Fq "eventListenerMap['mouse up'][0].listener" "$GENERATED_PROBE"
-          grep -Fq 'candidate full-screen listener unavailable' "$GENERATED_PROBE"
-          grep -Fq '__gamsNavigationGuard' "$GENERATED_PROBE"
+          grep -Fq 'before-core' "$GENERATED_PROBE"
+          grep -Fq 'after-click-decision' "$GENERATED_PROBE"
+          grep -Fq 'gpBreakpointsInstalled' "$GENERATED_PROBE"
 
       - name: Install Chromium
         shell: bash
@@ -60,15 +62,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute candidate cover listener probe
+      - name: Execute candidate mouse-up state probe v4
         id: probe_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-candidate-cover-listener-probe.log
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-candidate-mouseup-state-probe-v4.log
 
-      - name: Build candidate cover listener status
+      - name: Build candidate mouse-up state v4 status
         if: always()
         shell: bash
         env:
@@ -76,7 +78,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-candidate-cover-listener-probe.log && cp /tmp/page5-candidate-cover-listener-probe.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-candidate-mouseup-state-probe-v4.log && cp /tmp/page5-candidate-mouseup-state-probe-v4.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
@@ -86,7 +88,18 @@ jobs:
           output = Path(os.environ['OUTPUT_DIR'])
           report_path = output / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          listener = report.get('listener', {}) if report else {}
+          pauses = report.get('pauses', []) if report else []
+          compact_pauses = []
+          for pause in pauses:
+              state = pause.get('state', {}) or {}
+              compact_pauses.append({
+                  'labels': pause.get('labels', []),
+                  'functionName': pause.get('functionName'),
+                  'location': pause.get('location'),
+                  'stateAvailable': state.get('available'),
+                  'state': state.get('value'),
+                  'stateError': state.get('exception'),
+              })
           ok = bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
@@ -95,16 +108,13 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-candidate-cover-listener-read-only-probe',
-              'listenerCaptured': bool(listener),
-              'listenerSourceLength': listener.get('sourceLength') if listener else None,
-              'listenerSourceSha256': listener.get('sourceSha256') if listener else None,
-              'listenerFunctionLocation': listener.get('functionLocation') if listener else None,
-              'listenerScopeCount': listener.get('scopeCount') if listener else None,
-              'listenerRemote': listener.get('remote') if listener else None,
-              'listenerInternalPropertyNames': [item.get('name') for item in listener.get('internalProperties', []) if item.get('name')] if listener else [],
+              'mode': 'page5-candidate-mouseup-state-read-only-probe-v4',
+              'pauseCount': len(pauses),
+              'pauses': compact_pauses,
+              'listener': report.get('listener') if report else None,
+              'beforeCoreBreakpoint': report.get('before-core') if report else None,
+              'afterDecisionBreakpoint': report.get('after-click-decision') if report else None,
               'canvasListener': report.get('canvasListener') if report else None,
-              'canvasPause': report.get('canvasPause') if report else None,
               'goto': report.get('goto') if report else None,
               'final': report.get('final') if report else None,
               'fatalError': report.get('fatalError') if report else None,
@@ -114,7 +124,7 @@ jobs:
               'debuggerErrorCount': len(report.get('debuggerErrors', [])) if report else None,
               'candidatePatch': report.get('candidatePatch') if report else None,
               'reportAvailable': bool(report),
-              'artifactName': 'page5-candidate-cover-listener-probe',
+              'artifactName': 'page5-candidate-mouseup-state-probe-v4',
               'readOnlyProbe': True,
               'pageScriptModified': False,
               'candidatePersisted': False,
@@ -128,7 +138,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_CANDIDATE_COVER_LISTENER_PROBE_STATUS.json').write_text(
+          Path('/tmp/PAGE5_CANDIDATE_MOUSEUP_STATE_PROBE_V4_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -137,12 +147,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-candidate-cover-listener-probe
-          path: page5-candidate-cover-listener-probe
+          name: page5-candidate-mouseup-state-probe-v4
+          path: page5-candidate-mouseup-state-probe-v4
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish candidate cover listener status
+      - name: Publish candidate mouse-up state v4 status
         if: always()
         shell: bash
         run: |
@@ -150,14 +160,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_CANDIDATE_COVER_LISTENER_PROBE_STATUS.json docs/PAGE5_CANDIDATE_COVER_LISTENER_PROBE_STATUS.json
-          git add docs/PAGE5_CANDIDATE_COVER_LISTENER_PROBE_STATUS.json
+          cp /tmp/PAGE5_CANDIDATE_MOUSEUP_STATE_PROBE_V4_STATUS.json docs/PAGE5_CANDIDATE_MOUSEUP_STATE_PROBE_V4_STATUS.json
+          git add docs/PAGE5_CANDIDATE_MOUSEUP_STATE_PROBE_V4_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five candidate cover listener"
+            git commit -m "Record page five candidate mouse-up state v4"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce candidate cover listener capture
+      - name: Enforce candidate mouse-up state v4 capture
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_CANDIDATE_COVER_LISTENER_PROBE_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/PAGE5_CANDIDATE_MOUSEUP_STATE_PROBE_V4_STATUS.json >/dev/null
