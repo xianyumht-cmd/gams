@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T22:10:28Z",
+  "runId": 31051701269,
+  "state": "completed",
+  "workflowOutcome": {
+    "fivePage": "skipped",
+    "repeatReentry": "skipped"
+  },
+  "ok": false,
+  "mode": "guarded-runtime-browser-regression",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "fivePage": {
+    "pass": false,
+    "summary": {},
+    "candidatePatch": null
+  },
+  "repeatReentry": {
+    "pass": false,
+    "summary": {},
+    "candidatePatch": null,
+    "returnCssPoint": null
+  },
+  "realOrderRequestsAllowed": false,
+  "paymentCompleted": false,
+  "authorizationOutcomeModified": false,
+  "productionDefaultChanged": false,
+  "androidClientChanged": false,
+  "apkBuilt": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "2bedd5b409b15fe8d1aff4064d7cb596a6250918"
+}
