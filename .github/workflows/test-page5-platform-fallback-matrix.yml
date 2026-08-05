@@ -1,4 +1,4 @@
-name: Inventory page five list scene nodes
+name: Test page five repeat and reentry sequence
 
 on:
   push:
@@ -7,27 +7,26 @@ on:
     paths:
       - scripts/run_page5_guard_full_entry_matrix.mjs
       - scripts/prepare_five_page_missing_constructor_matrix.py
-      - scripts/prepare_page5_list_scene_inventory.py
-      - scripts/page5_list_scene_inventory.trigger
-      - .github/workflows/test-page5-platform-fallback-matrix.yml
+      - scripts/prepare_page5_repeat_reentry_matrix.py
+      - scripts/page5_repeat_reentry_matrix.trigger
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: page5-list-scene-inventory-registered-20260806
+  group: page5-repeat-reentry-matrix-20260806
   cancel-in-progress: true
 
 jobs:
-  inventory:
+  matrix:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
-      OUTPUT_DIR: page5-list-scene-inventory
+      OUTPUT_DIR: page5-repeat-reentry-matrix
       CURRENT_FIRST_PATH: remote-script/src/noname.js
       CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
-      GENERATED_PROBE: scripts/run_page5_list_scene_inventory.generated.mjs
+      GENERATED_MATRIX: scripts/run_page5_repeat_reentry_matrix.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +38,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare list scene inventory
+      - name: Prepare repeat and reentry matrix
         shell: bash
         run: |
           set -euo pipefail
@@ -47,13 +46,15 @@ jobs:
           test -s "$CURRENT_SECOND_PATH"
           python3 -m py_compile \
             scripts/prepare_five_page_missing_constructor_matrix.py \
-            scripts/prepare_page5_list_scene_inventory.py
-          python3 scripts/prepare_page5_list_scene_inventory.py --output "$GENERATED_PROBE"
-          node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-list-scene-node-inventory' "$GENERATED_PROBE"
-          grep -Fq 'listSceneInventory' "$GENERATED_PROBE"
-          grep -Fq 'clickableNodeCount' "$GENERATED_PROBE"
-          grep -Fq 'candidateTargetListCount > 0' "$GENERATED_PROBE"
+            scripts/prepare_page5_repeat_reentry_matrix.py
+          python3 scripts/prepare_page5_repeat_reentry_matrix.py --output "$GENERATED_MATRIX"
+          node --check "$GENERATED_MATRIX"
+          grep -Fq 'page5-first-second-reentry-third-repeat-matrix' "$GENERATED_MATRIX"
+          grep -Fq 'first-open' "$GENERATED_MATRIX"
+          grep -Fq 'second-open' "$GENERATED_MATRIX"
+          grep -Fq 'third-open-after-reentry' "$GENERATED_MATRIX"
+          grep -Fq 'returnCssPoint = { x: 35, y: 423 }' "$GENERATED_MATRIX"
+          grep -Fq 'openTargetListCount === 3' "$GENERATED_MATRIX"
 
       - name: Install Chromium
         shell: bash
@@ -62,23 +63,23 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute list scene inventory
-        id: inventory_run
+      - name: Execute repeat and reentry matrix
+        id: matrix_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-list-scene-inventory.log
+          node "$GENERATED_MATRIX" 2>&1 | tee /tmp/page5-repeat-reentry-matrix.log
 
-      - name: Build list scene inventory status
+      - name: Build repeat and reentry status
         if: always()
         shell: bash
         env:
-          INVENTORY_OUTCOME: ${{ steps.inventory_run.outcome }}
+          MATRIX_OUTCOME: ${{ steps.matrix_run.outcome }}
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-list-scene-inventory.log && cp /tmp/page5-list-scene-inventory.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-repeat-reentry-matrix.log && cp /tmp/page5-repeat-reentry-matrix.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
@@ -91,24 +92,31 @@ jobs:
           summary = (report or {}).get('summary') or {}
           cases = (report or {}).get('cases') or []
           case = cases[0] if cases else None
-          inventory = (case or {}).get('listSceneInventory') or {}
-          clickable = [node for node in inventory.get('nodes') or [] if node.get('clickable')]
-          ok = bool(report) and bool(report.get('pass')) and os.environ.get('INVENTORY_OUTCOME') == 'success'
+          ok = bool(report) and bool(report.get('pass')) and os.environ.get('MATRIX_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
               'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
               'runId': int(os.environ['GITHUB_RUN_ID']),
               'state': 'completed',
-              'workflowOutcome': os.environ.get('INVENTORY_OUTCOME', 'unknown'),
+              'workflowOutcome': os.environ.get('MATRIX_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-list-scene-node-inventory',
+              'mode': 'page5-first-second-reentry-third-repeat-matrix',
               'summary': summary,
-              'clickableNodes': clickable,
+              'repeatSequence': (case or {}).get('repeatSequence') or [],
+              'returnSequence': (case or {}).get('returnSequence') or [],
+              'reentry': (case or {}).get('reentry') or {},
+              'runtimeLoads': (case or {}).get('runtimeLoads') or {},
+              'pageErrorCount': len((case or {}).get('pageErrors') or []),
+              'pageErrors': (case or {}).get('pageErrors') or [],
+              'blockedOrderCount': len((case or {}).get('blockedOrders') or []),
+              'blockedExternalNavigationCount': len((case or {}).get('blockedExternalNavigations') or []),
+              'fatalError': (case or {}).get('fatalError'),
+              'returnCssPoint': (report or {}).get('returnCssPoint'),
               'candidatePatch': (report or {}).get('candidatePatch'),
               'reportAvailable': bool(report),
-              'artifactName': 'page5-list-scene-inventory',
+              'artifactName': 'page5-repeat-reentry-matrix',
               'candidatePersisted': False,
-              'repeatSequenceTested': False,
+              'repeatSequenceTested': bool(report),
               'apkBuilt': False,
               'productionDefaultChanged': False,
               'runtimeFilesChanged': False,
@@ -118,7 +126,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_LIST_SCENE_INVENTORY_STATUS.json').write_text(
+          Path('/tmp/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -127,12 +135,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-list-scene-inventory
-          path: page5-list-scene-inventory
+          name: page5-repeat-reentry-matrix
+          path: page5-repeat-reentry-matrix
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish list scene inventory status
+      - name: Publish repeat and reentry status
         if: always()
         shell: bash
         run: |
@@ -140,14 +148,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_LIST_SCENE_INVENTORY_STATUS.json docs/PAGE5_LIST_SCENE_INVENTORY_STATUS.json
-          git add docs/PAGE5_LIST_SCENE_INVENTORY_STATUS.json
+          cp /tmp/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json docs/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json
+          git add docs/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five list scene node inventory"
+            git commit -m "Record page five repeat and reentry matrix"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce list scene inventory gate
+      - name: Enforce repeat and reentry gate
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_LIST_SCENE_INVENTORY_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/PAGE5_REPEAT_REENTRY_MATRIX_STATUS.json >/dev/null
