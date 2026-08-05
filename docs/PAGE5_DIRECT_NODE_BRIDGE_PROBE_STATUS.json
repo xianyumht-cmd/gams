@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:42:38Z",
-  "runId": 31031148516,
+  "generatedAt": "2026-08-05T17:47:32Z",
+  "runId": 31031521896,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
-  "mode": "page5-dynamic-node-touch-empty-callback-bridge-probe",
+  "mode": "page5-dynamic-target-button-empty-callback-bridge-probe",
   "summary": {
     "totalCases": 2,
     "fatalCases": 0,
@@ -14,11 +14,11 @@
     "secondFileLoadCases": 2,
     "engineCapturedCases": 2,
     "directTriggerOkCases": 2,
-    "currentPageErrorCount": 0,
+    "currentPageErrorCount": 1,
     "currentTargetReadCount": 0,
     "currentTargetListCount": 0,
     "candidatePageErrorCount": 0,
-    "candidateTargetReadCount": 0,
+    "candidateTargetReadCount": 1,
     "candidateTargetListCount": 0,
     "blockedOrderCases": 0,
     "replacementCount": 2,
@@ -32,10 +32,10 @@
     },
     "engineCaptureError": null,
     "nodeGeometry": {
-      "x": 1180,
-      "y": 250,
-      "width": 74,
-      "height": 69,
+      "x": 1198,
+      "y": 145,
+      "width": 46,
+      "height": 64,
       "visible": true,
       "touchable": true
     },
@@ -57,12 +57,12 @@
         "height": 720
       },
       "nativeCenter": {
-        "x": 1217,
-        "y": 284.5
+        "x": 1221,
+        "y": 177
       },
       "cssPoint": {
-        "x": 235.89583333333331,
-        "y": 734.5315063476563
+        "x": 294.125,
+        "y": 736.6981567382812
       },
       "insideViewport": true,
       "canvas": {
@@ -82,16 +82,18 @@
       }
     },
     "targetWindow": {
-      "total": 3,
+      "total": 1,
       "kinds": {
-        "page-request": 3
+        "page-request": 1
       },
       "targetReadCount": 0,
       "targetListCount": 0,
       "orderMutationCount": 0
     },
-    "pageErrorCount": 0,
-    "pageErrors": [],
+    "pageErrorCount": 1,
+    "pageErrors": [
+      "ReferenceError: SCGMenu is not defined\n    at PF.<computed> [as onClick] (https://ggv2.local/runtime/game.js:1:3447712)\n    at https://ggv2.local/runtime/game.js:1:1309085\n    at t.dispatchEvent (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:2940)\n    at t.onMouseClick (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124674)\n    at t.onTouchEnd (https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js?v=202607280001:1:124992)"
+    ],
     "blockedOrderCount": 0,
     "fatalError": null
   },
@@ -102,10 +104,10 @@
     },
     "engineCaptureError": null,
     "nodeGeometry": {
-      "x": 1180,
-      "y": 250,
-      "width": 74,
-      "height": 69,
+      "x": 1198,
+      "y": 145,
+      "width": 46,
+      "height": 64,
       "visible": true,
       "touchable": true
     },
@@ -127,12 +129,12 @@
         "height": 720
       },
       "nativeCenter": {
-        "x": 1217,
-        "y": 284.5
+        "x": 1221,
+        "y": 177
       },
       "cssPoint": {
-        "x": 235.89583333333331,
-        "y": 734.5315063476563
+        "x": 294.125,
+        "y": 736.6981567382812
       },
       "insideViewport": true,
       "canvas": {
@@ -152,11 +154,12 @@
       }
     },
     "targetWindow": {
-      "total": 3,
+      "total": 6,
       "kinds": {
-        "page-request": 3
+        "target-read-request": 1,
+        "page-request": 5
       },
-      "targetReadCount": 0,
+      "targetReadCount": 1,
       "targetListCount": 0,
       "orderMutationCount": 0
     },
@@ -178,7 +181,7 @@
   },
   "reportAvailable": true,
   "artifactName": "page5-direct-node-bridge-probe",
-  "directNodeIndex": 9,
+  "directNodeIndex": 10,
   "realTouchUsed": true,
   "isolatedCandidateOnly": true,
   "candidatePersisted": false,
@@ -190,5 +193,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "1ea454cf8d2ab679b7587350154c8c3a8c183e75"
+  "commit": "19d36d8a29ca7e19253937c41a9649bc9dde2e6e"
 }
