@@ -1,4 +1,4 @@
-name: Probe page five story-to-target entry
+name: Probe target open-menu callback contract
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     paths:
       - scripts/run_page5_guard_full_entry_matrix.mjs
       - scripts/prepare_page5_scoped_mobile_contract_matrix.py
-      - scripts/prepare_page5_story_target_entry_probe.py
-      - scripts/page5_story_target_entry_probe.trigger
+      - scripts/prepare_target_open_menu_contract_probe.py
+      - scripts/target_open_menu_contract_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-story-target-entry-probe-20260805
+  group: target-open-menu-contract-probe-20260806
   cancel-in-progress: true
 
 jobs:
@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      OUTPUT_DIR: page5-story-target-entry-probe
+      OUTPUT_DIR: target-open-menu-contract-probe
       CURRENT_FIRST_PATH: remote-script/src/noname.js
       CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
-      GENERATED_PROBE: scripts/run_page5_story_target_entry_probe.generated.mjs
+      GENERATED_PROBE: scripts/run_target_open_menu_contract_probe.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -39,19 +39,20 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare story-to-target entry probe
+      - name: Prepare callback contract probe
         shell: bash
         run: |
           set -euo pipefail
           test -s "$CURRENT_FIRST_PATH"
           test -s "$CURRENT_SECOND_PATH"
-          python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py scripts/prepare_page5_story_target_entry_probe.py
-          python3 scripts/prepare_page5_story_target_entry_probe.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py scripts/prepare_target_open_menu_contract_probe.py
+          python3 scripts/prepare_target_open_menu_contract_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-story-target-entry-probe' "$GENERATED_PROBE"
-          grep -Fq 'story-entry' "$GENERATED_PROBE"
-          grep -Fq 'target-side-entry' "$GENERATED_PROBE"
-          grep -Fq 'candidatePage5TargetListCount > 0' "$GENERATED_PROBE"
+          grep -Fq 'target-open-menu-contract-read-only-probe' "$GENERATED_PROBE"
+          grep -Fq '__gamsOpenMenuContractProbe' "$GENERATED_PROBE"
+          grep -Fq 'secondBooleanFields' "$GENERATED_PROBE"
+          grep -Fq 'workingTargetListCount > 0' "$GENERATED_PROBE"
+          grep -Fq 'page5TargetReadCount > 0' "$GENERATED_PROBE"
 
       - name: Install Chromium
         shell: bash
@@ -60,15 +61,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute current and story-target candidate
+      - name: Execute callback contract comparison
         id: probe_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-story-target-entry-probe.log
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/target-open-menu-contract-probe.log
 
-      - name: Build story-target status
+      - name: Build callback contract status
         if: always()
         shell: bash
         env:
@@ -76,7 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-story-target-entry-probe.log && cp /tmp/page5-story-target-entry-probe.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/target-open-menu-contract-probe.log && cp /tmp/target-open-menu-contract-probe.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
@@ -86,10 +87,45 @@ jobs:
           output = Path(os.environ['OUTPUT_DIR'])
           report_path = output / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          summary = report.get('summary', {}) if report else {}
-          cases = report.get('cases', []) if report else []
-          current = next((case for case in cases if case.get('pair') == 'current'), None)
-          candidate = next((case for case in cases if case.get('pair') == 'candidate'), None)
+          summary = (report or {}).get('summary') or {}
+          cases = (report or {}).get('cases') or []
+
+          def compact_case(page_name):
+              case = next((item for item in cases if item.get('page') == page_name), None)
+              if not case:
+                  return None
+              contract = case.get('openMenuContract') or {}
+              calls = contract.get('calls') or []
+              callbacks = contract.get('callbacks') or []
+              return {
+                  'page': page_name,
+                  'install': case.get('openMenuContractInstall'),
+                  'callCount': len(calls),
+                  'callbackCount': len(callbacks),
+                  'calls': [
+                      {
+                          'argCount': item.get('argCount'),
+                          'callbackIndex': item.get('callbackIndex'),
+                          'argTypes': [(arg or {}).get('type') for arg in (item.get('args') or [])],
+                      }
+                      for item in calls[:20]
+                  ],
+                  'callbacks': [
+                      {
+                          'callIndex': item.get('callIndex'),
+                          'argCount': item.get('argCount'),
+                          'argTypes': [(arg or {}).get('type') for arg in (item.get('args') or [])],
+                          'secondOwnKeys': item.get('secondOwnKeys') or [],
+                          'secondBooleanFields': item.get('secondBooleanFields') or {},
+                      }
+                      for item in callbacks[:20]
+                  ],
+                  'targetWindow': case.get('targetWindow'),
+                  'pageErrorCount': len(case.get('pageErrors') or []),
+                  'blockedOrderCount': len(case.get('blockedOrders') or []),
+                  'fatalError': case.get('fatalError'),
+              }
+
           ok = bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
@@ -98,22 +134,16 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-story-target-entry-probe',
+              'mode': 'target-open-menu-contract-read-only-probe',
               'summary': summary,
-              'currentTargetWindow': current.get('targetWindow') if current else None,
-              'candidateTargetWindow': candidate.get('targetWindow') if candidate else None,
-              'currentPageErrors': current.get('pageErrors', []) if current else [],
-              'candidatePageErrors': candidate.get('pageErrors', []) if candidate else [],
-              'currentStages': sorted((current.get('states') or {}).keys()) if current else [],
-              'candidateStages': sorted((candidate.get('states') or {}).keys()) if candidate else [],
-              'currentScreenshots': current.get('screenshots', {}) if current else {},
-              'candidateScreenshots': candidate.get('screenshots', {}) if candidate else {},
-              'currentMainFrameNavigation': current.get('mainFrameNavigation', []) if current else [],
-              'candidateMainFrameNavigation': candidate.get('mainFrameNavigation', []) if candidate else [],
-              'candidatePatch': report.get('candidatePatch') if report else None,
+              'workingPage': compact_case('working-page'),
+              'page5': compact_case('page5'),
+              'candidatePatch': (report or {}).get('candidatePatch'),
               'reportAvailable': bool(report),
-              'artifactName': 'page5-story-target-entry-probe',
-              'entryCalibrationOnly': True,
+              'artifactName': 'target-open-menu-contract-probe',
+              'readOnlyProbe': True,
+              'callbackArgumentsForwardedUnchanged': True,
+              'callbackReturnValuesModified': False,
               'candidatePersisted': False,
               'repeatSequenceTested': False,
               'apkBuilt': False,
@@ -125,7 +155,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_STORY_TARGET_ENTRY_PROBE_STATUS.json').write_text(
+          Path('/tmp/TARGET_OPEN_MENU_CONTRACT_PROBE_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -134,12 +164,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-story-target-entry-probe
-          path: page5-story-target-entry-probe
+          name: target-open-menu-contract-probe
+          path: target-open-menu-contract-probe
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish story-target status
+      - name: Publish callback contract status
         if: always()
         shell: bash
         run: |
@@ -147,14 +177,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_STORY_TARGET_ENTRY_PROBE_STATUS.json docs/PAGE5_STORY_TARGET_ENTRY_PROBE_STATUS.json
-          git add docs/PAGE5_STORY_TARGET_ENTRY_PROBE_STATUS.json
+          cp /tmp/TARGET_OPEN_MENU_CONTRACT_PROBE_STATUS.json docs/TARGET_OPEN_MENU_CONTRACT_PROBE_STATUS.json
+          git add docs/TARGET_OPEN_MENU_CONTRACT_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five story-to-target entry probe"
+            git commit -m "Record target menu callback contract probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce story-target entry gate
+      - name: Enforce callback contract capture
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_STORY_TARGET_ENTRY_PROBE_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/TARGET_OPEN_MENU_CONTRACT_PROBE_STATUS.json >/dev/null
