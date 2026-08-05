@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:33:31Z",
-  "runId": 31030390679,
+  "generatedAt": "2026-08-05T17:37:42Z",
+  "runId": 31030746950,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
-  "mode": "page5-direct-node-sequence-empty-callback-bridge-probe",
+  "mode": "page5-dynamic-node-touch-empty-callback-bridge-probe",
   "summary": {
     "totalCases": 2,
     "fatalCases": 0,
@@ -31,118 +31,48 @@
       "length": 20
     },
     "engineCaptureError": null,
-    "directNodeInventory": {
-      "engineAvailable": true,
-      "listLength": 20,
-      "nodeAvailable": true,
-      "geometry": {
-        "x": 1180,
-        "y": 250,
-        "width": 74,
-        "height": 69,
-        "visible": true,
-        "touchable": true
-      },
-      "eventNames": [
-        "mouse down",
-        "mouse up",
-        "mouse over",
-        "mouse move",
-        "mouse out",
-        "mouse click"
-      ],
-      "eventContracts": [
-        {
-          "eventName": "mouse down",
-          "entryAvailable": true,
-          "entryKeys": [
-            "listener",
-            "param",
-            "caller"
-          ],
-          "listenerType": "function",
-          "listenerName": "bound ",
-          "listenerArity": 0,
-          "listenerSourceLength": 29,
-          "caller": {
-            "type": "null"
-          },
-          "param": {
-            "type": "null"
-          },
-          "hasOwnCaller": true,
-          "hasOwnParam": true
-        },
-        {
-          "eventName": "mouse up",
-          "entryAvailable": true,
-          "entryKeys": [
-            "listener",
-            "param",
-            "caller"
-          ],
-          "listenerType": "function",
-          "listenerName": "bound ",
-          "listenerArity": 0,
-          "listenerSourceLength": 29,
-          "caller": {
-            "type": "null"
-          },
-          "param": {
-            "type": "null"
-          },
-          "hasOwnCaller": true,
-          "hasOwnParam": true
-        },
-        {
-          "eventName": "mouse click",
-          "entryAvailable": true,
-          "entryKeys": [
-            "listener",
-            "param",
-            "caller"
-          ],
-          "listenerType": "function",
-          "listenerName": "",
-          "listenerArity": 0,
-          "listenerSourceLength": 12,
-          "caller": {
-            "type": "null"
-          },
-          "param": {
-            "type": "null"
-          },
-          "hasOwnCaller": true,
-          "hasOwnParam": true
-        }
-      ]
+    "nodeGeometry": {
+      "x": 1180,
+      "y": 250,
+      "width": 74,
+      "height": 69,
+      "visible": true,
+      "touchable": true
     },
-    "directNodeTrigger": {
+    "nodeEventNames": [
+      "mouse down",
+      "mouse up",
+      "mouse over",
+      "mouse move",
+      "mouse out",
+      "mouse click"
+    ],
+    "dynamicTouch": {
       "ok": true,
-      "sequence": "mouse down -> mouse up -> mouse click",
-      "steps": [
-        {
-          "eventName": "mouse down",
-          "ok": true,
-          "argumentCount": 1,
-          "callerType": "null",
-          "returnType": "undefined"
-        },
-        {
-          "eventName": "mouse up",
-          "ok": true,
-          "argumentCount": 1,
-          "callerType": "null",
-          "returnType": "undefined"
-        },
-        {
-          "eventName": "mouse click",
-          "ok": true,
-          "argumentCount": 1,
-          "callerType": "null",
-          "returnType": "undefined"
-        }
-      ]
+      "mode": "dynamic-real-touch",
+      "nativeCenter": {
+        "x": 1217,
+        "y": 284.5
+      },
+      "cssPoint": {
+        "x": 659.2083333333334,
+        "y": 229.4311340332031
+      },
+      "canvas": {
+        "width": 720,
+        "height": 1280
+      },
+      "rect": {
+        "x": 0,
+        "y": 75.328125,
+        "width": 390,
+        "height": 693.328125
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "devicePixelRatio": 2
+      }
     },
     "targetWindow": {
       "total": 0,
@@ -162,124 +92,52 @@
       "length": 20
     },
     "engineCaptureError": null,
-    "directNodeInventory": {
-      "engineAvailable": true,
-      "listLength": 20,
-      "nodeAvailable": true,
-      "geometry": {
-        "x": 1180,
-        "y": 250,
-        "width": 74,
-        "height": 69,
-        "visible": true,
-        "touchable": true
-      },
-      "eventNames": [
-        "mouse down",
-        "mouse up",
-        "mouse over",
-        "mouse move",
-        "mouse out",
-        "mouse click"
-      ],
-      "eventContracts": [
-        {
-          "eventName": "mouse down",
-          "entryAvailable": true,
-          "entryKeys": [
-            "listener",
-            "param",
-            "caller"
-          ],
-          "listenerType": "function",
-          "listenerName": "bound ",
-          "listenerArity": 0,
-          "listenerSourceLength": 29,
-          "caller": {
-            "type": "null"
-          },
-          "param": {
-            "type": "null"
-          },
-          "hasOwnCaller": true,
-          "hasOwnParam": true
-        },
-        {
-          "eventName": "mouse up",
-          "entryAvailable": true,
-          "entryKeys": [
-            "listener",
-            "param",
-            "caller"
-          ],
-          "listenerType": "function",
-          "listenerName": "bound ",
-          "listenerArity": 0,
-          "listenerSourceLength": 29,
-          "caller": {
-            "type": "null"
-          },
-          "param": {
-            "type": "null"
-          },
-          "hasOwnCaller": true,
-          "hasOwnParam": true
-        },
-        {
-          "eventName": "mouse click",
-          "entryAvailable": true,
-          "entryKeys": [
-            "listener",
-            "param",
-            "caller"
-          ],
-          "listenerType": "function",
-          "listenerName": "",
-          "listenerArity": 0,
-          "listenerSourceLength": 12,
-          "caller": {
-            "type": "null"
-          },
-          "param": {
-            "type": "null"
-          },
-          "hasOwnCaller": true,
-          "hasOwnParam": true
-        }
-      ]
+    "nodeGeometry": {
+      "x": 1180,
+      "y": 250,
+      "width": 74,
+      "height": 69,
+      "visible": true,
+      "touchable": true
     },
-    "directNodeTrigger": {
+    "nodeEventNames": [
+      "mouse down",
+      "mouse up",
+      "mouse over",
+      "mouse move",
+      "mouse out",
+      "mouse click"
+    ],
+    "dynamicTouch": {
       "ok": true,
-      "sequence": "mouse down -> mouse up -> mouse click",
-      "steps": [
-        {
-          "eventName": "mouse down",
-          "ok": true,
-          "argumentCount": 1,
-          "callerType": "null",
-          "returnType": "undefined"
-        },
-        {
-          "eventName": "mouse up",
-          "ok": true,
-          "argumentCount": 1,
-          "callerType": "null",
-          "returnType": "undefined"
-        },
-        {
-          "eventName": "mouse click",
-          "ok": true,
-          "argumentCount": 1,
-          "callerType": "null",
-          "returnType": "undefined"
-        }
-      ]
+      "mode": "dynamic-real-touch",
+      "nativeCenter": {
+        "x": 1217,
+        "y": 284.5
+      },
+      "cssPoint": {
+        "x": 659.2083333333334,
+        "y": 229.4311340332031
+      },
+      "canvas": {
+        "width": 720,
+        "height": 1280
+      },
+      "rect": {
+        "x": 0,
+        "y": 75.328125,
+        "width": 390,
+        "height": 693.328125
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "devicePixelRatio": 2
+      }
     },
     "targetWindow": {
-      "total": 1,
-      "kinds": {
-        "page-request": 1
-      },
+      "total": 0,
+      "kinds": {},
       "targetReadCount": 0,
       "targetListCount": 0,
       "orderMutationCount": 0
@@ -303,11 +161,7 @@
   "reportAvailable": true,
   "artifactName": "page5-direct-node-bridge-probe",
   "directNodeIndex": 9,
-  "eventSequence": [
-    "mouse down",
-    "mouse up",
-    "mouse click"
-  ],
+  "realTouchUsed": true,
   "isolatedCandidateOnly": true,
   "candidatePersisted": false,
   "repeatSequenceTested": false,
@@ -318,5 +172,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "565461ca07a41e451cf676c84fdcb403b63bcc04"
+  "commit": "c16e20bfb474728e82bd1f00ef6caf3f125945e0"
 }
