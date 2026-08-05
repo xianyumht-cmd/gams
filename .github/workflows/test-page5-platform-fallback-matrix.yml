@@ -1,13 +1,13 @@
-name: Probe page five cover mouse-up callback
+name: Probe page five simplified mouse-up cover entry
 
 on:
   push:
     branches:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
-      - scripts/run_page5_menu_callback_scope_probe.mjs
-      - scripts/prepare_page5_cover_mouseup_callback_probe.py
-      - scripts/page5_cover_mouseup_callback_probe.trigger
+      - scripts/run_page5_guard_full_entry_matrix.mjs
+      - scripts/prepare_page5_simplified_mouseup_cover_probe.py
+      - scripts/page5_simplified_mouseup_cover_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-cover-mouseup-callback-probe-20260805
+  group: page5-simplified-mouseup-cover-probe-20260805
   cancel-in-progress: true
 
 jobs:
@@ -23,8 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      OUTPUT_DIR: page5-cover-mouseup-callback-probe
-      GENERATED_PROBE: scripts/run_page5_cover_mouseup_callback_probe.generated.mjs
+      OUTPUT_DIR: page5-simplified-mouseup-cover-probe
+      CURRENT_FIRST_PATH: remote-script/src/noname.js
+      CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
+      GENERATED_PROBE: scripts/run_page5_simplified_mouseup_cover_probe.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -36,16 +38,20 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare cover mouse-up callback probe
+      - name: Prepare isolated simplified mouse-up candidate
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/prepare_page5_cover_mouseup_callback_probe.py
-          python3 scripts/prepare_page5_cover_mouseup_callback_probe.py --output "$GENERATED_PROBE"
+          test -s "$CURRENT_FIRST_PATH"
+          test -s "$CURRENT_SECOND_PATH"
+          python3 -m py_compile scripts/prepare_page5_simplified_mouseup_cover_probe.py
+          python3 scripts/prepare_page5_simplified_mouseup_cover_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-cover-mouseup-callback-scope-read-only-probe' "$GENERATED_PROBE"
-          grep -Fq "eventListenerMap['mouse up'][0].listener" "$GENERATED_PROBE"
-          grep -Fq 'after-title-reveal' "$GENERATED_PROBE"
+          grep -Fq 'page5-simplified-mouseup-cover-probe' "$GENERATED_PROBE"
+          grep -Fq 'expectedMouseUpLength = 1278' "$GENERATED_PROBE"
+          grep -Fq 'simplifiedMouseUp' "$GENERATED_PROBE"
+          grep -Fq 'cover-center-enter' "$GENERATED_PROBE"
+          grep -Fq 'replacementCount === 2' "$GENERATED_PROBE"
 
       - name: Install Chromium
         shell: bash
@@ -54,15 +60,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute cover mouse-up callback probe
+      - name: Execute current and simplified mouse-up candidate
         id: probe_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-cover-mouseup-callback-probe.log
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-simplified-mouseup-cover-probe.log
 
-      - name: Build cover mouse-up callback status
+      - name: Build simplified mouse-up status
         if: always()
         shell: bash
         env:
@@ -70,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-cover-mouseup-callback-probe.log && cp /tmp/page5-cover-mouseup-callback-probe.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-simplified-mouseup-cover-probe.log && cp /tmp/page5-simplified-mouseup-cover-probe.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
@@ -80,9 +86,10 @@ jobs:
           output = Path(os.environ['OUTPUT_DIR'])
           report_path = output / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-          callback = report.get('callback', {}) if report else {}
-          structure = callback.get('structure', {}) if callback else {}
-          internal_names = [item.get('name') for item in structure.get('internalProperties', []) if item.get('name')]
+          summary = report.get('summary', {}) if report else {}
+          cases = report.get('cases', []) if report else []
+          current = next((case for case in cases if case.get('pair') == 'current'), None)
+          candidate = next((case for case in cases if case.get('pair') == 'candidate'), None)
           ok = bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
@@ -91,25 +98,19 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-cover-mouseup-callback-scope-read-only-probe',
-              'pauseCaptured': report.get('pauseCaptured') if report else None,
-              'selectedNodeIndex': report.get('selectedNodeIndex') if report else None,
-              'callbackSourceLength': callback.get('sourceLength') if callback else None,
-              'callbackSourceSha256': callback.get('sourceSha256') if callback else None,
-              'callbackInternalPropertyNames': internal_names,
-              'callbackRemote': callback.get('remote') if callback else None,
-              'coverScreenshotChanged': report.get('coverScreenshotChanged') if report else None,
-              'mainFrameValid': report.get('mainFrameValid') if report else None,
-              'pageErrorCount': len(report.get('pageErrors', [])) if report else None,
-              'blockedOrderCount': len(report.get('blockedOrders', [])) if report else None,
-              'debuggerErrorCount': len(report.get('debuggerErrors', [])) if report else None,
-              'preStepCssPoints': report.get('preStepCssPoints') if report else None,
-              'probeCssPoint': report.get('probeCssPoint') if report else None,
+              'mode': 'page5-simplified-mouseup-cover-probe',
+              'summary': summary,
+              'currentTargetWindow': current.get('targetWindow') if current else None,
+              'candidateTargetWindow': candidate.get('targetWindow') if candidate else None,
+              'currentPageErrors': current.get('pageErrors', []) if current else [],
+              'candidatePageErrors': candidate.get('pageErrors', []) if candidate else [],
+              'candidateStages': sorted(candidate.get('states', {}).keys()) if candidate else [],
+              'candidatePatch': report.get('candidatePatch') if report else None,
               'reportAvailable': bool(report),
-              'artifactName': 'page5-cover-mouseup-callback-probe',
-              'readOnlyProbe': True,
-              'pageScriptModified': False,
-              'candidateTested': False,
+              'artifactName': 'page5-simplified-mouseup-cover-probe',
+              'browserCandidateOnly': True,
+              'manualScreenshotReviewRequired': True,
+              'candidatePersisted': False,
               'repeatSequenceTested': False,
               'apkBuilt': False,
               'productionDefaultChanged': False,
@@ -120,7 +121,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_COVER_MOUSEUP_CALLBACK_PROBE_STATUS.json').write_text(
+          Path('/tmp/PAGE5_SIMPLIFIED_MOUSEUP_COVER_PROBE_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -129,12 +130,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-cover-mouseup-callback-probe
-          path: page5-cover-mouseup-callback-probe
+          name: page5-simplified-mouseup-cover-probe
+          path: page5-simplified-mouseup-cover-probe
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish cover mouse-up callback status
+      - name: Publish simplified mouse-up status
         if: always()
         shell: bash
         run: |
@@ -142,14 +143,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_COVER_MOUSEUP_CALLBACK_PROBE_STATUS.json docs/PAGE5_COVER_MOUSEUP_CALLBACK_PROBE_STATUS.json
-          git add docs/PAGE5_COVER_MOUSEUP_CALLBACK_PROBE_STATUS.json
+          cp /tmp/PAGE5_SIMPLIFIED_MOUSEUP_COVER_PROBE_STATUS.json docs/PAGE5_SIMPLIFIED_MOUSEUP_COVER_PROBE_STATUS.json
+          git add docs/PAGE5_SIMPLIFIED_MOUSEUP_COVER_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five cover mouse-up callback"
+            git commit -m "Record page five simplified mouse-up cover probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce cover mouse-up callback capture
+      - name: Enforce simplified mouse-up diagnostic gate
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_COVER_MOUSEUP_CALLBACK_PROBE_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/PAGE5_SIMPLIFIED_MOUSEUP_COVER_PROBE_STATUS.json >/dev/null
