@@ -238,13 +238,6 @@ if (!report.pass) process.exitCode = 1;
     if count != 1:
         raise SystemExit(f"tail block mismatch: {count}")
 
-    text = replace_once(
-        text,
-        'mode: "page5-scoped-mobile-contract-full-entry-matrix"',
-        'mode: "target-open-menu-contract-read-only-probe"',
-        "mode",
-    )
-
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(text, encoding="utf-8")
     print(output)
