@@ -1,4 +1,4 @@
-name: Probe page five cover entry via established runner
+name: Probe page five cover-center entry via established runner
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare isolated cover-enter probe
+      - name: Prepare isolated cover-center entry probe
         shell: bash
         run: |
           set -euo pipefail
@@ -46,9 +46,10 @@ jobs:
           python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py scripts/prepare_page5_cover_enter_probe.py
           python3 scripts/prepare_page5_cover_enter_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-cover-enter-probe' "$GENERATED_PROBE"
+          grep -Fq 'page5-cover-center-enter-probe' "$GENERATED_PROBE"
           grep -Fq 'title-reveal' "$GENERATED_PROBE"
-          grep -Fq 'cover-enter' "$GENERATED_PROBE"
+          grep -Fq 'cover-center-enter' "$GENERATED_PROBE"
+          grep -Fq 'candidatePage5FinalRequestTotal > 0' "$GENERATED_PROBE"
           grep -Fq '30000' "$GENERATED_PROBE"
 
       - name: Install Chromium
@@ -58,7 +59,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute current and cover-enter candidate
+      - name: Execute current and cover-center candidate
         id: probe_run
         continue-on-error: true
         shell: bash
@@ -66,7 +67,7 @@ jobs:
           set -o pipefail
           node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-cover-enter-probe.log
 
-      - name: Build cover-enter status
+      - name: Build cover-center entry status
         if: always()
         shell: bash
         env:
@@ -96,7 +97,7 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-cover-enter-probe',
+              'mode': 'page5-cover-center-enter-probe',
               'summary': summary,
               'currentTargetWindow': current.get('targetWindow') if current else None,
               'candidateTargetWindow': candidate.get('targetWindow') if candidate else None,
@@ -133,7 +134,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish cover-enter status
+      - name: Publish cover-center entry status
         if: always()
         shell: bash
         run: |
@@ -144,11 +145,11 @@ jobs:
           cp /tmp/PAGE5_COVER_ENTER_PROBE_STATUS.json docs/PAGE5_COVER_ENTER_PROBE_STATUS.json
           git add docs/PAGE5_COVER_ENTER_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five cover-enter probe"
+            git commit -m "Record page five cover-center entry probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce cover-enter capture
+      - name: Enforce cover-center entry capture
         if: always()
         shell: bash
         run: jq -e '.ok == true' /tmp/PAGE5_COVER_ENTER_PROBE_STATUS.json >/dev/null
