@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T03:25:21Z",
+  "runId": 30972122539,
+  "state": "completed",
+  "workflowOutcome": "success",
+  "ok": true,
+  "mode": "page5-canvas-listener-breakpoint-read-only-probe",
+  "listenerInventory": [
+    {
+      "type": "touchstart",
+      "useCapture": false,
+      "passive": false,
+      "once": false,
+      "scriptId": "24",
+      "script": {
+        "scriptId": "24",
+        "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js",
+        "startLine": 0,
+        "startColumn": 0,
+        "endLine": 0,
+        "endColumn": 262309
+      },
+      "lineNumber": 0,
+      "columnNumber": 121976,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function(t){if(t instanceof MouseEvent&&0!=t.button)return t.preventDefault?t.preventDefault():window.event.returnValue=!1,1==t.button?void 0:void this.onMouseRightDown(t);this.upd",
+        "hasObjectId": true
+      },
+      "originalHandler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function () { [native code] }",
+        "hasObjectId": true
+      }
+    },
+    {
+      "type": "touchend",
+      "useCapture": false,
+      "passive": false,
+      "once": false,
+      "scriptId": "24",
+      "script": {
+        "scriptId": "24",
+        "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js",
+        "startLine": 0,
+        "startColumn": 0,
+        "endLine": 0,
+        "endColumn": 262309
+      },
+      "lineNumber": 0,
+      "columnNumber": 124925,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function(t){t instanceof MouseEvent&&0!=t.button||(this.onMouseUp(t),this.onMouseClick(t))}",
+        "hasObjectId": true
+      },
+      "originalHandler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function () { [native code] }",
+        "hasObjectId": true
+      }
+    },
+    {
+      "type": "touchcancel",
+      "useCapture": false,
+      "passive": false,
+      "once": false,
+      "scriptId": "24",
+      "script": {
+        "scriptId": "24",
+        "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js",
+        "startLine": 0,
+        "startColumn": 0,
+        "endLine": 0,
+        "endColumn": 262309
+      },
+      "lineNumber": 0,
+      "columnNumber": 125040,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function(){GlobalData.getInstance().resetPressedPoint();for(var t=!1,e=null,i=this._elementList.length-1;0<=i&&this._elementList&&!(i>=this._elementList.length);i--)(e=this._elemen",
+        "hasObjectId": true
+      },
+      "originalHandler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function () { [native code] }",
+        "hasObjectId": true
+      }
+    },
+    {
+      "type": "touchmove",
+      "useCapture": false,
+      "passive": false,
+      "once": false,
+      "scriptId": "24",
+      "script": {
+        "scriptId": "24",
+        "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js",
+        "startLine": 0,
+        "startColumn": 0,
+        "endLine": 0,
+        "endColumn": 262309
+      },
+      "lineNumber": 0,
+      "columnNumber": 125640,
+      "handler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function(t){if(!(t instanceof MouseEvent&&0!=t.button)){var e=t,i=(e=GlobalData.getInstance().isMobile()?t.changedTouches.item(0):e).clientX||e.offsetX,n=e.clientY||e.offsetY;if(Gl",
+        "hasObjectId": true
+      },
+      "originalHandler": {
+        "type": "function",
+        "subtype": null,
+        "className": "Function",
+        "description": "function () { [native code] }",
+        "hasObjectId": true
+      }
+    }
+  ],
+  "breakpoints": [
+    {
+      "type": "touchstart",
+      "requested": {
+        "scriptId": "24",
+        "lineNumber": 0,
+        "columnNumber": 121976
+      },
+      "breakpointId": "4:0:121976:24",
+      "actualLocation": {
+        "scriptId": "24",
+        "lineNumber": 0,
+        "columnNumber": 121996
+      },
+      "script": {
+        "scriptId": "24",
+        "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js",
+        "startLine": 0,
+        "startColumn": 0,
+        "endLine": 0,
+        "endColumn": 262309
+      }
+    },
+    {
+      "type": "touchend",
+      "requested": {
+        "scriptId": "24",
+        "lineNumber": 0,
+        "columnNumber": 124925
+      },
+      "breakpointId": "4:0:124925:24",
+      "actualLocation": {
+        "scriptId": "24",
+        "lineNumber": 0,
+        "columnNumber": 124942
+      },
+      "script": {
+        "scriptId": "24",
+        "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js",
+        "startLine": 0,
+        "startColumn": 0,
+        "endLine": 0,
+        "endColumn": 262309
+      }
+    }
+  ],
+  "firstPauseCaptured": true,
+  "pauseCount": 1,
+  "topFrames": [
+    {
+      "reason": "other",
+      "hitBreakpoints": [
+        "4:0:121976:24"
+      ],
+      "functionName": "t.onMouseDown",
+      "url": "https://c2.cgyouxi.com/website/hfplayer/v3/bin/official/lib/webGLLib.js",
+      "location": {
+        "scriptId": "24",
+        "lineNumber": 0,
+        "columnNumber": 121996
+      }
+    }
+  ],
+  "menuScreenshotChanged": true,
+  "mainFrameValid": true,
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "debuggerErrorCount": 0,
+  "reportAvailable": true,
+  "artifactName": "page5-canvas-listener-breakpoint-probe",
+  "readOnlyProbe": true,
+  "pageScriptModified": false,
+  "candidateTested": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "d89aed50af24faff225b0af89591a58c91e1b665"
+}
