@@ -6,6 +6,7 @@ on:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
       - scripts/prepare_page5_menu_callback_contract_probe.py
+      - scripts/prepare_page5_menu_callback_contract_probe_v2.py
       - scripts/page5_menu_callback_contract_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
@@ -43,8 +44,8 @@ jobs:
           set -euo pipefail
           test -s "$CURRENT_FIRST_PATH"
           test -s "$CURRENT_SECOND_PATH"
-          python3 -m py_compile scripts/prepare_page5_menu_callback_contract_probe.py
-          python3 scripts/prepare_page5_menu_callback_contract_probe.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_menu_callback_contract_probe.py scripts/prepare_page5_menu_callback_contract_probe_v2.py
+          python3 scripts/prepare_page5_menu_callback_contract_probe_v2.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
           grep -Fq 'page5-menu-callback-contract-probe' "$GENERATED_PROBE"
           grep -Fq '__gamsPage5MenuContractHistory' "$GENERATED_PROBE"
