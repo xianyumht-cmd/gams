@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:26:22Z",
-  "runId": 31029874598,
+  "generatedAt": "2026-08-05T17:33:31Z",
+  "runId": 31030390679,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
-  "mode": "page5-direct-node-empty-callback-bridge-probe",
+  "mode": "page5-direct-node-sequence-empty-callback-bridge-probe",
   "summary": {
     "totalCases": 2,
     "fatalCases": 0,
@@ -51,18 +51,98 @@
         "mouse out",
         "mouse click"
       ],
-      "clickEntryAvailable": true,
-      "clickEntryKeys": [
-        "listener",
-        "param",
-        "caller"
-      ],
-      "listenerType": "function",
-      "listenerArity": 0
+      "eventContracts": [
+        {
+          "eventName": "mouse down",
+          "entryAvailable": true,
+          "entryKeys": [
+            "listener",
+            "param",
+            "caller"
+          ],
+          "listenerType": "function",
+          "listenerName": "bound ",
+          "listenerArity": 0,
+          "listenerSourceLength": 29,
+          "caller": {
+            "type": "null"
+          },
+          "param": {
+            "type": "null"
+          },
+          "hasOwnCaller": true,
+          "hasOwnParam": true
+        },
+        {
+          "eventName": "mouse up",
+          "entryAvailable": true,
+          "entryKeys": [
+            "listener",
+            "param",
+            "caller"
+          ],
+          "listenerType": "function",
+          "listenerName": "bound ",
+          "listenerArity": 0,
+          "listenerSourceLength": 29,
+          "caller": {
+            "type": "null"
+          },
+          "param": {
+            "type": "null"
+          },
+          "hasOwnCaller": true,
+          "hasOwnParam": true
+        },
+        {
+          "eventName": "mouse click",
+          "entryAvailable": true,
+          "entryKeys": [
+            "listener",
+            "param",
+            "caller"
+          ],
+          "listenerType": "function",
+          "listenerName": "",
+          "listenerArity": 0,
+          "listenerSourceLength": 12,
+          "caller": {
+            "type": "null"
+          },
+          "param": {
+            "type": "null"
+          },
+          "hasOwnCaller": true,
+          "hasOwnParam": true
+        }
+      ]
     },
     "directNodeTrigger": {
       "ok": true,
-      "returnType": "undefined"
+      "sequence": "mouse down -> mouse up -> mouse click",
+      "steps": [
+        {
+          "eventName": "mouse down",
+          "ok": true,
+          "argumentCount": 1,
+          "callerType": "null",
+          "returnType": "undefined"
+        },
+        {
+          "eventName": "mouse up",
+          "ok": true,
+          "argumentCount": 1,
+          "callerType": "null",
+          "returnType": "undefined"
+        },
+        {
+          "eventName": "mouse click",
+          "ok": true,
+          "argumentCount": 1,
+          "callerType": "null",
+          "returnType": "undefined"
+        }
+      ]
     },
     "targetWindow": {
       "total": 0,
@@ -102,22 +182,104 @@
         "mouse out",
         "mouse click"
       ],
-      "clickEntryAvailable": true,
-      "clickEntryKeys": [
-        "listener",
-        "param",
-        "caller"
-      ],
-      "listenerType": "function",
-      "listenerArity": 0
+      "eventContracts": [
+        {
+          "eventName": "mouse down",
+          "entryAvailable": true,
+          "entryKeys": [
+            "listener",
+            "param",
+            "caller"
+          ],
+          "listenerType": "function",
+          "listenerName": "bound ",
+          "listenerArity": 0,
+          "listenerSourceLength": 29,
+          "caller": {
+            "type": "null"
+          },
+          "param": {
+            "type": "null"
+          },
+          "hasOwnCaller": true,
+          "hasOwnParam": true
+        },
+        {
+          "eventName": "mouse up",
+          "entryAvailable": true,
+          "entryKeys": [
+            "listener",
+            "param",
+            "caller"
+          ],
+          "listenerType": "function",
+          "listenerName": "bound ",
+          "listenerArity": 0,
+          "listenerSourceLength": 29,
+          "caller": {
+            "type": "null"
+          },
+          "param": {
+            "type": "null"
+          },
+          "hasOwnCaller": true,
+          "hasOwnParam": true
+        },
+        {
+          "eventName": "mouse click",
+          "entryAvailable": true,
+          "entryKeys": [
+            "listener",
+            "param",
+            "caller"
+          ],
+          "listenerType": "function",
+          "listenerName": "",
+          "listenerArity": 0,
+          "listenerSourceLength": 12,
+          "caller": {
+            "type": "null"
+          },
+          "param": {
+            "type": "null"
+          },
+          "hasOwnCaller": true,
+          "hasOwnParam": true
+        }
+      ]
     },
     "directNodeTrigger": {
       "ok": true,
-      "returnType": "undefined"
+      "sequence": "mouse down -> mouse up -> mouse click",
+      "steps": [
+        {
+          "eventName": "mouse down",
+          "ok": true,
+          "argumentCount": 1,
+          "callerType": "null",
+          "returnType": "undefined"
+        },
+        {
+          "eventName": "mouse up",
+          "ok": true,
+          "argumentCount": 1,
+          "callerType": "null",
+          "returnType": "undefined"
+        },
+        {
+          "eventName": "mouse click",
+          "ok": true,
+          "argumentCount": 1,
+          "callerType": "null",
+          "returnType": "undefined"
+        }
+      ]
     },
     "targetWindow": {
-      "total": 0,
-      "kinds": {},
+      "total": 1,
+      "kinds": {
+        "page-request": 1
+      },
       "targetReadCount": 0,
       "targetListCount": 0,
       "orderMutationCount": 0
@@ -141,6 +303,11 @@
   "reportAvailable": true,
   "artifactName": "page5-direct-node-bridge-probe",
   "directNodeIndex": 9,
+  "eventSequence": [
+    "mouse down",
+    "mouse up",
+    "mouse click"
+  ],
   "isolatedCandidateOnly": true,
   "candidatePersisted": false,
   "repeatSequenceTested": false,
@@ -151,5 +318,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "87b8afc4aa344004af02ba871cfefb0f80e74552"
+  "commit": "565461ca07a41e451cf676c84fdcb403b63bcc04"
 }
