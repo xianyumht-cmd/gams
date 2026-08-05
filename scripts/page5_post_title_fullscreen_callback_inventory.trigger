@@ -1,2 +1,2 @@
-trigger=2026-08-05T22:17:00+08:00
-purpose=run post-title fullscreen callback inventory through established runner
+trigger=2026-08-05T22:26:00+08:00
+purpose=trigger pull-request observable post-title callback inventory
