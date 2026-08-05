@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T17:54:12Z",
-  "runId": 31031957189,
+  "generatedAt": "2026-08-05T18:02:22Z",
+  "runId": 31032605027,
   "state": "completed",
   "workflowOutcome": "failure",
   "ok": false,
-  "mode": "page5-dynamic-target-button-missing-state-bridge-probe",
+  "mode": "page5-stable-target-button-bridge-diagnostic",
   "summary": {
     "totalCases": 2,
     "fatalCases": 0,
@@ -81,6 +81,7 @@
         "devicePixelRatio": 2
       }
     },
+    "targetBridgeDiagnostic": null,
     "targetWindow": {
       "total": 1,
       "kinds": {
@@ -89,6 +90,15 @@
       "targetReadCount": 0,
       "targetListCount": 0,
       "orderMutationCount": 0
+    },
+    "screenshots": {
+      "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
+      "runtime-open": "47489bceefdd9989997d6061cb068ccc4e9663a35df602133621b717edaed812",
+      "runtime-close": "90f49f837a9cc16452718f13ec9f269b2c7a1112419ed8612106ed964852a715",
+      "runtime-reopen": "cc5a7292f5d2ff20ac38b2b059c102094731dd2dbf9dce2a86131f647b4f909b",
+      "runtime-final-close": "8d927399c8e15ec49c2a796816f7fd6c6bac6ad8788042a99958a9736bde76fb",
+      "before-stable-dynamic-target-touch": "8b82afb7ec84dc7845a9e212ed5b90a02d90f607022372c62785bc93aa99cc2b",
+      "after-direct-target-entry": "ea0d59beba5557005742a1323ad208999fe31ac3ebc450ef584f59fe658db5b0"
     },
     "pageErrorCount": 1,
     "pageErrors": [
@@ -153,6 +163,11 @@
         "devicePixelRatio": 2
       }
     },
+    "targetBridgeDiagnostic": {
+      "innerCalls": 1,
+      "missingStateHits": 1,
+      "openSceneCalls": 0
+    },
     "targetWindow": {
       "total": 6,
       "kinds": {
@@ -162,6 +177,15 @@
       "targetReadCount": 1,
       "targetListCount": 0,
       "orderMutationCount": 0
+    },
+    "screenshots": {
+      "initial-ready": "990003b78570e48c4c59261c7bd46cf8fb88db0a3117e1a5a677ce69cb06256b",
+      "runtime-open": "47489bceefdd9989997d6061cb068ccc4e9663a35df602133621b717edaed812",
+      "runtime-close": "7c29fd3891004ffef9a528f22e7f60c3b7dc056654914c9dd4c870c1c69de564",
+      "runtime-reopen": "254323a9faf76a7c1deaf2961d30aee49d6e312d9f721859fd7d3f17f4b48715",
+      "runtime-final-close": "ffe7a0e491873393e53eb49ffff8b0bda8945172d7ecfd36223f603e856903f9",
+      "before-stable-dynamic-target-touch": "b014fb2a8a453f5ade3514dd0cc97ca6b84b1372b2f9f3ae75a076db05aa7484",
+      "after-direct-target-entry": "cacd3c80d0904607899d4c74ed1c4726e2a8ff0eaa0298a21f06f310da77f22c"
     },
     "pageErrorCount": 0,
     "pageErrors": [],
@@ -173,18 +197,19 @@
     "guardReplacementCount": 1,
     "emptyCallbackReplacementCount": 1,
     "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
-    "newTextSha256": "92391ed3c25d81c7077133add5096b149d5c4c8bb735dc439f21bb9c2eb6361c",
+    "newTextSha256": "231f6c07f1d0fac7adc47869866a1c640e0414cb9c12a2a608a0a9163a6a229b",
     "currentSecondSize": 11590534,
     "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
-    "candidateSecondSize": 11590583,
-    "candidateSecondSha256": "b2bdcba0099b80db48d982dd44efac7c0ee5652b7f26f091543b52c950da0389"
+    "candidateSecondSize": 11590871,
+    "candidateSecondSha256": "44c5f4bcdb509811980ce32123e8714feeec9583fea6be1e41d5735e74da692f"
   },
   "reportAvailable": true,
   "artifactName": "page5-direct-node-bridge-probe",
   "directNodeIndex": 10,
   "realTouchUsed": true,
-  "missingStateCondition": "SA is undefined",
-  "isolatedCandidateOnly": true,
+  "preTouchStableWaitMs": 22000,
+  "postTouchObservationMs": 25000,
+  "diagnosticOnly": true,
   "candidatePersisted": false,
   "repeatSequenceTested": false,
   "apkBuilt": false,
@@ -194,5 +219,5 @@
   "authorizationOutcomeModified": false,
   "paymentCompleted": false,
   "branch": "diagnostics/page5-guard-full-entry-20260805",
-  "commit": "8d11911d41ddf8b0fbc5314497beba8f7c0365de"
+  "commit": "2aa9cb9de1cb56c50e3991b818d6b0853453aefc"
 }
