@@ -59,8 +59,9 @@ jobs:
             scripts/prepare_page5_purchase_action_probe.py
           python3 scripts/prepare_page5_purchase_action_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'persisted-runtime-page5-safe-purchase-action-probe' "$GENERATED_PROBE"
+          grep -Fq 'persisted-runtime-page5-safe-final-purchase-action-probe' "$GENERATED_PROBE"
           grep -Fq 'left-middle-purchase' "$GENERATED_PROBE"
+          grep -Fq 'product-detail-final-buy' "$GENERATED_PROBE"
           grep -Fq 'mutation && (lower.includes("/propshop/")' "$GENERATED_PROBE"
           grep -Fq 'safeProbeCompleted' "$GENERATED_PROBE"
 
@@ -99,22 +100,25 @@ jobs:
           summary = (report or {}).get('summary') or {}
           cases = (report or {}).get('cases') or []
           case = cases[0] if cases else {}
-          attempts = ((case.get('purchaseProbe') or {}).get('attempts') or [])
+          purchase_probe = case.get('purchaseProbe') or {}
+          attempts = purchase_probe.get('attempts') or []
           attempt = attempts[0] if attempts else None
           ok = bool(report) and bool(report.get('safeProbeCompleted')) and os.environ.get('PROBE_OUTCOME') == 'success'
           status = {
-              'schemaVersion': 1,
+              'schemaVersion': 2,
               'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
               'runId': int(os.environ['GITHUB_RUN_ID']),
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'persisted-runtime-page5-safe-purchase-action-probe',
+              'mode': 'persisted-runtime-page5-safe-final-purchase-action-probe',
               'implementationRef': os.environ.get('IMPLEMENTATION_REF', ''),
               'summary': summary,
+              'productDetailObserved': bool((report or {}).get('productDetailObserved')),
               'purchaseActionReached': bool((report or {}).get('purchaseActionReached')),
               'purchaseResultObserved': bool((report or {}).get('purchaseResultObserved')),
               'requiresCompatibilityReview': bool((report or {}).get('requiresCompatibilityReview')),
+              'productDetail': purchase_probe.get('productDetail'),
               'attempt': attempt,
               'pageErrors': case.get('pageErrors') or [],
               'dialogs': case.get('dialogs') or [],
@@ -159,7 +163,7 @@ jobs:
           cp /tmp/PAGE5_PURCHASE_ACTION_PROBE_STATUS.json docs/PAGE5_PURCHASE_ACTION_PROBE_STATUS.json
           git add docs/PAGE5_PURCHASE_ACTION_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five safe purchase action probe"
+            git commit -m "Record page five safe final purchase action probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
