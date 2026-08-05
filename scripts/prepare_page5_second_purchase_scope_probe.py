@@ -20,19 +20,14 @@ def main() -> int:
     args = parser.parse_args()
 
     subprocess.run(
-        [
-            sys.executable,
-            "scripts/prepare_page5_repeat_purchase_action_probe.py",
-            "--output",
-            args.output,
-        ],
+        [sys.executable, "scripts/prepare_page5_repeat_purchase_action_probe.py", "--output", args.output],
         check=True,
     )
 
     output = Path(args.output)
     text = output.read_text(encoding="utf-8")
 
-    anchor = '  const loginInitiators = [];'
+    anchor = "  const loginInitiators = [];"
     instrumentation = r'''  const loginInitiators = [];
   const purchaseScopeSnapshots = [];
   const purchaseScopeBreakpoints = [];
@@ -81,35 +76,29 @@ def main() -> int:
     }).call(this)
   `;
 
-  const setPurchaseScopeBreakpoints = async () => {
-    for (const target of purchaseScopeOffsets) {
-      try {
-        const response = await purchaseTraceCdp.send("Debugger.setBreakpointByUrl", {
-          lineNumber: 0,
-          columnNumber: target.columnNumber,
-          url: virtualSecondUrl,
-        });
-        purchaseScopeBreakpoints.push({
-          ...target,
-          breakpointId: response.breakpointId || null,
-          locations: response.locations || [],
-        });
-      } catch (error) {
-        purchaseScopeBreakpoints.push({
-          ...target,
-          error: redactText(error?.stack || error),
-          locations: [],
-        });
-      }
+  for (const target of purchaseScopeOffsets) {
+    try {
+      const response = await purchaseTraceCdp.send("Debugger.setBreakpointByUrl", {
+        lineNumber: 0,
+        columnNumber: target.columnNumber,
+        url: virtualSecondUrl,
+      });
+      purchaseScopeBreakpoints.push({
+        ...target,
+        breakpointId: response.breakpointId || null,
+        locations: response.locations || [],
+      });
+    } catch (error) {
+      purchaseScopeBreakpoints.push({ ...target, error: redactText(error?.stack || error), locations: [] });
     }
-  };
+  }
 
   purchaseTraceCdp.on("Debugger.paused", async (event) => {
     const top = event.callFrames?.[0] || null;
-    const columnNumber = Number(top?.location?.columnNumber ?? -1);
+    const actualColumnNumber = Number(top?.location?.columnNumber ?? -1);
     const configured = purchaseScopeOffsets.reduce((best, item) => {
       if (!best) return item;
-      return Math.abs(item.columnNumber - columnNumber) < Math.abs(best.columnNumber - columnNumber) ? item : best;
+      return Math.abs(item.columnNumber - actualColumnNumber) < Math.abs(best.columnNumber - actualColumnNumber) ? item : best;
     }, null);
     const frames = [];
     try {
@@ -138,26 +127,28 @@ def main() -> int:
         reason: event.reason || null,
         configuredLabel: configured?.label || null,
         configuredColumnNumber: configured?.columnNumber ?? null,
-        actualColumnNumber: columnNumber,
+        actualColumnNumber,
         frames,
       });
     } finally {
       try { await purchaseTraceCdp.send("Debugger.resume"); } catch {}
     }
-  });
-
-  await setPurchaseScopeBreakpoints();'''
+  });'''
     text = replace_once(text, anchor, instrumentation, "scope instrumentation anchor")
 
-    first_tap = '      await page.touchscreen.tap(finalBuyPoint.x, finalBuyPoint.y);'
-    first_replacement = '''      await page.evaluate(() => { globalThis.__gamsPurchaseAttemptStage = "first"; });
-      await page.touchscreen.tap(finalBuyPoint.x, finalBuyPoint.y);'''
-    text = replace_once(text, first_tap, first_replacement, "first final purchase stage")
-
-    repeated_tap = '        await page.touchscreen.tap(finalBuyPoint.x, finalBuyPoint.y);'
-    repeated_replacement = '''        await page.evaluate((stage) => { globalThis.__gamsPurchaseAttemptStage = stage; }, label);
-        await page.touchscreen.tap(finalBuyPoint.x, finalBuyPoint.y);'''
-    text = replace_once(text, repeated_tap, repeated_replacement, "repeated final purchase stage")
+    tap_marker = "await page.touchscreen.tap(finalBuyPoint.x, finalBuyPoint.y);"
+    parts = text.split(tap_marker)
+    if len(parts) - 1 != 2:
+        raise SystemExit(f"final purchase tap marker mismatch: {len(parts) - 1}")
+    text = (
+        parts[0]
+        + 'await page.evaluate(() => { globalThis.__gamsPurchaseAttemptStage = "first"; });\n      '
+        + tap_marker
+        + parts[1]
+        + 'await page.evaluate((stage) => { globalThis.__gamsPurchaseAttemptStage = stage; }, label);\n        '
+        + tap_marker
+        + parts[2]
+    )
 
     finalizer = '''    result.loginInitiators = loginInitiators.slice(0, 80);
     await purchaseTraceCdp.detach().catch(() => {});'''
