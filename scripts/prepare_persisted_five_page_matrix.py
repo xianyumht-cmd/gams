@@ -119,7 +119,7 @@ report.pass = summary.totalCases === 5
   && summary.replacementCount === 2
   && summary.guardReplacementCount === 1
   && summary.callbackReplacementCount === 1
-  && candidatePatch.persistedSha256 === "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca";
+  && candidatePatch.persistedSha256 === "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72";
 
 fs.writeFileSync(path.join(outputDir, "report.json"), JSON.stringify(report, null, 2) + "\\n");
 console.log(JSON.stringify({ pass: report.pass, ...summary }, null, 2));

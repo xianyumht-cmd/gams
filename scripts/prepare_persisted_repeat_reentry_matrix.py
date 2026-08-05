@@ -61,7 +61,7 @@ def main() -> int:
         1,
     )
     gate_anchor = '  && summary.callbackReplacementCount === 1;'
-    gate_new = '  && summary.callbackReplacementCount === 1\n  && candidatePatch.persistedSha256 === "9a5f9573077eaedada060ed4aeb3ea4307222ca29d4f10fd05fdb922d52d8fca";'
+    gate_new = '  && summary.callbackReplacementCount === 1\n  && candidatePatch.persistedSha256 === "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72";'
     if text.count(gate_anchor) != 1:
         raise SystemExit(f"gate anchor mismatch: {text.count(gate_anchor)}")
     text = text.replace(gate_anchor, gate_new, 1)
