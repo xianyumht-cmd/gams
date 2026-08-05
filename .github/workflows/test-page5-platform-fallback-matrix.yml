@@ -1,13 +1,12 @@
-name: Probe page five menu callback contract via established runner
+name: Probe page five two-step menu open via established runner
 
 on:
   push:
     branches:
       - diagnostics/page5-guard-full-entry-20260805
     paths:
-      - scripts/prepare_page5_menu_callback_contract_probe.py
-      - scripts/prepare_page5_menu_callback_contract_probe_v2.py
-      - scripts/page5_menu_callback_contract_probe.trigger
+      - scripts/prepare_page5_two_step_menu_open_probe.py
+      - scripts/page5_two_step_menu_open_probe.trigger
       - .github/workflows/test-page5-platform-fallback-matrix.yml
   workflow_dispatch:
 
@@ -15,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: page5-menu-callback-contract-probe-20260805
+  group: page5-two-step-menu-open-probe-20260805
   cancel-in-progress: true
 
 jobs:
@@ -23,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      OUTPUT_DIR: page5-menu-callback-contract-probe
+      OUTPUT_DIR: page5-two-step-menu-open-probe
       CURRENT_FIRST_PATH: remote-script/src/noname.js
       CURRENT_SECOND_PATH: game-engine/release/game-1.0.5.js
-      GENERATED_PROBE: scripts/run_page5_menu_callback_contract_probe.generated.mjs
+      GENERATED_PROBE: scripts/run_page5_two_step_menu_open_probe.generated.mjs
 
     steps:
       - uses: actions/checkout@v4
@@ -38,18 +37,19 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Prepare isolated callback contract probe
+      - name: Prepare isolated two-step menu-open probe
         shell: bash
         run: |
           set -euo pipefail
           test -s "$CURRENT_FIRST_PATH"
           test -s "$CURRENT_SECOND_PATH"
-          python3 -m py_compile scripts/prepare_page5_menu_callback_contract_probe.py scripts/prepare_page5_menu_callback_contract_probe_v2.py
-          python3 scripts/prepare_page5_menu_callback_contract_probe_v2.py --output "$GENERATED_PROBE"
+          python3 -m py_compile scripts/prepare_page5_scoped_mobile_contract_matrix.py scripts/prepare_page5_two_step_menu_open_probe.py
+          python3 scripts/prepare_page5_two_step_menu_open_probe.py --output "$GENERATED_PROBE"
           node --check "$GENERATED_PROBE"
-          grep -Fq 'page5-menu-callback-contract-probe' "$GENERATED_PROBE"
-          grep -Fq '__gamsPage5MenuContractHistory' "$GENERATED_PROBE"
-          grep -Fq 'candidatePage5MenuContractHistoryLength > 0' "$GENERATED_PROBE"
+          grep -Fq 'page5-two-step-menu-open-probe' "$GENERATED_PROBE"
+          grep -Fq 'cover-progress' "$GENERATED_PROBE"
+          grep -Fq 'menu-open' "$GENERATED_PROBE"
+          grep -Fq 'candidatePage5ScreenshotChanged' "$GENERATED_PROBE"
 
       - name: Install Chromium
         shell: bash
@@ -58,15 +58,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.52.0
           npx playwright install --with-deps chromium
 
-      - name: Execute current and callback-contract candidate
+      - name: Execute current and two-step candidate
         id: probe_run
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-menu-callback-contract-probe.log
+          node "$GENERATED_PROBE" 2>&1 | tee /tmp/page5-two-step-menu-open-probe.log
 
-      - name: Build callback contract status
+      - name: Build two-step menu-open status
         if: always()
         shell: bash
         env:
@@ -74,7 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          test -f /tmp/page5-menu-callback-contract-probe.log && cp /tmp/page5-menu-callback-contract-probe.log "$OUTPUT_DIR/workflow.log" || true
+          test -f /tmp/page5-two-step-menu-open-probe.log && cp /tmp/page5-two-step-menu-open-probe.log "$OUTPUT_DIR/workflow.log" || true
           python3 - <<'PY'
           import json
           import os
@@ -85,7 +85,8 @@ jobs:
           report_path = output_dir / 'report.json'
           report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
           summary = report.get('summary', {}) if report else {}
-          contract = summary.get('candidatePage5MenuContract') if summary else None
+          candidate = next((case for case in report.get('cases', []) if case.get('pair') == 'candidate'), None) if report else None
+          states = candidate.get('states', {}) if candidate else {}
           ok = bool(report) and bool(report.get('pass')) and os.environ.get('PROBE_OUTCOME') == 'success'
           status = {
               'schemaVersion': 1,
@@ -94,17 +95,14 @@ jobs:
               'state': 'completed',
               'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
               'ok': ok,
-              'mode': 'page5-menu-callback-contract-probe',
+              'mode': 'page5-two-step-menu-open-probe',
               'summary': summary,
-              'contractCaptured': bool(contract),
-              'secondArgumentAvailable': bool(contract and contract.get('second', {}).get('available')),
-              'secondArgumentOwnKeys': contract.get('second', {}).get('ownKeys', []) if contract else [],
-              'secondArgumentPrototypeKeys': contract.get('second', {}).get('prototypeKeys', []) if contract else [],
-              'secondArgumentBooleanFields': contract.get('second', {}).get('booleanFields', {}) if contract else {},
-              'candidatePatch': report.get('candidatePatch') if report else None,
+              'candidateStages': sorted(states.keys()),
+              'candidateTargetWindow': candidate.get('targetWindow') if candidate else None,
+              'candidatePageErrors': candidate.get('pageErrors', []) if candidate else [],
               'reportAvailable': bool(report),
-              'artifactName': 'page5-menu-callback-contract-probe',
-              'readOnlyContractProbe': True,
+              'artifactName': 'page5-two-step-menu-open-probe',
+              'entryCalibrationOnly': True,
               'candidatePersisted': False,
               'repeatSequenceTested': False,
               'apkBuilt': False,
@@ -116,7 +114,7 @@ jobs:
               'branch': os.environ.get('GITHUB_REF_NAME', ''),
               'commit': os.environ.get('GITHUB_SHA', ''),
           }
-          Path('/tmp/PAGE5_MENU_CALLBACK_CONTRACT_PROBE_STATUS.json').write_text(
+          Path('/tmp/PAGE5_TWO_STEP_MENU_OPEN_PROBE_STATUS.json').write_text(
               json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
           print(json.dumps(status, ensure_ascii=False, indent=2))
@@ -125,12 +123,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: page5-menu-callback-contract-probe
-          path: page5-menu-callback-contract-probe
+          name: page5-two-step-menu-open-probe
+          path: page5-two-step-menu-open-probe
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Publish callback contract status
+      - name: Publish two-step menu-open status
         if: always()
         shell: bash
         run: |
@@ -138,14 +136,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs
-          cp /tmp/PAGE5_MENU_CALLBACK_CONTRACT_PROBE_STATUS.json docs/PAGE5_MENU_CALLBACK_CONTRACT_PROBE_STATUS.json
-          git add docs/PAGE5_MENU_CALLBACK_CONTRACT_PROBE_STATUS.json
+          cp /tmp/PAGE5_TWO_STEP_MENU_OPEN_PROBE_STATUS.json docs/PAGE5_TWO_STEP_MENU_OPEN_PROBE_STATUS.json
+          git add docs/PAGE5_TWO_STEP_MENU_OPEN_PROBE_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m "Record page five menu callback contract"
+            git commit -m "Record page five two-step menu open probe"
             git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
           fi
 
-      - name: Enforce callback contract capture
+      - name: Enforce two-step menu-open gate
         if: always()
         shell: bash
-        run: jq -e '.ok == true' /tmp/PAGE5_MENU_CALLBACK_CONTRACT_PROBE_STATUS.json >/dev/null
+        run: jq -e '.ok == true' /tmp/PAGE5_TWO_STEP_MENU_OPEN_PROBE_STATUS.json >/dev/null
