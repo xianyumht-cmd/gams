@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T17:26:22Z",
+  "runId": 31029874598,
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "ok": false,
+  "mode": "page5-direct-node-empty-callback-bridge-probe",
+  "summary": {
+    "totalCases": 2,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 2,
+    "noLoginEnabledCases": 2,
+    "secondFileLoadCases": 2,
+    "engineCapturedCases": 2,
+    "directTriggerOkCases": 2,
+    "currentPageErrorCount": 0,
+    "currentTargetReadCount": 0,
+    "currentTargetListCount": 0,
+    "candidatePageErrorCount": 0,
+    "candidateTargetReadCount": 0,
+    "candidateTargetListCount": 0,
+    "blockedOrderCases": 0,
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "emptyCallbackReplacementCount": 1
+  },
+  "current": {
+    "pair": "current",
+    "engineCapture": {
+      "length": 20
+    },
+    "engineCaptureError": null,
+    "directNodeInventory": {
+      "engineAvailable": true,
+      "listLength": 20,
+      "nodeAvailable": true,
+      "geometry": {
+        "x": 1180,
+        "y": 250,
+        "width": 74,
+        "height": 69,
+        "visible": true,
+        "touchable": true
+      },
+      "eventNames": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ],
+      "clickEntryAvailable": true,
+      "clickEntryKeys": [
+        "listener",
+        "param",
+        "caller"
+      ],
+      "listenerType": "function",
+      "listenerArity": 0
+    },
+    "directNodeTrigger": {
+      "ok": true,
+      "returnType": "undefined"
+    },
+    "targetWindow": {
+      "total": 0,
+      "kinds": {},
+      "targetReadCount": 0,
+      "targetListCount": 0,
+      "orderMutationCount": 0
+    },
+    "pageErrorCount": 0,
+    "pageErrors": [],
+    "blockedOrderCount": 0,
+    "fatalError": null
+  },
+  "candidate": {
+    "pair": "candidate",
+    "engineCapture": {
+      "length": 20
+    },
+    "engineCaptureError": null,
+    "directNodeInventory": {
+      "engineAvailable": true,
+      "listLength": 20,
+      "nodeAvailable": true,
+      "geometry": {
+        "x": 1180,
+        "y": 250,
+        "width": 74,
+        "height": 69,
+        "visible": true,
+        "touchable": true
+      },
+      "eventNames": [
+        "mouse down",
+        "mouse up",
+        "mouse over",
+        "mouse move",
+        "mouse out",
+        "mouse click"
+      ],
+      "clickEntryAvailable": true,
+      "clickEntryKeys": [
+        "listener",
+        "param",
+        "caller"
+      ],
+      "listenerType": "function",
+      "listenerArity": 0
+    },
+    "directNodeTrigger": {
+      "ok": true,
+      "returnType": "undefined"
+    },
+    "targetWindow": {
+      "total": 0,
+      "kinds": {},
+      "targetReadCount": 0,
+      "targetListCount": 0,
+      "orderMutationCount": 0
+    },
+    "pageErrorCount": 0,
+    "pageErrors": [],
+    "blockedOrderCount": 0,
+    "fatalError": null
+  },
+  "candidatePatch": {
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "emptyCallbackReplacementCount": 1,
+    "oldTextSha256": "7d859c28bd3d07a97f23769e6f5b2f7d7323f6136fef8349bebc2b31f5933f3c",
+    "newTextSha256": "37fe35703e40793d24fd8d80e2e40e59170def41c13e32eeade8570845cb7c0a",
+    "currentSecondSize": 11590534,
+    "currentSecondSha256": "ba8103ab7ef8ee8327df6d1d73daba8aca3a4c90d2370e30ab93001fce289112",
+    "candidateSecondSize": 11590592,
+    "candidateSecondSha256": "713b4e2019cf323ce366a8d5e68399d1d733a21bcae81b43a9569fda49aec975"
+  },
+  "reportAvailable": true,
+  "artifactName": "page5-direct-node-bridge-probe",
+  "directNodeIndex": 9,
+  "isolatedCandidateOnly": true,
+  "candidatePersisted": false,
+  "repeatSequenceTested": false,
+  "apkBuilt": false,
+  "productionDefaultChanged": false,
+  "runtimeFilesChanged": false,
+  "androidClientChanged": false,
+  "authorizationOutcomeModified": false,
+  "paymentCompleted": false,
+  "branch": "diagnostics/page5-guard-full-entry-20260805",
+  "commit": "87b8afc4aa344004af02ba871cfefb0f80e74552"
+}
