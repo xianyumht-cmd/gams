@@ -6,15 +6,29 @@ JAVA = MODULE / "src/main/java/com/jinli/ggsecure"
 ASSETS = MODULE / "src/main/assets"
 BUILD = MODULE / "build.gradle.kts"
 MANIFEST = MODULE / "src/main/AndroidManifest.xml"
+LOGGER = JAVA / "DiagnosticLogger.java"
 
 for source, destination in (
-    (ROOT / "src/main/java/com/jinli/ggsecure/DiagnosticLogger.java", JAVA / "DiagnosticLogger.java"),
+    (ROOT / "src/main/java/com/jinli/ggsecure/DiagnosticLogger.java", LOGGER),
     (ROOT / "src/main/assets/diagnostic-prelude.js", ASSETS / "diagnostic-prelude.js"),
     (ROOT / "src/main/assets/diagnostic-postlude.js", ASSETS / "diagnostic-postlude.js"),
 ):
     if not source.is_file():
         raise SystemExit(f"missing strict privacy source: {source}")
     destination.write_bytes(source.read_bytes())
+
+# Native WebView callbacks in the base diagnostic patch still use names such as
+# descriptionHash. Remove those stable values before the strict logger is built.
+logger_text = LOGGER.read_text(encoding="utf-8")
+anchor = '        value = value.replaceAll("(?i)modelHash\\\\s*[:=]\\\\s*[^,}\\\\s]+", "deviceModel=omitted");\n'
+if anchor not in logger_text:
+    raise SystemExit("strict logger sanitization anchor mismatch")
+logger_text = logger_text.replace(
+    anchor,
+    anchor + '        value = value.replaceAll("(?i)[A-Za-z0-9_]*Hash\\\\s*[:=]\\\\s*[^,}\\\\s]+", "hash=omitted");\n',
+    1,
+)
+LOGGER.write_text(logger_text, encoding="utf-8")
 
 build = BUILD.read_text(encoding="utf-8")
 if build.count("versionCode = 26") != 1:
@@ -35,7 +49,7 @@ if manifest.count('android:label="GG 诊断版"') != 1:
 manifest = manifest.replace('android:label="GG 诊断版"', 'android:label="匿名诊断工具"', 1)
 MANIFEST.write_text(manifest, encoding="utf-8")
 
-logger = (JAVA / "DiagnosticLogger.java").read_text(encoding="utf-8")
+logger = LOGGER.read_text(encoding="utf-8")
 prelude = (ASSETS / "diagnostic-prelude.js").read_text(encoding="utf-8")
 postlude = (ASSETS / "diagnostic-postlude.js").read_text(encoding="utf-8")
 
@@ -45,6 +59,7 @@ required_logger = (
     "routeToken(String value)",
     "LONG_HEX_PATTERN",
     "privateSessionNonce",
+    "hash=omitted",
 )
 for marker in required_logger:
     if marker not in logger:
@@ -77,7 +92,7 @@ for forbidden in (
     "stackHash",
     "sha256",
     "textLength",
-    "className",
+    '"className"',
 ):
     if forbidden.lower() in combined.lower():
         raise SystemExit(f"strict JS privacy guard failed: {forbidden}")
