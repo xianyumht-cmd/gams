@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   deliver:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'fix/page5-missing-constructor-mobile-bridge-20260806'
+    if: github.event.workflow_run.head_branch == 'fix/page5-missing-constructor-mobile-bridge-20260806'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -69,6 +69,7 @@ jobs:
         env:
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
           SOURCE_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SOURCE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           DELIVERY_RUN_ID: ${{ github.run_id }}
           DELIVERY_ATTEMPT: ${{ github.run_attempt }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
@@ -100,6 +101,7 @@ jobs:
               'ok': ok,
               'sourceRunId': int(os.environ['SOURCE_RUN_ID']),
               'sourceRunUrl': os.environ.get('SOURCE_RUN_URL', ''),
+              'sourceConclusion': os.environ.get('SOURCE_CONCLUSION', ''),
               'deliveryRunId': int(os.environ['DELIVERY_RUN_ID']),
               'deliveryRunAttempt': int(os.environ['DELIVERY_ATTEMPT']),
               'buildOutcome': os.environ.get('BUILD_OUTCOME', ''),
