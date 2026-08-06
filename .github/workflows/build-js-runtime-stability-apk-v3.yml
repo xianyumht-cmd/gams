@@ -1,0 +1,286 @@
+name: Build JS runtime stability APK v3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/build-js-runtime-stability-apk-v3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: js-runtime-stability-apk-v3-20260807
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      IMPLEMENTATION_BRANCH: fix/page5-missing-constructor-mobile-bridge-20260806
+      APK_VERSION_NAME: 2.0.14-page5-stability
+      APK_VERSION_CODE: 25
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/page5-missing-constructor-mobile-bridge-20260806
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Patch method declaration matcher safely
+        id: patcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeStabilityPatch.java')
+          text = path.read_text(encoding='utf-8')
+          start_token = '    private static String replaceMethodBody(String text, String marker, String newBody) {'
+          end_token = '    private static String patchEngineWrapper(String text) {'
+          start = text.find(start_token)
+          end = text.find(end_token, start + len(start_token))
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit(f'method boundary mismatch: start={start}, end={end}')
+          if text.find(start_token, start + len(start_token)) >= 0:
+              raise SystemExit('replaceMethodBody declaration is not unique')
+
+          replacement = r'''    private static String replaceMethodBody(String text, String marker, String newBody) {
+              int start = -1;
+              int openIndex = -1;
+              int cursor = 0;
+              while (true) {
+                  int candidate = text.indexOf(marker, cursor);
+                  if (candidate < 0) break;
+                  int candidateOpen = skipSpace(text, candidate + marker.length());
+                  if (candidateOpen < text.length() && text.charAt(candidateOpen) == '{') {
+                      if (start >= 0) {
+                          throw new SecurityException("方法定义不唯一: " + marker);
+                      }
+                      start = candidate;
+                      openIndex = candidateOpen;
+                  }
+                  cursor = candidate + marker.length();
+              }
+              if (start < 0) throw new SecurityException("缺少方法定义: " + marker);
+              int closeIndex = findMatchingBrace(text, openIndex);
+              String body = "{\n" + newBody.strip() + "\n    }";
+              return text.substring(0, openIndex) + body + text.substring(closeIndex + 1);
+          }
+
+'''
+          updated = text[:start] + replacement + text[end:]
+          path.write_text(updated, encoding='utf-8', newline='')
+          PY
+
+          patcher=v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeStabilityPatch.java
+          grep -Fq 'candidateOpen < text.length()' "$patcher"
+          grep -Fq 'String body = "{\n" + newBody.strip() + "\n    }";' "$patcher"
+
+      - name: Verify runtime repair against actual JavaScript
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GG_RELEASE_KEYSTORE_BASE64:-}"
+          test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}"
+          patcher=v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeStabilityPatch.java
+          payload=v2/android/client/src/main/java/com/jinli/ggsecure/RuntimePayload.java
+          test -s "$patcher" && test -s "$payload"
+          grep -Fq 'RuntimeStabilityPatch.patchNoname(noname)' "$payload"
+          grep -Fq 'RuntimeStabilityPatch.patchGame(game)' "$payload"
+          grep -Fq 'Symbol.for("gg.runtime.storage-hook.v2")' "$patcher"
+          grep -Fq 'Symbol.for("gg.runtime.xhr-open.v2")' "$patcher"
+          grep -Fq 'Symbol.for("gg.runtime.jsonp-create-element.v2")' "$patcher"
+          grep -Fq '__gg_engine_load_started_at__' "$patcher"
+          node --check remote-script/src/noname.js
+          node --check game-engine/release/game-1.0.5.js
+
+          rm -rf /tmp/runtime-stability-java /tmp/runtime-stability-output
+          mkdir -p /tmp/runtime-stability-java/com/jinli/ggsecure /tmp/runtime-stability-output
+          cp "$patcher" /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatch.java
+          cat > /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatchTest.java <<'JAVA'
+          package com.jinli.ggsecure;
+          import java.nio.file.Files;
+          import java.nio.file.Path;
+          final class RuntimeStabilityPatchTest {
+              public static void main(String[] args) throws Exception {
+                  byte[] noname = Files.readAllBytes(Path.of(args[0]));
+                  byte[] game = Files.readAllBytes(Path.of(args[1]));
+                  byte[] stableNoname = RuntimeStabilityPatch.patchNoname(noname);
+                  byte[] stableGame = RuntimeStabilityPatch.patchGame(game);
+                  Files.write(Path.of(args[2]), stableNoname);
+                  Files.write(Path.of(args[3]), stableGame);
+                  if (stableNoname.length == 0 || stableGame.length == 0) {
+                      throw new IllegalStateException("empty output");
+                  }
+              }
+          }
+          JAVA
+          javac -encoding UTF-8 -d /tmp/runtime-stability-java \
+            /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatch.java \
+            /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatchTest.java
+          java -cp /tmp/runtime-stability-java com.jinli.ggsecure.RuntimeStabilityPatchTest \
+            remote-script/src/noname.js game-engine/release/game-1.0.5.js \
+            /tmp/runtime-stability-output/noname.js /tmp/runtime-stability-output/game.js
+          node --check /tmp/runtime-stability-output/noname.js
+          node --check /tmp/runtime-stability-output/game.js
+          grep -Fq 'Symbol.for("gg.runtime.storage-hook.v2")' /tmp/runtime-stability-output/noname.js
+          grep -Fq '__gg_engine_load_started_at__' /tmp/runtime-stability-output/game.js
+          ! grep -Fq 'Object["defineProperty"](Object["prototype"]' /tmp/runtime-stability-output/noname.js
+          ! grep -Fq '__gg_engine_alert_filter_installed__' /tmp/runtime-stability-output/game.js
+
+      - name: Patch candidate identifiers
+        id: identifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manager = Path('v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java')
+          text = manager.read_text(encoding='utf-8')
+          if text.count('PROTOCOL_APP_VERSION = 12') != 1:
+              raise SystemExit('protocol baseline mismatch')
+          manager.write_text(
+              text.replace('PROTOCOL_APP_VERSION = 12', 'PROTOCOL_APP_VERSION = 24', 1),
+              encoding='utf-8',
+              newline='',
+          )
+
+          gradle = Path('v2/android/client/build.gradle.kts')
+          text = gradle.read_text(encoding='utf-8')
+          if text.count('versionCode = 16') != 1:
+              raise SystemExit('versionCode baseline mismatch')
+          if text.count('versionName = "2.0.3-stable"') != 1:
+              raise SystemExit('versionName baseline mismatch')
+          gradle.write_text(
+              text.replace('versionCode = 16', 'versionCode = 25', 1)
+                  .replace('versionName = "2.0.3-stable"', 'versionName = "2.0.14-page5-stability"', 1),
+              encoding='utf-8',
+              newline='',
+          )
+          PY
+
+      - name: Build sign and verify APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p v2/android :client:clean :client:lintRelease :client:assembleRelease
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+
+          trap 'rm -f /tmp/gg-release.jks' EXIT
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          test -s /tmp/gg-release.jks
+          keytool -list -v \
+            -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" \
+            -alias gg-release > /tmp/keytool-stability.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool-stability.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          mkdir -p /tmp/js-runtime-stability-artifact
+          signed="/tmp/js-runtime-stability-artifact/GG-${APK_VERSION_NAME}-code${APK_VERSION_CODE}.apk"
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks \
+            --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out "$signed" \
+            "$unsigned"
+
+          "$apksigner" verify --verbose --print-certs "$signed" > /tmp/apk-stability-verify.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apk-stability-verify.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apk-stability-verify.txt
+          "$aapt" dump badging "$signed" > /tmp/apk-stability-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='25' versionName='2.0.14-page5-stability'" /tmp/apk-stability-badging.txt
+          sha256sum "$signed" | tee /tmp/js-runtime-stability-artifact/SHA256SUMS.txt
+          jq -n \
+            --arg versionName "$APK_VERSION_NAME" \
+            --argjson versionCode "$APK_VERSION_CODE" \
+            --arg sourceCommit "$(git rev-parse HEAD)" \
+            '{schemaVersion:1,kind:"js-runtime-stability-candidate",workflowRevision:3,versionName:$versionName,versionCode:$versionCode,sourceCommit:$sourceCommit,repair:{methodDeclarationMatchingCorrected:true,javaEscapeHandlingCorrected:true,signedRuntimeVerifiedBeforePatch:true,prototypePollutionRemoved:true,reentryHooksIdempotent:true,resourceExhaustionGuardRemoved:true,staleLoadingRecovery:true},unrelatedLogicChanged:false}' \
+            > /tmp/js-runtime-stability-artifact/CANDIDATE_INFO.json
+
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        if: steps.apk.outcome == 'success'
+        with:
+          name: GG-2.0.14-page5-stability-code25
+          path: /tmp/js-runtime-stability-artifact/**
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record final build status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          if [[ "${{ steps.patcher.outcome }}" == success \
+             && "${{ steps.verify.outcome }}" == success \
+             && "${{ steps.identifiers.outcome }}" == success \
+             && "${{ steps.apk.outcome }}" == success \
+             && "${{ steps.artifact.outcome }}" == success ]]; then
+            ok=true
+          fi
+
+          apk_sha=''
+          if [[ -f /tmp/js-runtime-stability-artifact/SHA256SUMS.txt ]]; then
+            apk_sha="$(awk '{print $1}' /tmp/js-runtime-stability-artifact/SHA256SUMS.txt | head -n1)"
+          fi
+
+          jq -n \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson ok "$ok" \
+            --arg versionName "$APK_VERSION_NAME" \
+            --argjson versionCode "$APK_VERSION_CODE" \
+            --arg sha256 "$apk_sha" \
+            --arg patcher "${{ steps.patcher.outcome }}" \
+            --arg verify "${{ steps.verify.outcome }}" \
+            --arg identifiers "${{ steps.identifiers.outcome }}" \
+            --arg apk "${{ steps.apk.outcome }}" \
+            --arg artifact "${{ steps.artifact.outcome }}" \
+            '{schemaVersion:1,generatedAt:$generatedAt,runId:$runId,state:(if $ok then "completed" else "failed" end),ok:$ok,apk:{versionName:$versionName,versionCode:$versionCode,sha256:$sha256},repairScope:"runtime-stability-only",workflowRevision:3,steps:{patcher:$patcher,verify:$verify,identifiers:$identifiers,apk:$apk,artifact:$artifact},secretsExposed:false}' \
+            > /tmp/JS_RUNTIME_STABILITY_APK_STATUS.json
+
+          git fetch origin "$IMPLEMENTATION_BRANCH" --quiet
+          git reset --hard "origin/${IMPLEMENTATION_BRANCH}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p docs
+          cp /tmp/JS_RUNTIME_STABILITY_APK_STATUS.json docs/JS_RUNTIME_STABILITY_APK_STATUS.json
+          git add docs/JS_RUNTIME_STABILITY_APK_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record JS runtime stability APK v3 build result'
+            git push origin "HEAD:${IMPLEMENTATION_BRANCH}"
+          fi
+          [[ "$ok" == true ]]
+
+# Trigger revision: create
