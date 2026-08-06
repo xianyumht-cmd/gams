@@ -290,13 +290,23 @@ final class RuntimeStabilityPatch {
     }
 
     private static String replaceMethodBody(String text, String marker, String newBody) {
-        int start = text.indexOf(marker);
-        if (start < 0) throw new SecurityException("缺少方法标记: " + marker);
-        if (text.indexOf(marker, start + marker.length()) >= 0) {
-            throw new SecurityException("方法标记不唯一: " + marker);
+        int start = -1;
+        int openIndex = -1;
+        int cursor = 0;
+        while (true) {
+            int candidate = text.indexOf(marker, cursor);
+            if (candidate < 0) break;
+            int candidateOpen = skipSpace(text, candidate + marker.length());
+            if (candidateOpen < text.length() && text.charAt(candidateOpen) == '{') {
+                if (start >= 0) {
+                    throw new SecurityException("方法定义不唯一: " + marker);
+                }
+                start = candidate;
+                openIndex = candidateOpen;
+            }
+            cursor = candidate + marker.length();
         }
-        int openIndex = text.indexOf('{', start + marker.length());
-        if (openIndex < 0) throw new SecurityException("缺少方法起始括号: " + marker);
+        if (start < 0) throw new SecurityException("缺少方法定义: " + marker);
         int closeIndex = findMatchingBrace(text, openIndex);
         String body = "{\n" + newBody.strip() + "\n    }";
         return text.substring(0, openIndex) + body + text.substring(closeIndex + 1);
