@@ -6,6 +6,11 @@ on:
       - fix/page5-missing-constructor-mobile-bridge-20260806
     paths:
       - scripts/apply_js_runtime_stability_fix.trigger
+  pull_request:
+    branches:
+      - fix/page5-missing-constructor-mobile-bridge-20260806
+    paths:
+      - scripts/apply_js_runtime_stability_fix.trigger
   workflow_dispatch:
 
 permissions:
