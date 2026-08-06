@@ -56,10 +56,7 @@ def main() -> int:
 
     old_pause = '''    if (!matchedId) return;
     const configured = purchaseScopeBreakpointById.get(matchedId);'''
-    new_pause = '''    if (!matchedId) {
-      try { await purchaseTraceCdp.send("Debugger.resume"); } catch {}
-      return;
-    }
+    new_pause = '''    if (!matchedId) return;
     if (purchaseScopeSnapshots.length >= 36) {
       try { await purchaseTraceCdp.send("Debugger.resume"); } catch {}
       return;
