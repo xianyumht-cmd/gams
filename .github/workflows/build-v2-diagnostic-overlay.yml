@@ -99,7 +99,9 @@ jobs:
           "$apksigner" verify --verbose --print-certs "$signed" > /tmp/apksigner-v2-diag.txt
           grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apksigner-v2-diag.txt
           grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apksigner-v2-diag.txt
-          grep -Fq "Signer #1 certificate SHA-256 digest: $(printf '%s' "$CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')" /tmp/apksigner-v2-diag.txt
+          expected_cert="$(printf '%s' "$CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          actual_cert="$(sed -n 's/^.*certificate SHA-256 digest: //p' /tmp/apksigner-v2-diag.txt | head -n1 | tr '[:upper:]' '[:lower:]')"
+          test "$actual_cert" = "$expected_cert"
 
           "$aapt" dump badging "$signed" > /tmp/aapt-v2-diag.txt
           grep -Fq "package: name='com.jinli.quickweb' versionCode='26' versionName='2.0.15-page5-bridge-diag'" /tmp/aapt-v2-diag.txt
