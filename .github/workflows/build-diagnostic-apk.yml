@@ -1,12 +1,7 @@
-name: Build privacy-safe JS diagnostic APK
+name: Build signed overlay JS diagnostic APK
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - "client_diagnostics_patch/**"
-      - ".github/workflows/build-diagnostic-apk.yml"
   push:
     branches:
       - "diagnostic/js-runtime-logging-20260806"
@@ -18,6 +13,9 @@ jobs:
   build-diagnostic-client:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
     steps:
       - name: Checkout repository quietly
         shell: bash
@@ -27,6 +25,13 @@ jobs:
           git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           git fetch -q --depth 1 origin "${GITHUB_SHA}"
           git checkout -q FETCH_HEAD
+
+      - name: Validate production signing inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GG_RELEASE_KEYSTORE_BASE64:-}"
+          test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}"
 
       - name: Restore project payload
         shell: bash
@@ -54,7 +59,8 @@ jobs:
           }
           parts = [Path("payload_xz") / name for name in names]
           for part in parts:
-              if not part.is_file(): raise SystemExit(f"Missing payload segment: {part.name}")
+              if not part.is_file():
+                  raise SystemExit(f"Missing payload segment: {part.name}")
               cleaned = "".join(part.read_text(encoding="utf-8").split()).encode()
               if part.name in expected and hashlib.sha256(cleaned).hexdigest() != expected[part.name]:
                   raise SystemExit(f"Checksum mismatch in {part.name}")
@@ -91,13 +97,15 @@ jobs:
             python3 client_control_center_patch/version.py
             python3 client_control_center_patch/activity_patch.py
             python3 client_diagnostics_patch/patch_client_diagnostics.py
+            python3 client_diagnostics_patch/set_overlay_version.py
           } 2>&1 | tee /tmp/apply-diagnostics.log
 
-      - name: Verify privacy guardrails before build
+      - name: Verify privacy and overlay guardrails
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'versionName = "1.4.0-diag.20260806"' client/build.gradle.kts
+          grep -q 'versionCode = 13' client/build.gradle.kts
+          grep -q 'versionName = "1.4.0-diag.20260806.2"' client/build.gradle.kts
           grep -q 'android:label="GG 诊断版"' client/src/main/AndroidManifest.xml
           grep -q 'diagnosticLogger.instrumentSource(source)' client/src/main/java/com/jinli/quickweb/MainActivity.java
           grep -q 'addJavascriptInterface(diagnosticBridge, "__GG_DIAG__")' client/src/main/java/com/jinli/quickweb/MainActivity.java
@@ -122,32 +130,67 @@ jobs:
           set -o pipefail
           gradle :client:assembleRelease --stacktrace 2>&1 | tee /tmp/gradle-diagnostics.log
 
-      - name: Verify and package artifact
+      - name: Sign with production certificate and package artifact
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
-          apk="client/build/outputs/apk/release/client-release.apk"
-          test -s "$apk"
+          unsigned="client/build/outputs/apk/release/client-release.apk"
+          test -s "$unsigned"
           test -s client/build/outputs/mapping/release/mapping.txt
-          unzip -l "$apk" > /tmp/apk-files.txt
+
+          unzip -l "$unsigned" > /tmp/apk-files.txt
           grep -q 'assets/diagnostic-prelude.js' /tmp/apk-files.txt
           grep -q 'assets/diagnostic-postlude.js' /tmp/apk-files.txt
           if grep -q 'assets/noname.js' /tmp/apk-files.txt; then exit 1; fi
-          cp "$apk" "dist/GG-v1.4.0-JS运行诊断版-20260806.apk"
-          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          test -s /tmp/gg-release.jks
+          keytool -list -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" \
+            -alias gg-release >/tmp/keytool-summary.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner"
+          test -x "$aapt"
+
+          signed="dist/GG-v1.4.0-JS运行诊断覆盖版-code13-20260806.apk"
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks \
+            --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out "$signed" \
+            "$unsigned"
+
+          "$apksigner" verify --verbose --print-certs "$signed" > /tmp/apksigner-verify.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apksigner-verify.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apksigner-verify.txt
+          "$aapt" dump badging "$signed" > /tmp/apk-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='13' versionName='1.4.0-diag.20260806.2'" /tmp/apk-badging.txt
+
+          sha256sum "$signed" > dist/SHA256SUMS.txt
+          sed -n 's/^.*certificate SHA-256 digest: /certificate-sha256=/p' /tmp/apksigner-verify.txt | head -n1 \
+            > dist/SIGNING-CERTIFICATE.txt
           cat > dist/使用说明.txt <<'TXT'
-          1. 安装并正常运行诊断版，复现失效功能。
-          2. 尽量按平时真实操作顺序完整复现一次。
-          3. 点击顶部“日志”→“导出并发送”。
-          4. 将生成的 GG-diagnostic-*.zip 发回用于排查。
-          5. 日志不保存原始网址、页面文字、Cookie、激活码、Token、请求正文或响应正文。
+          1. 不要卸载手机中现有 GG。
+          2. 直接点击此 code13 覆盖版 APK 安装，原有应用数据与激活状态应保留。
+          3. 正常运行并完整复现失效功能。
+          4. 点击顶部“日志”→“导出并发送”。
+          5. 将生成的 GG-diagnostic-*.zip 发回用于排查。
+          6. 日志不保存原始网址、页面文字、Cookie、激活码、Token、请求正文或响应正文。
           TXT
 
-      - name: Upload diagnostic APK
+      - name: Upload signed overlay diagnostic APK
         uses: actions/upload-artifact@v4
         with:
-          name: GG-v1.4.0-JS-runtime-diagnostic-20260806
+          name: GG-JS-runtime-diagnostic-overlay-code13-20260806
           path: dist/*
           if-no-files-found: error
           retention-days: 14
@@ -156,9 +199,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: GG-JS-diagnostic-build-logs-20260806
+          name: GG-JS-diagnostic-overlay-build-logs-20260806
           path: |
             /tmp/apply-diagnostics.log
             /tmp/gradle-diagnostics.log
+            /tmp/apksigner-verify.txt
+            /tmp/apk-badging.txt
           if-no-files-found: warn
           retention-days: 7
