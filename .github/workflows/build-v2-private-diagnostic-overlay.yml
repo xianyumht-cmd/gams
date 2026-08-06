@@ -104,7 +104,7 @@ jobs:
           test -x "$apksigner" && test -x "$aapt"
 
           mkdir -p dist-private-diagnostic
-          signed="dist-private-diagnostic/GG-2.0.17-严格匿名诊断覆盖版-code28.apk"
+          signed="dist-private-diagnostic/GG-2.0.17-strict-private-diagnostic-code28.apk"
           "$apksigner" sign \
             --ks /tmp/gg-release.jks \
             --ks-key-alias gg-release \
