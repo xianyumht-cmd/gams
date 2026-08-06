@@ -23,7 +23,6 @@ jobs:
     env:
       IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
       WORKTREE: /tmp/gams-page5-source
-      EXPORT_DIR: /tmp/page5-implementation-source
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,31 +34,29 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
-          rm -rf "$WORKTREE" "$EXPORT_DIR"
+          rm -rf "$WORKTREE"
           git worktree add --detach "$WORKTREE" "origin/$IMPLEMENTATION_REF"
-          mkdir -p "$EXPORT_DIR"
-          cp --parents \
-            "$WORKTREE/game-engine/release/game-1.0.5.js" \
-            "$WORKTREE/v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java" \
-            "$WORKTREE/v2/android/client/src/main/java/com/jinli/ggsecure/RuntimePayload.java" \
-            "$WORKTREE/v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java" \
-            "$WORKTREE/v2/android/client/build.gradle.kts" \
-            "$WORKTREE/v2/android/settings.gradle.kts" \
-            "$WORKTREE/v2/runtime/src/index.js" \
-            "$WORKTREE/v2/runtime/package.json" \
-            "$EXPORT_DIR"
-          if [[ -d "$WORKTREE/scripts" ]]; then
-            mkdir -p "$EXPORT_DIR/scripts"
-            cp -a "$WORKTREE/scripts/." "$EXPORT_DIR/scripts/"
-          fi
-          git -C "$WORKTREE" rev-parse HEAD > "$EXPORT_DIR/IMPLEMENTATION_COMMIT.txt"
-          sha256sum "$WORKTREE/game-engine/release/game-1.0.5.js" > "$EXPORT_DIR/GAME_ENGINE_SHA256.txt"
-          tar -C "$EXPORT_DIR" -czf /tmp/page5-implementation-source.tar.gz .
+          test -s "$WORKTREE/game-engine/release/game-1.0.5.js"
+          test -s "$WORKTREE/v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java"
+          test -s "$WORKTREE/v2/runtime/src/index.js"
+          git -C "$WORKTREE" rev-parse HEAD > /tmp/IMPLEMENTATION_COMMIT.txt
+          sha256sum "$WORKTREE/game-engine/release/game-1.0.5.js" > /tmp/GAME_ENGINE_SHA256.txt
+          tar -C "$WORKTREE" -czf /tmp/page5-implementation-source.tar.gz \
+            game-engine/release/game-1.0.5.js \
+            v2/android/client \
+            v2/android/settings.gradle.kts \
+            v2/runtime/src/index.js \
+            scripts
+          tar -rf /tmp/page5-implementation-source.tar /dev/null 2>/dev/null || true
+          test -s /tmp/page5-implementation-source.tar.gz
 
       - uses: actions/upload-artifact@v4
         with:
           name: page5-implementation-source
-          path: /tmp/page5-implementation-source.tar.gz
+          path: |
+            /tmp/page5-implementation-source.tar.gz
+            /tmp/IMPLEMENTATION_COMMIT.txt
+            /tmp/GAME_ENGINE_SHA256.txt
           retention-days: 7
           if-no-files-found: error
 
@@ -67,8 +64,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          implementation_commit="$(git -C "$WORKTREE" rev-parse HEAD)"
-          runtime_sha="$(sha256sum "$WORKTREE/game-engine/release/game-1.0.5.js" | awk '{print $1}')"
+          implementation_commit="$(cat /tmp/IMPLEMENTATION_COMMIT.txt)"
+          runtime_sha="$(awk '{print $1}' /tmp/GAME_ENGINE_SHA256.txt)"
           python3 - <<PY
           import json, os
           from datetime import datetime, timezone
@@ -90,5 +87,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
           git add docs/PAGE5_IMPLEMENTATION_SOURCE_EXPORT_STATUS.json
-          git commit -m "Record page5 implementation source export"
-          git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          if ! git diff --cached --quiet; then
+            git commit -m "Record page5 implementation source export"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
