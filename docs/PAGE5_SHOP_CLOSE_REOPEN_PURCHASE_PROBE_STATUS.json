@@ -1,14 +1,97 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-06T04:15:10Z",
+  "generatedAt": "2026-08-06T04:21:02Z",
   "runId": 31070720454,
-  "state": "running",
+  "state": "completed",
+  "workflowOutcome": "failure",
+  "probeExecutionOutcome": "success",
+  "publishOutcome": "failure",
   "ok": false,
-  "mode": "page5-shop-close-reopen-purchase-probe",
+  "mode": "persisted-runtime-page5-shop-close-reopen-purchase-probe",
+  "summary": {
+    "totalCases": 1,
+    "fatalCases": 0,
+    "runtimeEntryCompleteCases": 1,
+    "noLoginEnabledCases": 1,
+    "secondFileLoadCount": 2,
+    "listOpenCount": 3,
+    "listTargetReadCount": 3,
+    "listTargetListCount": 3,
+    "productDetailInteractionObservedCount": 3,
+    "productDetailScreenChangedCount": 3,
+    "purchaseAttemptCount": 3,
+    "purchaseInteractionObservedCount": 3,
+    "purchaseScreenChangedCount": 3,
+    "purchaseDialogCount": 0,
+    "purchaseBlockedMutationCount": 0,
+    "purchaseRequestCount": 3,
+    "candidatePageErrorCount": 0,
+    "blockedExternalNavigationCases": 1,
+    "replacementCount": 2,
+    "guardReplacementCount": 1,
+    "callbackReplacementCount": 1
+  },
+  "shopLifecycle": [
+    {
+      "label": "shop-page-return",
+      "screenChanged": true
+    },
+    {
+      "label": "second-list-open-after-shop-return",
+      "screenChanged": true,
+      "targetReadCount": 4,
+      "targetListCount": 1
+    }
+  ],
+  "attemptIndex": [
+    {
+      "label": "first",
+      "interactionObserved": true,
+      "screenChanged": true,
+      "urlClass": "page",
+      "requestKinds": {
+        "page-request": 1
+      }
+    },
+    {
+      "label": "second-after-shop-return",
+      "interactionObserved": true,
+      "screenChanged": true,
+      "urlClass": "browser-error",
+      "requestKinds": {
+        "session-request": 1
+      }
+    },
+    {
+      "label": "third-after-reentry",
+      "interactionObserved": true,
+      "screenChanged": true,
+      "urlClass": "page",
+      "requestKinds": {
+        "page-request": 1
+      }
+    }
+  ],
+  "secondAfterShopReturn": {
+    "interactionObserved": true,
+    "screenChanged": true,
+    "urlClass": "browser-error",
+    "requestKinds": {
+      "session-request": 1
+    }
+  },
+  "pageErrorCount": 0,
+  "blockedOrderCount": 0,
+  "blockedExternalNavigationCount": 1,
+  "conclusion": "Closing and reopening only the shop page does not reset the stale runtime state. Full page reentry remains the only verified reset boundary.",
   "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
   "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "artifactName": "page5-shop-close-reopen-purchase-probe",
+  "artifactId": 8955621806,
+  "artifactDigest": "sha256:9b9f888f8099598fa5628eaa406fb5ea7c51be6cff30540179c3d3e0663a8fdf",
   "readOnlyProbe": true,
   "runtimeFilesChanged": false,
   "productionDefaultChanged": false,
+  "androidClientChanged": false,
   "apkBuilt": false
 }
