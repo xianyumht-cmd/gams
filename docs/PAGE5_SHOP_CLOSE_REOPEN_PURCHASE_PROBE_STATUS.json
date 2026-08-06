@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-06T04:15:10Z",
+  "runId": 31070720454,
+  "state": "running",
+  "ok": false,
+  "mode": "page5-shop-close-reopen-purchase-probe",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "readOnlyProbe": true,
+  "runtimeFilesChanged": false,
+  "productionDefaultChanged": false,
+  "apkBuilt": false
+}
