@@ -24,4 +24,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --ref main
 
-# Trigger revision: create
+# Trigger revision: execute-1
