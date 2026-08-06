@@ -1,3 +1,4 @@
 Final remote build requested on 2026-08-07T05:39:00+08:00.
 Target: GG-2.0.14-page5-stability-code25.apk
 Source: fix/page5-missing-constructor-mobile-bridge-20260806
+Retrigger: 2026-08-07T05:42:00+08:00 after workflow registration.
