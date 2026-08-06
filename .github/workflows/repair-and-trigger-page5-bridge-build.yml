@@ -6,6 +6,12 @@ on:
       - fix/page5-missing-constructor-mobile-bridge-20260806
     paths:
       - scripts/repair_page5_bridge_workflow.trigger
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/repair-and-trigger-page5-bridge-build.yml
+      - scripts/repair_page5_bridge_workflow.trigger
 
 permissions:
   contents: write
@@ -15,6 +21,8 @@ jobs:
   repair:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,3 +67,7 @@ jobs:
             git commit -m 'Synchronize isolated compatibility build metadata'
             git push origin HEAD:fix/page5-missing-constructor-mobile-bridge-20260806
           fi
+
+          gh workflow run build-page5-bridge-candidate.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref fix/page5-missing-constructor-mobile-bridge-20260806
