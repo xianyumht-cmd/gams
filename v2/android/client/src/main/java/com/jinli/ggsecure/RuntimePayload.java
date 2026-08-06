@@ -35,8 +35,10 @@ final class RuntimePayload {
         verify(noname, manifest.getInt("nonameSize"), manifest.getString("nonameSha256"), "控制层");
         verify(game, manifest.getInt("gameSize"), manifest.getString("gameSha256"), "引擎层");
 
-        byte[] stableNoname = RuntimeStabilityPatch.patchNoname(noname);
+        byte[] stabilityNoname = RuntimeStabilityPatch.patchNoname(noname);
+        byte[] stableNoname = RuntimeExperiencePatch.patchNoname(stabilityNoname);
         byte[] stableGame = RuntimeStabilityPatch.patchGame(game);
+        Arrays.fill(stabilityNoname, (byte) 0);
         Arrays.fill(noname, (byte) 0);
         Arrays.fill(game, (byte) 0);
         return new RuntimePayload(stableNoname, stableGame);
