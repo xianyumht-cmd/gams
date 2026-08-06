@@ -55,6 +55,7 @@ jobs:
             -e 's/versionCode = 25/versionCode = 26/g' \
             -e 's/2.0.14-page5-bridge/2.0.15-premium-ui/g' \
             scripts/build_safe_js_compat_candidate.sh
+          sed -i '/^ARTIFACT_DIR=/a export RUNTIME_DIR RUNTIME_VERSION SECOND_SIZE SECOND_SHA256 RUNTIME_MASTER_KEY FIRST_FILE SECOND_FILE' scripts/build_safe_js_compat_candidate.sh
           chmod +x scripts/build_safe_js_compat_candidate.sh
           scripts/build_safe_js_compat_candidate.sh
 
