@@ -3,14 +3,19 @@ name: One-shot JS runtime repair
 on:
   issues:
     types: [opened]
+  pull_request_target:
+    types: [opened]
 
 permissions:
   contents: write
   issues: write
+  pull-requests: write
 
 jobs:
   repair:
-    if: github.event.issue.title == '[automation] apply-js-runtime-stability-20260807'
+    if: >-
+      (github.event_name == 'issues' && github.event.issue.title == '[automation] apply-js-runtime-stability-20260807') ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.title == '[automation] apply-js-runtime-stability-20260807')
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -60,11 +65,17 @@ jobs:
           git commit -m 'fix(js): stabilize restored runtime and remove destructive guards [skip ci]'
           git push origin HEAD:fix/page5-missing-constructor-mobile-bridge-20260806
 
-      - name: Close trigger issue
+      - name: Mark trigger complete
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
-          gh issue comment "$ISSUE_URL" --body 'JS runtime repair completed and verified.'
-          gh issue close "$ISSUE_URL" --reason completed
+          if [ -n "${ISSUE_URL:-}" ]; then
+            gh issue comment "$ISSUE_URL" --body 'JS runtime repair completed and verified.'
+            gh issue close "$ISSUE_URL" --reason completed
+          elif [ -n "${PR_URL:-}" ]; then
+            gh pr comment "$PR_URL" --body 'JS runtime repair completed and verified.'
+            gh pr close "$PR_URL"
+          fi
