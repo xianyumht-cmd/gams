@@ -56,7 +56,29 @@ jobs:
             -e 's/2.0.14-page5-bridge/2.0.15-premium-ui/g' \
             scripts/build_safe_js_compat_candidate.sh
           sed -i '/^ARTIFACT_DIR=/a export RUNTIME_DIR RUNTIME_VERSION SECOND_SIZE SECOND_SHA256 RUNTIME_MASTER_KEY FIRST_FILE SECOND_FILE' scripts/build_safe_js_compat_candidate.sh
-          sed -i 's/grep -Fq "SHA256: $CERT_SHA256"/grep -Fq "$CERT_SHA256"/' scripts/build_safe_js_compat_candidate.sh
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/build_safe_js_compat_candidate.sh')
+          text = path.read_text(encoding='utf-8')
+          old_keytool = 'grep -Fq "SHA256: $CERT_SHA256" /tmp/safe-compat-keytool.txt'
+          if old_keytool not in text:
+              old_keytool = 'grep -Fq "$CERT_SHA256" /tmp/safe-compat-keytool.txt'
+          if old_keytool not in text:
+              raise SystemExit('certificate precheck anchor not found')
+          text = text.replace(old_keytool, ': # certificate digest is verified after APK signing', 1)
+
+          anchor = '"$apksigner" verify --verbose --print-certs "$SIGNED" > /tmp/safe-compat-apk-verify.txt\n'
+          if text.count(anchor) != 1:
+              raise SystemExit(f'apksigner verification anchor mismatch: {text.count(anchor)}')
+          verification = anchor + '''EXPECTED_CERT="$(printf '%s' "$CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          ACTUAL_CERT="$(grep -i 'certificate SHA-256 digest:' /tmp/safe-compat-apk-verify.txt | head -n1 | awk -F': ' '{print $2}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          test -n "$ACTUAL_CERT"
+          test "$ACTUAL_CERT" = "$EXPECTED_CERT"
+          '''
+          text = text.replace(anchor, verification, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
           chmod +x scripts/build_safe_js_compat_candidate.sh
           scripts/build_safe_js_compat_candidate.sh
 
