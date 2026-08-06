@@ -13,9 +13,4 @@ final class DiagnosticJavascriptBridge {
     public void emit(String payload) {
         logger.logBridgePayload(payload);
     }
-
-    @JavascriptInterface
-    public String session() {
-        return logger.sessionId();
-    }
 }
