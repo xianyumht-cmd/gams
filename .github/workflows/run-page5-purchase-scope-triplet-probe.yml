@@ -1,0 +1,257 @@
+name: Inspect purchase callback state across three attempts
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - scripts/prepare_page5_purchase_scope_triplet_probe.py
+      - .github/workflows/run-page5-purchase-scope-triplet-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-purchase-scope-triplet-probe-20260806
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+      CURRENT_SECOND_PATH: /tmp/current-game-1.0.5.js
+      CURRENT_SECOND_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
+      GENERATED_PROBE: scripts/run_page5_purchase_scope_triplet_probe.generated.mjs
+      OUTPUT_DIR: page5-purchase-scope-triplet-probe
+      STATUS_PATH: docs/PAGE5_PURCHASE_SCOPE_TRIPLET_PROBE_STATUS.json
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - name: Publish running marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'running',
+              'ok': False,
+              'mode': 'page5-purchase-scope-triplet-probe',
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'runtimeSha256': os.environ['CURRENT_SECOND_SHA256'],
+              'readOnlyProbe': True,
+              'runtimeFilesChanged': False,
+              'productionDefaultChanged': False,
+              'apkBuilt': False,
+          }
+          path = Path(os.environ['STATUS_PATH'])
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+          git add "$STATUS_PATH"
+          if ! git diff --cached --quiet; then
+            git commit -m "Mark purchase scope triplet probe running"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Read isolated implementation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$CURRENT_SECOND_PATH"
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_repeat_reentry_matrix.py" > scripts/prepare_persisted_repeat_reentry_matrix.py
+          test -s "$CURRENT_SECOND_PATH"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_SECOND_SHA256"
+
+      - name: Prepare triplet callback scope probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/prepare_five_page_missing_constructor_matrix.py \
+            scripts/prepare_page5_repeat_reentry_matrix.py \
+            scripts/prepare_persisted_repeat_reentry_matrix.py \
+            scripts/prepare_page5_purchase_action_probe.py \
+            scripts/prepare_page5_purchase_action_probe_guard.py \
+            scripts/prepare_page5_repeat_purchase_action_probe.py \
+            scripts/prepare_page5_second_purchase_scope_probe.py \
+            scripts/prepare_page5_purchase_scope_triplet_probe.py
+          python3 scripts/prepare_page5_purchase_scope_triplet_probe.py --output "$GENERATED_PROBE"
+          node --check "$GENERATED_PROBE"
+          grep -Fq 'persisted-runtime-page5-purchase-scope-triplet-probe' "$GENERATED_PROBE"
+          grep -Fq 'Debugger.setBreakpointByUrl' "$GENERATED_PROBE"
+          grep -Fq 'purchaseScopeSnapshots.length >= 36' "$GENERATED_PROBE"
+          grep -Fq 'third-after-reentry' "$GENERATED_PROBE"
+          grep -Fq "$CURRENT_SECOND_SHA256" "$GENERATED_PROBE"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute triplet callback scope probe
+        id: probe_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p "$OUTPUT_DIR"
+          timeout --signal=TERM --kill-after=30s 35m node "$GENERATED_PROBE" 2>&1 | tee "$OUTPUT_DIR/workflow.log"
+
+      - name: Build triplet callback scope status
+        if: always()
+        shell: bash
+        env:
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR" docs
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import Counter, defaultdict
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output = Path(os.environ['OUTPUT_DIR'])
+          report_path = output / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          cases = (report or {}).get('cases') or []
+          case = cases[0] if cases else {}
+          snapshots = case.get('purchaseScopeSnapshots') or []
+          breakpoints = case.get('purchaseScopeBreakpoints') or []
+          attempts = ((case.get('purchaseProbe') or {}).get('attempts') or [])
+          page_errors = case.get('pageErrors') or []
+          blocked_orders = case.get('blockedOrders') or []
+          blocked_nav = case.get('blockedExternalNavigations') or []
+
+          def stage_of(snapshot):
+              for frame in snapshot.get('frames') or []:
+                  values = frame.get('values') or {}
+                  if values.get('stage'):
+                      return str(values.get('stage'))
+              return 'unknown'
+
+          def selected_values(snapshot):
+              for frame in snapshot.get('frames') or []:
+                  values = frame.get('values') or {}
+                  if values.get('Sf') is not None or values.get('SH') is not None or values.get('buyNumber') is not None:
+                      return {
+                          'functionName': frame.get('functionName'),
+                          'lineNumber': frame.get('lineNumber'),
+                          'columnNumber': frame.get('columnNumber'),
+                          'values': values,
+                      }
+              return None
+
+          stage_counts = Counter(stage_of(item) for item in snapshots)
+          observed = {key for key in stage_counts if key != 'unknown'}
+          label_stage = defaultdict(list)
+          for item in snapshots:
+              label_stage[str(item.get('configuredLabel') or 'unknown')].append({
+                  'stage': stage_of(item),
+                  'configuredColumnNumber': item.get('configuredColumnNumber'),
+                  'actualColumnNumber': item.get('actualColumnNumber'),
+                  'selectedFrame': selected_values(item),
+              })
+
+          bound = sum(1 for item in breakpoints if item.get('breakpointId'))
+          evidence_ok = (
+              bool(report)
+              and bound > 0
+              and {'first', 'second', 'third-after-reentry'}.issubset(observed)
+              and not page_errors
+              and not blocked_orders
+          )
+          status = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
+              'ok': evidence_ok,
+              'mode': 'page5-purchase-scope-triplet-probe',
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'runtimeSha256': os.environ['CURRENT_SECOND_SHA256'],
+              'reportAvailable': bool(report),
+              'snapshotCount': len(snapshots),
+              'breakpointCount': len(breakpoints),
+              'boundBreakpointCount': bound,
+              'stageSnapshotCounts': dict(stage_counts),
+              'labelStageIndex': dict(label_stage),
+              'attemptIndex': [
+                  {
+                      'label': item.get('label'),
+                      'interactionObserved': bool(item.get('interactionObserved')),
+                      'screenChanged': bool(item.get('screenChanged')),
+                      'urlClass': 'browser-error' if str(item.get('url') or '').startswith('chrome-error://') else 'page',
+                      'requestKinds': (item.get('requestWindow') or {}).get('kinds') or {},
+                  }
+                  for item in attempts
+              ],
+              'pageErrorCount': len(page_errors),
+              'blockedOrderCount': len(blocked_orders),
+              'blockedExternalNavigationCount': len(blocked_nav),
+              'artifactName': 'page5-purchase-scope-triplet-probe',
+              'readOnlyProbe': True,
+              'runtimeFilesChanged': False,
+              'productionDefaultChanged': False,
+              'androidClientChanged': False,
+              'apkBuilt': False,
+          }
+          status_path = Path(os.environ['STATUS_PATH'])
+          status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (output / 'status.json').write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-purchase-scope-triplet-probe
+          path: page5-purchase-scope-triplet-probe
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish triplet callback scope status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f "$GENERATED_PROBE"
+          git checkout -- scripts/prepare_persisted_repeat_reentry_matrix.py
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          git add "$STATUS_PATH"
+          if ! git diff --cached --quiet; then
+            git commit -m "Record purchase scope triplet probe"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce read-only probe gate
+        if: always()
+        shell: bash
+        run: jq -e '.readOnlyProbe == true and .runtimeFilesChanged == false and .productionDefaultChanged == false and .apkBuilt == false' "$STATUS_PATH" >/dev/null
