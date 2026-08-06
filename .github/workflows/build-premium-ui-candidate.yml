@@ -106,7 +106,7 @@ jobs:
           grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/premium-ui-apk-verify.txt
           grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/premium-ui-apk-verify.txt
           expected_cert="$(printf '%s' "$CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
-          actual_cert="$(grep -i 'certificate SHA-256 digest:' /tmp/premium-ui-apk-verify.txt | head -n1 | awk -F': ' '{print $2}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          actual_cert="$(grep -i 'certificate SHA-256 digest:' /tmp/premium-ui-apk-verify.txt | head -n1 | awk -F': ' '{print $NF}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           test -n "$actual_cert"
           test "$actual_cert" = "$expected_cert"
 
