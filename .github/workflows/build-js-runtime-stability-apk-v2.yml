@@ -7,9 +7,17 @@ on:
       - main
     paths:
       - docs/triggers/gg-2.0.14-stability-apk.txt
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: gg-2-0-14-stability-apk-final
@@ -17,6 +25,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.ref == 'trigger/js-runtime-stability-apk-20260807'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
