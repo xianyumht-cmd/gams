@@ -1,0 +1,220 @@
+name: Inspect second purchase callback state v3
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - .github/workflows/run-page5-second-purchase-callback-scope-v3.yml
+      - scripts/page5_second_purchase_scope_probe_v3.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-second-purchase-callback-scope-v3-20260806
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+      CURRENT_SECOND_PATH: /tmp/current-game-1.0.5.js
+      CURRENT_SECOND_SHA256: 57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72
+      GENERATED_PROBE: scripts/run_page5_second_purchase_scope_probe_v3.generated.mjs
+      OUTPUT_DIR: page5-second-purchase-callback-scope-v3
+      STATUS_PATH: docs/PAGE5_SECOND_PURCHASE_CALLBACK_SCOPE_V3_STATUS.json
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Read isolated implementation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          git show "origin/$IMPLEMENTATION_REF:game-engine/release/game-1.0.5.js" > "$CURRENT_SECOND_PATH"
+          git show "origin/$IMPLEMENTATION_REF:scripts/prepare_persisted_repeat_reentry_matrix.py" > scripts/prepare_persisted_repeat_reentry_matrix.py
+          test -s "$CURRENT_SECOND_PATH"
+          test "$(sha256sum "$CURRENT_SECOND_PATH" | awk '{print $1}')" = "$CURRENT_SECOND_SHA256"
+
+      - name: Prepare bounded callback scope probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare_page5_second_purchase_scope_probe.py --output "$GENERATED_PROBE"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/run_page5_second_purchase_scope_probe_v3.generated.mjs')
+          text = path.read_text(encoding='utf-8')
+          replacements = [
+              (
+                  '    if (!matchedId) return;\n    const configured = purchaseScopeBreakpointById.get(matchedId);',
+                  '    if (!matchedId) {\n      try { await purchaseTraceCdp.send("Debugger.resume"); } catch {}\n      return;\n    }\n    if (purchaseScopeSnapshots.length >= 24) {\n      try { await purchaseTraceCdp.send("Debugger.resume"); } catch {}\n      return;\n    }\n    const configured = purchaseScopeBreakpointById.get(matchedId);\n    const purchaseScopeResumeWatchdog = setTimeout(() => {\n      purchaseTraceCdp.send("Debugger.resume").catch(() => {});\n    }, 3000);'
+              ),
+              (
+                  '      for (const frame of (event.callFrames || []).slice(0, 8)) {',
+                  '      for (const frame of (event.callFrames || []).slice(0, 3)) {'
+              ),
+              (
+                  '    } finally {\n      try { await purchaseTraceCdp.send("Debugger.resume"); } catch {}\n    }',
+                  '    } finally {\n      clearTimeout(purchaseScopeResumeWatchdog);\n      try { await purchaseTraceCdp.send("Debugger.resume"); } catch {}\n    }'
+              ),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'bounded scope marker mismatch: {count}: {old[:80]}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          node --check "$GENERATED_PROBE"
+          grep -Fq 'purchaseScopeSnapshots.length >= 24' "$GENERATED_PROBE"
+          grep -Fq 'purchaseScopeResumeWatchdog' "$GENERATED_PROBE"
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute bounded callback scope probe
+        id: probe_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p "$OUTPUT_DIR"
+          timeout --signal=TERM --kill-after=30s 20m node "$GENERATED_PROBE" 2>&1 | tee "$OUTPUT_DIR/workflow.log"
+
+      - name: Build callback scope status
+        if: always()
+        shell: bash
+        env:
+          PROBE_OUTCOME: ${{ steps.probe_run.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR" docs
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import Counter
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          output = Path(os.environ['OUTPUT_DIR'])
+          report_path = output / 'report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
+          cases = (report or {}).get('cases') or []
+          case = cases[0] if cases else {}
+          snapshots = case.get('purchaseScopeSnapshots') or []
+          breakpoints = case.get('purchaseScopeBreakpoints') or []
+          attempts = ((case.get('purchaseProbe') or {}).get('attempts') or [])
+          page_errors = case.get('pageErrors') or []
+          blocked_orders = case.get('blockedOrders') or []
+
+          def stage_of(snapshot):
+              for frame in snapshot.get('frames') or []:
+                  values = frame.get('values') or {}
+                  if values.get('stage'):
+                      return str(values.get('stage'))
+              return 'unknown'
+
+          def compact(snapshot):
+              return {
+                  'configuredLabel': snapshot.get('configuredLabel'),
+                  'configuredColumnNumber': snapshot.get('configuredColumnNumber'),
+                  'actualColumnNumber': snapshot.get('actualColumnNumber'),
+                  'stage': stage_of(snapshot),
+                  'frames': [
+                      {
+                          'functionName': frame.get('functionName'),
+                          'lineNumber': frame.get('lineNumber'),
+                          'columnNumber': frame.get('columnNumber'),
+                          'values': frame.get('values'),
+                      }
+                      for frame in (snapshot.get('frames') or [])[:3]
+                  ],
+              }
+
+          stage_counts = Counter(stage_of(item) for item in snapshots)
+          observed = {key for key in stage_counts if key != 'unknown'}
+          bound = sum(1 for item in breakpoints if item.get('locations'))
+          status = {
+              'schemaVersion': 3,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'state': 'completed',
+              'workflowOutcome': os.environ.get('PROBE_OUTCOME', 'unknown'),
+              'ok': bool(report) and bound > 0 and {'first', 'second'}.issubset(observed) and not page_errors and not blocked_orders,
+              'mode': 'page5-second-purchase-callback-scope-probe-v3',
+              'implementationRef': os.environ['IMPLEMENTATION_REF'],
+              'runtimeSha256': os.environ['CURRENT_SECOND_SHA256'],
+              'reportAvailable': bool(report),
+              'snapshotCount': len(snapshots),
+              'breakpointCount': len(breakpoints),
+              'boundBreakpointCount': bound,
+              'stageSnapshotCounts': dict(stage_counts),
+              'snapshotIndex': [compact(item) for item in snapshots[:24]],
+              'attemptIndex': [
+                  {
+                      'label': item.get('label'),
+                      'interactionObserved': bool(item.get('interactionObserved')),
+                      'screenChanged': bool(item.get('screenChanged')),
+                      'urlClass': 'browser-error' if str(item.get('url') or '').startswith('chrome-error://') else 'page',
+                  }
+                  for item in attempts
+              ],
+              'pageErrorCount': len(page_errors),
+              'blockedOrderCount': len(blocked_orders),
+              'artifactName': 'page5-second-purchase-callback-scope-v3',
+              'readOnlyProbe': True,
+              'runtimeFilesChanged': False,
+              'productionDefaultChanged': False,
+              'apkBuilt': False,
+          }
+          status_path = Path(os.environ['STATUS_PATH'])
+          status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (output / 'status.json').write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(status, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: page5-second-purchase-callback-scope-v3
+          path: page5-second-purchase-callback-scope-v3
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish callback scope status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/prepare_persisted_repeat_reentry_matrix.py "$GENERATED_PROBE"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          git add "$STATUS_PATH"
+          if ! git diff --cached --quiet; then
+            git commit -m "Record bounded second purchase callback scope"
+            git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
+          fi
+
+      - name: Enforce read-only probe gate
+        if: always()
+        shell: bash
+        run: jq -e '.runtimeFilesChanged == false and .productionDefaultChanged == false and .apkBuilt == false' "$STATUS_PATH" >/dev/null
