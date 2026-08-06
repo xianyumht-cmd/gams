@@ -2,19 +2,30 @@ name: GG 2.0.14 Stability APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/triggers/gg-2.0.14-stability-apk.txt
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: gg-2-0-14-stability-apk-final
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
     steps:
       - name: Checkout build controller
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
 
       - name: Checkout implementation source
         uses: actions/checkout@v4
@@ -35,15 +46,81 @@ jobs:
           gradle-version: '8.11.1'
 
       - name: Build, sign and verify APK
+        id: build
         env:
           GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
           GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
         run: bash scripts/build-js-runtime-stability-apk-final.sh
 
       - name: Upload signed APK
+        id: artifact
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: GG-2.0.14-page5-stability-code25
           path: artifact/**
           retention-days: 30
           if-no-files-found: error
+
+      - name: Record final APK status
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk_sha=""
+          if [[ -f artifact/SHA256SUMS.txt ]]; then
+            apk_sha="$(awk '{print $1}' artifact/SHA256SUMS.txt | head -n1)"
+          fi
+          ok=false
+          if [[ "$BUILD_OUTCOME" == "success" && "$ARTIFACT_OUTCOME" == "success" ]]; then
+            ok=true
+          fi
+          export APK_SHA="$apk_sha" OK="$ok"
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          payload = {
+              "schemaVersion": 1,
+              "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "runId": int(os.environ["GITHUB_RUN_ID"]),
+              "runAttempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
+              "state": "completed" if os.environ["OK"] == "true" else "failed",
+              "ok": os.environ["OK"] == "true",
+              "buildOutcome": os.environ.get("BUILD_OUTCOME", ""),
+              "artifactOutcome": os.environ.get("ARTIFACT_OUTCOME", ""),
+              "artifactId": int(os.environ["ARTIFACT_ID"]) if os.environ.get("ARTIFACT_ID") else None,
+              "artifactUrl": os.environ.get("ARTIFACT_URL", ""),
+              "apk": {
+                  "fileName": "GG-2.0.14-page5-stability-code25.apk",
+                  "package": "com.jinli.quickweb",
+                  "versionName": "2.0.14-page5-stability",
+                  "versionCode": 25,
+                  "sha256": os.environ.get("APK_SHA", ""),
+              },
+              "sourceBranch": "fix/page5-missing-constructor-mobile-bridge-20260806",
+              "secretsExposed": False,
+          }
+          with open("/tmp/GG_2_0_14_APK_STATUS.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
+
+          git fetch origin main --quiet
+          git reset --hard origin/main
+          mkdir -p docs
+          cp /tmp/GG_2_0_14_APK_STATUS.json docs/GG_2_0_14_APK_STATUS.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/GG_2_0_14_APK_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record GG 2.0.14 APK build result'
+            git push origin HEAD:main
+          fi
+          [[ "$ok" == true ]]
