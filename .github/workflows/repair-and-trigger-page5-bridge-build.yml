@@ -1,11 +1,6 @@
-name: Repair and trigger isolated compatibility build
+name: Prepare synchronized compatibility build workflow
 
 on:
-  push:
-    branches:
-      - fix/page5-missing-constructor-mobile-bridge-20260806
-    paths:
-      - scripts/repair_page5_bridge_workflow.trigger
   pull_request:
     branches:
       - main
@@ -14,27 +9,23 @@ on:
       - scripts/repair_page5_bridge_workflow.trigger
 
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
-  repair:
+  prepare:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/page5-missing-constructor-mobile-bridge-20260806
           fetch-depth: 0
 
-      - name: Synchronize candidate build metadata
+      - name: Prepare synchronized workflow file
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import os
           from pathlib import Path
 
           path = Path('.github/workflows/build-page5-bridge-candidate.yml')
@@ -50,24 +41,13 @@ jobs:
               if count == 1:
                   text = text.replace(old, new, 1)
           path.write_text(text, encoding='utf-8')
-
-          trigger = Path('scripts/build_page5_bridge_candidate.trigger')
-          trigger.write_text(
-              f"trigger={os.environ['GITHUB_RUN_ID']}\nreason=metadata-sync\n",
-              encoding='utf-8',
-          )
+          Path('/tmp/synchronized-workflow').mkdir(parents=True, exist_ok=True)
+          Path('/tmp/synchronized-workflow/build-page5-bridge-candidate.yml').write_text(text, encoding='utf-8')
           PY
 
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/build-page5-bridge-candidate.yml scripts/build_page5_bridge_candidate.trigger
-          if git diff --cached --quiet; then
-            echo 'No synchronization change required.'
-          else
-            git commit -m 'Synchronize isolated compatibility build metadata'
-            git push origin HEAD:fix/page5-missing-constructor-mobile-bridge-20260806
-          fi
-
-          gh workflow run build-page5-bridge-candidate.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            --ref fix/page5-missing-constructor-mobile-bridge-20260806
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synchronized-compatibility-build-workflow
+          path: /tmp/synchronized-workflow/build-page5-bridge-candidate.yml
+          retention-days: 7
+          if-no-files-found: error
