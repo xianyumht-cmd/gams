@@ -8,25 +8,26 @@
 - Production default channel: unchanged
 - Android client code: unchanged
 - APK built in this phase: no
-- Confirmed fix: no
+- Confirmed compatibility fix: no
 
 ## Reproduced behavior
 
-The browser matrix now reproduces the complete sequence consistently:
+The browser matrix reproduces the complete sequence consistently:
 
-1. The first purchase action reaches its result and remains on the target page.
-2. Closing the result and reopening product details on the same page works.
-3. The second final purchase action in the same runtime instance enters the session-navigation branch and leaves the target page.
-4. A complete page/runtime reentry restores the third purchase action to the same behavior as the first.
+1. The first final action reaches its result and remains on the target page.
+2. Closing the result and reopening the same item details on the same page works.
+3. The second final action in the same runtime instance enters the session-navigation branch and leaves the target page.
+4. A complete page/runtime reentry restores the third action to the same behavior as the first.
 
 The following are excluded as the immediate cause:
 
-- shop entry coordinates;
-- product list loading;
-- product card opening;
+- page entry coordinates;
+- list loading;
+- item-card opening;
 - final-action coordinates;
-- shop-page close and reopen;
-- page errors or blocked order mutations.
+- page close and reopen;
+- duplicate event listeners;
+- page errors or blocked mutations.
 
 ## Shop-page close/reopen A/B result
 
@@ -40,22 +41,22 @@ Artifact:
 
 Result:
 
-- shop page return changed the screen;
-- reopening the shop loaded the list again;
+- page return changed the screen;
+- reopening loaded the list again;
 - list read count: `4`;
 - list request count: `1`;
-- second product detail opened normally;
+- second item detail opened normally;
 - second final action still produced one session request and one external navigation;
 - full reentry third action stayed on the page;
 - page error count: `0`;
-- blocked order count: `0`.
+- blocked mutation count: `0`.
 
 Recorded status:
 
 - `docs/PAGE5_SHOP_CLOSE_REOPEN_PURCHASE_PROBE_STATUS.json`
 - commit: `60e7199103122d5f74995f1c38d8f8fa9fe590b0`
 
-Conclusion: closing and reopening only the shop page does not reset the stale runtime state.
+Conclusion: closing and reopening only the page does not reset the runtime state.
 
 ## Three-attempt callback-scope result
 
@@ -70,20 +71,22 @@ Artifact:
 The persistent callback breakpoints captured all three attempts:
 
 - first: one snapshot;
-- second: four snapshots through the abnormal branch;
+- second: four snapshots through the session branch;
 - third after full reentry: one snapshot.
 
 At the shared pre-router callback:
 
-- first runtime marker value: `0`;
-- second runtime marker value: `1`;
-- third-after-reentry runtime marker value: `0`.
+- first decoded usage value: `0`;
+- second decoded usage value: `1`;
+- third-after-reentry decoded usage value: `0`;
+- configured maximum: `1` on all captured attempts;
+- requested quantity: `1`.
 
 The second attempt alone continued through:
 
 1. pre-router callback;
 2. post-router callback;
-3. purchase router;
+3. action router;
 4. session entry.
 
 The first and third attempts did not continue through the latter three breakpoints.
@@ -93,7 +96,11 @@ Recorded status:
 - `docs/PAGE5_PURCHASE_SCOPE_TRIPLET_PROBE_STATUS.json`
 - commit: `56a2c750ad0124f81fc6f5badb58d229a0ee57cf`
 
-Conclusion: the defect is tied to a runtime-instance-local lifecycle marker. Full page/runtime reentry resets it; shop-page close/reopen does not.
+## Refined conclusion
+
+The state change is not an unreset event-handler flag. It is the runtime's recorded usage changing from `0` to `1` while the configured maximum remains `1`. The second action therefore fails the local `current + requested <= maximum` condition and continues to the normal session path.
+
+A complete runtime reentry makes the local usage appear as `0` again. Deliberately reconstructing the runtime after every result, clearing that value, increasing the maximum, short-circuiting the session path, or forcing the first branch would change the authorization/limit outcome rather than repair a lifecycle defect. No such patch was applied.
 
 ## Other preserved evidence
 
@@ -101,36 +108,34 @@ Conclusion: the defect is tied to a runtime-instance-local lifecycle marker. Ful
 - callback-scope artifact ID: `8955379002`
 - callback-scope digest: `sha256:4eeeeb20e68d3cbe4303f10581ba38934f984b260b5bdf3f53bd0aca17671e9a`
 - status commit: `b9b8403ae78130eea57b980468b7047c72d2be71`
+- `docs/PAGE5_SECOND_PURCHASE_CALLCHAIN_SLICE_STATUS.json`
+- call-chain artifact ID: `8949917252`
 
 ## Invalid conclusions to avoid
 
-- Do not treat product-list repeat opening as a completed purchase fix.
-- Do not promote the current implementation branch as fixing same-runtime repeat purchase.
-- Do not repeat the historical version rollback matrix.
-- Do not treat workflow conclusion `failure` as probe failure when execution and artifact upload succeeded; several runs failed only during status publication because generated files left the worktree dirty.
-- Do not build an APK from the present diagnostic state.
+- Do not treat repeated list opening as a completed fix.
+- Do not promote the current implementation branch as fixing the second same-runtime action.
+- Do not describe the recorded usage value as a stale callback marker.
+- Do not repeat historical rollback matrices.
+- Do not build or distribute an APK that resets usage, changes the maximum, fabricates state, or suppresses the session decision.
 
 ## Safe continuation boundary
 
-The next compatibility candidate must address runtime lifecycle cleanup or legitimate instance reconstruction only. It must not:
+A future compatibility candidate may only improve ordinary authorized navigation, UI cleanup, callback disposal, or instance reconstruction that preserves the same usage and maximum values. It must not:
 
 - fabricate login state;
-- alter an authorization result;
+- alter an authorization or limit result;
 - fabricate an order, balance, entitlement or successful response;
 - suppress a legitimate session decision;
-- complete real payment in automated tests.
+- reset recorded usage to obtain another first-action outcome;
+- complete a real mutation in automated tests.
 
-A candidate is not accepted until the browser matrix verifies:
+## Final status for this investigation
 
-1. first action remains on the page;
-2. second action in the continued user flow remains on the page;
-3. third action after reentry remains on the page;
-4. all three product details open;
-5. no page errors;
-6. no external navigation;
-7. no real order mutation;
-8. production default and Android client remain unchanged.
-
-## Next task
-
-Create a lifecycle-only candidate in an authorized test environment that reconstructs the affected runtime instance after the result is closed, then run the three-attempt matrix. Do not patch the session-entry branch or force the runtime marker value directly.
+- Root cause identified: yes.
+- Duplicate listener/lifecycle defect confirmed: no.
+- Safe JS correction available for the requested second-success behavior: no.
+- Runtime modified: no.
+- Android source modified: no.
+- New APK built: no.
+- Existing production/default channel modified: no.
