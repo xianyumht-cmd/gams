@@ -1,0 +1,143 @@
+name: Build signed V2 page5 diagnostic overlay
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "v2_diagnostics_patch/**"
+      - ".github/workflows/build-v2-diagnostic-overlay.yml"
+
+jobs:
+  build-v2-diagnostic-overlay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate production signing inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GG_RELEASE_KEYSTORE_BASE64:-}"
+          test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}"
+
+      - name: Apply V2 diagnostics to page5 c2 client
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 v2_diagnostics_patch/apply.py 2>&1 | tee /tmp/apply-v2-diagnostics.log
+
+      - name: Verify diagnostic privacy and compatibility guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'versionCode = 26' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.15-page5-bridge-diag"' v2/android/client/build.gradle.kts
+          grep -Fq 'PROTOCOL_APP_VERSION = 25' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
+          grep -Fq 'android:label="GG 诊断版"' v2/android/client/src/main/AndroidManifest.xml
+          grep -Fq 'diagnosticLogger.instrumentSource(payload.nonameSource())' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'addJavascriptInterface(diagnosticBridge, "__GG_DIAG__")' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
+          grep -Fq 'Exact URLs, host names, page or business text' v2_diagnostics_patch/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
+          grep -Fq 'responseLength' v2/android/client/src/main/assets/diagnostic-prelude.js
+          if grep -Fq 'requestBody' v2/android/client/src/main/assets/diagnostic-prelude.js; then exit 1; fi
+          if grep -Fq 'responseBody' v2/android/client/src/main/assets/diagnostic-prelude.js; then exit 1; fi
+          test ! -e v2/android/client/src/main/assets/noname.js
+          test ! -e v2/android/client/src/main/assets/game.js
+
+      - name: Build V2 diagnostic APK
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon -p v2/android :client:clean :client:lintRelease :client:assembleRelease --stacktrace 2>&1 | tee /tmp/gradle-v2-diagnostics.log
+
+      - name: Sign and verify overlay APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -n "$unsigned" && test -s "$unsigned"
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          test -s /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/keytool-v2-diag.txt
+          grep -Fq "SHA256: $CERT_SHA256" /tmp/keytool-v2-diag.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          mkdir -p dist
+          signed="dist/GG-2.0.15-page5-bridge-JS诊断覆盖版-code26.apk"
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks \
+            --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out "$signed" "$unsigned"
+
+          "$apksigner" verify --verbose --print-certs "$signed" > /tmp/apksigner-v2-diag.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apksigner-v2-diag.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apksigner-v2-diag.txt
+          grep -Fq "Signer #1 certificate SHA-256 digest: $(printf '%s' "$CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')" /tmp/apksigner-v2-diag.txt
+
+          "$aapt" dump badging "$signed" > /tmp/aapt-v2-diag.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='26' versionName='2.0.15-page5-bridge-diag'" /tmp/aapt-v2-diag.txt
+          unzip -l "$signed" > /tmp/apk-v2-diag-files.txt
+          grep -Fq 'assets/diagnostic-prelude.js' /tmp/apk-v2-diag-files.txt
+          grep -Fq 'assets/diagnostic-postlude.js' /tmp/apk-v2-diag-files.txt
+          if grep -Fq 'assets/noname.js' /tmp/apk-v2-diag-files.txt; then exit 1; fi
+          if grep -Fq 'assets/game.js' /tmp/apk-v2-diag-files.txt; then exit 1; fi
+
+          sha256sum "$signed" > dist/SHA256SUMS.txt
+          cat > dist/使用说明.txt <<'TXT'
+          此包基于当前 V2 page5 bridge c2 客户端生成：
+          - package: com.jinli.quickweb
+          - versionCode: 26
+          - runtime protocol: 25（保持 page5 bridge c2 运行通道）
+          - 使用正式 gg-release 证书签名，可覆盖 2.0.14-page5-bridge/code25
+
+          安装时不要卸载原应用。覆盖安装后完整复现问题，再点击顶部“日志”→“导出并发送”。
+          日志不记录原始网址、域名、业务文字、页面正文、Cookie、激活码、Token、请求正文或响应正文。
+          TXT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GG-2.0.15-page5-bridge-JS-diagnostic-overlay-code26
+          path: dist/*
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-V2-page5-diagnostic-build-logs
+          path: |
+            /tmp/apply-v2-diagnostics.log
+            /tmp/gradle-v2-diagnostics.log
+            /tmp/keytool-v2-diag.txt
+            /tmp/apksigner-v2-diag.txt
+            /tmp/aapt-v2-diag.txt
+          retention-days: 7
+          if-no-files-found: warn
