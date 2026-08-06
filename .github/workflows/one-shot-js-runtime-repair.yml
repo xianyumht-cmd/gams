@@ -1,0 +1,70 @@
+name: One-shot JS runtime repair
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  repair:
+    if: github.event.issue.title == '[automation] apply-js-runtime-stability-20260807'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out implementation branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/page5-missing-constructor-mobile-bridge-20260806
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Load reviewed patcher from isolated branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin fix/js-runtime-stability-20260807
+          git show origin/fix/js-runtime-stability-20260807:scripts/apply_js_runtime_stability_fix.py > /tmp/apply_js_runtime_stability_fix.py
+          python3 -m py_compile /tmp/apply_js_runtime_stability_fix.py
+
+      - name: Patch and verify source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 /tmp/apply_js_runtime_stability_fix.py
+          python3 /tmp/apply_js_runtime_stability_fix.py --verify-only
+          node --check remote-script/src/noname.js
+          node --check game-engine/release/game-1.0.5.js
+          git diff --check
+          git diff --stat
+
+      - name: Commit repaired JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add remote-script/src/noname.js game-engine/release/game-1.0.5.js
+          git diff --cached --quiet && { echo 'No source changes produced'; exit 1; }
+          git commit -m 'fix(js): stabilize restored runtime and remove destructive guards [skip ci]'
+          git push origin HEAD:fix/page5-missing-constructor-mobile-bridge-20260806
+
+      - name: Close trigger issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: |
+          gh issue comment "$ISSUE_URL" --body 'JS runtime repair completed and verified.'
+          gh issue close "$ISSUE_URL" --reason completed
