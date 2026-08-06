@@ -120,7 +120,7 @@ jobs:
           grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/apksigner-v2-private-diagnostic.txt
           grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/apksigner-v2-private-diagnostic.txt
           expected_digest="$(printf '%s' "$CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
-          actual_digest="$(awk -F': ' '/certificate SHA-256 digest:/ {print tolower($2); exit}' /tmp/apksigner-v2-private-diagnostic.txt | tr -d '[:space:]')"
+          actual_digest="$(awk -F': ' '/certificate SHA-256 digest:/ {print tolower($NF); exit}' /tmp/apksigner-v2-private-diagnostic.txt | tr -d '[:space:]')"
           test "$actual_digest" = "$expected_digest"
 
           "$aapt" dump badging "$signed" > /tmp/aapt-v2-private-diagnostic.txt
