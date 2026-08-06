@@ -19,7 +19,7 @@ jobs:
   deliver:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'fix/page5-missing-constructor-mobile-bridge-20260806'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - name: Checkout controller
@@ -28,71 +28,38 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Download source artifacts and select target APK
-        id: select
-        shell: bash
+      - name: Checkout v2 implementation
+        uses: actions/checkout@v4
+        with:
+          ref: fix/page5-missing-constructor-mobile-bridge-20260806
+          path: source
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build sign and verify v2 APK
+        id: build
         env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
-        run: |
-          set -u
-          rm -rf source-artifacts deliver
-          mkdir -p source-artifacts deliver
-          echo "source_run_id=$SOURCE_RUN_ID" >> "$GITHUB_OUTPUT"
-
-          if ! gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir source-artifacts; then
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "error=artifact_download_failed" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
-          if [[ ! -x "$aapt" ]]; then
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "error=aapt_not_found" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          selected=''
-          while IFS= read -r -d '' apk; do
-            badging="$($aapt dump badging "$apk" 2>/dev/null || true)"
-            if grep -Fq "package: name='com.jinli.quickweb' versionCode='100' versionName='2.0.20-page5-stability'" <<<"$badging"; then
-              selected="$apk"
-              printf '%s\n' "$badging" > deliver/APK_BADGING.txt
-              break
-            fi
-          done < <(find source-artifacts -type f -name '*.apk' -print0)
-
-          if [[ -z "$selected" ]]; then
-            find source-artifacts -type f -maxdepth 5 -print | sort > deliver/SOURCE_FILES.txt
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "error=target_apk_not_found" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          target='deliver/GG-2.0.20-page5-stability-code100.apk'
-          cp "$selected" "$target"
-          sha="$(sha256sum "$target" | awk '{print $1}')"
-          printf '%s  %s\n' "$sha" "GG-2.0.20-page5-stability-code100.apk" > deliver/SHA256SUMS.txt
-          cat > deliver/BUILD_INFO.txt <<EOF
-          package=com.jinli.quickweb
-          versionName=2.0.20-page5-stability
-          versionCode=100
-          sourceRunId=$SOURCE_RUN_ID
-          sourceBranch=fix/page5-missing-constructor-mobile-bridge-20260806
-          EOF
-          echo "ok=true" >> "$GITHUB_OUTPUT"
-          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
-          echo "error=" >> "$GITHUB_OUTPUT"
+          GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+          GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+        run: bash scripts/build-js-runtime-stability-apk-final.sh
 
       - name: Upload verified client APK
         id: upload
-        if: steps.select.outputs.ok == 'true'
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: GG-2.0.20-page5-stability-code100
-          path: deliver/**
+          path: artifact/**
           retention-days: 30
           if-no-files-found: error
 
@@ -100,36 +67,42 @@ jobs:
         if: always()
         shell: bash
         env:
-          SELECT_OK: ${{ steps.select.outputs.ok }}
-          SELECT_ERROR: ${{ steps.select.outputs.error }}
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
           SOURCE_RUN_URL: ${{ github.event.workflow_run.html_url }}
           DELIVERY_RUN_ID: ${{ github.run_id }}
           DELIVERY_ATTEMPT: ${{ github.run_attempt }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
           UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
           ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
-          APK_SHA256: ${{ steps.select.outputs.sha256 }}
         run: |
           set -euo pipefail
-          export SELECT_OK SELECT_ERROR SOURCE_RUN_ID SOURCE_RUN_URL DELIVERY_RUN_ID DELIVERY_ATTEMPT UPLOAD_OUTCOME ARTIFACT_ID ARTIFACT_URL APK_SHA256
+          apk_sha=''
+          if [[ -f artifact/SHA256SUMS.txt ]]; then
+            apk_sha="$(awk '{print $1}' artifact/SHA256SUMS.txt | head -n1)"
+          fi
+          ok=false
+          if [[ "$BUILD_OUTCOME" == 'success' && "$UPLOAD_OUTCOME" == 'success' ]]; then
+            ok=true
+          fi
+          export OK="$ok" APK_SHA="$apk_sha"
           python3 - <<'PY'
           import json
           import os
           from datetime import datetime, timezone
 
           artifact_id = os.environ.get('ARTIFACT_ID', '')
-          ok = os.environ.get('SELECT_OK') == 'true' and os.environ.get('UPLOAD_OUTCOME') == 'success'
+          ok = os.environ.get('OK') == 'true'
           payload = {
-              'schemaVersion': 1,
+              'schemaVersion': 2,
               'generatedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
               'state': 'completed' if ok else 'failed',
               'ok': ok,
-              'error': os.environ.get('SELECT_ERROR', ''),
               'sourceRunId': int(os.environ['SOURCE_RUN_ID']),
               'sourceRunUrl': os.environ.get('SOURCE_RUN_URL', ''),
               'deliveryRunId': int(os.environ['DELIVERY_RUN_ID']),
               'deliveryRunAttempt': int(os.environ['DELIVERY_ATTEMPT']),
+              'buildOutcome': os.environ.get('BUILD_OUTCOME', ''),
               'uploadOutcome': os.environ.get('UPLOAD_OUTCOME', ''),
               'artifactId': int(artifact_id) if artifact_id else None,
               'artifactUrl': os.environ.get('ARTIFACT_URL', ''),
@@ -138,8 +111,9 @@ jobs:
                   'package': 'com.jinli.quickweb',
                   'versionName': '2.0.20-page5-stability',
                   'versionCode': 100,
-                  'sha256': os.environ.get('APK_SHA256', ''),
+                  'sha256': os.environ.get('APK_SHA', ''),
               },
+              'sourceBranch': 'fix/page5-missing-constructor-mobile-bridge-20260806',
               'secretsExposed': False,
           }
           with open('/tmp/GG_2_0_20_DELIVERY_STATUS.json', 'w', encoding='utf-8') as f:
@@ -158,12 +132,4 @@ jobs:
             git commit -m 'Record GG 2.0.20 APK delivery result'
             git push origin HEAD:main
           fi
-
-      - name: Require successful delivery
-        if: always()
-        shell: bash
-        env:
-          SELECT_OK: ${{ steps.select.outputs.ok }}
-          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
-        run: |
-          [[ "$SELECT_OK" == 'true' && "$UPLOAD_OUTCOME" == 'success' ]]
+          [[ "$ok" == true ]]
