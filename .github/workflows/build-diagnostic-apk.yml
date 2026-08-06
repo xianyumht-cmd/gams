@@ -1,0 +1,159 @@
+name: Build privacy-safe JS diagnostic APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "diagnostic/js-runtime-logging-20260806"
+    paths:
+      - "client_diagnostics_patch/**"
+      - ".github/workflows/build-diagnostic-apk.yml"
+
+jobs:
+  build-diagnostic-client:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repository quietly
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin "${GITHUB_SHA}"
+          git checkout -q FETCH_HEAD
+
+      - name: Restore project payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+          names = [
+              "part00", "part01", "part02",
+              "part03a", "part03b", "part03c", "part03d",
+              "part04",
+              "part05a", "part05b", "part05c", "part05d",
+              "part06", "part07", "part08",
+          ]
+          expected = {
+              "part03a": "55daa0b004d668fac704fcdafd4ed95e1f4972c8b21e4d9cdcbd4e45760f3a06",
+              "part03b": "c15f08e8eed02a7def56ffadaab03263a14fe081802851987cffad3d64e1f7c4",
+              "part03c": "832e962722e94114bba427ee0bb9c013d09514d91b7d786713399795e2c00937",
+              "part03d": "3f1870c7564e9ae856945a14a724c02692708d2e209ffa0696ee621585a31256",
+              "part05a": "43c475b28ae2f1d5e5d12bc718338a51dff4116ab8661c0ee2ac66a183c3064e",
+              "part05b": "f45deca39cbe0398b3ce5d2209d0533c53198cfbd7a9c26b74eeb549de7c492f",
+              "part05c": "7f1bcd7ab9310339247b7469a84de37af5a9c76fe39b5fe6cb073f38e523d3f2",
+              "part05d": "ab252aed7f91fedeb9d6a6db184daae017d0fbed7248e464474ef837a7f45c65",
+          }
+          parts = [Path("payload_xz") / name for name in names]
+          for part in parts:
+              if not part.is_file(): raise SystemExit(f"Missing payload segment: {part.name}")
+              cleaned = "".join(part.read_text(encoding="utf-8").split()).encode()
+              if part.name in expected and hashlib.sha256(cleaned).hexdigest() != expected[part.name]:
+                  raise SystemExit(f"Checksum mismatch in {part.name}")
+          text = "".join("".join(part.read_text(encoding="utf-8").split()) for part in parts)
+          raw = base64.b64decode(text, validate=True)
+          if hashlib.sha256(raw).hexdigest() != "aab22ffe5e49fbcb6ba9efa8f960aa90057644ae5a94511d2334704dbb92ea9d":
+              raise SystemExit("Payload checksum mismatch")
+          Path("project_payload.tar.xz").write_bytes(raw)
+          PY
+          tar -xJf project_payload.tar.xz
+
+      - name: Apply production-equivalent client patches
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            set -eux
+            cp client_patch/src/main/java/com/jinli/quickweb/RemoteScriptManager.java client/src/main/java/com/jinli/quickweb/RemoteScriptManager.java
+            python3 client_patch/patch_client.py
+            cp client_online_patch/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java client/src/main/java/com/jinli/quickweb/OnlineLicenseManager.java
+            cp client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java client/src/main/java/com/jinli/quickweb/ResilientApiTransport.java
+            python3 client_online_patch/patch_client_online.py
+            cp keygen_online_patch/src/main/java/com/jinli/keygen/MainActivity.java keygen/src/main/java/com/jinli/keygen/MainActivity.java
+            cp keygen_online_patch/src/main/java/com/jinli/keygen/AdminApiManager.java keygen/src/main/java/com/jinli/keygen/AdminApiManager.java
+            sed 's/package com.jinli.quickweb;/package com.jinli.keygen;/' client_online_patch/src/main/java/com/jinli/quickweb/ResilientApiTransport.java > keygen/src/main/java/com/jinli/keygen/ResilientApiTransport.java
+            python3 keygen_online_patch/patch_keygen_online.py
+            python3 license_endpoint_hotfix/patch_endpoints.py
+            target=client_hardening_patch/src/main/java/com/jinli/quickweb
+            mkdir -p "$target"
+            for name in SecureStore DeviceIdentity OnlineLicenseManager MainActivity; do
+              cat "hardening_client_parts/${name}.java"/part* > "$target/${name}.java"
+            done
+            python3 client_hardening_patch/apply.py
+            python3 client_control_center_patch/version.py
+            python3 client_control_center_patch/activity_patch.py
+            python3 client_diagnostics_patch/patch_client_diagnostics.py
+          } 2>&1 | tee /tmp/apply-diagnostics.log
+
+      - name: Verify privacy guardrails before build
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'versionName = "1.4.0-diag.20260806"' client/build.gradle.kts
+          grep -q 'android:label="GG 诊断版"' client/src/main/AndroidManifest.xml
+          grep -q 'diagnosticLogger.instrumentSource(source)' client/src/main/java/com/jinli/quickweb/MainActivity.java
+          grep -q 'addJavascriptInterface(diagnosticBridge, "__GG_DIAG__")' client/src/main/java/com/jinli/quickweb/MainActivity.java
+          grep -q 'Exact URLs, host names, page text' client/src/main/java/com/jinli/quickweb/DiagnosticLogger.java
+          grep -q 'responseLength' client/src/main/assets/diagnostic-prelude.js
+          if grep -q 'responseText:' client/src/main/assets/diagnostic-prelude.js; then exit 1; fi
+          if grep -q 'requestBody' client/src/main/assets/diagnostic-prelude.js; then exit 1; fi
+          test ! -e client/src/main/assets/noname.js
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Build diagnostic APK
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle :client:assembleRelease --stacktrace 2>&1 | tee /tmp/gradle-diagnostics.log
+
+      - name: Verify and package artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          apk="client/build/outputs/apk/release/client-release.apk"
+          test -s "$apk"
+          test -s client/build/outputs/mapping/release/mapping.txt
+          unzip -l "$apk" > /tmp/apk-files.txt
+          grep -q 'assets/diagnostic-prelude.js' /tmp/apk-files.txt
+          grep -q 'assets/diagnostic-postlude.js' /tmp/apk-files.txt
+          if grep -q 'assets/noname.js' /tmp/apk-files.txt; then exit 1; fi
+          cp "$apk" "dist/GG-v1.4.0-JS运行诊断版-20260806.apk"
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+          cat > dist/使用说明.txt <<'TXT'
+          1. 安装并正常运行诊断版，复现失效功能。
+          2. 尽量按平时真实操作顺序完整复现一次。
+          3. 点击顶部“日志”→“导出并发送”。
+          4. 将生成的 GG-diagnostic-*.zip 发回用于排查。
+          5. 日志不保存原始网址、页面文字、Cookie、激活码、Token、请求正文或响应正文。
+          TXT
+
+      - name: Upload diagnostic APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-v1.4.0-JS-runtime-diagnostic-20260806
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-JS-diagnostic-build-logs-20260806
+          path: |
+            /tmp/apply-diagnostics.log
+            /tmp/gradle-diagnostics.log
+          if-no-files-found: warn
+          retention-days: 7
