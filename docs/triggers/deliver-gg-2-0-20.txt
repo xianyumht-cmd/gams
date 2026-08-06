@@ -1,4 +1,4 @@
 Trigger Build two Android APKs for verified GG 2.0.20 delivery.
 Target: com.jinli.quickweb / 2.0.20-page5-stability / code100
-Requested at: 2026-08-07T07:36:00+08:00
-Delivery workflow revision: direct-v2-build
+Requested at: 2026-08-07T07:41:00+08:00
+Delivery workflow revision: unconditional-direct-v2-build
