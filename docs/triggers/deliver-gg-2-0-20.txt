@@ -1,0 +1,3 @@
+Trigger Build two Android APKs for verified GG 2.0.20 delivery.
+Target: com.jinli.quickweb / 2.0.20-page5-stability / code100
+Requested at: 2026-08-07T07:30:00+08:00
