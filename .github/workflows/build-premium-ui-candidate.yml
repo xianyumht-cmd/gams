@@ -87,8 +87,7 @@ jobs:
           test -d "$sdk_root/build-tools"
           apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -n1)"
           aapt="$(find "$sdk_root/build-tools" -type f -name aapt | sort -V | tail -n1)"
-          test -f "$apksigner" && test -f "$aapt"
-          chmod +x "$apksigner" "$aapt"
+          test -x "$apksigner" && test -x "$aapt"
 
           mkdir -p /tmp/premium-ui-artifact
           signed="/tmp/premium-ui-artifact/GG-${APK_VERSION_NAME}-code${APK_VERSION_CODE}.apk"
