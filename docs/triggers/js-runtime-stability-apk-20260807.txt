@@ -1,3 +1,4 @@
 Trigger the controlled 2.0.14 JS runtime stability APK build.
 Retriggered on 2026-08-07 after GitHub Actions returned to operational status.
 Remote build requested at 2026-08-07 04:42 UTC+08:00.
+Dispatch corrected workflow revision 2 through PR synchronization.
