@@ -3,8 +3,8 @@ set -euo pipefail
 
 SOURCE_DIR="${GITHUB_WORKSPACE}/source"
 ARTIFACT_DIR="${GITHUB_WORKSPACE}/artifact"
-VERSION_NAME="2.0.14-page5-stability"
-VERSION_CODE="25"
+VERSION_NAME="2.0.20-page5-stability"
+VERSION_CODE="100"
 EXPECTED_CERT_SHA256="70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34"
 
 : "${GG_RELEASE_KEYSTORE_BASE64:?Missing GG_RELEASE_KEYSTORE_BASE64}"
@@ -21,6 +21,7 @@ CLIENT_GRADLE="$SOURCE_DIR/v2/android/client/build.gradle.kts"
 
 python3 - "$PATCHER" "$MANAGER" "$CLIENT_GRADLE" <<'PY'
 from pathlib import Path
+import re
 import sys
 
 patcher = Path(sys.argv[1])
@@ -28,16 +29,16 @@ manager = Path(sys.argv[2])
 gradle = Path(sys.argv[3])
 
 text = patcher.read_text(encoding="utf-8")
-start_token = "    private static String replaceMethodBody(String text, String marker, String newBody) {"
-end_token = "    private static String patchEngineWrapper(String text) {"
-start = text.find(start_token)
-end = text.find(end_token, start + len(start_token))
-if start < 0 or end < 0 or end <= start:
-    raise SystemExit(f"method boundary mismatch: start={start}, end={end}")
-if text.find(start_token, start + len(start_token)) >= 0:
-    raise SystemExit("replaceMethodBody declaration is not unique")
-
-replacement = r'''    private static String replaceMethodBody(String text, String marker, String newBody) {
+if "candidateOpen < text.length()" not in text:
+    start_token = "    private static String replaceMethodBody(String text, String marker, String newBody) {"
+    end_token = "    private static String patchEngineWrapper(String text) {"
+    start = text.find(start_token)
+    end = text.find(end_token, start + len(start_token))
+    if start < 0 or end < 0 or end <= start:
+        raise SystemExit(f"method boundary mismatch: start={start}, end={end}")
+    if text.find(start_token, start + len(start_token)) >= 0:
+        raise SystemExit("replaceMethodBody declaration is not unique")
+    replacement = r'''    private static String replaceMethodBody(String text, String marker, String newBody) {
         int start = -1;
         int openIndex = -1;
         int cursor = 0;
@@ -61,28 +62,22 @@ replacement = r'''    private static String replaceMethodBody(String text, Strin
     }
 
 '''
-patcher.write_text(text[:start] + replacement + text[end:], encoding="utf-8", newline="")
+    text = text[:start] + replacement + text[end:]
+    patcher.write_text(text, encoding="utf-8", newline="")
 
 text = manager.read_text(encoding="utf-8")
-if text.count("PROTOCOL_APP_VERSION = 12") != 1:
-    raise SystemExit("protocol baseline mismatch")
-manager.write_text(
-    text.replace("PROTOCOL_APP_VERSION = 12", "PROTOCOL_APP_VERSION = 24", 1),
-    encoding="utf-8",
-    newline="",
-)
+if "PROTOCOL_APP_VERSION = 24" not in text:
+    if text.count("PROTOCOL_APP_VERSION = 12") != 1:
+        raise SystemExit("protocol version baseline mismatch")
+    text = text.replace("PROTOCOL_APP_VERSION = 12", "PROTOCOL_APP_VERSION = 24", 1)
+    manager.write_text(text, encoding="utf-8", newline="")
 
 text = gradle.read_text(encoding="utf-8")
-if text.count("versionCode = 16") != 1:
-    raise SystemExit("versionCode baseline mismatch")
-if text.count('versionName = "2.0.3-stable"') != 1:
-    raise SystemExit("versionName baseline mismatch")
-gradle.write_text(
-    text.replace("versionCode = 16", "versionCode = 25", 1)
-        .replace('versionName = "2.0.3-stable"', 'versionName = "2.0.14-page5-stability"', 1),
-    encoding="utf-8",
-    newline="",
-)
+text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 100", text, count=1)
+text, name_count = re.subn(r'versionName\s*=\s*"[^"]+"', 'versionName = "2.0.20-page5-stability"', text, count=1)
+if code_count != 1 or name_count != 1:
+    raise SystemExit(f"APK identifier replacement mismatch: code={code_count}, name={name_count}")
+gradle.write_text(text, encoding="utf-8", newline="")
 PY
 
 grep -Fq 'candidateOpen < text.length()' "$PATCHER"
@@ -93,6 +88,9 @@ grep -Fq 'Symbol.for("gg.runtime.storage-hook.v2")' "$PATCHER"
 grep -Fq 'Symbol.for("gg.runtime.xhr-open.v2")' "$PATCHER"
 grep -Fq 'Symbol.for("gg.runtime.jsonp-create-element.v2")' "$PATCHER"
 grep -Fq '__gg_engine_load_started_at__' "$PATCHER"
+grep -Fq 'PROTOCOL_APP_VERSION = 24' "$MANAGER"
+grep -Fq 'versionCode = 100' "$CLIENT_GRADLE"
+grep -Fq 'versionName = "2.0.20-page5-stability"' "$CLIENT_GRADLE"
 
 node --check "$SOURCE_DIR/remote-script/src/noname.js"
 node --check "$SOURCE_DIR/game-engine/release/game-1.0.5.js"
@@ -176,7 +174,7 @@ grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$ARTIFACT_D
 grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "$ARTIFACT_DIR/APK_VERIFY.txt"
 
 "$AAPT" dump badging "$SIGNED_APK" > "$ARTIFACT_DIR/APK_BADGING.txt"
-grep -Fq "package: name='com.jinli.quickweb' versionCode='25' versionName='2.0.14-page5-stability'" "$ARTIFACT_DIR/APK_BADGING.txt"
+grep -Fq "package: name='com.jinli.quickweb' versionCode='100' versionName='2.0.20-page5-stability'" "$ARTIFACT_DIR/APK_BADGING.txt"
 sha256sum "$SIGNED_APK" | tee "$ARTIFACT_DIR/SHA256SUMS.txt"
 
 cat > "$ARTIFACT_DIR/BUILD_INFO.txt" <<EOF
@@ -184,5 +182,5 @@ versionName=$VERSION_NAME
 versionCode=$VERSION_CODE
 package=com.jinli.quickweb
 sourceBranch=fix/page5-missing-constructor-mobile-bridge-20260806
-workflow=final-standalone-script
+workflow=gg-2.0.20-direct-delivery
 EOF
