@@ -1,42 +1,43 @@
-name: GG 2.0.14 Stability APK
+name: GG 2.0.14 APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - docs/triggers/gg-2.0.14-stability-apk.txt
-  pull_request_target:
-    branches:
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
+  schedule:
+    - cron: '*/5 * * * *'
 
 permissions:
   contents: write
-  pull-requests: read
 
 concurrency:
-  group: gg-2-0-14-stability-apk-final
-  cancel-in-progress: false
+  group: gg-2-0-14-apk-final
+  cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.ref == 'trigger/js-runtime-stability-apk-20260807'
     runs-on: ubuntu-latest
     timeout-minutes: 45
-
     steps:
-      - name: Checkout build controller
+      - name: Checkout controller
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Checkout implementation source
+      - name: Record running state
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs
+          printf '{\n  "state": "running",\n  "ok": false,\n  "runId": %s,\n  "runAttempt": %s\n}\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > docs/GG_2_0_14_APK_STATUS.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/GG_2_0_14_APK_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record GG 2.0.14 APK build start'
+            git push origin HEAD:main
+          fi
+
+      - name: Checkout implementation
         uses: actions/checkout@v4
         with:
           ref: fix/page5-missing-constructor-mobile-bridge-20260806
@@ -54,15 +55,15 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Build, sign and verify APK
+      - name: Build and sign APK
         id: build
         env:
           GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
           GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
         run: bash scripts/build-js-runtime-stability-apk-final.sh
 
-      - name: Upload signed APK
-        id: artifact
+      - name: Upload APK
+        id: upload
         if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
@@ -71,56 +72,51 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      - name: Record final APK status
+      - name: Record final state
         if: always()
-        env:
-          BUILD_OUTCOME: ${{ steps.build.outcome }}
-          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
-          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
-          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
         shell: bash
+        env:
+          BUILD_RESULT: ${{ steps.build.outcome }}
+          UPLOAD_RESULT: ${{ steps.upload.outcome }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
         run: |
           set -euo pipefail
-          apk_sha=""
+          ok=false
+          apk_sha=''
+          if [[ "$BUILD_RESULT" == 'success' && "$UPLOAD_RESULT" == 'success' ]]; then
+            ok=true
+          fi
           if [[ -f artifact/SHA256SUMS.txt ]]; then
             apk_sha="$(awk '{print $1}' artifact/SHA256SUMS.txt | head -n1)"
           fi
-          ok=false
-          if [[ "$BUILD_OUTCOME" == "success" && "$ARTIFACT_OUTCOME" == "success" ]]; then
-            ok=true
-          fi
-          export APK_SHA="$apk_sha" OK="$ok"
+          export OK="$ok" APK_SHA="$apk_sha"
           python3 - <<'PY'
           import json
           import os
           from datetime import datetime, timezone
-
+          artifact_id = os.environ.get('ARTIFACT_ID', '')
           payload = {
-              "schemaVersion": 1,
-              "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "runId": int(os.environ["GITHUB_RUN_ID"]),
-              "runAttempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
-              "state": "completed" if os.environ["OK"] == "true" else "failed",
-              "ok": os.environ["OK"] == "true",
-              "buildOutcome": os.environ.get("BUILD_OUTCOME", ""),
-              "artifactOutcome": os.environ.get("ARTIFACT_OUTCOME", ""),
-              "artifactId": int(os.environ["ARTIFACT_ID"]) if os.environ.get("ARTIFACT_ID") else None,
-              "artifactUrl": os.environ.get("ARTIFACT_URL", ""),
-              "apk": {
-                  "fileName": "GG-2.0.14-page5-stability-code25.apk",
-                  "package": "com.jinli.quickweb",
-                  "versionName": "2.0.14-page5-stability",
-                  "versionCode": 25,
-                  "sha256": os.environ.get("APK_SHA", ""),
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'state': 'completed' if os.environ['OK'] == 'true' else 'failed',
+              'ok': os.environ['OK'] == 'true',
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'runAttempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'buildOutcome': os.environ.get('BUILD_RESULT', ''),
+              'uploadOutcome': os.environ.get('UPLOAD_RESULT', ''),
+              'artifactId': int(artifact_id) if artifact_id else None,
+              'apk': {
+                  'fileName': 'GG-2.0.14-page5-stability-code25.apk',
+                  'package': 'com.jinli.quickweb',
+                  'versionName': '2.0.14-page5-stability',
+                  'versionCode': 25,
+                  'sha256': os.environ.get('APK_SHA', ''),
               },
-              "sourceBranch": "fix/page5-missing-constructor-mobile-bridge-20260806",
-              "secretsExposed": False,
           }
-          with open("/tmp/GG_2_0_14_APK_STATUS.json", "w", encoding="utf-8") as f:
+          with open('/tmp/GG_2_0_14_APK_STATUS.json', 'w', encoding='utf-8') as f:
               json.dump(payload, f, ensure_ascii=False, indent=2)
-              f.write("\n")
+              f.write('\n')
           PY
-
           git fetch origin main --quiet
           git reset --hard origin/main
           mkdir -p docs
