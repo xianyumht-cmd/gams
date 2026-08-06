@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "versionName": "2.0.10-page5-bridge-c2",
+  "file": "bundle-2.0.10-page5-bridge-c2.bin",
+  "size": 3905533,
+  "sha256": "357e7d30336d2a19f6b4bb7af2dfa94c0e2dcef898ee6fe81088b2c04caa6cf8",
+  "iv": "DoyA5+CXKXAm9STm",
+  "nonameSize": 332368,
+  "nonameSha256": "707826b2049853a714740baf169fa5b61fa072ab8027ed69551b7d55813c53c0",
+  "gameSize": 11590659,
+  "gameSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "keyIv": "F5p5gn5BH3C8s0Pq",
+  "keyCipher": "7PsXBwn3aU3Wb1ido2q6Gh/kGNR3jbDAWgql4eaB+cN46N1+F/fWaBqJBBZoCbMc",
+  "publishedAt": "2026-08-06T22:47:06Z",
+  "signatureAlgorithm": "SHA256withECDSA",
+  "signature": "MEUCIBI5tubhBwQrkZTl99J81ewVgpbY8QOT7OihiLk1a3V+AiEA7DrEBCfNVQBZ/4pI5iRf23U6EBYPM4aKP2LRHBNyaRw="
+}
