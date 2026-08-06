@@ -7,9 +7,16 @@ on:
       - main
     paths:
       - docs/triggers/build-gg-2-0-20.txt
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: build-gg-2-0-20-apk
@@ -17,6 +24,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.ref == 'fix/page5-missing-constructor-mobile-bridge-20260806'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -26,6 +34,43 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+
+      - name: Record running state
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          payload = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'state': 'running',
+              'ok': False,
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'runAttempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'artifactId': None,
+              'apk': {
+                  'fileName': 'GG-2.0.20-page5-stability-code100.apk',
+                  'package': 'com.jinli.quickweb',
+                  'versionName': '2.0.20-page5-stability',
+                  'versionCode': 100,
+                  'sha256': '',
+              },
+          }
+          with open('docs/GG_2_0_20_APK_STATUS.json', 'w', encoding='utf-8') as f:
+              json.dump(payload, f, ensure_ascii=False, indent=2)
+              f.write('\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/GG_2_0_20_APK_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record GG 2.0.20 APK build start'
+            git push origin HEAD:main
+          fi
 
       - name: Checkout implementation
         uses: actions/checkout@v4
@@ -106,7 +151,6 @@ jobs:
                   'sha256': os.environ.get('APK_SHA', ''),
               },
               'sourceBranch': 'fix/page5-missing-constructor-mobile-bridge-20260806',
-              'sourceCommit': '126495d8a48f5bf85c2b19b97ec9921d7bbe5adb',
               'secretsExposed': False,
           }
           with open('/tmp/GG_2_0_20_APK_STATUS.json', 'w', encoding='utf-8') as f:
