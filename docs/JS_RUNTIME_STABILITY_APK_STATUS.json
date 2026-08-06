@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-06T21:02:41Z",
+  "generatedAt": "2026-08-06T21:03:12Z",
   "runId": 31128033350,
-  "state": "running",
+  "state": "failed",
   "ok": false,
   "apk": {
     "versionName": "2.0.14-page5-stability",
@@ -11,5 +11,11 @@
   },
   "repairScope": "runtime-stability-only",
   "workflowRevision": 2,
+  "steps": {
+    "verify": "failure",
+    "identifiers": "skipped",
+    "apk": "skipped",
+    "artifact": "skipped"
+  },
   "secretsExposed": false
 }
