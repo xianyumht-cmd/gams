@@ -1,28 +1,195 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05T23:21:08Z",
+  "generatedAt": "2026-08-06T04:06:38Z",
   "runId": 31056034960,
   "state": "completed",
-  "workflowOutcome": "skipped",
-  "ok": false,
+  "workflowOutcome": "failure",
+  "probeExecutionOutcome": "success",
+  "publishOutcome": "failure",
+  "ok": true,
   "mode": "page5-second-purchase-callback-scope-probe",
   "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
   "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
-  "snapshotCount": 0,
-  "breakpointCount": 0,
-  "boundBreakpointCount": 0,
-  "stageSnapshotCounts": {},
+  "snapshotCount": 5,
+  "breakpointCount": 4,
+  "boundBreakpointCount": 4,
+  "stageSnapshotCounts": {
+    "first": 1,
+    "second": 4
+  },
   "expectedStages": [
     "first",
     "second",
     "third-after-reentry"
   ],
-  "snapshotIndex": [],
-  "attemptIndex": [],
+  "snapshotIndex": [
+    {
+      "configuredLabel": "click-confirm-before-router",
+      "configuredColumnNumber": 2046389,
+      "actualColumnNumber": 2046389,
+      "stage": "first",
+      "selectedFrame": {
+        "functionName": "",
+        "lineNumber": 0,
+        "columnNumber": 2046389,
+        "values": {
+          "stage": "first",
+          "NO": 0,
+          "g4": 0,
+          "SH": 0,
+          "buyNumber": null,
+          "itemType": null,
+          "itemPrice": null,
+          "userIsLogin": null,
+          "Sf": {
+            "type": "object",
+            "count": -717479701,
+            "max": 1,
+            "isRepeat": null,
+            "itemDiscount": null
+          }
+        }
+      }
+    },
+    {
+      "configuredLabel": "click-confirm-before-router",
+      "configuredColumnNumber": 2046389,
+      "actualColumnNumber": 2046389,
+      "stage": "second",
+      "selectedFrame": {
+        "functionName": "",
+        "lineNumber": 0,
+        "columnNumber": 2046389,
+        "values": {
+          "stage": "second",
+          "NO": 0,
+          "g4": 0,
+          "SH": 1,
+          "buyNumber": null,
+          "itemType": null,
+          "itemPrice": null,
+          "userIsLogin": null,
+          "Sf": {
+            "type": "object",
+            "count": -717479702,
+            "max": 1,
+            "isRepeat": null,
+            "itemDiscount": null
+          }
+        }
+      }
+    },
+    {
+      "configuredLabel": "click-confirm-after-router",
+      "configuredColumnNumber": 2058919,
+      "actualColumnNumber": 2058919,
+      "stage": "second",
+      "selectedFrame": {
+        "functionName": "<computed>",
+        "lineNumber": 0,
+        "columnNumber": 2058919,
+        "values": {
+          "stage": "second",
+          "NO": 0,
+          "g4": 0,
+          "SH": 1,
+          "buyNumber": 1,
+          "itemType": 2,
+          "itemPrice": -717479701,
+          "userIsLogin": null,
+          "Sf": {
+            "type": "object",
+            "count": -717479702,
+            "max": 1,
+            "isRepeat": null,
+            "itemDiscount": null
+          }
+        }
+      }
+    },
+    {
+      "configuredLabel": "purchase-router",
+      "configuredColumnNumber": 1935617,
+      "actualColumnNumber": 1935617,
+      "stage": "second",
+      "selectedFrame": {
+        "functionName": "jH",
+        "lineNumber": 0,
+        "columnNumber": 1935617,
+        "values": {
+          "stage": "second",
+          "NO": 0,
+          "g4": 0,
+          "SH": 0,
+          "buyNumber": null,
+          "itemType": null,
+          "itemPrice": null,
+          "userIsLogin": null,
+          "Sf": {
+            "type": "number",
+            "count": null,
+            "max": null,
+            "isRepeat": null,
+            "itemDiscount": null
+          }
+        }
+      }
+    },
+    {
+      "configuredLabel": "login-entry",
+      "configuredColumnNumber": 3522415,
+      "actualColumnNumber": 3522415,
+      "stage": "second",
+      "selectedFrame": {
+        "functionName": "<computed>",
+        "lineNumber": 0,
+        "columnNumber": 3522415,
+        "values": {
+          "stage": "second",
+          "NO": 0,
+          "g4": 0,
+          "SH": "[function]",
+          "buyNumber": null,
+          "itemType": null,
+          "itemPrice": null,
+          "userIsLogin": null,
+          "Sf": {
+            "type": "object",
+            "count": null,
+            "max": null,
+            "isRepeat": true,
+            "itemDiscount": 0
+          }
+        }
+      }
+    }
+  ],
+  "attemptIndex": [
+    {
+      "label": "first",
+      "interactionObserved": true,
+      "screenChanged": true,
+      "urlClass": "page"
+    },
+    {
+      "label": "second",
+      "interactionObserved": true,
+      "screenChanged": true,
+      "urlClass": "browser-error"
+    },
+    {
+      "label": "third-after-reentry",
+      "interactionObserved": true,
+      "screenChanged": true,
+      "urlClass": "page"
+    }
+  ],
   "pageErrorCount": 0,
   "blockedOrderCount": 0,
-  "blockedExternalNavigationCount": 0,
+  "blockedExternalNavigationCount": 1,
   "artifactName": "page5-second-purchase-callback-scope",
+  "artifactId": 8955379002,
+  "artifactDigest": "sha256:4eeeeb20e68d3cbe4303f10581ba38934f984b260b5bdf3f53bd0aca17671e9a",
   "candidatePrepared": false,
   "correctionApplied": false,
   "realOrderRequestsAllowed": false,
