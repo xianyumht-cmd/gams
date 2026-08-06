@@ -6,8 +6,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  actions: write
-  contents: read
+  contents: write
   pull-requests: read
 
 concurrency:
@@ -15,15 +14,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  dispatch:
+  repair-workflow:
     if: github.event.pull_request.head.ref == 'trigger/js-runtime-stability-apk-20260807'
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch corrected build workflow
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Preserve Java newline escapes in Python replacement
+        shell: bash
         run: |
           set -euo pipefail
-          gh workflow run build-js-runtime-stability-apk-v2.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            --ref main
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/build-js-runtime-stability-apk-v2.yml')
+          text = path.read_text(encoding='utf-8')
+
+          old = 'updated, count = pattern.subn(replacement, text, count=1)'
+          new = 'updated, count = pattern.subn(lambda _match: replacement, text, count=1)'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one unsafe replacement call, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old_indent = "\n          private static String patchEngineWrapper'''"
+          new_indent = "\n              private static String patchEngineWrapper'''"
+          if old_indent in text:
+              text = text.replace(old_indent, new_indent, 1)
+
+          path.write_text(text, encoding='utf-8', newline='')
+          PY
+
+      - name: Commit workflow repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/build-js-runtime-stability-apk-v2.yml
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'Workflow already repaired'; exit 0; }
+          git commit -m 'build: preserve Java newline escapes in stability workflow'
+          git push origin HEAD:main
