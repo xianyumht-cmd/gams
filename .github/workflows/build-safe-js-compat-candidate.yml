@@ -47,6 +47,7 @@ jobs:
       - name: Build and verify isolated candidate
         shell: bash
         run: |
+          sed -i '/^ARTIFACT_DIR=/a export RUNTIME_DIR RUNTIME_VERSION SECOND_SIZE SECOND_SHA256 RUNTIME_MASTER_KEY FIRST_FILE SECOND_FILE' scripts/build_safe_js_compat_candidate.sh
           chmod +x scripts/build_safe_js_compat_candidate.sh
           scripts/build_safe_js_compat_candidate.sh
 
