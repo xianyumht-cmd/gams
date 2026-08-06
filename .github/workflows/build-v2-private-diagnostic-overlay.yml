@@ -38,13 +38,14 @@ jobs:
           test -n "${GG_RELEASE_KEYSTORE_BASE64:-}"
           test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}"
 
-      - name: Apply diagnostic base, privacy layer and export fix
+      - name: Apply diagnostic base, privacy layer, export fix and event-chain probe
         shell: bash
         run: |
           set -euo pipefail
           python3 v2_diagnostics_patch/apply.py
           python3 v2_privacy_strict_patch/apply.py
           python3 v2_privacy_strict_patch/fix_export_audit.py
+          python3 v2_privacy_strict_patch/add_event_chain_probe.py
           node --check v2/android/client/src/main/assets/diagnostic-prelude.js
           node --check v2/android/client/src/main/assets/diagnostic-postlude.js
 
@@ -52,8 +53,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'versionCode = 29' v2/android/client/build.gradle.kts
-          grep -Fq 'versionName = "2.0.18-private-diagnostic-exportfix"' v2/android/client/build.gradle.kts
+          grep -Fq 'versionCode = 30' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.19-private-event-chain"' v2/android/client/build.gradle.kts
           grep -Fq 'PROTOCOL_APP_VERSION = 25' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
           grep -Fq 'android:label="匿名诊断工具"' v2/android/client/src/main/AndroidManifest.xml
           grep -Fq 'auditDetailValue(record.opt("detail"), 0)' v2/android/client/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
@@ -65,6 +66,10 @@ jobs:
           grep -Fq 'callback_state' v2/android/client/src/main/assets/diagnostic-postlude.js
           grep -Fq 'routeToken' v2/android/client/src/main/assets/diagnostic-prelude.js
           grep -Fq 'selectorToken' v2/android/client/src/main/assets/diagnostic-prelude.js
+          grep -Fq 'event_chain_probe_installed' v2/android/client/src/main/assets/diagnostic-prelude.js
+          grep -Fq 'action_listener_enter' v2/android/client/src/main/assets/diagnostic-prelude.js
+          grep -Fq 'action_listener_throw' v2/android/client/src/main/assets/diagnostic-prelude.js
+          grep -Fq 'action_settled' v2/android/client/src/main/assets/diagnostic-prelude.js
           grep -Fq 'getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE)' v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java
 
           combined="/tmp/private-diagnostic-sources.txt"
@@ -74,7 +79,7 @@ jobs:
             '66rpg' 'cgyouxi' 'createBuyOrder' 'goods_id' 'buy_num' \
             'mallViewData' 'https://' 'http://' 'userAgentHash' 'messageHash' \
             'stackHash' 'sha256' 'textLength' 'className' 'responseBody' \
-            'requestBody'; do
+            'requestBody' 'innerText' 'textContent' 'outerHTML'; do
             if grep -Fiq "$forbidden" "$combined"; then
               echo "Strict privacy guard failed: $forbidden" >&2
               exit 1
@@ -107,7 +112,7 @@ jobs:
           test -x "$apksigner" && test -x "$aapt"
 
           mkdir -p dist-private-diagnostic
-          signed="dist-private-diagnostic/GG-2.0.18-strict-private-diagnostic-exportfix-code29.apk"
+          signed="dist-private-diagnostic/GG-2.0.19-strict-private-event-chain-code30.apk"
           "$apksigner" sign \
             --ks /tmp/gg-release.jks \
             --ks-key-alias gg-release \
@@ -127,7 +132,7 @@ jobs:
           test "$actual_digest" = "$expected_digest"
 
           "$aapt" dump badging "$signed" > /tmp/aapt-v2-private-diagnostic.txt
-          grep -Fq "package: name='com.jinli.quickweb' versionCode='29' versionName='2.0.18-private-diagnostic-exportfix'" /tmp/aapt-v2-private-diagnostic.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='30' versionName='2.0.19-private-event-chain'" /tmp/aapt-v2-private-diagnostic.txt
           unzip -l "$signed" > /tmp/apk-v2-private-diagnostic-files.txt
           grep -Fq 'assets/diagnostic-prelude.js' /tmp/apk-v2-private-diagnostic-files.txt
           grep -Fq 'assets/diagnostic-postlude.js' /tmp/apk-v2-private-diagnostic-files.txt
@@ -136,24 +141,24 @@ jobs:
 
           sha256sum "$signed" > dist-private-diagnostic/SHA256SUMS.txt
           cat > dist-private-diagnostic/使用说明.txt <<'TXT'
-          严格匿名诊断导出修复覆盖版：
+          严格匿名事件链诊断覆盖版：
           - package: com.jinli.quickweb
-          - versionCode: 29
+          - versionCode: 30
           - runtime protocol: 25
-          - 正式 gg-release 证书签名，可覆盖 code26/code28
-          - 修复固定事件名被误判为密钥而导致“日志导出失败”的问题
-          - 增加分享 URI 兼容授权
-          - 不修改目标 JS、请求、响应或功能结果，只增加匿名运行记录
-          - 不导出域名/网址特征、稳定哈希、页面文字、对象字段、脚本摘要或精确资源指纹
-          - JS 对象字段统一改为 F1/F2 等本次记录结构编号
-          - 路由、选择器、回调和错误只使用本次运行有效的临时编号
+          - 正式 gg-release 证书签名，可覆盖 code26/code28/code29
+          - 不修改目标 JS、请求、响应或功能结果，只追踪匿名事件控制流
+          - 记录监听器是否注册、进入、正常返回、抛错、移除
+          - 记录 preventDefault、stopPropagation、stopImmediatePropagation
+          - 记录捕获、冒泡和事件结束状态
+          - 监听器、目标元素、路由、选择器和错误均只使用本次运行有效的临时编号
+          - 不导出域名、网址特征、页面文字、元素 id/class、函数名、对象字段或脚本摘要
 
-          不要卸载原应用。直接覆盖安装。安装后点击“日志→清空”，彻底关闭 App，再打开并完整复现至少两次，最后导出 ZIP。
+          不要卸载原应用。直接覆盖安装。安装后点击“日志→清空”，彻底关闭 App，再打开；到失效页面后连续点击失效入口 3 次，等待 5 秒，最后导出 ZIP。
           TXT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-2.0.18-strict-private-diagnostic-exportfix-overlay-code29
+          name: GG-2.0.19-strict-private-event-chain-overlay-code30
           path: dist-private-diagnostic/*
           retention-days: 14
           if-no-files-found: error
@@ -162,7 +167,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: GG-V2-strict-private-diagnostic-exportfix-build-logs
+          name: GG-V2-strict-private-event-chain-build-logs
           path: |
             /tmp/gradle-v2-private-diagnostic.log
             /tmp/keytool-v2-private-diagnostic.txt
