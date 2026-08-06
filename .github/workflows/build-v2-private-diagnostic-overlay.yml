@@ -38,12 +38,13 @@ jobs:
           test -n "${GG_RELEASE_KEYSTORE_BASE64:-}"
           test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}"
 
-      - name: Apply diagnostic base and strict privacy layer
+      - name: Apply diagnostic base, privacy layer and export fix
         shell: bash
         run: |
           set -euo pipefail
           python3 v2_diagnostics_patch/apply.py
           python3 v2_privacy_strict_patch/apply.py
+          python3 v2_privacy_strict_patch/fix_export_audit.py
           node --check v2/android/client/src/main/assets/diagnostic-prelude.js
           node --check v2/android/client/src/main/assets/diagnostic-postlude.js
 
@@ -51,11 +52,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'versionCode = 28' v2/android/client/build.gradle.kts
-          grep -Fq 'versionName = "2.0.17-private-diagnostic"' v2/android/client/build.gradle.kts
+          grep -Fq 'versionCode = 29' v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.18-private-diagnostic-exportfix"' v2/android/client/build.gradle.kts
           grep -Fq 'PROTOCOL_APP_VERSION = 25' v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java
           grep -Fq 'android:label="匿名诊断工具"' v2/android/client/src/main/AndroidManifest.xml
-          grep -Fq 'assertPrivacySafe(logFile)' v2/android/client/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
+          grep -Fq 'auditDetailValue(record.opt("detail"), 0)' v2/android/client/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
+          grep -Fq 'String anonymousName = "F" + (i + 1)' v2/android/client/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
+          grep -Fq 'ClipData.newRawUri' v2/android/client/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
           grep -Fq 'No exact or hashed domain' v2/android/client/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
           grep -Fq 'privateSessionNonce' v2/android/client/src/main/java/com/jinli/ggsecure/DiagnosticLogger.java
           grep -Fq 'dynamic_script_start' v2/android/client/src/main/assets/diagnostic-postlude.js
@@ -104,7 +107,7 @@ jobs:
           test -x "$apksigner" && test -x "$aapt"
 
           mkdir -p dist-private-diagnostic
-          signed="dist-private-diagnostic/GG-2.0.17-strict-private-diagnostic-code28.apk"
+          signed="dist-private-diagnostic/GG-2.0.18-strict-private-diagnostic-exportfix-code29.apk"
           "$apksigner" sign \
             --ks /tmp/gg-release.jks \
             --ks-key-alias gg-release \
@@ -124,7 +127,7 @@ jobs:
           test "$actual_digest" = "$expected_digest"
 
           "$aapt" dump badging "$signed" > /tmp/aapt-v2-private-diagnostic.txt
-          grep -Fq "package: name='com.jinli.quickweb' versionCode='28' versionName='2.0.17-private-diagnostic'" /tmp/aapt-v2-private-diagnostic.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='29' versionName='2.0.18-private-diagnostic-exportfix'" /tmp/aapt-v2-private-diagnostic.txt
           unzip -l "$signed" > /tmp/apk-v2-private-diagnostic-files.txt
           grep -Fq 'assets/diagnostic-prelude.js' /tmp/apk-v2-private-diagnostic-files.txt
           grep -Fq 'assets/diagnostic-postlude.js' /tmp/apk-v2-private-diagnostic-files.txt
@@ -133,22 +136,24 @@ jobs:
 
           sha256sum "$signed" > dist-private-diagnostic/SHA256SUMS.txt
           cat > dist-private-diagnostic/使用说明.txt <<'TXT'
-          严格匿名诊断覆盖版：
+          严格匿名诊断导出修复覆盖版：
           - package: com.jinli.quickweb
-          - versionCode: 28
+          - versionCode: 29
           - runtime protocol: 25
-          - 正式 gg-release 证书签名，可覆盖 code26/code27
+          - 正式 gg-release 证书签名，可覆盖 code26/code28
+          - 修复固定事件名被误判为密钥而导致“日志导出失败”的问题
+          - 增加分享 URI 兼容授权
           - 不修改目标 JS、请求、响应或功能结果，只增加匿名运行记录
           - 不导出域名/网址特征、稳定哈希、页面文字、对象字段、脚本摘要或精确资源指纹
+          - JS 对象字段统一改为 F1/F2 等本次记录结构编号
           - 路由、选择器、回调和错误只使用本次运行有效的临时编号
-          - 导出前执行二次隐私审计，发现疑似标识会拒绝导出
 
-          不要卸载原应用。覆盖后先点击“日志→清空”，彻底关闭 App，再打开并完整复现至少两次，最后导出 ZIP。
+          不要卸载原应用。直接覆盖安装。安装后点击“日志→清空”，彻底关闭 App，再打开并完整复现至少两次，最后导出 ZIP。
           TXT
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-2.0.17-strict-private-diagnostic-overlay-code28
+          name: GG-2.0.18-strict-private-diagnostic-exportfix-overlay-code29
           path: dist-private-diagnostic/*
           retention-days: 14
           if-no-files-found: error
@@ -157,7 +162,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: GG-V2-strict-private-diagnostic-build-logs
+          name: GG-V2-strict-private-diagnostic-exportfix-build-logs
           path: |
             /tmp/gradle-v2-private-diagnostic.log
             /tmp/keytool-v2-private-diagnostic.txt
