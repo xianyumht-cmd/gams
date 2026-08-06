@@ -1,6 +1,8 @@
 from pathlib import Path
 import re
 
+# This version must be higher than the installed formal GG build so Android can
+# perform an in-place update while preserving the existing app data.
 build_path = Path("client/build.gradle.kts")
 text = build_path.read_text(encoding="utf-8")
 text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 13", text, count=1)
