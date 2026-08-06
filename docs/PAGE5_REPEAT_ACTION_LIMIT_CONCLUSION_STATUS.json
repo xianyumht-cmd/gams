@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-06T09:29:00Z",
+  "state": "completed",
+  "ok": true,
+  "mode": "page5-repeat-action-state-semantics",
+  "implementationRef": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "implementationCommit": "a1de079f395642fe2f2c081492f286239538812c",
+  "runtimeSha256": "57765fbb8d9a0529ed1463623f1bed9c05052e76396a6aaa89fdd2ecc673bc72",
+  "observed": {
+    "firstUsage": 0,
+    "secondUsage": 1,
+    "thirdAfterRuntimeReentryUsage": 0,
+    "configuredMaximum": 1,
+    "requestedQuantity": 1,
+    "secondConditionPasses": false,
+    "duplicateListenerConfirmed": false,
+    "pageLifecycleDefectConfirmed": false
+  },
+  "conclusion": "The second same-runtime action follows the session path because recorded usage is already equal to the configured maximum. Resetting the runtime usage, increasing the maximum, or suppressing that path would alter the existing authorization/limit outcome and is not a compatibility-only correction.",
+  "changes": {
+    "runtimeModified": false,
+    "androidClientModified": false,
+    "productionDefaultModified": false,
+    "apkBuilt": false
+  },
+  "evidence": {
+    "tripletRunId": 31071348661,
+    "tripletArtifactId": 8955829075,
+    "callchainRunId": 31055050294,
+    "callchainArtifactId": 8949917252
+  }
+}
