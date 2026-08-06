@@ -3,91 +3,108 @@
   const diag = window.__GG_DIAGNOSTICS__;
   if (!diag) return;
   const wrapped = typeof WeakSet === 'function' ? new WeakSet() : null;
+  const functionIds = typeof WeakMap === 'function' ? new WeakMap() : null;
+  const objectIds = typeof WeakMap === 'function' ? new WeakMap() : null;
+  const excludedKeys = new Set(['__GG_DIAGNOSTICS__', '__GG_DIAG__']);
 
   function emit(event, detail) { diag.emit(event, detail); }
   function shape(value) { return diag.shape(value, 0); }
-  function safeName(value) {
-    const text = String(value == null ? '' : value);
-    return /^[A-Za-z0-9_$.:/-]{1,96}$/.test(text) ? text : 'id#' + diag.hash(text);
+  function functionId(fn) {
+    if (functionIds && functionIds.has(fn)) return functionIds.get(fn);
+    const id = diag.token('api', fn);
+    if (functionIds) functionIds.set(fn, id);
+    return id;
+  }
+  function objectId(object) {
+    if (objectIds && objectIds.has(object)) return objectIds.get(object);
+    const id = diag.token('object', object);
+    if (objectIds) objectIds.set(object, id);
+    return id;
   }
 
-  function wrapFunction(owner, key, path) {
+  function wrapFunction(owner, key, sourceKind) {
     let original;
     try { original = owner[key]; } catch (_) { return false; }
     if (typeof original !== 'function') return false;
     if (original.__ggDiagWrapped || (wrapped && wrapped.has(original))) return false;
+    const api = functionId(original);
     const proxy = function () {
       const args = Array.prototype.slice.call(arguments);
       const started = performance.now();
-      emit('api_call_start', { api: safeName(path), args: args.slice(0, 12).map(shape) });
+      emit('api_call_start', { api: api, sourceKind: sourceKind, argCount: args.length, args: args.slice(0, 12).map(shape) });
       try {
         const result = original.apply(this, args);
         if (result && typeof result.then === 'function') {
           return result.then(function (value) {
-            emit('api_call_resolve', { api: safeName(path), result: shape(value), durationMs: Math.round(performance.now() - started) });
+            emit('api_call_resolve', { api: api, result: shape(value), durationMs: Math.round(performance.now() - started) });
             return value;
           }, function (error) {
-            emit('api_call_reject', { api: safeName(path), error: shape(error), durationMs: Math.round(performance.now() - started) });
+            emit('api_call_reject', { api: api, error: shape(error), durationMs: Math.round(performance.now() - started) });
             throw error;
           });
         }
-        emit('api_call_return', { api: safeName(path), result: shape(result), durationMs: Math.round(performance.now() - started) });
+        emit('api_call_return', { api: api, result: shape(result), durationMs: Math.round(performance.now() - started) });
         return result;
       } catch (error) {
-        emit('api_call_throw', { api: safeName(path), error: shape(error), durationMs: Math.round(performance.now() - started) });
+        emit('api_call_throw', { api: api, error: shape(error), durationMs: Math.round(performance.now() - started) });
         throw error;
       }
     };
     try {
-      Object.defineProperty(proxy, 'name', { value: original.name || String(key), configurable: true });
       proxy.__ggDiagWrapped = true;
-      proxy.__ggDiagOriginal = original;
       owner[key] = proxy;
       if (wrapped) wrapped.add(original);
-      emit('api_wrapped', { api: safeName(path), arity: original.length });
+      emit('api_wrapped', { api: api, sourceKind: sourceKind, arity: original.length });
       return true;
     } catch (_) {
       return false;
     }
   }
 
-  let lastInventory = '';
+  function scanObjectMethods(object, limit) {
+    let wrappedCount = 0;
+    if (!object || (typeof object !== 'object' && typeof object !== 'function')) return 0;
+    let keys = [];
+    try { keys = Object.keys(object).slice(0, limit); } catch (_) { return 0; }
+    const owner = objectId(object);
+    keys.forEach(function (key) {
+      if (wrapFunction(object, key, 'object-method')) wrappedCount += 1;
+    });
+    if (wrappedCount > 0) emit('api_object_inventory', { owner: owner, keyCount: keys.length, wrappedCount: wrappedCount });
+    return wrappedCount;
+  }
+
   let scans = 0;
+  let previousInventory = -1;
   function scanApis() {
     scans += 1;
-    const names = [];
+    let candidateCount = 0;
+    let wrappedCount = 0;
     try {
       Object.getOwnPropertyNames(window).forEach(function (key) {
-        if (key.indexOf('noname.') === 0) {
-          names.push(key);
-          wrapFunction(window, key, 'window[' + key + ']');
+        if (excludedKeys.has(key) || diag.baselineWindowKeys.has(key)) return;
+        candidateCount += 1;
+        let value;
+        try { value = window[key]; } catch (_) { return; }
+        if (typeof value === 'function') {
+          if (wrapFunction(window, key, 'new-global-function')) wrappedCount += 1;
+        } else if (value && (typeof value === 'object' || typeof value === 'function')) {
+          wrappedCount += scanObjectMethods(value, 64);
         }
       });
     } catch (_) {}
-    try {
-      const object = window.noname;
-      if (object && (typeof object === 'object' || typeof object === 'function')) {
-        Object.keys(object).forEach(function (key) {
-          names.push('noname.' + key);
-          wrapFunction(object, key, 'noname.' + key);
-        });
-      }
-    } catch (_) {}
-    names.sort();
-    const fingerprint = diag.hash(names.join('|'));
-    if (fingerprint !== lastInventory) {
-      lastInventory = fingerprint;
-      emit('api_inventory', { count: names.length, fingerprint: 'api#' + fingerprint, sample: names.slice(0, 20).map(safeName) });
+    if (candidateCount !== previousInventory || wrappedCount > 0) {
+      previousInventory = candidateCount;
+      emit('api_inventory', { candidateCount: candidateCount, wrappedCount: wrappedCount, scan: scans });
     }
     if (scans < 40) setTimeout(scanApis, 500);
-    else emit('api_scan_complete', { scans: scans, inventory: 'api#' + lastInventory });
+    else emit('api_scan_complete', { scans: scans, candidateCount: candidateCount });
   }
 
   emit('payload_executed', {
     elapsedMs: Date.now() - diag.startedAt,
     readyState: document.readyState,
-    remoteInstalled: !!window.__REMOTE_SCRIPT_INSTALLED__,
-    quickWebInstalled: !!window.__QUICK_WEB_APP_SCRIPT_LOADED__
+    newGlobalCount: Math.max(0, Object.getOwnPropertyNames(window).length - diag.baselineWindowKeys.size)
   });
   scanApis();
 
