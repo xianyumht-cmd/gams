@@ -34,7 +34,12 @@ final class RuntimePayload {
         if (noname == null || game == null) throw new SecurityException("运行包内容不完整");
         verify(noname, manifest.getInt("nonameSize"), manifest.getString("nonameSha256"), "控制层");
         verify(game, manifest.getInt("gameSize"), manifest.getString("gameSha256"), "引擎层");
-        return new RuntimePayload(noname, game);
+
+        byte[] stableNoname = RuntimeStabilityPatch.patchNoname(noname);
+        byte[] stableGame = RuntimeStabilityPatch.patchGame(game);
+        Arrays.fill(noname, (byte) 0);
+        Arrays.fill(game, (byte) 0);
+        return new RuntimePayload(stableNoname, stableGame);
     }
 
     synchronized String nonameSource() {
