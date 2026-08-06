@@ -1,0 +1,94 @@
+name: Export page5 implementation source
+
+on:
+  push:
+    branches:
+      - diagnostics/page5-guard-full-entry-20260805
+    paths:
+      - .github/workflows/export-page5-implementation-source.yml
+      - scripts/page5_implementation_source_export.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page5-implementation-source-export-20260806
+  cancel-in-progress: true
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      IMPLEMENTATION_REF: fix/page5-missing-constructor-mobile-bridge-20260806
+      WORKTREE: /tmp/gams-page5-source
+      EXPORT_DIR: /tmp/page5-implementation-source
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnostics/page5-guard-full-entry-20260805
+          fetch-depth: 0
+
+      - name: Prepare implementation source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$IMPLEMENTATION_REF:refs/remotes/origin/$IMPLEMENTATION_REF"
+          rm -rf "$WORKTREE" "$EXPORT_DIR"
+          git worktree add --detach "$WORKTREE" "origin/$IMPLEMENTATION_REF"
+          mkdir -p "$EXPORT_DIR"
+          cp --parents \
+            "$WORKTREE/game-engine/release/game-1.0.5.js" \
+            "$WORKTREE/v2/android/client/src/main/java/com/jinli/ggsecure/MainActivity.java" \
+            "$WORKTREE/v2/android/client/src/main/java/com/jinli/ggsecure/RuntimePayload.java" \
+            "$WORKTREE/v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java" \
+            "$WORKTREE/v2/android/client/build.gradle.kts" \
+            "$WORKTREE/v2/android/settings.gradle.kts" \
+            "$WORKTREE/v2/runtime/src/index.js" \
+            "$WORKTREE/v2/runtime/package.json" \
+            "$EXPORT_DIR"
+          if [[ -d "$WORKTREE/scripts" ]]; then
+            mkdir -p "$EXPORT_DIR/scripts"
+            cp -a "$WORKTREE/scripts/." "$EXPORT_DIR/scripts/"
+          fi
+          git -C "$WORKTREE" rev-parse HEAD > "$EXPORT_DIR/IMPLEMENTATION_COMMIT.txt"
+          sha256sum "$WORKTREE/game-engine/release/game-1.0.5.js" > "$EXPORT_DIR/GAME_ENGINE_SHA256.txt"
+          tar -C "$EXPORT_DIR" -czf /tmp/page5-implementation-source.tar.gz .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: page5-implementation-source
+          path: /tmp/page5-implementation-source.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Publish export status
+        shell: bash
+        run: |
+          set -euo pipefail
+          implementation_commit="$(git -C "$WORKTREE" rev-parse HEAD)"
+          runtime_sha="$(sha256sum "$WORKTREE/game-engine/release/game-1.0.5.js" | awk '{print $1}')"
+          python3 - <<PY
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          status = {
+            'schemaVersion': 1,
+            'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+            'runId': int(os.environ['GITHUB_RUN_ID']),
+            'state': 'completed',
+            'ok': True,
+            'implementationRef': os.environ['IMPLEMENTATION_REF'],
+            'implementationCommit': '$implementation_commit',
+            'runtimeSha256': '$runtime_sha',
+            'artifactName': 'page5-implementation-source',
+          }
+          Path('docs/PAGE5_IMPLEMENTATION_SOURCE_EXPORT_STATUS.json').write_text(json.dumps(status, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin diagnostics/page5-guard-full-entry-20260805
+          git add docs/PAGE5_IMPLEMENTATION_SOURCE_EXPORT_STATUS.json
+          git commit -m "Record page5 implementation source export"
+          git push origin HEAD:diagnostics/page5-guard-full-entry-20260805
