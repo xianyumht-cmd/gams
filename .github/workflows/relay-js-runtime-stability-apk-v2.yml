@@ -1,0 +1,29 @@
+name: Relay corrected JS runtime stability APK build
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: relay-js-runtime-stability-apk-v2-20260807
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.event.pull_request.head.ref == 'trigger/js-runtime-stability-apk-20260807'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch corrected build workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run build-js-runtime-stability-apk-v2.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main
