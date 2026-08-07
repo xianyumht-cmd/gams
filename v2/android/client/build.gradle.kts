@@ -6,8 +6,8 @@ android {
         applicationId = "com.jinli.quickweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 102
-        versionName = "2.0.22-mobile-sheet-action-fix"
+        versionCode = 103
+        versionName = "2.0.23-root-source-ui-repeat-fix"
     }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
