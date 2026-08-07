@@ -28,7 +28,8 @@ final class RuntimeExperiencePatch {
     "[class*='order']",
     "[class*='goods']",
   ].join(",");
-  const purchaseText = /购买|确认购买|立即购买|兑换|确认|确定|领取/;
+  const purchaseText = /购买|确认购买|立即购买|兑换/;
+  const confirmText = /确认|确定/;
   const purchaseHint = /buy|purchase|order|goods|mall|pay|shop/i;
   let sequence = 0;
 
@@ -171,12 +172,12 @@ final class RuntimeExperiencePatch {
         color: #8292aa !important;
       }
       .gg-runtime-fab-v3 {
+        position: relative !important;
         width: 54px !important;
         height: 54px !important;
         border: 1px solid rgba(94, 234, 212, .48) !important;
         border-radius: 18px !important;
-        background:
-          linear-gradient(145deg, rgba(15, 23, 42, .96), rgba(30, 41, 59, .92)) !important;
+        background: linear-gradient(145deg, rgba(15, 23, 42, .96), rgba(30, 41, 59, .92)) !important;
         color: var(--gg-v3-accent) !important;
         box-shadow: 0 14px 34px rgba(2, 6, 23, .48), inset 0 1px 0 rgba(255, 255, 255, .12) !important;
         font-size: 17px !important;
@@ -206,9 +207,15 @@ final class RuntimeExperiencePatch {
   function markThemeNodes(root = document) {
     installTheme();
     const scope = root && root.querySelectorAll ? root : document;
+    if (root instanceof Element && root.matches(".orange-panel-head")) {
+      root.parentElement?.classList.add("gg-runtime-panel-v3");
+    }
     scope.querySelectorAll(".orange-panel-head").forEach((head) => {
       const panel = head.parentElement;
       if (panel) panel.classList.add("gg-runtime-panel-v3");
+    });
+    scope.querySelectorAll(".orange-panel-meta span:last-child").forEach((meta) => {
+      meta.textContent = "深色玻璃主题";
     });
     scope.querySelectorAll("button").forEach((button) => {
       const title = String(button.title || "");
@@ -224,8 +231,12 @@ final class RuntimeExperiencePatch {
     const control = element.closest(purchaseSelector);
     if (!control) return false;
     const text = String(control.textContent || control.getAttribute("aria-label") || "").trim();
-    const hint = `${control.id || ""} ${control.className || ""} ${control.getAttribute("data-action") || ""}`;
-    return purchaseText.test(text) || purchaseHint.test(hint);
+    const context = control.closest(
+      "[class*='mall'],[class*='shop'],[class*='goods'],[class*='order'],[class*='buy']," +
+      "[id*='mall'],[id*='shop'],[id*='goods'],[id*='order'],[id*='buy']"
+    );
+    const hint = `${control.id || ""} ${control.className || ""} ${control.getAttribute("data-action") || ""} ${context?.id || ""} ${context?.className || ""}`;
+    return purchaseText.test(text) || (confirmText.test(text) && purchaseHint.test(hint)) || purchaseHint.test(hint);
   }
 
   function recoverControl(control) {
@@ -244,6 +255,7 @@ final class RuntimeExperiencePatch {
 
   function recoverPurchaseUi(root = document) {
     const scope = root && root.querySelectorAll ? root : document;
+    if (root instanceof Element && isPurchaseControl(root)) recoverControl(root);
     scope.querySelectorAll(purchaseSelector).forEach((control) => {
       if (isPurchaseControl(control)) recoverControl(control);
     });
