@@ -1,4 +1,4 @@
-name: Deliver GG 2.0.20 APK
+name: Deliver GG 2.0.21 APK
 
 on:
   workflow_run:
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: deliver-gg-2-0-20-apk
+  group: deliver-gg-2-0-21-apk
   cancel-in-progress: false
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
         if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: GG-2.0.20-page5-stability-code100
+          name: GG-2.0.21-runtime-ui-repeat-fix-code101
           path: artifact/**
           retention-days: 30
           if-no-files-found: error
@@ -95,7 +95,7 @@ jobs:
           artifact_id = os.environ.get('ARTIFACT_ID', '')
           ok = os.environ.get('OK') == 'true'
           payload = {
-              'schemaVersion': 2,
+              'schemaVersion': 3,
               'generatedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
               'state': 'completed' if ok else 'failed',
               'ok': ok,
@@ -109,16 +109,20 @@ jobs:
               'artifactId': int(artifact_id) if artifact_id else None,
               'artifactUrl': os.environ.get('ARTIFACT_URL', ''),
               'apk': {
-                  'fileName': 'GG-2.0.20-page5-stability-code100.apk',
+                  'fileName': 'GG-2.0.21-runtime-ui-repeat-fix-code101.apk',
                   'package': 'com.jinli.quickweb',
-                  'versionName': '2.0.20-page5-stability',
-                  'versionCode': 100,
+                  'versionName': '2.0.21-runtime-ui-repeat-fix',
+                  'versionCode': 101,
                   'sha256': os.environ.get('APK_SHA', ''),
+              },
+              'changes': {
+                  'uiTheme': 'dark-glass-v3',
+                  'repeatActionRecovery': 'per-request-jsonp-v3',
               },
               'sourceBranch': 'fix/page5-missing-constructor-mobile-bridge-20260806',
               'secretsExposed': False,
           }
-          with open('/tmp/GG_2_0_20_DELIVERY_STATUS.json', 'w', encoding='utf-8') as f:
+          with open('/tmp/GG_2_0_21_DELIVERY_STATUS.json', 'w', encoding='utf-8') as f:
               json.dump(payload, f, ensure_ascii=False, indent=2)
               f.write('\n')
           PY
@@ -126,12 +130,12 @@ jobs:
           git fetch origin main --quiet
           git reset --hard origin/main
           mkdir -p docs
-          cp /tmp/GG_2_0_20_DELIVERY_STATUS.json docs/GG_2_0_20_DELIVERY_STATUS.json
+          cp /tmp/GG_2_0_21_DELIVERY_STATUS.json docs/GG_2_0_21_DELIVERY_STATUS.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/GG_2_0_20_DELIVERY_STATUS.json
+          git add docs/GG_2_0_21_DELIVERY_STATUS.json
           if ! git diff --cached --quiet; then
-            git commit -m 'Record GG 2.0.20 APK delivery result'
+            git commit -m 'Record GG 2.0.21 APK delivery result'
             git push origin HEAD:main
           fi
           [[ "$ok" == true ]]
