@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-08-07T01:45:35Z",
+  "workflow": "Deliver GG 2.0.23 root-source APK",
+  "runs": [
+    {
+      "id": 31139004249,
+      "runNumber": 2,
+      "attempt": 1,
+      "event": "workflow_run",
+      "status": "in_progress",
+      "conclusion": null,
+      "headBranch": "main",
+      "headSha": "153550273438b52913a29e13885acc04ea4393a7",
+      "createdAt": "2026-08-07T01:44:43Z",
+      "updatedAt": "2026-08-07T01:44:46Z",
+      "url": "https://github.com/xianyumht-cmd/gams/actions/runs/31139004249"
+    },
+    {
+      "id": 31138787894,
+      "runNumber": 1,
+      "attempt": 1,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "success",
+      "headBranch": "main",
+      "headSha": "577ef2cf4e437563f5fd0bd416ccd07c724aa566",
+      "createdAt": "2026-08-07T01:40:40Z",
+      "updatedAt": "2026-08-07T01:42:30Z",
+      "url": "https://github.com/xianyumht-cmd/gams/actions/runs/31138787894"
+    }
+  ]
+}
