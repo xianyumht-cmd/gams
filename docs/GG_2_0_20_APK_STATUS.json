@@ -1,16 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-07T00:03:23Z",
-  "state": "running",
-  "ok": false,
+  "generatedAt": "2026-08-07T00:04:23Z",
+  "state": "completed",
+  "ok": true,
   "runId": 31133212521,
   "runAttempt": 1,
-  "artifactId": null,
+  "buildOutcome": "success",
+  "uploadOutcome": "success",
+  "artifactId": 8976902226,
+  "artifactUrl": "https://github.com/xianyumht-cmd/gams/actions/runs/31133212521/artifacts/8976902226",
   "apk": {
     "fileName": "GG-2.0.20-page5-stability-code100.apk",
     "package": "com.jinli.quickweb",
     "versionName": "2.0.20-page5-stability",
     "versionCode": 100,
-    "sha256": ""
-  }
+    "sha256": "518c45cd946f4dbd4d0afcd863a10a10f4fa427908c860e1de0a915a62c6e36c"
+  },
+  "sourceBranch": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "secretsExposed": false
 }
