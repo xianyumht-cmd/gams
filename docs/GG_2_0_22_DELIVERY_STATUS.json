@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 4,
+  "generatedAt": "2026-08-07T00:45:05Z",
+  "state": "failed",
+  "ok": false,
+  "sourceRunId": 31135620008,
+  "sourceRunUrl": "https://github.com/xianyumht-cmd/gams/actions/runs/31135620008",
+  "sourceConclusion": "success",
+  "deliveryRunId": 31135689386,
+  "deliveryRunAttempt": 1,
+  "buildOutcome": "failure",
+  "uploadOutcome": "skipped",
+  "artifactId": null,
+  "artifactUrl": "",
+  "apk": {
+    "fileName": "GG-2.0.22-mobile-sheet-action-fix-code102.apk",
+    "package": "com.jinli.quickweb",
+    "versionName": "2.0.22-mobile-sheet-action-fix",
+    "versionCode": 102,
+    "sha256": ""
+  },
+  "changes": {
+    "panelStructure": "mobile-bottom-sheet-v4",
+    "floatingControl": "mobile-squircle-v4",
+    "repeatActionTransport": "synchronous-jsonp-and-virtual-xhr-v4"
+  },
+  "sourceBranch": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "secretsExposed": false
+}
