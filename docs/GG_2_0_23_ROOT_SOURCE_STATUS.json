@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-07T01:46:44Z",
+  "state": "completed",
+  "ok": true,
+  "deliveryRunId": 31139004249,
+  "deliveryRunUrl": "https://github.com/xianyumht-cmd/gams/actions/runs/31139004249",
+  "conclusion": "success",
+  "artifactId": 8979106478,
+  "artifactUrl": "https://github.com/xianyumht-cmd/gams/actions/runs/31139004249/artifacts/8979106478",
+  "artifactName": "GG-2.0.23-root-source-ui-repeat-fix-code103",
+  "apk": {
+    "fileName": "GG-2.0.23-root-source-ui-repeat-fix-code103.apk",
+    "package": "com.jinli.quickweb",
+    "versionName": "2.0.23-root-source-ui-repeat-fix",
+    "versionCode": 103
+  },
+  "runtime": {
+    "versionName": "2.0.10-root-source-ui-repeat-v5",
+    "nonameSize": 342058,
+    "nonameSha256": "cf1c8c970d3bcb8b4e695f7338a2473e91b2bf53b36e814db55805d7a6af6975",
+    "apkRuntimeUiPatch": false,
+    "apkRuntimeNonameRewrite": false,
+    "globalMutationObserver": false,
+    "panelNodeReplacement": false
+  }
+}
