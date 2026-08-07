@@ -1,0 +1,66 @@
+name: Generate noname root-source fix
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: generate-noname-root-source-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.event.pull_request.head.ref == 'fix/page5-missing-constructor-mobile-bridge-20260806' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout PR source branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/page5-missing-constructor-mobile-bridge-20260806
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Patch and validate noname source
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/apply_noname_root_ui_repeat_fix.py
+          python3 scripts/apply_noname_root_ui_repeat_fix.py
+          python3 scripts/apply_noname_root_ui_repeat_fix.py --verify-only
+          node --check remote-script/src/noname.js
+          git diff --check
+          grep -Fq 'Symbol.for("gg.source.ui-mobile.v5")' remote-script/src/noname.js
+          grep -Fq 'gg.source.xhr.v5' remote-script/src/noname.js
+          grep -Fq 'gg.source.jsonp.v5' remote-script/src/noname.js
+          ! grep -Fq 'gg.runtime.experience.v4' remote-script/src/noname.js
+          ! grep -Fq 'new MutationObserver(scheduleInterfaceSync)' remote-script/src/noname.js
+          ! grep -Fq 'gg-v4-sheet' remote-script/src/noname.js
+
+      - name: Commit generated source
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add remote-script/src/noname.js
+          git diff --cached --quiet && { echo 'No source change generated'; exit 1; }
+          git commit -m 'fix(noname): generate root-source mobile UI and repeat lifecycle [skip ci]'
+          git push origin HEAD:fix/page5-missing-constructor-mobile-bridge-20260806
