@@ -3,8 +3,8 @@ set -euo pipefail
 
 SOURCE_DIR="${GITHUB_WORKSPACE}/source"
 ARTIFACT_DIR="${GITHUB_WORKSPACE}/artifact"
-VERSION_NAME="2.0.20-page5-stability"
-VERSION_CODE="100"
+VERSION_NAME="2.0.21-runtime-ui-repeat-fix"
+VERSION_CODE="101"
 EXPECTED_CERT_SHA256="70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34"
 
 : "${GG_RELEASE_KEYSTORE_BASE64:?Missing GG_RELEASE_KEYSTORE_BASE64}"
@@ -15,9 +15,16 @@ rm -rf "$ARTIFACT_DIR" /tmp/runtime-stability-java /tmp/runtime-stability-output
 mkdir -p "$ARTIFACT_DIR" /tmp/runtime-stability-java/com/jinli/ggsecure /tmp/runtime-stability-output
 
 PATCHER="$SOURCE_DIR/v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeStabilityPatch.java"
+EXPERIENCE="$SOURCE_DIR/v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeExperiencePatch.java"
 PAYLOAD="$SOURCE_DIR/v2/android/client/src/main/java/com/jinli/ggsecure/RuntimePayload.java"
 MANAGER="$SOURCE_DIR/v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java"
 CLIENT_GRADLE="$SOURCE_DIR/v2/android/client/build.gradle.kts"
+
+test -s "$PATCHER"
+test -s "$EXPERIENCE"
+test -s "$PAYLOAD"
+test -s "$MANAGER"
+test -s "$CLIENT_GRADLE"
 
 python3 - "$PATCHER" "$MANAGER" "$CLIENT_GRADLE" <<'PY'
 from pathlib import Path
@@ -73,8 +80,13 @@ if "PROTOCOL_APP_VERSION = 24" not in text:
     manager.write_text(text, encoding="utf-8", newline="")
 
 text = gradle.read_text(encoding="utf-8")
-text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 100", text, count=1)
-text, name_count = re.subn(r'versionName\s*=\s*"[^"]+"', 'versionName = "2.0.20-page5-stability"', text, count=1)
+text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 101", text, count=1)
+text, name_count = re.subn(
+    r'versionName\s*=\s*"[^"]+"',
+    'versionName = "2.0.21-runtime-ui-repeat-fix"',
+    text,
+    count=1,
+)
 if code_count != 1 or name_count != 1:
     raise SystemExit(f"APK identifier replacement mismatch: code={code_count}, name={name_count}")
 gradle.write_text(text, encoding="utf-8", newline="")
@@ -83,19 +95,24 @@ PY
 grep -Fq 'candidateOpen < text.length()' "$PATCHER"
 grep -Fq 'String body = "{\n" + newBody.strip() + "\n    }";' "$PATCHER"
 grep -Fq 'RuntimeStabilityPatch.patchNoname(noname)' "$PAYLOAD"
+grep -Fq 'RuntimeExperiencePatch.patchNoname(stabilityNoname)' "$PAYLOAD"
 grep -Fq 'RuntimeStabilityPatch.patchGame(game)' "$PAYLOAD"
 grep -Fq 'Symbol.for("gg.runtime.storage-hook.v2")' "$PATCHER"
 grep -Fq 'Symbol.for("gg.runtime.xhr-open.v2")' "$PATCHER"
 grep -Fq 'Symbol.for("gg.runtime.jsonp-create-element.v2")' "$PATCHER"
 grep -Fq '__gg_engine_load_started_at__' "$PATCHER"
+grep -Fq 'gg.runtime.experience.v3' "$EXPERIENCE"
+grep -Fq 'gg-runtime-theme-v3' "$EXPERIENCE"
+grep -Fq 'scheduleRecovery' "$EXPERIENCE"
 grep -Fq 'PROTOCOL_APP_VERSION = 24' "$MANAGER"
-grep -Fq 'versionCode = 100' "$CLIENT_GRADLE"
-grep -Fq 'versionName = "2.0.20-page5-stability"' "$CLIENT_GRADLE"
+grep -Fq 'versionCode = 101' "$CLIENT_GRADLE"
+grep -Fq 'versionName = "2.0.21-runtime-ui-repeat-fix"' "$CLIENT_GRADLE"
 
 node --check "$SOURCE_DIR/remote-script/src/noname.js"
 node --check "$SOURCE_DIR/game-engine/release/game-1.0.5.js"
 
 cp "$PATCHER" /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatch.java
+cp "$EXPERIENCE" /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeExperiencePatch.java
 cat > /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatchTest.java <<'JAVA'
 package com.jinli.ggsecure;
 import java.nio.file.Files;
@@ -104,7 +121,8 @@ final class RuntimeStabilityPatchTest {
     public static void main(String[] args) throws Exception {
         byte[] noname = Files.readAllBytes(Path.of(args[0]));
         byte[] game = Files.readAllBytes(Path.of(args[1]));
-        byte[] stableNoname = RuntimeStabilityPatch.patchNoname(noname);
+        byte[] stabilityNoname = RuntimeStabilityPatch.patchNoname(noname);
+        byte[] stableNoname = RuntimeExperiencePatch.patchNoname(stabilityNoname);
         byte[] stableGame = RuntimeStabilityPatch.patchGame(game);
         Files.write(Path.of(args[2]), stableNoname);
         Files.write(Path.of(args[3]), stableGame);
@@ -117,6 +135,7 @@ JAVA
 
 javac -encoding UTF-8 -d /tmp/runtime-stability-java \
   /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatch.java \
+  /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeExperiencePatch.java \
   /tmp/runtime-stability-java/com/jinli/ggsecure/RuntimeStabilityPatchTest.java
 
 java -cp /tmp/runtime-stability-java com.jinli.ggsecure.RuntimeStabilityPatchTest \
@@ -128,6 +147,9 @@ java -cp /tmp/runtime-stability-java com.jinli.ggsecure.RuntimeStabilityPatchTes
 node --check /tmp/runtime-stability-output/noname.js
 node --check /tmp/runtime-stability-output/game.js
 grep -Fq 'Symbol.for("gg.runtime.storage-hook.v2")' /tmp/runtime-stability-output/noname.js
+grep -Fq 'Symbol.for("gg.runtime.experience.v3")' /tmp/runtime-stability-output/noname.js
+grep -Fq 'gg-runtime-theme-v3' /tmp/runtime-stability-output/noname.js
+grep -Fq 'scheduleRecovery' /tmp/runtime-stability-output/noname.js
 grep -Fq '__gg_engine_load_started_at__' /tmp/runtime-stability-output/game.js
 ! grep -Fq 'Object["defineProperty"](Object["prototype"]' /tmp/runtime-stability-output/noname.js
 ! grep -Fq '__gg_engine_alert_filter_installed__' /tmp/runtime-stability-output/game.js
@@ -174,7 +196,7 @@ grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$ARTIFACT_D
 grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "$ARTIFACT_DIR/APK_VERIFY.txt"
 
 "$AAPT" dump badging "$SIGNED_APK" > "$ARTIFACT_DIR/APK_BADGING.txt"
-grep -Fq "package: name='com.jinli.quickweb' versionCode='100' versionName='2.0.20-page5-stability'" "$ARTIFACT_DIR/APK_BADGING.txt"
+grep -Fq "package: name='com.jinli.quickweb' versionCode='101' versionName='2.0.21-runtime-ui-repeat-fix'" "$ARTIFACT_DIR/APK_BADGING.txt"
 sha256sum "$SIGNED_APK" | tee "$ARTIFACT_DIR/SHA256SUMS.txt"
 
 cat > "$ARTIFACT_DIR/BUILD_INFO.txt" <<EOF
@@ -182,5 +204,7 @@ versionName=$VERSION_NAME
 versionCode=$VERSION_CODE
 package=com.jinli.quickweb
 sourceBranch=fix/page5-missing-constructor-mobile-bridge-20260806
-workflow=gg-2.0.20-direct-delivery
+workflow=gg-2.0.21-runtime-ui-repeat-fix
+uiTheme=dark-glass-v3
+repeatActionRecovery=per-request-jsonp-v3
 EOF
