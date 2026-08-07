@@ -1,0 +1,72 @@
+name: Generate noname compact panel v6
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: generate-noname-compact-panel-v6-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.event.pull_request.head.ref == 'fix/page5-missing-constructor-mobile-bridge-20260806' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout implementation branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/page5-missing-constructor-mobile-bridge-20260806
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply compact source layout
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/apply_noname_compact_panel_v6.py
+          if python3 scripts/apply_noname_compact_panel_v6.py --verify-only; then
+            echo 'compact panel v6 already present'
+          else
+            python3 scripts/apply_noname_compact_panel_v6.py
+            python3 scripts/apply_noname_compact_panel_v6.py --verify-only
+          fi
+          node --check remote-script/src/noname.js
+          git diff --check
+          grep -Fq 'Symbol.for("gg.source.compact-panel.v6")' remote-script/src/noname.js
+          grep -Fq 'touch-action: pan-y !important' remote-script/src/noname.js
+          grep -Fq 'grid-template-columns: repeat(2, minmax(0, 1fr)) !important' remote-script/src/noname.js
+          ! grep -Fq 'gg.runtime.experience.v4' remote-script/src/noname.js
+          ! grep -Fq 'new MutationObserver(scheduleInterfaceSync)' remote-script/src/noname.js
+
+      - name: Commit compact source when changed
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add remote-script/src/noname.js
+          if git diff --cached --quiet; then
+            echo 'Verified compact source already committed'
+          else
+            git commit -m 'fix(noname): compact scrollable panel v6 [skip ci]'
+            git push origin HEAD:fix/page5-missing-constructor-mobile-bridge-20260806
+          fi
