@@ -1,16 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-07T00:43:24Z",
-  "state": "running",
+  "generatedAt": "2026-08-07T00:43:53Z",
+  "state": "failed",
   "ok": false,
   "runId": 31135617926,
   "runAttempt": 1,
+  "buildOutcome": "failure",
+  "uploadOutcome": "skipped",
   "artifactId": null,
+  "artifactUrl": "",
   "apk": {
     "fileName": "GG-2.0.20-page5-stability-code100.apk",
     "package": "com.jinli.quickweb",
     "versionName": "2.0.20-page5-stability",
     "versionCode": 100,
     "sha256": ""
-  }
+  },
+  "sourceBranch": "fix/page5-missing-constructor-mobile-bridge-20260806",
+  "secretsExposed": false
 }
