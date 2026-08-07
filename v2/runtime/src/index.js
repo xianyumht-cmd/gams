@@ -23,7 +23,7 @@ const FULL_HISTORICAL_AB_RUNTIME_VERSION = "2.0.8-full-historical-ab-c1";
 const FULL_HISTORICAL_AB_RELEASE_BASE =
   "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-full-historical-ab-20260804/candidate-runtime-full-historical/release/";
 const PAGE5_BRIDGE_APP_VERSION = 24;
-const PAGE5_BRIDGE_RUNTIME_VERSION = "2.0.10-root-source-ui-repeat-v5";
+const PAGE5_BRIDGE_RUNTIME_VERSION = "2.0.11-compact-panel-v6";
 const PAGE5_BRIDGE_RELEASE_BASE =
   "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-page5-bridge-20260806/candidate-runtime-page5-bridge/release/";
 
