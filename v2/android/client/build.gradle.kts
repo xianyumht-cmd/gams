@@ -6,8 +6,8 @@ android {
         applicationId = "com.jinli.quickweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 103
-        versionName = "2.0.23-root-source-ui-repeat-fix"
+        versionCode = 104
+        versionName = "2.0.24-compact-panel-temp"
     }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
