@@ -36,8 +36,8 @@ final class RuntimePayload {
         verify(game, manifest.getInt("gameSize"), manifest.getString("gameSha256"), "引擎层");
         verifyRootSource(noname);
 
-        // noname.js is now fixed in its source/release pipeline. The APK must not append
-        // UI code, rebuild DOM nodes, install observers, or rewrite request hooks at runtime.
+        // noname.js is fixed and laid out in its source/release pipeline. The APK must not
+        // append UI code, rebuild DOM nodes, install observers, or rewrite request hooks.
         byte[] sourceNoname = noname.clone();
         byte[] stableGame = RuntimeStabilityPatch.patchGame(game);
         Arrays.fill(noname, (byte) 0);
@@ -88,6 +88,9 @@ final class RuntimePayload {
         String source = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
         String[] required = {
                 "gg.source.ui-mobile.v5",
+                "gg.source.compact-panel.v6",
+                "touch-action: pan-y !important",
+                "grid-template-columns: repeat(2, minmax(0, 1fr)) !important",
                 "gg.source.xhr.v5",
                 "gg.source.jsonp.v5",
                 "gg.runtime.storage-hook.v2"
