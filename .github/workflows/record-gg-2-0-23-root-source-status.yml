@@ -1,0 +1,92 @@
+name: Record GG 2.0.23 root-source status
+
+on:
+  workflow_run:
+    workflows:
+      - Deliver GG 2.0.23 root-source APK
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Build status document
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SOURCE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          artifacts="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts?per_page=100")"
+          artifact_id="$(printf '%s' "$artifacts" | jq -r '.artifacts[] | select(.name=="GG-2.0.23-root-source-ui-repeat-fix-code103") | .id' | head -n1)"
+          artifact_url=''
+          if [[ -n "$artifact_id" && "$artifact_id" != null ]]; then
+            artifact_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts/${artifact_id}"
+          fi
+          export ARTIFACT_ID="$artifact_id" ARTIFACT_URL="$artifact_url"
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          artifact_id = os.environ.get('ARTIFACT_ID', '')
+          conclusion = os.environ.get('SOURCE_CONCLUSION', '')
+          ok = conclusion == 'success' and bool(artifact_id)
+          payload = {
+              'schemaVersion': 1,
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'state': 'completed' if ok else 'failed',
+              'ok': ok,
+              'deliveryRunId': int(os.environ['SOURCE_RUN_ID']),
+              'deliveryRunUrl': os.environ.get('SOURCE_RUN_URL', ''),
+              'conclusion': conclusion,
+              'artifactId': int(artifact_id) if artifact_id else None,
+              'artifactUrl': os.environ.get('ARTIFACT_URL', ''),
+              'artifactName': 'GG-2.0.23-root-source-ui-repeat-fix-code103',
+              'apk': {
+                  'fileName': 'GG-2.0.23-root-source-ui-repeat-fix-code103.apk',
+                  'package': 'com.jinli.quickweb',
+                  'versionName': '2.0.23-root-source-ui-repeat-fix',
+                  'versionCode': 103,
+              },
+              'runtime': {
+                  'versionName': '2.0.10-root-source-ui-repeat-v5',
+                  'nonameSize': 342058,
+                  'nonameSha256': 'cf1c8c970d3bcb8b4e695f7338a2473e91b2bf53b36e814db55805d7a6af6975',
+                  'apkRuntimeUiPatch': False,
+                  'apkRuntimeNonameRewrite': False,
+                  'globalMutationObserver': False,
+                  'panelNodeReplacement': False,
+              },
+          }
+          Path('/tmp/GG_2_0_23_ROOT_SOURCE_STATUS.json').write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Publish status
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git reset --hard origin/main
+          mkdir -p docs
+          cp /tmp/GG_2_0_23_ROOT_SOURCE_STATUS.json docs/GG_2_0_23_ROOT_SOURCE_STATUS.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/GG_2_0_23_ROOT_SOURCE_STATUS.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record GG 2.0.23 root-source delivery status'
+            git push origin HEAD:main
+          fi
+          jq -e '.ok == true' /tmp/GG_2_0_23_ROOT_SOURCE_STATUS.json >/dev/null
