@@ -51,7 +51,7 @@ jobs:
         env:
           GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
           GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
-        run: bash scripts/build-js-runtime-stability-apk-final.sh
+        run: bash scripts/run-gg-2.0.22-build.sh
 
       - name: Upload verified client APK
         id: upload
