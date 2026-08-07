@@ -1,5 +1,5 @@
 Trigger Build two Android APKs for verified GG 2.0.22 delivery.
 Target: com.jinli.quickweb / 2.0.22-mobile-sheet-action-fix / code102
 Changes: mobile bottom-sheet panel v4; mobile squircle floating control v4; synchronous JSONP and virtual XHR action transport v4
-Requested at: 2026-08-07T08:48:00+08:00
-Delivery workflow revision: mobile-sheet-action-fix-v4-scoped-check
+Requested at: 2026-08-07T08:52:00+08:00
+Delivery workflow revision: mobile-sheet-action-fix-v4-script-load-specific
