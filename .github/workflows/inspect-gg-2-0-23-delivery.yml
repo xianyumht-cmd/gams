@@ -1,0 +1,76 @@
+name: Inspect GG 2.0.23 delivery
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/inspect-gg-2-0-23-delivery.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Read delivery runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deliver-gg-2-0-23-root-source.yml/runs?per_page=20" > /tmp/runs.json
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          source = json.loads(Path('/tmp/runs.json').read_text(encoding='utf-8'))
+          runs = source.get('workflow_runs') or []
+          selected = []
+          for run in runs[:10]:
+              selected.append({
+                  'id': run.get('id'),
+                  'runNumber': run.get('run_number'),
+                  'attempt': run.get('run_attempt'),
+                  'event': run.get('event'),
+                  'status': run.get('status'),
+                  'conclusion': run.get('conclusion'),
+                  'headBranch': run.get('head_branch'),
+                  'headSha': run.get('head_sha'),
+                  'createdAt': run.get('created_at'),
+                  'updatedAt': run.get('updated_at'),
+                  'url': run.get('html_url'),
+              })
+          payload = {
+              'generatedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'workflow': 'Deliver GG 2.0.23 root-source APK',
+              'runs': selected,
+          }
+          Path('/tmp/GG_2_0_23_DELIVERY_RUNS.json').write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(payload, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Publish inspection
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git reset --hard origin/main
+          mkdir -p docs
+          cp /tmp/GG_2_0_23_DELIVERY_RUNS.json docs/GG_2_0_23_DELIVERY_RUNS.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/GG_2_0_23_DELIVERY_RUNS.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record current GG 2.0.23 delivery runs'
+            git push origin HEAD:main
+          fi
