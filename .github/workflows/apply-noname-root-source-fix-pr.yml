@@ -43,9 +43,11 @@ jobs:
       - name: Patch and validate noname source
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/apply_noname_root_ui_repeat_fix.py
-          python3 scripts/apply_noname_root_ui_repeat_fix.py
-          python3 scripts/apply_noname_root_ui_repeat_fix.py --verify-only
+          python3 -m py_compile \
+            scripts/apply_noname_root_ui_repeat_fix.py \
+            scripts/apply_noname_root_ui_repeat_fix_v2.py
+          python3 scripts/apply_noname_root_ui_repeat_fix_v2.py
+          python3 scripts/apply_noname_root_ui_repeat_fix_v2.py --verify-only
           node --check remote-script/src/noname.js
           git diff --check
           grep -Fq 'Symbol.for("gg.source.ui-mobile.v5")' remote-script/src/noname.js
