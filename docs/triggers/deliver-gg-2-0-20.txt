@@ -1,5 +1,5 @@
 Trigger root-source noname generation and verified GG 2.0.23 delivery.
 Target: com.jinli.quickweb / 2.0.23-root-source-ui-repeat-fix / code103
 Changes: source-native mobile panel CSS; original floating button preserved; per-request source XHR and JSONP lifecycle; no APK runtime DOM reconstruction
-Requested at: 2026-08-07T09:43:00+08:00
-Delivery workflow revision: root-source-ui-repeat-v5
+Requested at: 2026-08-07T09:49:00+08:00
+Delivery workflow revision: root-source-ui-repeat-v5-corrected-verifier
