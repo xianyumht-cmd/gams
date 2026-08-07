@@ -1,0 +1,329 @@
+name: Deliver GG 2.0.24 compact panel APK
+
+on:
+  workflow_run:
+    workflows:
+      - Generate noname compact panel v6
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: deliver-gg-2-0-24-compact-panel
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'fix/page5-missing-constructor-mobile-bridge-20260806'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      IMPLEMENTATION_BRANCH: fix/page5-missing-constructor-mobile-bridge-20260806
+      RUNTIME_BRANCH: candidate-page5-bridge-20260806
+      RELEASE_DIR: candidate-runtime-page5-bridge/release
+      RUNTIME_VERSION: 2.0.11-compact-panel-v6
+      APK_VERSION_NAME: 2.0.24-compact-panel-temp
+      APK_VERSION_CODE: 104
+      EXPECTED_CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      RUNTIME_WORKER_HOST: gams-runtime-v2.2320006072.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TOKEN_SIGNING_SECRET: ${{ secrets.TOKEN_SIGNING_SECRET }}
+      RUNTIME_MASTER_KEY: ${{ secrets.RUNTIME_MASTER_KEY }}
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+
+    steps:
+      - name: Checkout implementation source
+        uses: actions/checkout@v4
+        with:
+          ref: fix/page5-missing-constructor-mobile-bridge-20260806
+          path: source
+          fetch-depth: 0
+
+      - name: Checkout isolated runtime branch
+        uses: actions/checkout@v4
+        with:
+          ref: candidate-page5-bridge-20260806
+          path: runtime-publish
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate compact source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TOKEN_SIGNING_SECRET RUNTIME_MASTER_KEY GG_RELEASE_KEYSTORE_BASE64 GG_RELEASE_KEYSTORE_PASSWORD; do
+            test -n "${!name:-}" || { echo "$name is missing"; exit 1; }
+          done
+          noname=source/remote-script/src/noname.js
+          payload=source/v2/android/client/src/main/java/com/jinli/ggsecure/RuntimePayload.java
+          node --check "$noname"
+          node --check source/game-engine/release/game-1.0.5.js
+          grep -Fq 'Symbol.for("gg.source.compact-panel.v6")' "$noname"
+          grep -Fq 'touch-action: pan-y !important' "$noname"
+          grep -Fq 'grid-template-columns: repeat(2, minmax(0, 1fr)) !important' "$noname"
+          grep -Fq 'min-height: 28px !important' "$noname"
+          grep -Fq 'gg.source.compact-panel.v6' "$payload"
+          grep -Fq 'versionCode = 104' source/v2/android/client/build.gradle.kts
+          grep -Fq 'versionName = "2.0.24-compact-panel-temp"' source/v2/android/client/build.gradle.kts
+          ! test -e source/v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeExperiencePatch.java
+          ! grep -Fq 'RuntimeExperiencePatch.patchNoname' "$payload"
+          ! grep -Fq 'RuntimeStabilityPatch.patchNoname' "$payload"
+          ! grep -Fq 'gg.runtime.experience.v4' "$noname"
+          ! grep -Fq 'new MutationObserver(scheduleInterfaceSync)' "$noname"
+          ! grep -Fq 'gg-v4-sheet' "$noname"
+
+      - name: Build signed encrypted runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet cryptography
+          rm -rf /tmp/compact-release
+          mkdir -p /tmp/compact-release
+
+          export RUNTIME_SIGNING_PASSWORD="$(python3 - <<'PY'
+          import hashlib, hmac, os
+          print(hmac.new(
+              os.environ['GG_RELEASE_KEYSTORE_PASSWORD'].encode(),
+              b'gams-runtime-release-signing-v1',
+              hashlib.sha256,
+          ).hexdigest())
+          PY
+          )"
+          trap 'rm -f /tmp/compact-private.pem /tmp/compact.sig /tmp/v2-runtime-canonical.txt /tmp/v2-runtime-unsigned.json /tmp/gg-release.jks' EXIT
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in source/remote-script/keys/private.pem.enc \
+            -out /tmp/compact-private.pem \
+            -pass env:RUNTIME_SIGNING_PASSWORD
+          unset RUNTIME_SIGNING_PASSWORD
+
+          python3 source/v2/runtime/tools/build_release.py \
+            source/remote-script/src/noname.js \
+            source/game-engine/release/game-1.0.5.js \
+            "$RUNTIME_VERSION" \
+            "$RUNTIME_MASTER_KEY" \
+            /tmp/compact-release
+
+          openssl dgst -sha256 -sign /tmp/compact-private.pem \
+            -out /tmp/compact.sig /tmp/v2-runtime-canonical.txt
+          openssl dgst -sha256 -verify source/remote-script/keys/public.pem \
+            -signature /tmp/compact.sig /tmp/v2-runtime-canonical.txt
+
+          python3 - <<'PY'
+          import base64, hashlib, io, json, os, zipfile
+          from pathlib import Path
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+          release = Path('/tmp/compact-release')
+          manifest = json.loads(Path('/tmp/v2-runtime-unsigned.json').read_text(encoding='utf-8'))
+          manifest['signatureAlgorithm'] = 'SHA256withECDSA'
+          manifest['signature'] = base64.b64encode(Path('/tmp/compact.sig').read_bytes()).decode()
+          (release / 'manifest.json').write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          master_text = os.environ['RUNTIME_MASTER_KEY'].strip()
+          try:
+              master = bytes.fromhex(master_text)
+          except ValueError:
+              normalized = master_text.replace('-', '+').replace('_', '/')
+              normalized += '=' * ((4 - len(normalized) % 4) % 4)
+              master = base64.b64decode(normalized)
+          content_key = AESGCM(master).decrypt(
+              base64.b64decode(manifest['keyIv']),
+              base64.b64decode(manifest['keyCipher']),
+              f"gg-v2-key|{manifest['versionName']}".encode(),
+          )
+          bundle = (release / manifest['file']).read_bytes()
+          plain = AESGCM(content_key).decrypt(
+              base64.b64decode(manifest['iv']),
+              bundle,
+              f"gg-v2-runtime|{manifest['versionName']}".encode(),
+          )
+          with zipfile.ZipFile(io.BytesIO(plain)) as archive:
+              assert archive.namelist() == ['noname.js', 'game.js']
+              assert archive.testzip() is None
+              noname = archive.read('noname.js')
+          for marker in (
+              b'gg.source.ui-mobile.v5',
+              b'gg.source.compact-panel.v6',
+              b'touch-action: pan-y !important',
+              b'grid-template-columns: repeat(2, minmax(0, 1fr)) !important',
+          ):
+              assert marker in noname
+          for forbidden in (
+              b'gg.runtime.experience.v4',
+              b'gg-v4-sheet',
+              b'new MutationObserver(scheduleInterfaceSync)',
+          ):
+              assert forbidden not in noname
+          assert len(bundle) == manifest['size']
+          assert hashlib.sha256(bundle).hexdigest() == manifest['sha256']
+          Path('/tmp/compact-runtime-info.json').write_text(json.dumps({
+              'version': manifest['versionName'],
+              'nonameSize': manifest['nonameSize'],
+              'nonameSha256': manifest['nonameSha256'],
+              'gameSize': manifest['gameSize'],
+              'gameSha256': manifest['gameSha256'],
+              'bundleSize': manifest['size'],
+              'bundleSha256': manifest['sha256'],
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Publish compact runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd runtime-publish
+          git fetch origin "$RUNTIME_BRANCH" --quiet
+          git checkout -B "$RUNTIME_BRANCH" "origin/$RUNTIME_BRANCH"
+          rm -rf "$RELEASE_DIR"
+          mkdir -p "$RELEASE_DIR"
+          cp -a /tmp/compact-release/. "$RELEASE_DIR/"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$RELEASE_DIR"
+          git add -f "$RELEASE_DIR"/bundle-*.bin
+          git commit -m 'Build compact panel v6 runtime release'
+          git push origin "HEAD:$RUNTIME_BRANCH"
+
+      - name: Update and deploy isolated runtime channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          git fetch origin "$IMPLEMENTATION_BRANCH" --quiet
+          git reset --hard "origin/$IMPLEMENTATION_BRANCH"
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          path = Path('v2/runtime/src/index.js')
+          text = path.read_text(encoding='utf-8')
+          pattern = r'const PAGE5_BRIDGE_RUNTIME_VERSION = "[^"]+";'
+          replacement = 'const PAGE5_BRIDGE_RUNTIME_VERSION = "2.0.11-compact-panel-v6";'
+          updated, count = re.subn(pattern, replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'page5 runtime version marker count={count}')
+          path.write_text(updated, encoding='utf-8', newline='')
+          PY
+          node --check v2/runtime/src/index.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v2/runtime/src/index.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Point page five channel to compact panel runtime [skip ci]'
+            git push origin "HEAD:$IMPLEMENTATION_BRANCH"
+          fi
+
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$api?per_page=100")"
+          database_id="$(printf '%s' "$response" | jq -r '.result[] | select(.name=="gams-license-db") | (.uuid // .id)' | head -n1)"
+          test -n "$database_id" && test "$database_id" != null
+          sed "s/__D1_DATABASE_ID__/${database_id}/g" v2/runtime/wrangler.template.jsonc > v2/runtime/wrangler.compact.generated.jsonc
+          cd v2/runtime
+          printf '%s' "$TOKEN_SIGNING_SECRET" | npx --yes wrangler@4 secret put TOKEN_SIGNING_SECRET --config wrangler.compact.generated.jsonc
+          printf '%s' "$RUNTIME_MASTER_KEY" | npx --yes wrangler@4 secret put RUNTIME_MASTER_KEY --config wrangler.compact.generated.jsonc
+          npx --yes wrangler@4 deploy --config wrangler.compact.generated.jsonc
+
+      - name: Verify published runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw_base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${RUNTIME_BRANCH}/${RELEASE_DIR}"
+          published=''
+          for attempt in $(seq 1 30); do
+            published="$(curl -fsS "${raw_base}/manifest.json?attempt=${attempt}" | jq -r '.versionName' 2>/dev/null || true)"
+            [[ "$published" == "$RUNTIME_VERSION" ]] && break
+            sleep 3
+          done
+          [[ "$published" == "$RUNTIME_VERSION" ]]
+
+          healthy=false
+          for attempt in $(seq 1 24); do
+            body="$(curl -fsS --connect-timeout 5 --max-time 15 "https://${RUNTIME_WORKER_HOST}/health?candidate=24&attempt=${attempt}" 2>/dev/null || true)"
+            if printf '%s' "$body" | jq -e --arg version "$RUNTIME_VERSION" \
+              '.ok == true and .page5BridgeAppVersion == 24 and .page5BridgeRuntimeVersion == $version' >/dev/null 2>&1; then
+              healthy=true
+              break
+            fi
+            sleep 5
+          done
+          [[ "$healthy" == true ]]
+
+      - name: Build sign and verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          git fetch origin "$IMPLEMENTATION_BRANCH" --quiet
+          git reset --hard "origin/$IMPLEMENTATION_BRANCH"
+          gradle --no-daemon -p v2/android :client:clean :client:lintRelease :client:assembleRelease
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          keytool -list -v -keystore /tmp/gg-release.jks \
+            -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release > /tmp/compact-keytool.txt
+          grep -Fq "SHA256: $EXPECTED_CERT_SHA256" /tmp/compact-keytool.txt
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt -perm -u+x 2>/dev/null | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          mkdir -p "$GITHUB_WORKSPACE/artifact"
+          signed="$GITHUB_WORKSPACE/artifact/GG-${APK_VERSION_NAME}-code${APK_VERSION_CODE}.apk"
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
+            --v4-signing-enabled false --out "$signed" "$unsigned"
+          "$apksigner" verify --verbose --print-certs "$signed" > "$GITHUB_WORKSPACE/artifact/APK_VERIFY.txt"
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$GITHUB_WORKSPACE/artifact/APK_VERIFY.txt"
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "$GITHUB_WORKSPACE/artifact/APK_VERIFY.txt"
+          "$aapt" dump badging "$signed" > "$GITHUB_WORKSPACE/artifact/APK_BADGING.txt"
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='104' versionName='2.0.24-compact-panel-temp'" "$GITHUB_WORKSPACE/artifact/APK_BADGING.txt"
+          sha256sum "$signed" | tee "$GITHUB_WORKSPACE/artifact/SHA256SUMS.txt"
+          stat -c '%n %s bytes' "$signed" | tee "$GITHUB_WORKSPACE/artifact/APK_SIZE.txt"
+          cp /tmp/compact-runtime-info.json "$GITHUB_WORKSPACE/artifact/RUNTIME_INFO.json"
+          cat > "$GITHUB_WORKSPACE/artifact/BUILD_INFO.txt" <<EOF
+          versionName=$APK_VERSION_NAME
+          versionCode=$APK_VERSION_CODE
+          package=com.jinli.quickweb
+          runtimeVersion=$RUNTIME_VERSION
+          releaseScope=compact-panel-layout-only
+          purchaseIssueResolved=false
+          purchaseIssueRootScope=noname.js+game-1.0.5.js
+          apkRuntimeUiPatch=false
+          apkRuntimeNonameRewrite=false
+          globalMutationObserver=false
+          panelNodeReplacement=false
+          compactTwoColumnLayout=true
+          verticalTouchScroll=true
+          EOF
+
+      - name: Upload temporary compact release
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-2.0.24-compact-panel-temp-code104
+          path: artifact/**
+          retention-days: 30
+          if-no-files-found: error
