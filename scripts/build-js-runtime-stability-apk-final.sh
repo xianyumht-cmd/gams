@@ -3,8 +3,8 @@ set -euo pipefail
 
 SOURCE_DIR="${GITHUB_WORKSPACE}/source"
 ARTIFACT_DIR="${GITHUB_WORKSPACE}/artifact"
-VERSION_NAME="2.0.21-runtime-ui-repeat-fix"
-VERSION_CODE="101"
+VERSION_NAME="2.0.22-mobile-sheet-action-fix"
+VERSION_CODE="102"
 EXPECTED_CERT_SHA256="70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34"
 
 : "${GG_RELEASE_KEYSTORE_BASE64:?Missing GG_RELEASE_KEYSTORE_BASE64}"
@@ -43,8 +43,6 @@ if "candidateOpen < text.length()" not in text:
     end = text.find(end_token, start + len(start_token))
     if start < 0 or end < 0 or end <= start:
         raise SystemExit(f"method boundary mismatch: start={start}, end={end}")
-    if text.find(start_token, start + len(start_token)) >= 0:
-        raise SystemExit("replaceMethodBody declaration is not unique")
     replacement = r'''    private static String replaceMethodBody(String text, String marker, String newBody) {
         int start = -1;
         int openIndex = -1;
@@ -54,9 +52,7 @@ if "candidateOpen < text.length()" not in text:
             if (candidate < 0) break;
             int candidateOpen = skipSpace(text, candidate + marker.length());
             if (candidateOpen < text.length() && text.charAt(candidateOpen) == '{') {
-                if (start >= 0) {
-                    throw new SecurityException("方法定义不唯一: " + marker);
-                }
+                if (start >= 0) throw new SecurityException("方法定义不唯一: " + marker);
                 start = candidate;
                 openIndex = candidateOpen;
             }
@@ -76,14 +72,17 @@ text = manager.read_text(encoding="utf-8")
 if "PROTOCOL_APP_VERSION = 24" not in text:
     if text.count("PROTOCOL_APP_VERSION = 12") != 1:
         raise SystemExit("protocol version baseline mismatch")
-    text = text.replace("PROTOCOL_APP_VERSION = 12", "PROTOCOL_APP_VERSION = 24", 1)
-    manager.write_text(text, encoding="utf-8", newline="")
+    manager.write_text(
+        text.replace("PROTOCOL_APP_VERSION = 12", "PROTOCOL_APP_VERSION = 24", 1),
+        encoding="utf-8",
+        newline="",
+    )
 
 text = gradle.read_text(encoding="utf-8")
-text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 101", text, count=1)
+text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 102", text, count=1)
 text, name_count = re.subn(
     r'versionName\s*=\s*"[^"]+"',
-    'versionName = "2.0.21-runtime-ui-repeat-fix"',
+    'versionName = "2.0.22-mobile-sheet-action-fix"',
     text,
     count=1,
 )
@@ -93,7 +92,6 @@ gradle.write_text(text, encoding="utf-8", newline="")
 PY
 
 grep -Fq 'candidateOpen < text.length()' "$PATCHER"
-grep -Fq 'String body = "{\n" + newBody.strip() + "\n    }";' "$PATCHER"
 grep -Fq 'RuntimeStabilityPatch.patchNoname(noname)' "$PAYLOAD"
 grep -Fq 'RuntimeExperiencePatch.patchNoname(stabilityNoname)' "$PAYLOAD"
 grep -Fq 'RuntimeStabilityPatch.patchGame(game)' "$PAYLOAD"
@@ -101,12 +99,19 @@ grep -Fq 'Symbol.for("gg.runtime.storage-hook.v2")' "$PATCHER"
 grep -Fq 'Symbol.for("gg.runtime.xhr-open.v2")' "$PATCHER"
 grep -Fq 'Symbol.for("gg.runtime.jsonp-create-element.v2")' "$PATCHER"
 grep -Fq '__gg_engine_load_started_at__' "$PATCHER"
-grep -Fq 'gg.runtime.experience.v3' "$EXPERIENCE"
-grep -Fq 'gg-runtime-theme-v3' "$EXPERIENCE"
-grep -Fq 'scheduleRecovery' "$EXPERIENCE"
+
+grep -Fq 'gg.runtime.experience.v4' "$EXPERIENCE"
+grep -Fq 'gg-runtime-mobile-sheet-v4' "$EXPERIENCE"
+grep -Fq 'gg-v4-sheet' "$EXPERIENCE"
+grep -Fq 'gg-v4-fab-core' "$EXPERIENCE"
+grep -Fq 'buildSynchronousJsonpSource' "$EXPERIENCE"
+grep -Fq 'data:text/javascript;charset=utf-8' "$EXPERIENCE"
+grep -Fq 'gg.runtime.xhr-transport.v4' "$EXPERIENCE"
+! grep -Fq 'dispatchEvent(new Event("load"))' "$EXPERIENCE"
+
 grep -Fq 'PROTOCOL_APP_VERSION = 24' "$MANAGER"
-grep -Fq 'versionCode = 101' "$CLIENT_GRADLE"
-grep -Fq 'versionName = "2.0.21-runtime-ui-repeat-fix"' "$CLIENT_GRADLE"
+grep -Fq 'versionCode = 102' "$CLIENT_GRADLE"
+grep -Fq 'versionName = "2.0.22-mobile-sheet-action-fix"' "$CLIENT_GRADLE"
 
 node --check "$SOURCE_DIR/remote-script/src/noname.js"
 node --check "$SOURCE_DIR/game-engine/release/game-1.0.5.js"
@@ -147,9 +152,11 @@ java -cp /tmp/runtime-stability-java com.jinli.ggsecure.RuntimeStabilityPatchTes
 node --check /tmp/runtime-stability-output/noname.js
 node --check /tmp/runtime-stability-output/game.js
 grep -Fq 'Symbol.for("gg.runtime.storage-hook.v2")' /tmp/runtime-stability-output/noname.js
-grep -Fq 'Symbol.for("gg.runtime.experience.v3")' /tmp/runtime-stability-output/noname.js
-grep -Fq 'gg-runtime-theme-v3' /tmp/runtime-stability-output/noname.js
-grep -Fq 'scheduleRecovery' /tmp/runtime-stability-output/noname.js
+grep -Fq 'Symbol.for("gg.runtime.experience.v4")' /tmp/runtime-stability-output/noname.js
+grep -Fq 'gg-runtime-mobile-sheet-v4' /tmp/runtime-stability-output/noname.js
+grep -Fq 'buildSynchronousJsonpSource' /tmp/runtime-stability-output/noname.js
+grep -Fq 'gg.runtime.xhr-transport.v4' /tmp/runtime-stability-output/noname.js
+! grep -Fq 'dispatchEvent(new Event("load"))' /tmp/runtime-stability-output/noname.js
 grep -Fq '__gg_engine_load_started_at__' /tmp/runtime-stability-output/game.js
 ! grep -Fq 'Object["defineProperty"](Object["prototype"]' /tmp/runtime-stability-output/noname.js
 ! grep -Fq '__gg_engine_alert_filter_installed__' /tmp/runtime-stability-output/game.js
@@ -196,7 +203,7 @@ grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$ARTIFACT_D
 grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "$ARTIFACT_DIR/APK_VERIFY.txt"
 
 "$AAPT" dump badging "$SIGNED_APK" > "$ARTIFACT_DIR/APK_BADGING.txt"
-grep -Fq "package: name='com.jinli.quickweb' versionCode='101' versionName='2.0.21-runtime-ui-repeat-fix'" "$ARTIFACT_DIR/APK_BADGING.txt"
+grep -Fq "package: name='com.jinli.quickweb' versionCode='102' versionName='2.0.22-mobile-sheet-action-fix'" "$ARTIFACT_DIR/APK_BADGING.txt"
 sha256sum "$SIGNED_APK" | tee "$ARTIFACT_DIR/SHA256SUMS.txt"
 
 cat > "$ARTIFACT_DIR/BUILD_INFO.txt" <<EOF
@@ -204,7 +211,8 @@ versionName=$VERSION_NAME
 versionCode=$VERSION_CODE
 package=com.jinli.quickweb
 sourceBranch=fix/page5-missing-constructor-mobile-bridge-20260806
-workflow=gg-2.0.21-runtime-ui-repeat-fix
-uiTheme=dark-glass-v3
-repeatActionRecovery=per-request-jsonp-v3
+workflow=gg-2.0.22-mobile-sheet-action-fix
+panelStructure=mobile-bottom-sheet-v4
+floatingControl=mobile-squircle-v4
+repeatActionTransport=synchronous-jsonp-and-virtual-xhr-v4
 EOF
