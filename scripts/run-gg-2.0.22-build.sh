@@ -13,7 +13,8 @@ from pathlib import Path
 import sys
 
 path = Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")n
+text = path.read_text(encoding="utf-8")
+
 # Locate the exact verifier block through its stable exception message. The
 # prohibited behavior is manually completing a SCRIPT node. XHR load events
 # are part of its normal lifecycle and must remain available.
