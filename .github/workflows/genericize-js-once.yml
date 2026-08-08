@@ -1,0 +1,48 @@
+name: Genericize JS task branch
+
+on:
+  push:
+    branches:
+      - codex/generic-js-anonymization-20260809
+    paths:
+      - tools/genericize-js.mjs
+      - .github/workflows/genericize-js-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  genericize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout task branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install parser dependency
+        run: npm install --no-save --no-package-lock acorn@8
+
+      - name: Apply anonymous generic template conversion
+        run: node tools/genericize-js.mjs apply
+
+      - name: Verify anonymous templates
+        run: node tools/genericize-js.mjs verify
+
+      - name: Commit generated JS and registry
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add remote-script/src/noname.js game-engine/release/game-1.0.5.js docs/GENERIC_JS_ANONYMIZATION.md
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "refactor: genericize JS literals [genericized]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
