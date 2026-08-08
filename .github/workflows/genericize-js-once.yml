@@ -40,7 +40,7 @@ jobs:
       - name: Install parser dependency
         run: npm install --no-save --no-package-lock acorn@8
 
-      - name: Optimize large-file passes
+      - name: Persist validated large-file fixes
         shell: bash
         run: |
           node <<'NODE'
@@ -50,35 +50,39 @@ jobs:
 
           const overlapBefore = `    const overlap = replacements.some((r) => item.start < r.end && item.end > r.start);`;
           const overlapAfter = `    const lastReplacement = replacements[replacements.length - 1];\n    const overlap = Boolean(lastReplacement && item.start < lastReplacement.end && item.end > lastReplacement.start);`;
-          if (!source.includes(overlapBefore)) throw new Error('genericizer overlap optimization target not found');
-          source = source.replace(overlapBefore, overlapAfter);
+          if (source.includes(overlapBefore)) source = source.replace(overlapBefore, overlapAfter);
 
           const applyBefore = `function applyPlan(source, plan) {\n  let out = source;\n  for (const item of plan) {\n    out = out.slice(0, item.start) + item.genericSource + out.slice(item.end);\n  }\n  return out;\n}`;
           const applyAfter = `function applyPlan(source, plan) {\n  const ascending = [...plan].sort((a, b) => a.start - b.start || a.end - b.end);\n  let out = '';\n  let cursor = 0;\n  for (const item of ascending) {\n    out += source.slice(cursor, item.start);\n    out += item.genericSource;\n    cursor = item.end;\n  }\n  out += source.slice(cursor);\n  return out;\n}`;
-          if (!source.includes(applyBefore)) throw new Error('genericizer output optimization target not found');
-          source = source.replace(applyBefore, applyAfter);
+          if (source.includes(applyBefore)) source = source.replace(applyBefore, applyAfter);
 
           source = source.replaceAll('\\d{6}', '\\d{6,}');
           fs.writeFileSync(file, source);
           NODE
 
-      - name: Apply anonymous generic template conversion
-        run: node tools/genericize-js.mjs apply
+      - name: Apply anonymous generic template conversion if needed
+        shell: bash
+        run: |
+          if grep -q 'GJS_ANONYMIZED_V1' remote-script/src/noname.js; then
+            echo "Anonymous templates already generated"
+          else
+            node tools/genericize-js.mjs apply
+          fi
 
       - name: Verify anonymous templates
         run: node tools/genericize-js.mjs verify
 
-      - name: Commit generated JS and registry
+      - name: Commit validated helper and generated outputs
         shell: bash
         env:
           TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add remote-script/src/noname.js game-engine/release/game-1.0.5.js docs/GENERIC_JS_ANONYMIZATION.md
+          git add tools/genericize-js.mjs remote-script/src/noname.js game-engine/release/game-1.0.5.js docs/GENERIC_JS_ANONYMIZATION.md
           if git diff --cached --quiet; then
             echo "No generated changes"
             exit 0
           fi
-          git commit -m "refactor: genericize JS literals [genericized]"
+          git commit -m "chore: persist validated genericizer helper"
           git push origin "HEAD:${TARGET_BRANCH}"
