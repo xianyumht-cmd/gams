@@ -58,6 +58,7 @@ jobs:
           if (!source.includes(applyBefore)) throw new Error('genericizer output optimization target not found');
           source = source.replace(applyBefore, applyAfter);
 
+          source = source.replaceAll('\\d{6}', '\\d{6,}');
           fs.writeFileSync(file, source);
           NODE
 
