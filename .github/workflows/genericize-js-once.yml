@@ -7,17 +7,25 @@ on:
     paths:
       - tools/genericize-js.mjs
       - .github/workflows/genericize-js-once.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - tools/genericize-js.mjs
+      - .github/workflows/genericize-js-once.yml
 
 permissions:
   contents: write
 
 jobs:
   genericize:
+    if: github.head_ref == '' || github.head_ref == 'codex/generic-js-anonymization-20260809'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout task branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -36,6 +44,8 @@ jobs:
 
       - name: Commit generated JS and registry
         shell: bash
+        env:
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -45,4 +55,4 @@ jobs:
             exit 0
           fi
           git commit -m "refactor: genericize JS literals [genericized]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${TARGET_BRANCH}"
