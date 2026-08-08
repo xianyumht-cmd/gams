@@ -106,7 +106,8 @@ function makePlan(source, file, state) {
 
   const replacements = [];
   for (const item of items) {
-    const overlap = replacements.some((r) => item.start < r.end && item.end > r.start);
+    const lastReplacement = replacements[replacements.length - 1];
+    const overlap = Boolean(lastReplacement && item.start < lastReplacement.end && item.end > lastReplacement.start);
     if (overlap) continue;
     const category = classify(item.value, item.kind);
     state.counts[category] = (state.counts[category] || 0) + 1;
@@ -136,10 +137,15 @@ function makePlan(source, file, state) {
 }
 
 function applyPlan(source, plan) {
-  let out = source;
-  for (const item of plan) {
-    out = out.slice(0, item.start) + item.genericSource + out.slice(item.end);
+  const ascending = [...plan].sort((a, b) => a.start - b.start || a.end - b.end);
+  let out = '';
+  let cursor = 0;
+  for (const item of ascending) {
+    out += source.slice(cursor, item.start);
+    out += item.genericSource;
+    cursor = item.end;
   }
+  out += source.slice(cursor);
   return out;
 }
 
@@ -309,13 +315,13 @@ function collectLeaks(source, file) {
   walk(ast, (node) => {
     if (node.type === 'Literal' && typeof node.value === 'string') {
       if (node.value === '' || node.value === 'use strict') return;
-      if (/^__GJS_[A-Z]+_\d{6}__$/.test(node.value)) return;
+      if (/^__GJS_[A-Z]+_\d{6,}__$/.test(node.value)) return;
       leaks.push(`string@${node.start}`);
     } else if (node.type === 'Literal' && node.regex) {
-      if (/^__GJS_RX_\d{6}__$/.test(node.regex.pattern || '')) return;
+      if (/^__GJS_RX_\d{6,}__$/.test(node.regex.pattern || '')) return;
       leaks.push(`regex@${node.start}`);
     } else if (node.type === 'TemplateElement' && node.value?.raw) {
-      if (/^__GJS_[A-Z]+_\d{6}__$/.test(node.value.raw)) return;
+      if (/^__GJS_[A-Z]+_\d{6,}__$/.test(node.value.raw)) return;
       leaks.push(`template@${node.start}`);
     }
   });
