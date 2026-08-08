@@ -17,6 +17,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: genericize-js-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   genericize:
     if: github.head_ref == '' || github.head_ref == 'codex/generic-js-anonymization-20260809'
@@ -35,6 +39,20 @@ jobs:
 
       - name: Install parser dependency
         run: npm install --no-save --no-package-lock acorn@8
+
+      - name: Optimize large-file interval scan
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'tools/genericize-js.mjs';
+          let source = fs.readFileSync(file, 'utf8');
+          const before = `    const overlap = replacements.some((r) => item.start < r.end && item.end > r.start);`;
+          const after = `    const lastReplacement = replacements[replacements.length - 1];\n    const overlap = Boolean(lastReplacement && item.start < lastReplacement.end && item.end > lastReplacement.start);`;
+          if (!source.includes(before)) throw new Error('genericizer optimization target not found');
+          source = source.replace(before, after);
+          fs.writeFileSync(file, source);
+          NODE
 
       - name: Apply anonymous generic template conversion
         run: node tools/genericize-js.mjs apply
