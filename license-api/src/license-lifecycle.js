@@ -24,8 +24,7 @@ export default {
       } else if (body && path === ADMIN_BATCH && Array.isArray(body.ids)) {
         const ids = [...new Set(body.ids.map((value) => text(value, 64)).filter(Boolean))]
           .slice(0, 100);
-        beforeBatch = await Promise.all(ids.map((id) => findLicense(env, { id })));
-        beforeBatch = beforeBatch.filter(Boolean);
+        beforeBatch = await getLifecycles(env, ids, true);
       }
     }
 
@@ -79,14 +78,12 @@ function needsBody(path) {
 async function rewriteCreateResponse(response, env) {
   const payload = await response.clone().json();
   if (!Array.isArray(payload.licenses)) return response;
-  const licenses = [];
-  for (const item of payload.licenses) {
-    const current = item?.id ? await getLifecycle(env, item.id) : null;
-    if (!current) {
-      licenses.push(item);
-      continue;
-    }
-    licenses.push({
+  const ids = payload.licenses.map((item) => text(item?.id, 64)).filter(Boolean);
+  const lifecycleById = lifecycleMap(await getLifecycles(env, ids));
+  const licenses = payload.licenses.map((item) => {
+    const current = lifecycleById.get(item?.id);
+    if (!current) return item;
+    return {
       ...item,
       expiresAt: current.expires_at == null ? null : Number(current.expires_at),
       activatedAt: current.activated_at == null ? null : Number(current.activated_at),
@@ -94,8 +91,8 @@ async function rewriteCreateResponse(response, env) {
       durationDays: durationDays(current.duration_seconds),
       permanent: Number(current.duration_seconds) === -1,
       startsOnActivation: current.activated_at == null,
-    });
-  }
+    };
+  });
   return rewriteJson(response, { ...payload, licenses });
 }
 
@@ -117,26 +114,24 @@ async function rewriteActivationResponse(response, env, body) {
 async function rewriteAdminListResponse(response, env) {
   const payload = await response.clone().json();
   if (!Array.isArray(payload.licenses)) return response;
-  const licenses = [];
-  for (const item of payload.licenses) {
-    licenses.push(await enrichAdminLicense(env, item));
-  }
+  const ids = payload.licenses.map((item) => text(item?.id, 64)).filter(Boolean);
+  const lifecycleById = lifecycleMap(await getLifecycles(env, ids));
+  const licenses = payload.licenses.map((item) => enrichAdminLicense(item, lifecycleById.get(item?.id)));
   return rewriteJson(response, { ...payload, licenses });
 }
 
 async function rewriteAdminLicenseResponse(response, env) {
   const payload = await response.clone().json();
   if (!payload.license?.id) return response;
+  const current = await getLifecycle(env, payload.license.id);
   return rewriteJson(response, {
     ...payload,
-    license: await enrichAdminLicense(env, payload.license),
+    license: enrichAdminLicense(payload.license, current),
   });
 }
 
-async function enrichAdminLicense(env, item) {
-  if (!item?.id) return item;
-  const current = await getLifecycle(env, item.id);
-  if (!current) return item;
+function enrichAdminLicense(item, current) {
+  if (!item?.id || !current) return item;
   return {
     ...item,
     status: current.status,
@@ -257,9 +252,25 @@ async function findLicense(env, body) {
 }
 
 async function getLifecycle(env, id) {
-  return env.DB.prepare(
-    "SELECT id,status,created_at,activated_at,expires_at,duration_seconds FROM licenses WHERE id=?"
-  ).bind(id).first();
+  const rows = await getLifecycles(env, [text(id, 64)]);
+  return rows[0] || null;
+}
+
+async function getLifecycles(env, ids, full = false) {
+  const uniqueIds = [...new Set((ids || []).map((id) => text(id, 64)).filter(Boolean))].slice(0, 100);
+  if (!uniqueIds.length) return [];
+  const placeholders = uniqueIds.map(() => "?").join(",");
+  const columns = full
+    ? "*"
+    : "id,status,created_at,activated_at,expires_at,duration_seconds";
+  const rows = await env.DB.prepare(
+    `SELECT ${columns} FROM licenses WHERE id IN (${placeholders})`
+  ).bind(...uniqueIds).all();
+  return rows.results || [];
+}
+
+function lifecycleMap(rows) {
+  return new Map((rows || []).map((row) => [row.id, row]));
 }
 
 async function readJsonClone(request) {
