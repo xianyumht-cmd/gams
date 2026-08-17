@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "gams-license-api",
-  "main": "src/index.js",
+  "main": "src/license-lifecycle.js",
   "compatibility_date": "2026-07-18",
   "workers_dev": true,
   "preview_urls": false,
