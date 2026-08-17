@@ -29,6 +29,15 @@ jobs:
           cat hardening_backend_parts/part* > license-api/src/index.js
           (cd license-api && python3 control_center_patch.py && python3 client_config_patch.py && python3 release_baseline_patch.py)
           node --check license-api/src/index.js
+          node --check license-api/src/license-lifecycle.js
+      - name: Verify activation-relative expiry lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 license-api/test_activation_relative_expiry.py
+          grep -q 'duration_seconds' license-api/migrations/0005_activation_relative_expiry.sql
+          grep -q 'licenses_start_expiry_on_first_activation' license-api/migrations/0005_activation_relative_expiry.sql
+          grep -q '"main": "src/license-lifecycle.js"' license-api/wrangler.template.jsonc
       - name: Verify control-center routes and defaults
         shell: bash
         run: |
