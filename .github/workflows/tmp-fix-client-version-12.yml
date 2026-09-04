@@ -1,0 +1,77 @@
+name: Temporary fix client version 12
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/tmp-fix-client-version-12.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Apply client version 12 and bump APK build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path('hardening_client_parts/OnlineLicenseManager.java/part00'): [
+                  ('private static final int APP_VERSION_CODE = 8;', 'private static final int APP_VERSION_CODE = 12;'),
+              ],
+              Path('hardening_client_parts/OnlineLicenseManager.java/part01'): [
+                  ('"GG/8 Android"', '"GG/12 Android"'),
+              ],
+              Path('.github/workflows/build-apk.yml'): [
+                  ('2026090401', '2026090402'),
+                  ('2.0.24-compact-panel-temp-r1', '2.0.24-compact-panel-temp-r2'),
+              ],
+          }
+
+          for path, pairs in replacements.items():
+              text = path.read_text(encoding='utf-8')
+              for old, new in pairs:
+                  count = text.count(old)
+                  if count < 1:
+                      raise SystemExit(f'Expected text not found in {path}: {old}')
+                  text = text.replace(old, new)
+              path.write_text(text, encoding='utf-8')
+
+          assert 'APP_VERSION_CODE = 12;' in Path('hardening_client_parts/OnlineLicenseManager.java/part00').read_text(encoding='utf-8')
+          assert '"GG/12 Android"' in Path('hardening_client_parts/OnlineLicenseManager.java/part01').read_text(encoding='utf-8')
+          workflow = Path('.github/workflows/build-apk.yml').read_text(encoding='utf-8')
+          assert '2026090402' in workflow
+          assert '2.0.24-compact-panel-temp-r2' in workflow
+          PY
+
+      - name: Commit final source state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/tmp-fix-client-version-12.yml
+          git add hardening_client_parts/OnlineLicenseManager.java/part00
+          git add hardening_client_parts/OnlineLicenseManager.java/part01
+          git add .github/workflows/build-apk.yml
+          git commit -m "fix: align client app version with server version 12"
+          git push origin HEAD:main
+
+      - name: Start corrected APK build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 2
+          gh workflow run build-apk.yml --ref main
