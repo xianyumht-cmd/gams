@@ -80,7 +80,7 @@
 
     private JSONObject postJson(String path, JSONObject body, int maximumBytes) throws Exception {
         ResilientApiTransport.Response response = ResilientApiTransport.post(
-                path, body.toString(), "GG/8 Android", "", maximumBytes);
+                path, body.toString(), "GG/12 Android", "", maximumBytes);
         JSONObject object;
         try { object = new JSONObject(response.body); }
         catch (Exception error) { throw new java.io.IOException("服务器响应无效", error); }

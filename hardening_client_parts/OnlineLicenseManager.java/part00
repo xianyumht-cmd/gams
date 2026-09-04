@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class OnlineLicenseManager {
-    private static final int APP_VERSION_CODE = 8;
+    private static final int APP_VERSION_CODE = 12;
     private static final int MAX_JSON_BYTES = 128 * 1024;
     private static final int MAX_SCRIPT_RESPONSE_BYTES = 3 * 1024 * 1024;
     private static final long DEFAULT_FOREGROUND_RECHECK_MS = 30L * 60L * 1000L;
