@@ -1,0 +1,80 @@
+name: Temporary game 1.0.5 fingerprint probe
+
+on:
+  push:
+    branches:
+      - tmp/game-105-fixed-diff-20260904
+    paths:
+      - .github/workflows/tmp-game105-diff.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fingerprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/game-105-fixed-diff-20260904
+      - name: Build content-defined fingerprints
+        shell: python
+        run: |
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path('game-engine/release/game-1.0.5.js')
+          data = src.read_bytes()
+          min_size = 2048
+          max_size = 8192
+          mask = (1 << 12) - 1
+          base = 257
+          mod = (1 << 64) - 1
+
+          chunks = []
+          start = 0
+          h = 0
+          for i, b in enumerate(data):
+              h = ((h * base) + b + 1) & mod
+              size = i + 1 - start
+              if size >= min_size and ((h & mask) == 0 or size >= max_size):
+                  part = data[start:i+1]
+                  chunks.append({
+                      'i': len(chunks),
+                      'offset': start,
+                      'length': len(part),
+                      'sha256': hashlib.sha256(part).hexdigest(),
+                      'prefix': part[:32].hex(),
+                      'suffix': part[-32:].hex(),
+                  })
+                  start = i + 1
+                  h = 0
+          if start < len(data):
+              part = data[start:]
+              chunks.append({
+                  'i': len(chunks),
+                  'offset': start,
+                  'length': len(part),
+                  'sha256': hashlib.sha256(part).hexdigest(),
+                  'prefix': part[:32].hex(),
+                  'suffix': part[-32:].hex(),
+              })
+
+          out = {
+              'file': str(src),
+              'size': len(data),
+              'sha256': hashlib.sha256(data).hexdigest(),
+              'algorithm': {'min': min_size, 'max': max_size, 'mask_bits': 12, 'base': base},
+              'chunks': chunks,
+          }
+          p = Path('.tmp/game105-fingerprint.json')
+          p.parent.mkdir(parents=True, exist_ok=True)
+          p.write_text(json.dumps(out, separators=(',', ':')), encoding='utf-8')
+          print('chunks', len(chunks), 'size', len(data), 'sha256', out['sha256'])
+      - name: Commit fingerprint
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp/game105-fingerprint.json
+          git commit -m "chore: record temporary game 1.0.5 fingerprint"
+          git push origin HEAD:tmp/game-105-fixed-diff-20260904
