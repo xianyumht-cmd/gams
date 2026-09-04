@@ -5,101 +5,21 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/tmp-whole-file-replace-20260904.yml'
-      - '.tmp/game-1.0.5-replace-recipe-20260904.json'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  whole-file-replace:
+  export-current-target:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      GH_TOKEN: ${{ github.token }}
-      TARGET: game-engine/release/game-1.0.5.js
-      RECIPE: .tmp/game-1.0.5-replace-recipe-20260904.json
-      SELF: .github/workflows/tmp-whole-file-replace-20260904.yml
     steps:
       - name: Checkout main
-        shell: bash
-        run: |
-          set -euo pipefail
-          git init -q .
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch -q --depth 1 origin main
-          git checkout -q FETCH_HEAD
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Refine map or perform atomic whole-file replacement
-        shell: bash
-        env:
-          TARGET_SUB_SIGS: '1179648,4096,dd59b3b8,385f62c32525a176eb94ef67427ab303db9cb269d656030341177cea9cb69f55;1183744,4096,1e2411dc,c0cf6571cd8fa5d9b198351088722aca61b36089389b179d9d8c4fa1b3dc0182;1187840,4096,b2322100,60c487afd54b9192b02e2f177a8da190229ab78a9125448456870ce4b936219f;1191936,4096,99585c22,86304c70c29a4d1cf2c543fbfbb0974342ed3147b94248318c72e1d62b13dc64;1196032,4096,9c803d29,fb673e1a8d474f0dbb7a56ccc91731db96c941cc91276ddf9a5d3f1293fc7db2;1200128,4096,809986a9,40eaf9abc5d4872e4f7412df502dc529e5303f1183e37c19863c4c295a4e2fd6;1204224,4096,8fe7f582,93f739a029316e115e619b3b1664fa65f95be6b00c979ad7443e9e1033c3084c;1208320,4096,d9e2e34c,ff353a780494418d12dca7b3d5b1451160507ecc3eb91b32c6b99049e8774070;1212416,4096,846e51ee,a5911b4d0a31f50b1c6493389089bb6e1acf0076df360278b432779eaad72289;1216512,4096,2a2b3a32,567380e1c81fcbc78e9a04120d7a720ed6d2cbd7860f31d7d845f0eaa06f5816;1220608,4096,90ba8020,01bf50688a144af89cfbc087e949abbdcb8db3465d2bd4085090bfca6e762bd3;1224704,4096,deb49467,ba2815116281c6e89ed9cc1c4bc9fd37954e00df5a51257bf1727704d75f3538;1228800,4096,ccc7ff46,b866a7da6f0729ba79a83b52c4da8dde36a09f4662d2306ccb7464b1df16ef42;1232896,4096,ca7659ab,ef7c893fc8851438f8c9ec4d59acfd445e987016e4202222699117a998c707ca;1236992,4096,31d177fe,f4265766776381cf70fdf53eb6a5d8b47ca2702408774417ffb1623ea76b5f7c;1241088,4096,41c70d4a,6ea3c32f949caad11f9d33685511f715093dd51332b2d5a0a3ee153fb61895a7;1572864,4096,06646de4,3b15af5d8560cde19348fa5378c805726ea32de6a39639c7c6d78d0191f16a9e;1576960,4096,1d696616,0b81a99723fd0244fc82c45b118c9e706d878a2477782d3a51a5f8f59e219aee;1581056,4096,091e3b55,21c0b5b44f3303a6082484c93a0881a45f7ff099f0883d3d92963dedbd4257f7;1585152,4096,d39e1008,57d45a8e662c94a437bf2afe2c2340d628c34520ec1c7326ad88b2d71813a230;1589248,4096,067a3a13,4b1ddf56f1b5d386c4ed59e1a9da918ae9dfb1526f4ad8960bfc1de7d35233af;1593344,4096,17b16bc7,c6c129dd9a3670d50d6b9a326711378a26a1ff046649a0b58828a2169f735e1c;1597440,4096,2d33bc0b,2108d12bed9eb52f11fb48c553a4d407c1738a333b77b0ffcec650a82ddc7d33;1601536,4096,17505746,8b20d8b77e0bcf79b7197868444347378d90f0cfffbbeb75dac2a708d3506fb3;1605632,4096,2e4f8ddf,c0526d5374d7b9e6e2139987ad2773c5f659279a97469de141050780668291e2;1609728,4096,9ab5aafc,a7905b78c0630379d170e3e810a7af794870b3149cc27d803a3e3c4585a48299;1613824,4096,e120dc3a,a52d3a6e9e07424c45f9b3d922a89458b082d64a25b236ae1424f4683f6019ff;1617920,4096,57ddf30e,54365a5e9b2bd23e70260937f6845574898160acdfc3ffac39d4e2f45af40d86;1622016,4096,9b365eb4,334362f8f9bcb05a68c48a76b9b04c9da740da0dd9eed8515960b6a34a54875e;1626112,4096,5bb0972f,ac228115e3f5562e4c09408669e4aeddf1356ad7c87ebab3fed0a5865d01734e;1630208,4096,667eae6b,5828fcd75b70378052a7a00b1cf7360cafeece4c9733f1861a2b1ed8110a11f1;1634304,4096,861f6efe,4ce7bcb3a6a5ec5f2f337b81a0292de535f0e0456199e1af089f506c450fab6f;1900544,4096,1ef66ed1,05c1319506528f7e6fc27cc0ef702570fe53fdc29d0f1279c518e2ec6202415f;1904640,4096,44336abf,d24094506ac6621de4ff2bc83fa18b48edfd794c8e07ecd24373adef9a6b6b26;1908736,4096,c9c214bb,60ee3ccf128fac7614687f5a8a466db547976bbb4b34430ca1ad03f790bab615;1912832,4096,d64a794a,9c2b82bfa63be2f031a26ad12f81da61e25cd69b3d34a044ea1a8cb36c5f84b6;1916928,4096,1f906710,0c74fbfbaf5874c341e238e208455e27d081e14054b25b078fb6390810167a08;1921024,4096,85243066,817931dfa7fe863a95c97087655a2728404495e25436df954cf907f4170aebc4;1925120,4096,f9eb1320,9a53283709b3ca1af72b9b942d84c13561432cd35fe457e1ac1dd3ad2e7f698f;1929216,4096,36cc529f,d66775762e680d2a55bdc926cb50a367ba42a1b0ac70447adae82057b1653e6b;1933312,4096,bfbc6833,fc3fe8990195074b566a8207dff3def1cbe176813b43858e4c387992bc5334b2;1937408,4096,73033dc6,191c3d09c0a2a79a0d6d896d9883d1257c073df3e6d3309be73d1069f8374680;1941504,4096,6bf13f6a,50c1a78e9712c84cfa0e31f0956d1c56786530074b8e47b7f9654d0d74a39870;1945600,4096,e39a3ed6,fe9e207152c70d10908c80f4711f1a18335371915f3d48f0568efa70159d306c;1949696,4096,8f188d1e,5f9eb3ab3ae8b7e0c946bdf9fdd07909414e307d14af3f53224a029cef435c52;1953792,4096,0d4e4e69,be6051a387496197bcfccfa5da201c43e404415f7bfae8023360c0d82a684744;1957888,4096,c7676138,cdbac1a9c304236ed845ad34278af9d75c0a5bf888acc764ebdbe7810eb9bd4d;1961984,4096,8b2e67ec,bc6ede07b78302e7b79e35d2c7d7678661eb149d840cf5a3b0283a83447ba4c9;3670016,4096,4c01be9b,a7e9dbfefccfbc34dd896d3036c569184ec4218b050ecfc63114ab70dd71ab3d;3674112,4096,cfc72a9a,454478e427aaa287c2e4e1618969b12fc21a2562385a95434d5ce8ad87338575;3678208,4096,d58c6015,842c9d235598a738ada6b54781c1cfa3f267a1b434e0aa23029c5e5ba62efde6;3682304,4096,63e545e3,0b82c6549b3aeaf22e849617a2a37f8544e62c38e254aca6d8ca8362d73a2cd5;3686400,4096,a0cb2afb,b8eeaa8babcf068e5551beabe75c2ddb5c9f1aa36daa2f6296ddbc135a11b67b;3690496,4096,94bf544b,c53f05072b87e241b30ac293b350241b42ef854593933ba5a1a68a758b017143;3694592,4096,cba62910,cfbbc1fe52bc421064994eeb395ef9fb6114cbad8763a6d120648c5cd219ce46;3698688,4096,56ed8f80,923f2b64aa2d4386eecf6dfff18a59e14c0a72e720b202dbb1aac693d61ba098;3702784,4096,34304800,4931584e51ef940350de47a967fb348136f668bd930c7fb7d45f8351c0a1ee55;3706880,4096,f04062c8,9df5aa32469dfa8faa93e1b03867ef5a38a3a889e9e4eaebe6717404d4a34bc2;3710976,4096,e80a6d10,1c744cafd93aa25587558dd7854f80a9a7cebe713a056c118ff1c5099f9c0448;3715072,4096,67f658a3,a8fbb9526ce02b35a2dfd44fd7437b49ed51a7d419e36f552d3ae523764536e7;3719168,4096,f2b545d7,c710b7c18b29221309e45e44abe665eb7bc59a0201f0eea663cc683f27e3a9cc;3723264,4096,db758274,0bdfbddcf31099bfaa59a2e2aec2a07e199aa1604673a07440067d32c3c77798;3727360,4096,08c4a544,4afd4931601c39e600258a65e60b7e9cbeb9fc98f4715b862fb2775fea3e919e;3731456,4096,48a43b3d,e26b8022deed66c0ecf631320b3070f783cec043ec79305da332ec4876fa2d34;3997696,4096,c28b3aa3,0f7cab8790ba5d067efa0da040b115deb50d1b9f21999503d047cb2a8b535cb7;4001792,4096,a31a4a57,6b2564fb44b6e8076dd2d512419c9e13e04faf40e1596c6ea6c30b1abf75f039;4005888,4096,95fc214d,2bcd2a176017d3870c0de6cdfad73a75ef73d7e9f87eaa9272594e3ab3a34a56;4009984,4096,10424e7e,94a1aa30fa403ba6dac2c2fef877d7b088d301ce89c65c0201629e43256fd0ff;4014080,4096,02d14999,4284d2dba0e4f162b5024f81784bcde984f366bf96d78eef8b86e56aa13c9209;4018176,4096,844f49d5,083f9a812a766d694f09f61497438bb0d13128cbf0e4b4d1b5a6510c0150723e;4022272,4096,f2cfc962,0d489e5cbd697beb098edc545fdc1a3c217f7bc4b834ead05a19ee201078dacc;4026368,4096,75c6638d,10a210fcbabc2e8965a362e505949c675d3f48da303766dc58b98ca940cdfb20;4030464,4096,19cc77d5,88ae0c2a9132280b5d9cb493d4961a97cba9887cafc7d3eefbaa6d1b6e64211b;4034560,4096,2eaa93ef,000dc8490bc33e0ec494adb1ede0b6aa3b5e7efb44deff248b5b052f551d9991;4038656,4096,bf4f6693,b9de8a779a1b5c369e78bba546e9ca54efb21581f6c625d774fb3de2f0bb3943;4042752,4096,32f5725e,c286392ec485bf49ebbd255043fce276f8996d1188377de89374aaf4127b9b31;4046848,4096,f83a52da,35a27c80fa3a69bbcc98b993a851bf5a65bea3142a37831c30f3ec62728622e3;4050944,4096,b34c0b8b,24903d3bea0c33c79e4931001a4c606f5566e7d690be754cd5ed9c4007607561;4055040,4096,9d0bf0e0,3804c069ecfed243b8e4e186d3bf49057e991152b5a420649d21e6e7eed7ba77;4059136,4096,f1e34a2f,b20d0a7915aec77b363d00292ec864486983f7e5f24a9dd084aa6dd3d3a9d5db;11534336,4096,2af9d1e4,1c4e617c245ade5433c2fe0677b2f917ba62ffec338dccc64728742b65f56c93;11538432,4096,8e534aa4,73c75faac5d514288d95597c22872666d26966251f2527e609c3898e5f65ca62;11542528,4096,3898a7f3,ce491699d12bfebf1b334ad6f56a8362d73e900eee74de4ae8495009518922a0;11546624,4096,2fa6d4d6,fea5a75290ac8a75a0ad3b29e85bd738e5ded54934cbd36719904397b5e68585;11550720,4096,53995a34,31c6f75d99cc71d659cbdb9736bce3f9f7e400a556336d5dbe17b1cff333fb43;11554816,4096,f1d4914b,b3bb1b05d7ef82552126e6defd10f250d9df45e2b1734afd8421ca7fe81c8fc2;11558912,4096,8d1394b5,c6b5d563a87d98721f387d8384c09005aedd97622b57986161df25d104347ea6;11563008,4096,283b8164,4c2cab7ed68f7ce24fecd59d0ec153732fa388c08601efa87bef77bc891921f0;11567104,4096,e3746921,a2d16c67ebb527fc0f877ddbead8b2a194b3500520e1e83baf979b839363bedf;11571200,4096,b01b671a,51dd9e27920c8fdb02caf592179f5350939f9d61836a9a220ea036f7f78d1907;11575296,4096,a2579652,f0520b1f95c27d7f2e0f462ba73bdb123dba178d75df0a8260d5ba07ae0baa94;11579392,4096,e2e6a373,b13c5bedb521200cb1a8e2f3c7b2bce2b1b980e7726cea59d00b81859b1ce271;11583488,4096,18866948,6d7b1e89f24b4a02f760476942d3c7ae16da38c97c880b34a49f6725ccf6b33b;11587584,3016,9d6f1e1d,d058b9a65f28c0b9f86fc4b67d9e1d8bf30d497516348feecd8bfd7749751196'
-        run: |
-          set -euo pipefail
-          if [[ ! -f "${RECIPE}" ]]; then
-            python3 - <<'PY'
-          import hashlib, os
-          from pathlib import Path
-          old = Path(os.environ['TARGET']).read_bytes()
-          sigs=[]
-          for item in os.environ['TARGET_SUB_SIGS'].split(';'):
-              toff,n,w,h=item.split(',',3)
-              sigs.append((int(toff),int(n),int(w,16),h))
-          n=4096
-          full=[s for s in sigs if s[1] == n]
-          byweak={}
-          for toff,nn,w,h in full:
-              byweak.setdefault(w,[]).append((toff,h))
-          win=old[:n]
-          s1=sum(win)&0xffff
-          s2=sum((n-j)*v for j,v in enumerate(win))&0xffff
-          matches={}
-          def check(off,s1,s2):
-              weak=s1 | (s2<<16)
-              candidates=byweak.get(weak)
-              if not candidates: return
-              strong=hashlib.sha256(old[off:off+n]).hexdigest()
-              for toff,h in candidates:
-                  if toff not in matches and h == strong:
-                      matches[toff]=off
-          check(0,s1,s2)
-          for off in range(1,len(old)-n+1):
-              x=old[off-1]; y=old[off+n-1]
-              s1=(s1-x+y)&0xffff
-              s2=(s2+s1-(n*x))&0xffff
-              check(off,s1,s2)
-          unmatched=[toff for toff,nn,_,_ in sigs if nn == n and toff not in matches]
-          print('SUB_MATCHES ' + ','.join(f'{x}:{matches[x]}' for x in sorted(matches)))
-          print('SUB_UNMATCHED ' + ','.join(map(str,unmatched)))
-          print(f'SUB_COUNTS matched={len(matches)} unmatched={len(unmatched)} total_full={len(full)}')
-          PY
-            exit 0
-          fi
-
-          python3 - <<'PY'
-          import base64, hashlib, json, os
-          from pathlib import Path
-          target = Path(os.environ['TARGET'])
-          recipe = json.loads(Path(os.environ['RECIPE']).read_text(encoding='utf-8'))
-          old = target.read_bytes()
-          out = bytearray()
-          for op in recipe['ops']:
-              if op[0] == 'r':
-                  start, length = int(op[1]), int(op[2])
-                  out.extend(old[start:start+length])
-              elif op[0] == 'l':
-                  out.extend(base64.b64decode(op[1]))
-              else:
-                  raise SystemExit(f'unknown recipe op: {op[0]}')
-          got_size=len(out); got_sha=hashlib.sha256(out).hexdigest()
-          if got_size != int(recipe['target_size']): raise SystemExit(f'target size mismatch: {got_size}')
-          if got_sha != recipe['target_sha256']: raise SystemExit(f'target sha256 mismatch: {got_sha}')
-          tmp=target.with_suffix(target.suffix+'.whole-replacement.tmp')
-          tmp.write_bytes(out); os.replace(tmp,target)
-          print(f'REPLACED size={got_size} sha256={got_sha}')
-          PY
-          git add "${TARGET}"
-          git rm -f "${RECIPE}" "${SELF}"
-          git commit -m "Replace game engine 1.0.5 JS as whole file"
-          git push origin HEAD:main
+        uses: actions/checkout@v4
+      - name: Upload current target snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-game-engine-1.0.5
+          path: game-engine/release/game-1.0.5.js
+          if-no-files-found: error
+          compression-level: 6
