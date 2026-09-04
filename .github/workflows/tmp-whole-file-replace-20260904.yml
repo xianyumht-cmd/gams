@@ -1,0 +1,91 @@
+name: Temporary whole-file JS replacement
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-whole-file-replace-20260904.yml'
+      - '.tmp/game-1.0.5-replace-recipe-20260904.json'
+
+permissions:
+  contents: write
+
+jobs:
+  whole-file-replace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET: game-engine/release/game-1.0.5.js
+      RECIPE: .tmp/game-1.0.5-replace-recipe-20260904.json
+      SELF: .github/workflows/tmp-whole-file-replace-20260904.yml
+      BLOCK_SIZE: '16384'
+    steps:
+      - name: Checkout main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin main
+          git checkout -q FETCH_HEAD
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Emit signatures or perform atomic whole-file replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f "${RECIPE}" ]]; then
+            python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          p = Path(os.environ['TARGET'])
+          bs = int(os.environ['BLOCK_SIZE'])
+          data = p.read_bytes()
+          print(f"SIGBEGIN size={len(data)} sha256={hashlib.sha256(data).hexdigest()} block={bs}")
+          for idx, off in enumerate(range(0, len(data), bs)):
+              b = data[off:off+bs]
+              s1 = sum(b) & 0xffff
+              s2 = sum((len(b)-i)*v for i, v in enumerate(b)) & 0xffff
+              weak = s1 | (s2 << 16)
+              print(f"SIG {idx} {len(b)} {weak:08x} {hashlib.sha256(b).hexdigest()}")
+          print("SIGEND")
+          PY
+            exit 0
+          fi
+
+          python3 - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          target = Path(os.environ['TARGET'])
+          recipe_path = Path(os.environ['RECIPE'])
+          recipe = json.loads(recipe_path.read_text(encoding='utf-8'))
+          old = target.read_bytes()
+          bs = int(recipe['block_size'])
+          out = bytearray()
+          for op in recipe['ops']:
+              if op[0] == 'b':
+                  idx = int(op[1])
+                  start = idx * bs
+                  out.extend(old[start:start+bs])
+              elif op[0] == 'l':
+                  out.extend(base64.b64decode(op[1]))
+              else:
+                  raise SystemExit(f"unknown recipe op: {op[0]}")
+          got_size = len(out)
+          got_sha = hashlib.sha256(out).hexdigest()
+          if got_size != int(recipe['target_size']):
+              raise SystemExit(f"target size mismatch: {got_size}")
+          if got_sha != recipe['target_sha256']:
+              raise SystemExit(f"target sha256 mismatch: {got_sha}")
+          tmp = target.with_suffix(target.suffix + '.whole-replacement.tmp')
+          tmp.write_bytes(out)
+          os.replace(tmp, target)
+          print(f"REPLACED size={got_size} sha256={got_sha}")
+          PY
+
+          git add "${TARGET}"
+          git rm -f "${RECIPE}" "${SELF}"
+          git commit -m "Replace game engine 1.0.5 JS as whole file"
+          git push origin HEAD:main
