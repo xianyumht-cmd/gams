@@ -19,7 +19,6 @@ jobs:
       TARGET: game-engine/release/game-1.0.5.js
       RECIPE: .tmp/game-1.0.5-replace-recipe-20260904.json
       SELF: .github/workflows/tmp-whole-file-replace-20260904.yml
-      BLOCK_SIZE: '16384'
     steps:
       - name: Checkout main
         shell: bash
@@ -32,25 +31,34 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Emit signatures or perform atomic whole-file replacement
+      - name: Probe or perform atomic whole-file replacement
         shell: bash
+        env:
+          TARGET_PREFIX_PROBES: '262144:50d37731f42fcef068242a965f22eb57f55fcf82b54d55df828cad1387683c9f;524288:496358aaf451462fa76a6be1786cc33359f23d7a979cc875d6b79ee66ebe6ff2;786432:25266416edfba40418e0f774da7735196acf3e147fe0370d7b62dc89e8bbfc4c;1048576:09ce017746556f08b82c0111621f9a900782c23d1f266130e5008871109cdd4c;1310720:20caf75651e4d7c52295c7a7f3e4ce7d81349794a7b27e4eed4fefe3b93b5c25;1572864:982e1636b3cc123816fa9cb0de6759d79a629276bd678f6ddb7010fe3169254d;1835008:8aa0edf4adc7160484b5b364a2af5fbd242c261b1fc28b836e4cde54720902d1;2097152:9afa589b6479f4e0071b2ef6d29ad02aafe4116fd5f24e3fa781987d3951d7cb;2359296:d687806db1a387b562e420c540c65c08adaeb0e42543fae55332bf4d144b3d67;2621440:b06cb3fc8492e3e97b2dbd7babf20893de45a0ff4a89e66ced2936ea3c9bf4df;2883584:66831f9c718203df4ba8fdd87fc0ed779f48f164c20c13a4e14c153720c7f8b9;3145728:cee8842de599f859268c17a1035e81a21e35ccc46964b6c9daee068c9abd6f43;3407872:b891200015b20375361019360e59bdcb86a26876d21db72a84f6f3c1b5f3c766;3670016:dab19332fd9fd9abfda3504d6c1c2cb4c338c722f825e6c59391fb1bc380b6de;3932160:d7ea11352b7de46039e9d62dc43ff85c455bd551239ddc1f2407466c75b86809;4194304:4f6efd10f31c966846d0d97e690ec8f70f6a12bf4673814dd4e3362896b937db;4456448:28a9e896b7614d2a984825f166360791668b20c42fac64f0a7a193ab3f003bda;4718592:4d3e655c1c91dee406720d9c358a22889919ddf88628a83efeddd7ca6d2d2ab2;4980736:912a32256f641f84016b1397a963f6ea45463e5e220a96f21c30d7a67b1c9f64;5242880:a01d604ba5b38f7609b954640a47b196e582555efd630b32ff6d06f0ffbab475;5505024:3de504980c58bac9d13715b95da028d22b9bcfc98cdc1daf8d72ca60e6c0a28d;5767168:c0635ada0417be3ab667703b3a6eb773a392acf3f7a7c0f79ae83f42c97ce233;6029312:b102a66fbd47073023f0d5663b8508568a5c8f5f8ba2fcc59e22f856effb18d2;6291456:e7e8c21611748a361f45c0b007431cb58f8d5ed1ed43dc0023dfdae38dcb5c5c;6553600:344f79a62a7a903e5f898cf125f921e4369482e53e539819bcf8cfa7dff685f9;6815744:e4454a6c88e34b18bf4f246f12cba0e415adb663722a7b2d8e8ab0d84425fa7a;7077888:0f7d5d7bc807148bab6a34a663dd644578fe66f651c712229eabc5973e9486f2;7340032:3c3e4a88e3105a235ccedc4656d8f427c1bd7eac6a82c224673ebc7be23bd8e9;7602176:c2e9ce1774142bdcca99a7f8a43495df9a19c402a03ef271e94561a0704cbff6;7864320:642885ed523e1f29daad746d4d70c1b43114135f7c1429794a1a970aa3fcf87b;8126464:753caf6562cefffb82da344ed954ee7576fa3f22cee1384e92c63307c25e0c1d;8388608:805d58b088ddc44ef64d93d005539512e70a214c4f174bf0689f66409d3c6104;8650752:19f2ff6accccc287910667638772d51076a8c39e1e42ba24d6595635f0165c91;8912896:d96adb6e76c95a917d7216bab62faf0272c5d9864b06680aa87c96e6c8c511da;9175040:d21b35e0b8b5d24908170fbdf9e29beffa89f91a2c6276f15fe223e1b81e8062;9437184:07321fc967b351083746fb49254b74df2a4c06e1e8d68682100500c4a777f14b;9699328:f76b3854e10d5c873e09a2198100a0c4c64d1ed543a47acd6e14305e6e230363;9961472:56c51d7b3ad3ee78ac631953045e969a375d54cc021237f4cebca07478199c8d;10223616:e1cb2bb3cd7902d616c3c995247f1bd614d0c27d64003cc3bf94026998c6a55c;10485760:7be7defdbdfa334f9b6b3f95d1d49b875a2a2c041a0fb3043509ce289fb4cba4;10747904:c419aa7a8abe14b581e44864cfb45f2af8145d107a0af5f923b54d1d1c087083;11010048:20abdc0fa2e2b01061150f4f2aeed6e6c143ff3b8447671387c3c9dab94afc64;11272192:05365fa445a06f6d957b54e301327d1ea9a278837482fc86a7aaca51b05e7fc7;11534336:ba1eb1dbfc6292515757cdcdc1e5486bdf534c41e9ff7461aa3f12656c5be94d;11590600:61903eb697e82ae09f03a8ae87bd8808b6063191a224057fcb5e75813573e7a8'
+          TARGET_SUFFIX_PROBES: '262144:9faffc0cef484985adaa6c71c59659fa6d1dc747644ed5c6cf374609da37318e;524288:763e6dec28e4474a73c9b9f4b55e1a7a7973124298d08d350d177e73132fe34a;786432:8943b0362efe651218d5d5085e9a4a384bc20578903d9d5255a7b2db40d46c8e;1048576:1923c7ff4297cb18f1de089115b08f092a33c5ae106d0376a2fd88de79b89c31;1310720:51456c1b147aaa5be888b82024376a889c6f0d5ecd159827a88f621768fd1ba1;1572864:98ae2078f52ab14d5ad8244429e3557163583dd1be051e82b135635939007dad;1835008:ca11b12df5970feb44bb0a63557728b9ebc2b622b7f3c62f985679996520ee66;2097152:2b290381ba6091e010d4c2b9bfa03d2e62dcd3779e6bd71c09e9485df7150978;2359296:e31c388a7763469cdc1fabdb5186b74e9b1a7632567007a7f14ce38d80598d4b;2621440:be50ee50ddff3b5011723a23f4eaeacdae169402bd6d1d7a23f0aa2e3ed050f6;2883584:cee5d0aedd4bdbe2045e4c0e690d8f1228554e485b4a06aba0fbce59c7f6063d;3145728:528aaf7bd2889a5d45b670b753e05f036fafca0fedbbc12cf1877bc9627b6917;3407872:66412eccd1feaf88c4871591a8caabb13b803c520b183c79e9ba4a9fb4104eda;3670016:9a6f2d0222154d4eafdd6c30d2301de1e92864ecd8fbd1aee195f0a3986f6327;3932160:6c6f928fada60b9a1a2450a14878fab5229b1214658a8d6bd55e417b710764f2;4194304:b51060ab670fcad192206a1120a2d41cf868acb1e452106fc33cf5626ef84bbb;4456448:107707f5ee2468eb5ee1ee59b0c0f4f30525af4a57d36b45333bb824c2cb6db5;4718592:b8e8130e8f98a7967c76cb495ea5ed430a9e33054e86c050329e9e0e019c916e;4980736:17171bbd877b46d974f22419a33bd596786cbfa9d7a521f43debcda30c895b89;5242880:6fbb16e178ec7bac39e042ff7edb9ed7997546e2ff1486544e77194477703c1e;5505024:fd4a9773171b8a6811c76a296e3ac3d27744b1e6983c36c95a9bae4bb56f8a69;5767168:6d9c43d7a4072ada259f3cd5ac1a2863b5380f01ee4c3d70ff448f3799739d3d;6029312:ac60805f375293a78cc0746fd06bca69343b93454889976d6ff27dcf9a843749;6291456:dc2e69b02486120c76cf0c9720d1f56dc1ee4a9fe5ca550c4f47da995bf47c34;6553600:e83669ca064b4741f139081f39e07825b771465063a4afd5b117083777386c5a;6815744:cc0bfd493692d17718f7f26414f98080350e613b9f6ef7ed1b4c8e8d75b62401;7077888:34cc00c0f092b117867f696af36300519e1dbfc9a03fa85dae50094a6c0823be;7340032:7c3473fc0e882f1bcf8f20574fe7154f2eea384c02ea41e7e9c4c31a4f87f1e6;7602176:c075450134c4ded820f099c0f88334d27dc35c13956a801ae1aefc68c61fba0f;7864320:cbb144143cd622b8cf2215463855be6551b9e852d9b09dcb0cd371be64b998bf;8126464:7e02dce376788f00b65701e145a54e050cc6c8ffb1023fbe3e39357c7eee6381;8388608:73ca5329df8d87f63f4ccef67bc06b0cd9db7a37f4c0974107225c8089d95c8d;8650752:4efcdd5c6b57e4dbf94b7252c6b81a8f5501e4a481f60f7852b43e8dd45f3fd1;8912896:739247e387190458cccb480b488548f539f33d7e8b7f943e5e9f4e1e3ef64abc;9175040:e825087a76b34d092b85230a00575e6f5048559f7cfeed38f377ee82f3080f9d;9437184:3b78ffc6072422f8d5553673c2c8e27e583cbaadf4dcdbd1695abe17e58745be;9699328:6a370056e06e1957850f569a512b293b6dc5b2f1538122b42b14764b09379cf8;9961472:c10125db83a1dae9b7ff7706300cd3714e3a359b90fb282809843a269b531e65;10223616:815e380aa367db663b0743ec4296dd353a4f9d823d0080d1d2a13fded362877d;10485760:d3b31c84cb520ea3da97d278deb22cd45dc52cad2babbfdb4562c162e076fdea;10747904:b41b6f6a98e4a8305cc4f3855f8e56db723d4d48e52f718a2fe0a71bd0484d77;11010048:acd06f3e6c5d6fbed21dd7bb913908171e758e9b0dfaf26133113f1760de5af8;11272192:5916489f720eafb633c057adf68696435805ed1a461e333ddf1073187d53ed26;11534336:ff3d0acb92d5d45a69a614b7d52b24baab3cc033a59969a7675cd7c3ce5ee104;11590600:61903eb697e82ae09f03a8ae87bd8808b6063191a224057fcb5e75813573e7a8'
         run: |
           set -euo pipefail
           if [[ ! -f "${RECIPE}" ]]; then
             python3 - <<'PY'
           import hashlib, os
           from pathlib import Path
-          p = Path(os.environ['TARGET'])
-          bs = int(os.environ['BLOCK_SIZE'])
-          data = p.read_bytes()
-          print(f"SIGBEGIN size={len(data)} sha256={hashlib.sha256(data).hexdigest()} block={bs}")
-          for idx, off in enumerate(range(0, len(data), bs)):
-              b = data[off:off+bs]
-              s1 = sum(b) & 0xffff
-              s2 = sum((len(b)-i)*v for i, v in enumerate(b)) & 0xffff
-              weak = s1 | (s2 << 16)
-              print(f"SIG {idx} {len(b)} {weak:08x} {hashlib.sha256(b).hexdigest()}")
-          print("SIGEND")
+          old = Path(os.environ['TARGET']).read_bytes()
+          def parse(raw):
+              out=[]
+              for item in raw.split(';'):
+                  if not item: continue
+                  L,h=item.split(':',1)
+                  out.append((int(L),h))
+              return out
+          pm=0
+          for L,h in parse(os.environ['TARGET_PREFIX_PROBES']):
+              if L <= len(old) and hashlib.sha256(old[:L]).hexdigest() == h:
+                  pm=max(pm,L)
+          sm=0
+          for L,h in parse(os.environ['TARGET_SUFFIX_PROBES']):
+              if L <= len(old) and hashlib.sha256(old[-L:]).hexdigest() == h:
+                  sm=max(sm,L)
+          print(f"PROBE_MATCH prefix={pm} suffix={sm} old_size={len(old)}")
           PY
             exit 0
           fi
@@ -59,16 +67,13 @@ jobs:
           import base64, hashlib, json, os
           from pathlib import Path
           target = Path(os.environ['TARGET'])
-          recipe_path = Path(os.environ['RECIPE'])
-          recipe = json.loads(recipe_path.read_text(encoding='utf-8'))
+          recipe = json.loads(Path(os.environ['RECIPE']).read_text(encoding='utf-8'))
           old = target.read_bytes()
-          bs = int(recipe['block_size'])
           out = bytearray()
           for op in recipe['ops']:
-              if op[0] == 'b':
-                  idx = int(op[1])
-                  start = idx * bs
-                  out.extend(old[start:start+bs])
+              if op[0] == 'r':
+                  start, length = int(op[1]), int(op[2])
+                  out.extend(old[start:start+length])
               elif op[0] == 'l':
                   out.extend(base64.b64decode(op[1]))
               else:
