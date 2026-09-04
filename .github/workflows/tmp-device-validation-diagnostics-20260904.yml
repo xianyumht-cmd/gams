@@ -1,0 +1,63 @@
+name: Temporary device validation diagnostics
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/tmp-device-validation-diagnostics-20260904.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Split generic device validation errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('license-api/src/index.js')
+          text = path.read_text(encoding='utf-8')
+          old1 = '''  if (!deviceHash || !["activate", "check", "unbind"].includes(purpose)) {
+    throw new HttpError(400, "bad_request", "设备验证信息无效");
+  }'''
+          new1 = '''  if (!deviceHash) {
+    throw new HttpError(400, "bad_device_id", "设备标识格式无效");
+  }
+  if (!["activate", "check", "unbind"].includes(purpose)) {
+    throw new HttpError(400, "bad_purpose", "设备验证用途无效");
+  }'''
+          old2 = '''  if (!deviceHash || purpose !== expectedPurpose || !nonce || !Number.isFinite(timestamp)
+      || !keyFingerprint || !certificateDigest || !payloadHash || !signature) {
+    throw new HttpError(400, "bad_signature_request", "设备验证信息无效");
+  }'''
+          new2 = '''  if (!deviceHash) throw new HttpError(400, "bad_device_id", "设备标识格式无效");
+  if (purpose !== expectedPurpose) throw new HttpError(400, "bad_purpose", "设备验证用途无效");
+  if (!nonce) throw new HttpError(400, "bad_nonce", "设备验证随机码无效");
+  if (!Number.isFinite(timestamp)) throw new HttpError(400, "bad_timestamp", "设备验证时间无效");
+  if (!keyFingerprint) throw new HttpError(400, "bad_key_fingerprint", "设备公钥指纹无效");
+  if (!certificateDigest) throw new HttpError(400, "bad_certificate_digest", "客户端签名摘要无效");
+  if (!payloadHash) throw new HttpError(400, "bad_payload_hash", "设备验证数据摘要无效");
+  if (!signature) throw new HttpError(400, "bad_signature_field", "设备签名字段无效");'''
+          if text.count(old1) != 1:
+              raise SystemExit(f'challenge block count={text.count(old1)}')
+          if text.count(old2) != 1:
+              raise SystemExit(f'signed block count={text.count(old2)}')
+          text = text.replace(old1, new1).replace(old2, new2)
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add license-api/src/index.js
+          git commit -m "diag: identify invalid device validation field"
+          git push origin HEAD:main
