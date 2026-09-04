@@ -17,20 +17,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: tmp/game-105-fixed-diff-20260904
-      - name: Compare content-defined chunks
+      - name: Diagnose signatures
         shell: python
         run: |
           from pathlib import Path
           import base64, hashlib, json, difflib
 
-          joined = ''.join(Path(f'.tmp/fixed40.part{i}').read_text().strip() for i in range(1, 6))
-          assert len(joined) == 14780, len(joined)
-          raw = base64.b64decode(joined, validate=True)
-          assert len(raw) == 2217 * 5, len(raw)
-          fixed_sigs = [raw[i:i+5] for i in range(0, len(raw), 5)]
+          result = {}
+          parts = [Path(f'.tmp/fixed40.part{i}').read_text().strip() for i in range(1, 6)]
+          joined = ''.join(parts)
+          result['part_lengths'] = [len(x) for x in parts]
+          result['joined_length'] = len(joined)
+          result['joined_sha256'] = hashlib.sha256(joined.encode()).hexdigest()
+          try:
+              raw = base64.b64decode(joined, validate=True)
+              result['decoded_length'] = len(raw)
+              fixed_sigs = [raw[i:i+5] for i in range(0, len(raw), 5)]
+              result['fixed_sig_count'] = len(fixed_sigs)
+          except Exception as e:
+              result['decode_error'] = repr(e)
+              fixed_sigs = []
 
-          src = Path('game-engine/release/game-1.0.5.js')
-          data = src.read_bytes()
+          data = Path('game-engine/release/game-1.0.5.js').read_bytes()
           chunks = []
           start = 0
           h = 0
@@ -45,46 +53,21 @@ jobs:
           if start < len(data):
               part = data[start:]
               chunks.append((start, len(data), hashlib.sha256(part).digest()[:5]))
+          result['baseline_size'] = len(data)
+          result['baseline_sha256'] = hashlib.sha256(data).hexdigest()
+          result['baseline_chunks'] = len(chunks)
 
-          baseline_sigs = [c[2] for c in chunks]
-          matcher = difflib.SequenceMatcher(a=baseline_sigs, b=fixed_sigs, autojunk=False)
-          ops = matcher.get_opcodes()
-          changes = []
-          for tag, i1, i2, j1, j2 in ops:
-              if tag == 'equal':
-                  continue
-              old_start = chunks[i1][0] if i1 < len(chunks) else len(data)
-              old_end = chunks[i2-1][1] if i2 > i1 else old_start
-              old = data[old_start:old_end]
-              changes.append({
-                  'tag': tag,
-                  'old_chunks': [i1, i2],
-                  'new_chunks': [j1, j2],
-                  'old_start': old_start,
-                  'old_end': old_end,
-                  'old_len': len(old),
-                  'old_sha256': hashlib.sha256(old).hexdigest(),
-                  'old_b64': base64.b64encode(old).decode('ascii'),
-              })
+          if fixed_sigs and all(len(x) == 5 for x in fixed_sigs):
+              ops = difflib.SequenceMatcher(a=[c[2] for c in chunks], b=fixed_sigs, autojunk=False).get_opcodes()
+              result['change_opcodes'] = [[tag,i1,i2,j1,j2] for tag,i1,i2,j1,j2 in ops if tag != 'equal']
+              result['opcode_count'] = len(ops)
 
-          result = {
-              'baseline_size': len(data),
-              'baseline_sha256': hashlib.sha256(data).hexdigest(),
-              'baseline_chunks': len(chunks),
-              'fixed_chunks': len(fixed_sigs),
-              'opcodes': [[tag, i1, i2, j1, j2] for tag, i1, i2, j1, j2 in ops],
-              'changes': changes,
-          }
-          encoded = json.dumps(result, separators=(',', ':'))
-          assert len(encoded) < 500000, len(encoded)
-          Path('.tmp/game105-diff-plan.json').write_text(encoded, encoding='utf-8')
-          print('baseline chunks:', len(chunks))
-          print('fixed chunks:', len(fixed_sigs))
-          print('changes:', [(c['tag'], c['old_chunks'], c['new_chunks'], c['old_len']) for c in changes])
-      - name: Commit comparison result
+          Path('.tmp/compare-diagnostic.json').write_text(json.dumps(result,separators=(',',':')),encoding='utf-8')
+          print(result)
+      - name: Commit diagnostic
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp/game105-diff-plan.json
-          git commit -m "chore: record temporary game 1.0.5 diff plan"
+          git add .tmp/compare-diagnostic.json
+          git commit -m "chore: record temporary fixed comparison diagnostic"
           git push origin HEAD:tmp/game-105-fixed-diff-20260904
