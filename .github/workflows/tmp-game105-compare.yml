@@ -1,0 +1,90 @@
+name: Temporary game 1.0.5 fixed comparison
+
+on:
+  push:
+    branches:
+      - tmp/game-105-fixed-diff-20260904
+    paths:
+      - .github/workflows/tmp-game105-compare.yml
+
+permissions:
+  contents: write
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/game-105-fixed-diff-20260904
+      - name: Compare content-defined chunks
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64, hashlib, json, difflib
+
+          joined = ''.join(Path(f'.tmp/fixed40.part{i}').read_text().strip() for i in range(1, 6))
+          assert len(joined) == 14780, len(joined)
+          raw = base64.b64decode(joined, validate=True)
+          assert len(raw) == 2217 * 5, len(raw)
+          fixed_sigs = [raw[i:i+5] for i in range(0, len(raw), 5)]
+
+          src = Path('game-engine/release/game-1.0.5.js')
+          data = src.read_bytes()
+          chunks = []
+          start = 0
+          h = 0
+          for i, b in enumerate(data):
+              h = ((h * 257) + b + 1) & ((1 << 64) - 1)
+              size = i + 1 - start
+              if size >= 2048 and ((h & 4095) == 0 or size >= 8192):
+                  part = data[start:i+1]
+                  chunks.append((start, i+1, hashlib.sha256(part).digest()[:5]))
+                  start = i + 1
+                  h = 0
+          if start < len(data):
+              part = data[start:]
+              chunks.append((start, len(data), hashlib.sha256(part).digest()[:5]))
+
+          baseline_sigs = [c[2] for c in chunks]
+          matcher = difflib.SequenceMatcher(a=baseline_sigs, b=fixed_sigs, autojunk=False)
+          ops = matcher.get_opcodes()
+          changes = []
+          for tag, i1, i2, j1, j2 in ops:
+              if tag == 'equal':
+                  continue
+              old_start = chunks[i1][0] if i1 < len(chunks) else len(data)
+              old_end = chunks[i2-1][1] if i2 > i1 else old_start
+              old = data[old_start:old_end]
+              changes.append({
+                  'tag': tag,
+                  'old_chunks': [i1, i2],
+                  'new_chunks': [j1, j2],
+                  'old_start': old_start,
+                  'old_end': old_end,
+                  'old_len': len(old),
+                  'old_sha256': hashlib.sha256(old).hexdigest(),
+                  'old_b64': base64.b64encode(old).decode('ascii'),
+              })
+
+          result = {
+              'baseline_size': len(data),
+              'baseline_sha256': hashlib.sha256(data).hexdigest(),
+              'baseline_chunks': len(chunks),
+              'fixed_chunks': len(fixed_sigs),
+              'opcodes': [[tag, i1, i2, j1, j2] for tag, i1, i2, j1, j2 in ops],
+              'changes': changes,
+          }
+          encoded = json.dumps(result, separators=(',', ':'))
+          assert len(encoded) < 500000, len(encoded)
+          Path('.tmp/game105-diff-plan.json').write_text(encoded, encoding='utf-8')
+          print('baseline chunks:', len(chunks))
+          print('fixed chunks:', len(fixed_sigs))
+          print('changes:', [(c['tag'], c['old_chunks'], c['new_chunks'], c['old_len']) for c in changes])
+      - name: Commit comparison result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp/game105-diff-plan.json
+          git commit -m "chore: record temporary game 1.0.5 diff plan"
+          git push origin HEAD:tmp/game-105-fixed-diff-20260904
