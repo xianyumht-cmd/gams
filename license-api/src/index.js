@@ -240,8 +240,11 @@ async function issueChallenge(request, env) {
   }
   const deviceHash = normalizeHex64(body.deviceId);
   const purpose = text(body.purpose, 24);
-  if (!deviceHash || !["activate", "check", "unbind"].includes(purpose)) {
-    throw new HttpError(400, "bad_request", "设备验证信息无效");
+  if (!deviceHash) {
+    throw new HttpError(400, "bad_device_id", "设备标识格式无效");
+  }
+  if (!["activate", "check", "unbind"].includes(purpose)) {
+    throw new HttpError(400, "bad_purpose", "设备验证用途无效");
   }
   const rateKey = `license-challenge:${deviceHash.slice(0, 20)}:${await requestIpHash(request)}`;
   if (!(await allowRate(env, rateKey, 60, 60))) {
@@ -462,10 +465,14 @@ async function verifySignedRequest(
   const certificateDigest = normalizeHex64(body.certificateDigest);
   const payloadHash = normalizeHex64(body.payloadHash);
   const signature = text(body.signature, 2048);
-  if (!deviceHash || purpose !== expectedPurpose || !nonce || !Number.isFinite(timestamp)
-      || !keyFingerprint || !certificateDigest || !payloadHash || !signature) {
-    throw new HttpError(400, "bad_signature_request", "设备验证信息无效");
-  }
+  if (!deviceHash) throw new HttpError(400, "bad_device_id", "设备标识格式无效");
+  if (purpose !== expectedPurpose) throw new HttpError(400, "bad_purpose", "设备验证用途无效");
+  if (!nonce) throw new HttpError(400, "bad_nonce", "设备验证随机码无效");
+  if (!Number.isFinite(timestamp)) throw new HttpError(400, "bad_timestamp", "设备验证时间无效");
+  if (!keyFingerprint) throw new HttpError(400, "bad_key_fingerprint", "设备公钥指纹无效");
+  if (!certificateDigest) throw new HttpError(400, "bad_certificate_digest", "客户端签名摘要无效");
+  if (!payloadHash) throw new HttpError(400, "bad_payload_hash", "设备验证数据摘要无效");
+  if (!signature) throw new HttpError(400, "bad_signature_field", "设备签名字段无效");
   if (Math.abs(nowSeconds() - timestamp) > 120) {
     throw new HttpError(401, "stale_request", "验证请求已过期");
   }
