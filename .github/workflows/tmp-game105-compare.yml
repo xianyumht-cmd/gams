@@ -17,57 +17,62 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: tmp/game-105-fixed-diff-20260904
-      - name: Diagnose signatures
+          fetch-depth: 0
+      - name: Probe historical baselines
         shell: python
         run: |
           from pathlib import Path
-          import base64, hashlib, json, difflib
+          import base64, hashlib, json, difflib, subprocess
 
-          result = {}
-          parts = [Path(f'.tmp/fixed40.part{i}').read_text().strip() for i in range(1, 6)]
-          joined = ''.join(parts)
-          result['part_lengths'] = [len(x) for x in parts]
-          result['joined_length'] = len(joined)
-          result['joined_sha256'] = hashlib.sha256(joined.encode()).hexdigest()
-          try:
-              raw = base64.b64decode(joined, validate=True)
-              result['decoded_length'] = len(raw)
-              fixed_sigs = [raw[i:i+5] for i in range(0, len(raw), 5)]
-              result['fixed_sig_count'] = len(fixed_sigs)
-          except Exception as e:
-              result['decode_error'] = repr(e)
-              fixed_sigs = []
+          joined = ''.join(Path(f'.tmp/fixed40.part{i}').read_text().strip() for i in range(1, 6))
+          assert len(joined) == 14780
+          assert hashlib.sha256(joined.encode()).hexdigest() == 'e3d40ab7dffcd812e2089720f851c386265c50f21ed77de0959a110ad363820e'
+          raw = base64.b64decode(joined, validate=True)
+          fixed = [raw[i:i+5] for i in range(0, len(raw), 5)]
+          assert len(fixed) == 2217 and all(len(x) == 5 for x in fixed)
 
-          data = Path('game-engine/release/game-1.0.5.js').read_bytes()
-          chunks = []
-          start = 0
-          h = 0
-          for i, b in enumerate(data):
-              h = ((h * 257) + b + 1) & ((1 << 64) - 1)
-              size = i + 1 - start
-              if size >= 2048 and ((h & 4095) == 0 or size >= 8192):
-                  part = data[start:i+1]
-                  chunks.append((start, i+1, hashlib.sha256(part).digest()[:5]))
-                  start = i + 1
-                  h = 0
-          if start < len(data):
-              part = data[start:]
-              chunks.append((start, len(data), hashlib.sha256(part).digest()[:5]))
-          result['baseline_size'] = len(data)
-          result['baseline_sha256'] = hashlib.sha256(data).hexdigest()
-          result['baseline_chunks'] = len(chunks)
+          def chunk_sigs(data):
+              out=[]; start=0; h=0
+              for i,b in enumerate(data):
+                  h=((h*257)+b+1)&((1<<64)-1)
+                  size=i+1-start
+                  if size>=2048 and ((h&4095)==0 or size>=8192):
+                      part=data[start:i+1]
+                      out.append(hashlib.sha256(part).digest()[:5])
+                      start=i+1; h=0
+              if start<len(data):
+                  out.append(hashlib.sha256(data[start:]).digest()[:5])
+              return out
 
-          if fixed_sigs and all(len(x) == 5 for x in fixed_sigs):
-              ops = difflib.SequenceMatcher(a=[c[2] for c in chunks], b=fixed_sigs, autojunk=False).get_opcodes()
-              result['change_opcodes'] = [[tag,i1,i2,j1,j2] for tag,i1,i2,j1,j2 in ops if tag != 'equal']
-              result['opcode_count'] = len(ops)
-
-          Path('.tmp/compare-diagnostic.json').write_text(json.dumps(result,separators=(',',':')),encoding='utf-8')
+          path='game-engine/release/game-1.0.5.js'
+          commits=subprocess.check_output(['git','rev-list','--all','--',path],text=True).splitlines()
+          rows=[]
+          for commit in commits:
+              try:
+                  data=subprocess.check_output(['git','show',f'{commit}:{path}'])
+              except subprocess.CalledProcessError:
+                  continue
+              sigs=chunk_sigs(data)
+              matcher=difflib.SequenceMatcher(a=sigs,b=fixed,autojunk=False)
+              blocks=matcher.get_matching_blocks()
+              matched=sum(b.size for b in blocks)
+              rows.append({
+                  'commit':commit,
+                  'size':len(data),
+                  'sha256':hashlib.sha256(data).hexdigest(),
+                  'chunks':len(sigs),
+                  'matched_chunks':matched,
+                  'ratio':matcher.ratio(),
+                  'change_opcodes':sum(1 for op in matcher.get_opcodes() if op[0]!='equal'),
+              })
+          rows.sort(key=lambda r:(r['matched_chunks'],r['ratio']),reverse=True)
+          result={'candidate_count':len(rows),'top':rows[:20]}
+          Path('.tmp/history-probe.json').write_text(json.dumps(result,separators=(',',':')),encoding='utf-8')
           print(result)
-      - name: Commit diagnostic
+      - name: Commit history probe
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp/compare-diagnostic.json
-          git commit -m "chore: record temporary fixed comparison diagnostic"
+          git add .tmp/history-probe.json
+          git commit -m "chore: record temporary historical engine probe"
           git push origin HEAD:tmp/game-105-fixed-diff-20260904
