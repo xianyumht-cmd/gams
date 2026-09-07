@@ -9729,21 +9729,36 @@ function hwyqahb() {
       return vUYe8N[0]
     },
     ["initSt"+"orageH"+"ook"]() {
-      Object["entrie"+"s"](mIpEbB)["forEach"](([vUYe8N,
-      pw0zF4])=> {
-        Object["defineProperty"](Object["prototype"],
-        vUYe8N,
-         {
-          ["get"]:()=> {
-            const OFlPNa=window[pw0zF4];
-            return vUYe8N==="mallVi"+"ewData"?this["patchMallViewData"](OFlPNa):OFlPNa
+      const marker=Symbol.for("gg.runtime.storage-hook.v2");
+      if(window[marker]) {
+        return
+      }
+      Object["entrie"+"s"](mIpEbB)["forEach"](([publicName,backingName])=> {
+        const legacyDescriptor=Object.getOwnPropertyDescriptor(Object.prototype,publicName);
+        if(legacyDescriptor&&legacyDescriptor.configurable) {
+          delete Object.prototype[publicName]
+        }
+        const currentDescriptor=Object.getOwnPropertyDescriptor(window,publicName);
+        if(currentDescriptor&&!currentDescriptor.configurable) {
+          return
+        }
+        Object.defineProperty(window,publicName, {
+          get:()=> {
+            const value=window[backingName];
+            return publicName==="mallViewData"?zjEv2f["patchMallViewData"](value):value
           },
-          ["set"](OFlPNa) {
-            window[pw0zF4]=vUYe8N==="showLo"+"cal"&&OFlPNa===false?true:OFlPNa
+          set(value) {
+            window[backingName]=publicName==="showLocal"&&value===false?true:value
           },
-          ["enumer"+"able"]:false,
-          ["config"+"urable"]:true
+          enumerable:false,
+          configurable:true
         })
+      });
+      Object.defineProperty(window,marker, {
+        value:true,
+        enumerable:false,
+        configurable:true,
+        writable:false
       })
     },
     ["buildC"+"reateO"+"rderRe"+"sponse"](...vUYe8N) {
@@ -9778,126 +9793,176 @@ function hwyqahb() {
       return OFlPNa["toStri"+"ng"]()
     },
     ["initXh"+"rHook"](...vUYe8N) {
-      vUYe8N["length"]=0;
-      const OFlPNa=XMLHttpRequest["prototype"]["open"];
-      XMLHttpRequest["protot"+"ype"]["open"]=function(vUYe8N,
-      PwdGxxY,
-      mBjRt_=true,
-      yWpiJH=null,
-      Epe456s=null) {
-        const XBbHBMQ=zjEv2f["patchG"+"ameFlo"+"wUrl"](PwdGxxY);
-        hwyqahb(this["_url"]=XBbHBMQ,
-        OFlPNa["call"](this,
-        vUYe8N,
-        XBbHBMQ,
-        mBjRt_,
-        yWpiJH,
-        Epe456s),
-        this["addEventListener"]("readys"+"tatech"+"ange",
-        ()=> {
-          if(this["readyS"+"tate"]!==4||this["status"]!==200) {
-            return
-          }
-          const vUYe8N=this["respon"+"seType"]||"";
-          if(vUYe8N!==""&&vUYe8N!=="text") {
-            return
-          }
-          if(!pw0zF4["enable"+"FreeMo"+"de"]) {
-            return
-          }
-          if(!this["_url"]["includes"]("/creat"+"eBuyOr"+"der")) {
-            return
-          }
-          try {
-            Object["define"+"Proper"+"ty"](this,
-            "respon"+"seText",
-             {
-              ["value"]:zjEv2f["buildC"+"reateO"+"rderRe"+"sponse"](this["_url"]),
-              ["writab"+"le"]:true
-            })
-          }
-          catch(PwdGxxY) {
-            console["error"]("请求拦截失败"+"：",
-            PwdGxxY)
-          }
-        }))
+      const marker=Symbol.for("gg.runtime.xhr-open.v2"),
+      prototype=XMLHttpRequest.prototype;
+      if(prototype[marker]) {
+        return
       }
+      const originalOpen=prototype.open,
+      originalSend=prototype.send,
+      stateKey=Symbol.for("gg.source.xhr-request.v5");
+      prototype.open=function(...args) {
+        let patchedUrl=args[1];
+        try {
+          patchedUrl=zjEv2f["patchG"+"ameFlo"+"wUrl"](String(args[1]))
+        }
+        catch(error) {
+          patchedUrl=args[1]
+        }
+        args[1]=patchedUrl;
+        this[stateKey]= {
+          source:String(patchedUrl),
+          local:String(patchedUrl).includes("/createBuyOrder")
+        };
+        return originalOpen.apply(this,args)
+      };
+      prototype.send=function(body) {
+        const state=this[stateKey];
+        if(!state||!state.local||!pw0zF4["enable"+"FreeMo"+"de"]) {
+          return originalSend.call(this,body)
+        }
+        let responseText;
+        try {
+          responseText=zjEv2f["buildC"+"reateO"+"rderRe"+"sponse"](state.source)
+        }
+        catch(error) {
+          return originalSend.call(this,body)
+        }
+        let readyState=1,
+        aborted=false;
+        try {
+          Object.defineProperties(this, {
+            readyState: {configurable:true,get:()=>readyState},
+            status: {configurable:true,get:()=>200},
+            statusText: {configurable:true,get:()=>"OK"},
+            responseURL: {configurable:true,get:()=>state.source},
+            responseText: {configurable:true,get:()=>responseText},
+            response: {
+              configurable:true,
+              get:()=>this.responseType==="json"?JSON.parse(responseText):responseText
+            }
+          })
+        }
+        catch(error) {
+          return originalSend.call(this,body)
+        }
+        this.abort=function() {
+          if(aborted) {
+            return
+          }
+          aborted=true;
+          readyState=0;
+          try { this.dispatchEvent(new Event("abort")) } catch(error) {}
+          try { this.dispatchEvent(new Event("loadend")) } catch(error) {}
+        };
+        queueMicrotask(()=> {
+          if(aborted) {
+            return
+          }
+          try { this.dispatchEvent(new Event("loadstart")) } catch(error) {}
+          readyState=2;
+          try { this.dispatchEvent(new Event("readystatechange")) } catch(error) {}
+          readyState=3;
+          try { this.dispatchEvent(new Event("readystatechange")) } catch(error) {}
+          readyState=4;
+          try { this.dispatchEvent(new Event("readystatechange")) } catch(error) {}
+          try { this.dispatchEvent(new Event("load")) } catch(error) {}
+          try { this.dispatchEvent(new Event("loadend")) } catch(error) {}
+        });
+        return undefined
+      };
+      Object.defineProperty(prototype,marker, {
+        value: {open:originalOpen,send:originalSend,source:"gg.source.xhr.v5"},
+        enumerable:false,
+        configurable:true,
+        writable:false
+      })
     },
     ["initJs"+"onpHoo"+"k"]() {
-      const vUYe8N=document["create"+"Elemen"+"t"];
-      document["create"+"Elemen"+"t"]=function(OFlPNa,
-      ...PwdGxxY) {
-        const mBjRt_=vUYe8N["call"](this,
-        OFlPNa,
-        ...PwdGxxY);
-        if(OFlPNa["toLowe"+"rCase"]()!=="script") {
-          return mBjRt_
-        }
-        Object["define"+"Proper"+"ty"](mBjRt_,
-        "src",
-         {
-          ["set"](...OFlPNa) {
-            OFlPNa["length"]=1;
-            if(!pw0zF4["enableFreeMode"]) {
-              return mBjRt_["setAtt"+"ribute"]("src",
-              OFlPNa[0])
-            }
-            if(OFlPNa[0]["includ"+"es"]("create"+"BuyOrd"+"er")) {
-              const PwdGxxY=new URL(OFlPNa[0])["search"+"Params"],
-              vUYe8N=PwdGxxY["get"]("goods_"+"id"),
-              yWpiJH=PwdGxxY["get"]("buy_nu"+"m"),
-              Epe456s=PwdGxxY["get"]("jsonCa"+"llback");
-              if(vUYe8N&&yWpiJH&&Epe456s) {
-                const XBbHBMQ=window[Epe456s]&&window[Epe456s].__ggOriginalCallback||window[Epe456s];
-                let __ggCallbackDone=false;
-                const __ggOneShotCallback=function() {
-                  if(__ggCallbackDone) {
-                    return
-                  }
-                  __ggCallbackDone=true;
-                  try {
-                    if(typeof XBbHBMQ==="functi"+"on") {
-                      XBbHBMQ( {
-                        ["status"]:1,
-                        ["msg"]:"succes"+"sful",
-                        ["data"]: {
-                          ["goods_"+"id"]:vUYe8N,
-                          ["order_"+"id"]:zCSo6J["generateTimestamp"](),
-                          ["buy_nu"+"m"]:parseInt(yWpiJH,
-                          10)
-                        }
-                      })
-                    }
-                  }
-                  finally {
-                    if(window[Epe456s]===__ggOneShotCallback) {
-                      if(typeof XBbHBMQ==="functi"+"on") {
-                        window[Epe456s]=XBbHBMQ
-                      }
-                      else {
-                        delete window[Epe456s]
-                      }
-                    }
-                  }
-                };
-                Object.defineProperty(__ggOneShotCallback,"__ggOriginalCallback", {
-                  ["value"]:XBbHBMQ,
-                  ["config"+"urable"]:true
-                });
-                window[Epe456s]=__ggOneShotCallback
-              }
-            }
-            return mBjRt_["setAttribute"]("src",
-            OFlPNa[0])
-          },
-          ["get"]() {
-            return mBjRt_["getAtt"+"ribute"]("src")
-          },
-          ["enumer"+"able"]:true,
-          ["config"+"urable"]:true
-        });
-        return mBjRt_
+      const marker=Symbol.for("gg.runtime.jsonp-create-element.v2");
+      if(document[marker]) {
+        return
       }
+      const originalCreateElement=document.createElement,
+      scriptMarker=Symbol.for("gg.source.jsonp-node.v5"),
+      nativeSrcDescriptor=Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype,"src");
+      let requestSequence=0;
+      const resolveCallback=name=> {
+        let value=window;
+        for(const part of String(name||"").split(".")) {
+          if(!part||value==null) {
+            return null
+          }
+          value=value[part]
+        }
+        return typeof value==="function"?value:null
+      };
+      document.createElement=function(tagName,...args) {
+        const node=originalCreateElement.call(this,tagName,...args);
+        if(String(tagName).toLowerCase()!=="script"||node[scriptMarker]) {
+          return node
+        }
+        Object.defineProperty(node,scriptMarker, {value:true,configurable:true});
+        const nativeSetAttribute=node.setAttribute.bind(node),
+        nativeGetAttribute=node.getAttribute.bind(node),
+        setNativeSrc=value=> {
+          if(nativeSrcDescriptor&&typeof nativeSrcDescriptor.set==="function") {
+            return nativeSrcDescriptor.set.call(node,value)
+          }
+          return nativeSetAttribute("src",value)
+        },
+        getNativeSrc=()=> {
+          if(nativeSrcDescriptor&&typeof nativeSrcDescriptor.get==="function") {
+            return nativeSrcDescriptor.get.call(node)
+          }
+          return nativeGetAttribute("src")
+        },
+        routeSource=value=> {
+          const source=String(value);
+          if(!pw0zF4["enable"+"FreeMo"+"de"]||!source.includes("createBuyOrder")) {
+            return setNativeSrc(source)
+          }
+          try {
+            const params=new URL(source,document.baseURI).searchParams,
+            callbackName=params.get("jsonCallback")||params.get("callback")||params.get("cb");
+            if(!callbackName||!resolveCallback(callbackName)) {
+              return setNativeSrc(source)
+            }
+            const payload=JSON.parse(zjEv2f["buildC"+"reateO"+"rderRe"+"sponse"](source)),
+            callbackLiteral=JSON.stringify(callbackName),
+            payloadLiteral=JSON.stringify(payload),
+            code=";(function(){var v=window,p="+callbackLiteral+".split('.')"+
+              ";for(var i=0;i<p.length;i++){v=v&&v[p[i]];}"+
+              "if(typeof v==='function'){v("+payloadLiteral+");}})();",
+            requestId=Date.now()+"-"+(++requestSequence)+"-"+Math.random().toString(36).slice(2,8),
+            localSource="data:text/javascript;charset=utf-8,"+encodeURIComponent(code)+"#gg-"+requestId;
+            node.dataset.ggSourceRequestId=requestId;
+            return setNativeSrc(localSource)
+          }
+          catch(error) {
+            return setNativeSrc(source)
+          }
+        };
+        Object.defineProperty(node,"src", {
+          set:routeSource,
+          get:getNativeSrc,
+          enumerable:true,
+          configurable:true
+        });
+        node.setAttribute=function(name,value) {
+          if(String(name).toLowerCase()==="src") {
+            return routeSource(value)
+          }
+          return nativeSetAttribute(name,value)
+        };
+        return node
+      };
+      Object.defineProperty(document,marker, {
+        value: {createElement:originalCreateElement,source:"gg.source.jsonp.v5"},
+        enumerable:false,
+        configurable:true,
+        writable:false
+      })
     },
     ["init"]() {
       hwyqahb(this["syncRu"+"ntimeS"+"tate"](),
@@ -10288,3 +10353,412 @@ function hwyqahb() {
   Node.prototype.insertBefore = function(child, reference) { rewriteScriptNode(child); return originalInsertBefore.call(this, child, reference); };
 })();
 // ===== End self-hosted modified game engine redirect =====
+
+
+// ===== GG source-native mobile UI v5 =====
+(() => {
+  const marker = Symbol.for("gg.source.ui-mobile.v5");
+  if (window[marker]) return;
+  Object.defineProperty(window, marker, {
+    value: true,
+    configurable: true,
+    enumerable: false,
+    writable: false,
+  });
+
+  const install = () => {
+    if (document.getElementById("gg-source-ui-mobile-v5")) return;
+    const style = document.createElement("style");
+    style.id = "gg-source-ui-mobile-v5";
+    style.textContent = `
+      :root {
+        --gg5-bg: #101522;
+        --gg5-card: #181f2f;
+        --gg5-card-2: #20293b;
+        --gg5-line: rgba(255,255,255,.10);
+        --gg5-text: #f6f7fb;
+        --gg5-muted: #aeb8c8;
+        --gg5-accent: #7c6cff;
+        --gg5-safe-right: env(safe-area-inset-right, 0px);
+        --gg5-safe-bottom: env(safe-area-inset-bottom, 0px);
+        --gg5-safe-left: env(safe-area-inset-left, 0px);
+      }
+
+      #orange-script-panel {
+        box-sizing: border-box !important;
+        width: min(92vw, 430px) !important;
+        max-width: min(92vw, 430px) !important;
+        max-height: min(82vh, 720px) !important;
+        max-height: min(82dvh, 720px) !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        border: 1px solid var(--gg5-line) !important;
+        border-radius: 22px !important;
+        background: var(--gg5-bg) !important;
+        color: var(--gg5-text) !important;
+        box-shadow: 0 20px 58px rgba(0,0,0,.48) !important;
+        overscroll-behavior: contain !important;
+        -webkit-overflow-scrolling: touch !important;
+        -webkit-font-smoothing: antialiased !important;
+      }
+
+      #orange-script-panel .orange-panel-head {
+        box-sizing: border-box !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 2 !important;
+        margin: 0 !important;
+        padding: 16px !important;
+        border-bottom: 1px solid var(--gg5-line) !important;
+        background: #141b29 !important;
+        color: var(--gg5-text) !important;
+      }
+
+      #orange-script-panel .orange-panel-title,
+      #orange-script-panel .gg-readable-title,
+      #orange-script-panel .orange-switch-name,
+      #orange-script-panel .gg-readable-item-title {
+        color: var(--gg5-text) !important;
+      }
+
+      #orange-script-panel .orange-panel-desc,
+      #orange-script-panel .gg-readable-subtitle,
+      #orange-script-panel #gg-readable-maintainer,
+      #orange-script-panel .orange-switch-tip {
+        color: var(--gg5-muted) !important;
+      }
+
+      #orange-script-panel #gg-readable-notice-list {
+        box-sizing: border-box !important;
+        margin: 12px !important;
+        padding: 12px 12px 12px 34px !important;
+        border: 1px solid var(--gg5-line) !important;
+        border-radius: 15px !important;
+        background: var(--gg5-card) !important;
+        color: #dce3ed !important;
+      }
+
+      #orange-script-panel .orange-panel-list {
+        box-sizing: border-box !important;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        margin: 0 !important;
+        padding: 0 12px 12px !important;
+      }
+
+      #orange-script-panel [class*="orange-switch"] {
+        box-sizing: border-box !important;
+        border-color: var(--gg5-line) !important;
+        background: var(--gg5-card) !important;
+        color: var(--gg5-text) !important;
+      }
+
+      #orange-script-panel button,
+      #orange-script-panel [role="button"] {
+        min-height: 40px !important;
+        border: 1px solid rgba(124,108,255,.42) !important;
+        border-radius: 12px !important;
+        background: var(--gg5-accent) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+
+      #orange-script-panel .orange-panel-footer,
+      #orange-script-panel .gg-readable-footer {
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 12px 15px calc(12px + var(--gg5-safe-bottom)) !important;
+        border-top: 1px solid var(--gg5-line) !important;
+        background: #0d121d !important;
+        color: #8d99ac !important;
+      }
+
+      #orange-script-panel-button {
+        box-sizing: border-box !important;
+        right: calc(16px + var(--gg5-safe-right)) !important;
+        bottom: calc(16px + var(--gg5-safe-bottom)) !important;
+        width: 54px !important;
+        height: 54px !important;
+        min-width: 54px !important;
+        min-height: 54px !important;
+        padding: 0 !important;
+        border: 1px solid rgba(255,255,255,.20) !important;
+        border-radius: 18px !important;
+        background: #6d5ee8 !important;
+        color: #fff !important;
+        box-shadow: 0 10px 28px rgba(0,0,0,.34) !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        line-height: 54px !important;
+        animation: none !important;
+        transition: transform .12s ease !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      #orange-script-panel-button:active { transform: scale(.95) !important; }
+
+      @media (max-width: 600px) {
+        #orange-script-panel {
+          position: fixed !important;
+          left: var(--gg5-safe-left) !important;
+          right: var(--gg5-safe-right) !important;
+          bottom: 0 !important;
+          top: auto !important;
+          width: auto !important;
+          max-width: none !important;
+          max-height: 86vh !important;
+          max-height: 86dvh !important;
+          margin: 0 !important;
+          border-left: 0 !important;
+          border-right: 0 !important;
+          border-bottom: 0 !important;
+          border-radius: 22px 22px 0 0 !important;
+          transform: none !important;
+        }
+      }
+
+      @media (max-height: 520px) and (orientation: landscape) {
+        #orange-script-panel {
+          max-height: calc(96vh - var(--gg5-safe-bottom)) !important;
+          max-height: calc(96dvh - var(--gg5-safe-bottom)) !important;
+        }
+        #orange-script-panel .orange-panel-head { position: static !important; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #orange-script-panel-button { transition: none !important; }
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  };
+
+  if (document.documentElement) install();
+  else document.addEventListener("DOMContentLoaded", install, { once: true });
+})();
+// ===== End GG source-native mobile UI v5 =====
+
+
+// ===== GG source compact scrollable panel v6 =====
+(() => {
+  const marker = Symbol.for("gg.source.compact-panel.v6");
+  if (window[marker]) return;
+  Object.defineProperty(window, marker, {
+    value: true,
+    configurable: true,
+    enumerable: false,
+    writable: false,
+  });
+
+  const install = () => {
+    if (document.getElementById("gg-source-compact-panel-v6")) return;
+    const style = document.createElement("style");
+    style.id = "gg-source-compact-panel-v6";
+    style.textContent = `
+      #orange-script-panel {
+        box-sizing: border-box !important;
+        height: auto !important;
+        max-height: calc(100vh - 24px) !important;
+        max-height: calc(100dvh - 24px) !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior-x: none !important;
+        overscroll-behavior-y: contain !important;
+        touch-action: pan-y !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: thin !important;
+      }
+
+      #orange-script-panel * {
+        box-sizing: border-box !important;
+      }
+
+      #orange-script-panel .orange-panel-head {
+        position: relative !important;
+        top: auto !important;
+        padding: 10px 12px !important;
+      }
+
+      #orange-script-panel .orange-panel-title,
+      #orange-script-panel .gg-readable-title {
+        margin: 0 !important;
+        font-size: 15px !important;
+        line-height: 1.25 !important;
+      }
+
+      #orange-script-panel .orange-panel-desc,
+      #orange-script-panel .gg-readable-subtitle,
+      #orange-script-panel #gg-readable-maintainer {
+        margin-top: 3px !important;
+        font-size: 11px !important;
+        line-height: 1.35 !important;
+      }
+
+      #orange-script-panel #gg-readable-notice-list {
+        margin: 7px 8px !important;
+        padding: 7px 8px 7px 26px !important;
+        border-radius: 10px !important;
+        font-size: 11px !important;
+        line-height: 1.38 !important;
+      }
+
+      #orange-script-panel #gg-readable-notice-list li {
+        margin: 0 0 2px !important;
+        padding: 0 !important;
+      }
+
+      #orange-script-panel .orange-panel-list {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 8px 8px !important;
+        overflow: visible !important;
+      }
+
+      #orange-script-panel .orange-switch-item {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 5px !important;
+        min-width: 0 !important;
+        min-height: 48px !important;
+        margin: 0 !important;
+        padding: 6px 7px !important;
+        border-radius: 10px !important;
+      }
+
+      #orange-script-panel .orange-switch-label,
+      #orange-script-panel .orange-switch-row {
+        display: flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+      }
+
+      #orange-script-panel .orange-switch-icon {
+        display: inline-flex !important;
+        flex: 0 0 22px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        border-radius: 7px !important;
+        font-size: 11px !important;
+        line-height: 1 !important;
+      }
+
+      #orange-script-panel .orange-switch-name,
+      #orange-script-panel .gg-readable-item-title {
+        overflow: hidden !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        line-height: 1.2 !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      #orange-script-panel .orange-switch-tip {
+        display: -webkit-box !important;
+        overflow: hidden !important;
+        margin-top: 2px !important;
+        font-size: 9px !important;
+        line-height: 1.2 !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+      }
+
+      #orange-script-panel .orange-switch-side {
+        display: flex !important;
+        flex: 0 0 auto !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        min-width: 0 !important;
+      }
+
+      #orange-script-panel button,
+      #orange-script-panel [role="button"] {
+        width: auto !important;
+        min-width: 42px !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        margin: 0 !important;
+        padding: 3px 8px !important;
+        border-radius: 8px !important;
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        line-height: 20px !important;
+        white-space: nowrap !important;
+      }
+
+      #orange-script-panel input[type="checkbox"] + span,
+      #orange-script-panel input[type="checkbox"] ~ span {
+        transform: scale(.82) !important;
+        transform-origin: center !important;
+      }
+
+      #orange-script-panel .orange-panel-footer,
+      #orange-script-panel .gg-readable-footer {
+        margin: 0 !important;
+        padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px)) !important;
+        font-size: 9px !important;
+        line-height: 1.3 !important;
+      }
+
+      #orange-script-panel-button {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+        border-radius: 15px !important;
+        font-size: 14px !important;
+        line-height: 48px !important;
+      }
+
+      @media (max-width: 360px) {
+        #orange-script-panel .orange-panel-list {
+          gap: 4px !important;
+          padding-left: 6px !important;
+          padding-right: 6px !important;
+        }
+        #orange-script-panel .orange-switch-item {
+          min-height: 44px !important;
+          padding: 5px !important;
+        }
+        #orange-script-panel .orange-switch-tip {
+          display: none !important;
+        }
+        #orange-script-panel button,
+        #orange-script-panel [role="button"] {
+          min-width: 36px !important;
+          padding-left: 6px !important;
+          padding-right: 6px !important;
+          font-size: 9px !important;
+        }
+      }
+
+      @media (max-height: 560px) and (orientation: landscape) {
+        #orange-script-panel {
+          max-height: calc(100dvh - 8px) !important;
+        }
+        #orange-script-panel #gg-readable-notice-list {
+          font-size: 10px !important;
+          line-height: 1.25 !important;
+        }
+        #orange-script-panel .orange-switch-item {
+          min-height: 42px !important;
+        }
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  };
+
+  if (document.documentElement) install();
+  else document.addEventListener("DOMContentLoaded", install, { once: true });
+})();
+// ===== End GG source compact scrollable panel v6 =====
