@@ -1,0 +1,4 @@
+Final runtime stability APK build trigger.
+Target: GG-2.0.14-page5-stability-code25.apk
+Protocol app version: 24
+Triggered: 2026-08-07T06:55:00+08:00

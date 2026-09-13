@@ -1,0 +1,145 @@
+name: Build premium UI candidate APK
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-premium-ui-candidate.yml
+      - v2/android/client/**
+      - scripts/build_premium_ui_candidate.trigger
+
+permissions:
+  contents: read
+
+concurrency:
+  group: premium-ui-candidate-v2
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.pull_request.head.ref == 'fix/page5-missing-constructor-mobile-bridge-20260806'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+      CERT_SHA256: 70:60:83:47:EE:8C:C3:CD:72:E7:DC:70:C5:04:01:3E:26:1C:9A:2F:EE:98:50:53:92:19:CD:A5:19:C8:7F:34
+      APK_VERSION_NAME: 2.0.15-premium-ui
+      APK_VERSION_CODE: '26'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/page5-missing-constructor-mobile-bridge-20260806
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Prepare premium UI client version
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manager = Path('v2/android/client/src/main/java/com/jinli/ggsecure/V2LicenseManager.java')
+          text = manager.read_text(encoding='utf-8')
+          if text.count('PROTOCOL_APP_VERSION = 12') != 1:
+              raise SystemExit('protocol baseline mismatch')
+          manager.write_text(text.replace('PROTOCOL_APP_VERSION = 12', 'PROTOCOL_APP_VERSION = 25', 1), encoding='utf-8')
+
+          gradle = Path('v2/android/client/build.gradle.kts')
+          text = gradle.read_text(encoding='utf-8')
+          if text.count('versionCode = 16') != 1 or text.count('versionName = "2.0.3-stable"') != 1:
+              raise SystemExit('APK baseline mismatch')
+          text = text.replace('versionCode = 16', 'versionCode = 26', 1)
+          text = text.replace('versionName = "2.0.3-stable"', 'versionName = "2.0.15-premium-ui"', 1)
+          gradle.write_text(text, encoding='utf-8')
+          PY
+          grep -Fq 'android:name=".PremiumApplication"' v2/android/client/src/main/AndroidManifest.xml
+          grep -Fq 'class PremiumApplication' v2/android/client/src/main/java/com/jinli/ggsecure/PremiumApplication.java
+
+      - name: Compile and lint release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p v2/android :client:clean :client:lintRelease :client:assembleRelease
+
+      - name: Sign and verify release
+        shell: bash
+        run: |
+          set -euo pipefail
+          unsigned="$(find v2/android/client/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -s "$unsigned"
+
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/gg-release.jks
+          test -s /tmp/gg-release.jks
+          keytool -list -keystore /tmp/gg-release.jks -storepass "$GG_RELEASE_KEYSTORE_PASSWORD" -alias gg-release >/dev/null
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -d "$sdk_root/build-tools"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt | sort -V | tail -n1)"
+          test -x "$apksigner" && test -x "$aapt"
+
+          mkdir -p /tmp/premium-ui-artifact
+          signed="/tmp/premium-ui-artifact/GG-${APK_VERSION_NAME}-code${APK_VERSION_CODE}.apk"
+          "$apksigner" sign \
+            --ks /tmp/gg-release.jks \
+            --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --key-pass env:GG_RELEASE_KEYSTORE_PASSWORD \
+            --v1-signing-enabled false \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out "$signed" "$unsigned"
+
+          "$apksigner" verify --verbose --print-certs "$signed" | tee /tmp/premium-ui-apk-verify.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/premium-ui-apk-verify.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/premium-ui-apk-verify.txt
+          expected_cert="$(printf '%s' "$CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          actual_cert="$(grep -i 'certificate SHA-256 digest:' /tmp/premium-ui-apk-verify.txt | head -n1 | awk -F': ' '{print $NF}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          test -n "$actual_cert"
+          test "$actual_cert" = "$expected_cert"
+
+          "$aapt" dump badging "$signed" | tee /tmp/premium-ui-badging.txt
+          grep -Fq "package: name='com.jinli.quickweb' versionCode='26' versionName='2.0.15-premium-ui'" /tmp/premium-ui-badging.txt
+
+          apk_sha="$(sha256sum "$signed" | awk '{print $1}')"
+          printf '%s  %s\n' "$apk_sha" "$(basename "$signed")" > /tmp/premium-ui-artifact/SHA256SUMS.txt
+          cat > /tmp/premium-ui-artifact/BUILD_INFO.json <<JSON
+          {
+            "schemaVersion": 1,
+            "versionName": "${APK_VERSION_NAME}",
+            "versionCode": ${APK_VERSION_CODE},
+            "sha256": "${apk_sha}",
+            "ui": {
+              "login": true,
+              "browser": true,
+              "floatingEntry": true,
+              "floatingPanel": true
+            },
+            "checks": {
+              "compile": true,
+              "lint": true,
+              "v2Signature": true,
+              "v3Signature": true,
+              "certificate": true
+            }
+          }
+          JSON
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GG-2.0.15-premium-ui-code26
+          path: /tmp/premium-ui-artifact/**
+          retention-days: 30
+          if-no-files-found: error
