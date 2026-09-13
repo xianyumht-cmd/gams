@@ -1,0 +1,53 @@
+name: Build signed diagnostic overlay from PR
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "client_diagnostics_patch/**"
+      - ".github/workflows/build-diagnostic-overlay-pr.yml"
+
+jobs:
+  signed-overlay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+      GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Build production-signed overlay diagnostic APK
+        shell: bash
+        run: bash client_diagnostics_patch/build_signed_overlay.sh
+
+      - name: Upload signed overlay APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-JS-runtime-diagnostic-overlay-code13-20260806
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-JS-diagnostic-overlay-build-logs-20260806
+          path: |
+            /tmp/apply-diagnostics.log
+            /tmp/gradle-diagnostics.log
+            /tmp/apksigner-verify.txt
+            /tmp/apk-badging.txt
+          if-no-files-found: warn
+          retention-days: 7
