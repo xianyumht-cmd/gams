@@ -1,6 +1,18 @@
 {
-  "state": "running",
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-13T19:41:59Z",
+  "state": "failed",
   "ok": false,
   "runId": 34778470998,
-  "runAttempt": 1
+  "runAttempt": 1,
+  "buildOutcome": "failure",
+  "uploadOutcome": "skipped",
+  "artifactId": null,
+  "apk": {
+    "fileName": "GG-2.0.14-page5-stability-code25.apk",
+    "package": "com.jinli.quickweb",
+    "versionName": "2.0.14-page5-stability",
+    "versionCode": 25,
+    "sha256": ""
+  }
 }
