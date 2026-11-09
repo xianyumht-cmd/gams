@@ -2,7 +2,7 @@
 
 ## 独立 localTest APK
 
-`v2/android/client` 的 `localTest` 构建类型使用独立包名与测试签名。它从 APK assets 读取用户提交的原始 `noname.js`（当前 1.1.5）和仓库原版 `game.js`（当前 1.0.5），不启动 GG License API。
+`v2/android/client` 的 `localTest` 构建类型使用独立包名与测试签名。它从 APK assets 读取仓库历史发布的 `noname.js` 和对应 `game.js`（测试配对：1.1.4+1.0.5、1.1.3+1.0.5、1.1.2+1.0.4），不启动 GG License API。构建时通过 `-PggLocalNonameVersion` 给三个包设置各自包名、显示名及版本，并依次放入对应的原始发布脚本。
 
 1. 启动时注册 `WebViewCompat.addDocumentStartJavaScript`；设备不支持则停止并提示更新系统 WebView，避免脚本晚于页面 `Common.js` / `ssologin.js`。
 2. 注入的 `noname.js` **内存副本**将远端 `stable.js` URL 换成 `https://ggv2.local/runtime/game.js`，保留原始 assets SHA-256；`shouldInterceptRequest` 对此 URL 返回本地引擎字节。

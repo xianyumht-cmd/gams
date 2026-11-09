@@ -1,4 +1,9 @@
 plugins { id("com.android.application") }
+val localNonameVersion = providers.gradleProperty("ggLocalNonameVersion").orElse("1.1.4").get()
+require(localNonameVersion in setOf("1.1.4", "1.1.3", "1.1.2")) {
+    "Unsupported local JS test version: $localNonameVersion"
+}
+val localVariantCode = localNonameVersion.replace(".", "")
 android {
     namespace = "com.jinli.ggsecure"
     compileSdk = 35
@@ -13,8 +18,9 @@ android {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
         create("localTest") {
             initWith(getByName("debug"))
-            applicationIdSuffix = ".localtest"
-            versionNameSuffix = "-local-js-test"
+            applicationIdSuffix = ".localtest$localVariantCode"
+            versionNameSuffix = "-local-$localNonameVersion"
+            manifestPlaceholders["ggLocalTestLabel"] = "GG测试$localNonameVersion"
             isDebuggable = false
             isMinifyEnabled = false
             isShrinkResources = false

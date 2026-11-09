@@ -3,14 +3,19 @@
 from hashlib import sha256, sha384
 import base64
 from pathlib import Path
+import sys
 import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parent.parent
 CLIENT = ROOT / "v2/android/client"
-EXPECTED = {
-    "noname.js": "ac563935b762848cd4c1d6ee62eacfb26b624a2f3f7256fce8c7b94bb2ace20b",
-    "game.js": "61903eb697e82ae09f03a8ae87bd8808b6063191a224057fcb5e75813573e7a8",
+PAIRS = {"1.1.4": "1.0.5", "1.1.3": "1.0.5", "1.1.2": "1.0.4"}
+EXPECTED_SHA256 = {
+    "noname-1.1.4.js": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818",
+    "noname-1.1.3.js": "bb0337e6398658eec79e20da174206eb211807428960ea254b6bb4258dbe0a84",
+    "noname-1.1.2.js": "0e2209f6091543d5e69e3c9a039366c88ca388da4df9007fa73ff9a420d732e7",
+    "game-1.0.5.js": "61903eb697e82ae09f03a8ae87bd8808b6063191a224057fcb5e75813573e7a8",
+    "game-1.0.4.js": "c679859cf322f6c2d1049e1017309a2ebee1850c83874a4586e29b784d68cbc5",
 }
 
 
@@ -23,14 +28,19 @@ def local_mode(rel_path: str) -> str:
 
 
 def main() -> None:
+    assert len(sys.argv) == 3, "Usage: test_local_js_variant.py NONAME_VERSION GAME_VERSION"
+    noname_version, game_version = sys.argv[1:]
+    assert PAIRS.get(noname_version) == game_version, f"Invalid pair: {noname_version} + {game_version}"
     assert local_mode("src/main/res/values/local_test.xml") == "false"
     assert local_mode("src/localTest/res/values/local_test.xml") == "true"
     gradle = (CLIENT / "build.gradle.kts").read_text(encoding="utf-8")
     assert 'create("localTest")' in gradle
-    assert 'applicationIdSuffix = ".localtest"' in gradle
+    assert 'applicationIdSuffix = ".localtest$localVariantCode"' in gradle
+    assert 'manifestPlaceholders["ggLocalTestLabel"]' in gradle
     workflow = (ROOT / ".github/workflows/gg-local-js-test-apk.yml").read_text(encoding="utf-8")
-    assert 'cp game-engine/release/game-1.0.5.js "$dest/game.js"' in workflow
-    assert "GG-local-js-1.1.5-game-1.0.5.apk" in workflow
+    for version, engine in PAIRS.items():
+        assert f'"{version}:{engine}"' in workflow
+    assert "GG-local-noname-${noname}-game-${game}.apk" in workflow
 
     manifest = ET.parse(CLIENT / "src/localTest/AndroidManifest.xml").getroot()
     application = manifest.find("application")
@@ -62,10 +72,16 @@ def main() -> None:
     injected = source.replace(remote, "https://ggv2.local/runtime/game.js")
     assert remote not in injected and "https://ggv2.local/runtime/game.js" in injected
 
-    for name, expected_hash in EXPECTED.items():
+    for name, source_path in {
+        "noname.js": ROOT / f"remote-script/release/noname-{noname_version}.js",
+        "game.js": ROOT / f"game-engine/release/game-{game_version}.js",
+    }.items():
+        expected_hash = EXPECTED_SHA256[source_path.name]
+        source_hash = sha256(source_path.read_bytes()).hexdigest()
+        assert source_hash == expected_hash, f"Repository source differs: {source_path}: {source_hash}"
         payload = CLIENT / "src/localTest/assets" / name
         digest = sha256(payload.read_bytes()).hexdigest()
-        assert digest == expected_hash, f"{name} differs from the supplied file: {digest}"
+        assert digest == expected_hash, f"{name} differs from repository {source_path.name}: {digest}"
         print(f"Verified {name}: {payload.stat().st_size} bytes, SHA256 {digest}")
     print("Verified isolated build, local mode, and WebView injection contract")
 
