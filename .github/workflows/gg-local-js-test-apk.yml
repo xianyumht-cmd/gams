@@ -1,0 +1,108 @@
+name: GG Local JS Test APK
+
+on:
+  push:
+    branches:
+      - feat/gg-local-js-test-20261110
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gg-local-js-test-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/feat/gg-local-js-test-20261110'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore pinned local scripts into the Android test assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          dest='v2/android/client/src/localTest/assets'
+          mkdir -p "$dest"
+          gzip -dc v2/android/client/localtest-payload/noname.js.gz > "$dest/noname.js"
+          cat v2/android/client/localtest-payload/game.js.gz.part-* | gzip -dc > "$dest/game.js"
+
+      - name: Verify supplied JS inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/test_local_js_variant.py
+          printf '%s  %s\n' \
+            '1dd13ae38f3000c080427afb919bfe25aff71a7715c239eb233bd551a0d3533c' \
+            'v2/android/client/src/localTest/assets/noname.js' \
+            'b7756055a87cb8bef4409746fce0208ea0edd3e7e515e88f8ee73018a8c2019c' \
+            'v2/android/client/src/localTest/assets/game.js' | sha256sum --check
+          node --check v2/android/client/src/localTest/assets/noname.js
+          node --check v2/android/client/src/localTest/assets/game.js
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build standalone test APK
+        working-directory: v2/android
+        run: gradle --no-daemon :client:lintLocalTest :client:assembleLocalTest --stacktrace
+
+      - name: Verify APK identity, embedded scripts and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk='v2/android/client/build/outputs/apk/localTest/client-localTest.apk'
+          test -s "$apk"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          aapt="$(find "$sdk_root/build-tools" -type f -name aapt | sort -V | tail -n1)"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          test -x "$aapt" && test -x "$apksigner"
+          "$aapt" dump badging "$apk" | grep -Fq "package: name='com.jinli.quickweb.localtest' versionCode='16' versionName='2.0.3-stable-local-js-test'"
+          "$aapt" dump badging "$apk" | grep -Fq "application-label:'GG 本地测试'"
+          "$apksigner" verify --min-sdk-version 24 "$apk"
+          test "$(unzip -p "$apk" assets/noname.js | sha256sum | cut -d' ' -f1)" = \
+            '1dd13ae38f3000c080427afb919bfe25aff71a7715c239eb233bd551a0d3533c'
+          test "$(unzip -p "$apk" assets/game.js | sha256sum | cut -d' ' -f1)" = \
+            'b7756055a87cb8bef4409746fce0208ea0edd3e7e515e88f8ee73018a8c2019c'
+          mkdir -p dist
+          cp "$apk" dist/GG-local-js-1.1.4-game-1.0.6.apk
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GG-local-js-1.1.4-game-1.0.6
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish isolated pre-release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="gg-local-js-test-${GITHUB_SHA:0:7}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/GG-local-js-1.1.4-game-1.0.6.apk dist/SHA256SUMS.txt \
+              --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" \
+              dist/GG-local-js-1.1.4-game-1.0.6.apk \
+              dist/SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "GG 本地 JS 测试版 (${GITHUB_SHA:0:7})" \
+              --notes '独立包名 com.jinli.quickweb.localtest；离线内置 noname 1.1.4 + game 1.0.6；免 GG 激活码与授权联网检查。目标游戏网页及自身服务仍需网络。本版本仅供测试，非正式版。' \
+              --prerelease \
+              --latest=false
+          fi

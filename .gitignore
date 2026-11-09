@@ -1,0 +1,3 @@
+# Rebuilt from the pinned, committed localtest-payload/*.gz in CI.
+/v2/android/client/src/localTest/assets/noname.js
+/v2/android/client/src/localTest/assets/game.js

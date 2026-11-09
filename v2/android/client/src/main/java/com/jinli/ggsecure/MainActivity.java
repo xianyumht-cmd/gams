@@ -73,6 +73,11 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (isLocalTest()) {
+            WebView.setWebContentsDebuggingEnabled(true);
+            initializeLocalTest();
+            return;
+        }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         WebView.setWebContentsDebuggingEnabled(false);
         licenseManager = new V2LicenseManager(this);
@@ -80,6 +85,22 @@ public final class MainActivity extends Activity {
             showLicenseScreen("");
         } else {
             initializeV2(savedInstanceState);
+        }
+    }
+
+    private boolean isLocalTest() {
+        return getResources().getBoolean(R.bool.gg_local_test_mode);
+    }
+
+    private void initializeLocalTest() {
+        browserVisible = false;
+        releaseRuntime();
+        showLoading("正在加载本地 JS…");
+        try {
+            showBrowser(null, RuntimePayload.fromLocalAssets(getAssets()));
+        } catch (Exception error) {
+            showLoading("本地脚本加载失败：" + error.getMessage());
+            Toast.makeText(this, "本地 JS 加载失败", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -555,6 +576,16 @@ public final class MainActivity extends Activity {
     }
 
     private void showServiceDialog() {
+        if (isLocalTest()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("GG 本地 JS 测试版")
+                    .setMessage("内置 noname.js 1.1.4 与 game.js 1.0.6。\n"
+                            + "无需 GG 激活码、设备绑定或在线授权。\n"
+                            + "游戏网页及游戏自身服务仍需联网。")
+                    .setPositiveButton("确定", null)
+                    .show();
+            return;
+        }
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("服务信息")
                 .setMessage(licenseManager.getStatusSummary())
@@ -671,7 +702,8 @@ public final class MainActivity extends Activity {
         if (browserVisible && backgroundAtMs > 0
                 && System.currentTimeMillis() - backgroundAtMs >= BACKGROUND_RELOAD_MS) {
             backgroundAtMs = 0L;
-            initializeV2(null);
+            if (isLocalTest()) initializeLocalTest();
+            else initializeV2(null);
         }
     }
 

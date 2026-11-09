@@ -11,6 +11,14 @@ android {
     }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
+        create("localTest") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".localtest"
+            versionNameSuffix = "-local-js-test"
+            isDebuggable = false
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
