@@ -28,7 +28,7 @@ jobs:
           dest='v2/android/client/src/localTest/assets'
           mkdir -p "$dest"
           gzip -dc v2/android/client/localtest-payload/noname.js.gz > "$dest/noname.js"
-          cat v2/android/client/localtest-payload/game.js.gz.part-* | gzip -dc > "$dest/game.js"
+          cp game-engine/release/game-1.0.5.js "$dest/game.js"
 
       - name: Verify supplied JS inputs
         shell: bash
@@ -36,9 +36,9 @@ jobs:
           set -euo pipefail
           python3 scripts/test_local_js_variant.py
           printf '%s  %s\n' \
-            '1dd13ae38f3000c080427afb919bfe25aff71a7715c239eb233bd551a0d3533c' \
+            'ac563935b762848cd4c1d6ee62eacfb26b624a2f3f7256fce8c7b94bb2ace20b' \
             'v2/android/client/src/localTest/assets/noname.js' \
-            'b7756055a87cb8bef4409746fce0208ea0edd3e7e515e88f8ee73018a8c2019c' \
+            '61903eb697e82ae09f03a8ae87bd8808b6063191a224057fcb5e75813573e7a8' \
             'v2/android/client/src/localTest/assets/game.js' | sha256sum --check
           node --check v2/android/client/src/localTest/assets/noname.js
           node --check v2/android/client/src/localTest/assets/game.js
@@ -80,16 +80,16 @@ jobs:
           "$aapt" dump badging "$apk" | grep -Fq "application-label:'GG 本地测试'"
           "$apksigner" verify --min-sdk-version 24 "$apk"
           test "$(unzip -p "$apk" assets/noname.js | sha256sum | cut -d' ' -f1)" = \
-            '1dd13ae38f3000c080427afb919bfe25aff71a7715c239eb233bd551a0d3533c'
+            'ac563935b762848cd4c1d6ee62eacfb26b624a2f3f7256fce8c7b94bb2ace20b'
           test "$(unzip -p "$apk" assets/game.js | sha256sum | cut -d' ' -f1)" = \
-            'b7756055a87cb8bef4409746fce0208ea0edd3e7e515e88f8ee73018a8c2019c'
+            '61903eb697e82ae09f03a8ae87bd8808b6063191a224057fcb5e75813573e7a8'
           mkdir -p dist
-          cp "$apk" dist/GG-local-js-1.1.4-game-1.0.6.apk
+          cp "$apk" dist/GG-local-js-1.1.5-game-1.0.5.apk
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-local-js-1.1.4-game-1.0.6
+          name: GG-local-js-1.1.5-game-1.0.5
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -103,16 +103,16 @@ jobs:
           set -euo pipefail
           tag="gg-local-js-test-${GITHUB_SHA:0:7}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$tag" dist/GG-local-js-1.1.4-game-1.0.6.apk dist/SHA256SUMS.txt \
+            gh release upload "$tag" dist/GG-local-js-1.1.5-game-1.0.5.apk dist/SHA256SUMS.txt \
               --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$tag" \
-              dist/GG-local-js-1.1.4-game-1.0.6.apk \
+              dist/GG-local-js-1.1.5-game-1.0.5.apk \
               dist/SHA256SUMS.txt \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "GG 本地 JS 测试版 (${GITHUB_SHA:0:7})" \
-              --notes '独立包名 com.jinli.quickweb.localtest；离线内置 noname 1.1.4 + game 1.0.6；免 GG 激活码与授权联网检查。目标游戏网页及自身服务仍需网络。本版本仅供测试，非正式版。' \
+              --notes '独立包名 com.jinli.quickweb.localtest；离线内置用户上传的 noname 1.1.5 + 仓库原版 game 1.0.5；免 GG 激活码与授权联网检查。目标游戏网页及自身服务仍需网络。本版本仅供测试，非正式版。' \
               --prerelease \
               --latest=false
           fi

@@ -688,7 +688,7 @@ public final class MainActivity extends Activity {
         if (isLocalTest()) {
             new AlertDialog.Builder(this)
                     .setTitle("GG 本地 JS 测试版")
-                    .setMessage("内置 noname.js 1.1.4 与 game.js 1.0.6。\n"
+                    .setMessage("内置 noname.js 1.1.5 与 game.js 1.0.5。\n"
                             + "无需 GG 激活码、设备绑定或在线授权。\n"
                             + "游戏网页及游戏自身服务仍需联网。")
                     .setPositiveButton("确定", null)

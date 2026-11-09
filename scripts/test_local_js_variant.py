@@ -9,8 +9,8 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parent.parent
 CLIENT = ROOT / "v2/android/client"
 EXPECTED = {
-    "noname.js": "1dd13ae38f3000c080427afb919bfe25aff71a7715c239eb233bd551a0d3533c",
-    "game.js": "b7756055a87cb8bef4409746fce0208ea0edd3e7e515e88f8ee73018a8c2019c",
+    "noname.js": "ac563935b762848cd4c1d6ee62eacfb26b624a2f3f7256fce8c7b94bb2ace20b",
+    "game.js": "61903eb697e82ae09f03a8ae87bd8808b6063191a224057fcb5e75813573e7a8",
 }
 
 
@@ -28,6 +28,9 @@ def main() -> None:
     gradle = (CLIENT / "build.gradle.kts").read_text(encoding="utf-8")
     assert 'create("localTest")' in gradle
     assert 'applicationIdSuffix = ".localtest"' in gradle
+    workflow = (ROOT / ".github/workflows/gg-local-js-test-apk.yml").read_text(encoding="utf-8")
+    assert 'cp game-engine/release/game-1.0.5.js "$dest/game.js"' in workflow
+    assert "GG-local-js-1.1.5-game-1.0.5.apk" in workflow
 
     manifest = ET.parse(CLIENT / "src/localTest/AndroidManifest.xml").getroot()
     application = manifest.find("application")
