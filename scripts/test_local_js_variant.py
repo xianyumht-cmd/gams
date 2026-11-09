@@ -28,6 +28,11 @@ def main() -> None:
     assert 'create("localTest")' in gradle
     assert 'applicationIdSuffix = ".localtest"' in gradle
 
+    manifest = ET.parse(CLIENT / "src/localTest/AndroidManifest.xml").getroot()
+    application = manifest.find("application")
+    assert application is not None
+    assert application.attrib.get("{http://schemas.android.com/tools}replace") == "android:label"
+
     activity = (CLIENT / "src/main/java/com/jinli/ggsecure/MainActivity.java").read_text(encoding="utf-8")
     entry = activity.index("protected void onCreate(")
     local = activity.index("if (isLocalTest())", entry)
