@@ -13,6 +13,8 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Base64;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -43,6 +45,14 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
@@ -51,6 +61,10 @@ import java.util.Set;
 
 public final class MainActivity extends Activity {
     private static final String START_URL = RuntimeNames.startUrl();
+    private static final String REMOTE_ENGINE_URL =
+            "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
+    private static final byte[] OFFICIAL_ENGINE_SHIM =
+            "window.__gg_official_engine_blocked__=true;".getBytes(StandardCharsets.UTF_8);
     private static final Set<String> SCRIPT_ORIGINS = new HashSet<>(Arrays.asList(
             RuntimeNames.originA(),
             RuntimeNames.originB()
@@ -65,6 +79,7 @@ public final class MainActivity extends Activity {
     private V2LicenseManager licenseManager;
     private RuntimePayload runtimePayload;
     private String wrappedControlScript;
+    private String localOfficialSri;
     private ScriptHandler scriptHandler;
     private boolean nativeDocumentStartEnabled;
     private boolean browserVisible;
@@ -256,7 +271,17 @@ public final class MainActivity extends Activity {
     private void showBrowser(@Nullable Bundle savedInstanceState, RuntimePayload payload) {
         releaseRuntime();
         runtimePayload = payload;
-        wrappedControlScript = wrapControlScript(payload.nonameSource());
+        String source = payload.nonameSource();
+        if (isLocalTest()) {
+            // Preserve the uploaded asset, but expose the locally intercepted engine
+            // under a name ending in game.js, as required by the page loader.
+            if (!source.contains(REMOTE_ENGINE_URL)) {
+                throw new IllegalStateException("本地 noname 缺少预期的引擎地址");
+            }
+            source = source.replace(REMOTE_ENGINE_URL, RuntimeNames.virtualGameUrl());
+            localOfficialSri = calculateSri(OFFICIAL_ENGINE_SHIM);
+        }
+        wrappedControlScript = wrapControlScript(source);
         browserVisible = true;
         createBrowserUi();
         configureWebView();
@@ -346,6 +371,9 @@ public final class MainActivity extends Activity {
         cookies.setAcceptThirdPartyCookies(webView, true);
 
         installDocumentStartScript();
+        if (isLocalTest() && !nativeDocumentStartEnabled) {
+            throw new IllegalStateException("请更新 Android System WebView：当前版本不支持 document-start 注入");
+        }
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -370,6 +398,9 @@ public final class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(
                     WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                if (isLocalTest() && isLocalGameHtml(request)) {
+                    return localGameHtmlResponse(request);
+                }
                 if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
                 if (isEngineRequest(url)) return memoryGameResponse();
                 if (isForbiddenCoreRequest(url)) {
@@ -474,16 +505,94 @@ public final class MainActivity extends Activity {
     }
 
     private WebResourceResponse emptyOfficialEngineResponse() {
-        byte[] body = "window.__gg_official_engine_blocked__=true;".getBytes(
-                java.nio.charset.StandardCharsets.UTF_8);
+        byte[] body = OFFICIAL_ENGINE_SHIM;
         Map<String, String> headers = new java.util.HashMap<>();
         headers.put("Cache-Control", "no-store, no-cache, max-age=0");
         headers.put("Pragma", "no-cache");
         headers.put("X-Content-Type-Options", "nosniff");
+        headers.put("Access-Control-Allow-Origin", "*");
         headers.put("Content-Length", String.valueOf(body.length));
         return new WebResourceResponse(
                 "application/javascript", "UTF-8", 200, "OK",
                 headers, new ByteArrayInputStream(body));
+    }
+
+    private boolean isLocalGameHtml(WebResourceRequest request) {
+        if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
+        Uri uri = request.getUrl();
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !isTargetPage(uri.toString())) return false;
+        String path = uri.getPath();
+        return path != null && (path.matches("/h5/[0-9]+/?") || path.matches("/game/[0-9]+/?"));
+    }
+
+    private WebResourceResponse localGameHtmlResponse(WebResourceRequest request) {
+        HttpURLConnection connection = null;
+        try {
+            String address = request.getUrl().toString();
+            connection = (HttpURLConnection) new URL(address).openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(15000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept-Encoding", "identity");
+            for (String name : new String[]{"User-Agent", "Accept", "Accept-Language", "Referer"}) {
+                String value = request.getRequestHeaders().get(name);
+                if (value != null && !value.isEmpty()) connection.setRequestProperty(name, value);
+            }
+            String cookie = CookieManager.getInstance().getCookie(address);
+            if (cookie != null && !cookie.isEmpty()) connection.setRequestProperty("Cookie", cookie);
+            int status = connection.getResponseCode();
+            if (status >= 300 && status < 400) return null; // Let WebView follow a real redirect.
+            if (status != 200 || connection.getContentType() == null
+                    || !connection.getContentType().toLowerCase(Locale.ROOT).startsWith("text/html")) {
+                throw new IOException("游戏页返回状态 " + status);
+            }
+            String contentType = connection.getContentType().toLowerCase(Locale.ROOT);
+            if (contentType.contains("charset=") && !contentType.contains("utf-8")) {
+                throw new IOException("游戏页编码不是 UTF-8");
+            }
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            try (InputStream input = connection.getInputStream()) {
+                byte[] chunk = new byte[8192];
+                int count;
+                while ((count = input.read(chunk)) != -1) {
+                    if (buffer.size() + count > 2 * 1024 * 1024) {
+                        throw new IOException("游戏页 HTML 过大");
+                    }
+                    buffer.write(chunk, 0, count);
+                }
+            }
+            String rewritten = LocalHtmlRewriter.rewrite(
+                    new String(buffer.toByteArray(), StandardCharsets.UTF_8), localOfficialSri);
+            if (rewritten == null) throw new IOException("游戏页的 SRI 检查结构已变化");
+            Map<String, String> headers = new java.util.HashMap<>();
+            headers.put("Cache-Control", "no-store");
+            String csp = connection.getHeaderField("Content-Security-Policy");
+            if (csp != null) headers.put("Content-Security-Policy", csp);
+            String referrer = connection.getHeaderField("Referrer-Policy");
+            if (referrer != null) headers.put("Referrer-Policy", referrer);
+            return new WebResourceResponse("text/html", "UTF-8", 200, "OK", headers,
+                    new ByteArrayInputStream(rewritten.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception error) {
+            Log.w("GG-Local", "本地游戏 HTML 兼容处理失败", error);
+            byte[] message = ("<!doctype html><meta charset='utf-8'><title>GG 本地测试</title>"
+                    + "<p>网页兼容处理失败，请检查网络或游戏页面是否更新，然后点击刷新。</p>")
+                    .getBytes(StandardCharsets.UTF_8);
+            return new WebResourceResponse("text/html", "UTF-8", 503, "Unavailable",
+                    java.util.Collections.singletonMap("Cache-Control", "no-store"),
+                    new ByteArrayInputStream(message));
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    private static String calculateSri(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-384").digest(bytes);
+            return "sha384-" + Base64.encodeToString(digest, Base64.NO_WRAP);
+        } catch (NoSuchAlgorithmException error) {
+            throw new IllegalStateException("Android 缺少 SHA-384", error);
+        }
     }
 
     private boolean isOfficialEngineRequest(String url) {
@@ -727,6 +836,7 @@ public final class MainActivity extends Activity {
 
     private void releaseRuntime() {
         wrappedControlScript = null;
+        localOfficialSri = null;
         if (runtimePayload != null) {
             runtimePayload.wipe();
             runtimePayload = null;

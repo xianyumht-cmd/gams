@@ -1,0 +1,12 @@
+# Android 客户端架构
+
+## 独立 localTest APK
+
+`v2/android/client` 的 `localTest` 构建类型使用独立包名与测试签名。它从 APK assets 读取用户提交的原始 `noname.js` / `game.js`，不启动 GG License API。
+
+1. 启动时注册 `WebViewCompat.addDocumentStartJavaScript`；设备不支持则停止并提示更新系统 WebView，避免脚本晚于页面 `Common.js` / `ssologin.js`。
+2. 注入的 `noname.js` **内存副本**将远端 `stable.js` URL 换成 `https://ggv2.local/runtime/game.js`，保留原始 assets SHA-256；`shouldInterceptRequest` 对此 URL 返回本地引擎字节。
+3. 对指定 HTTPS 游戏 HTML 页面（含 iframe）在解析前获取源文档，`LocalHtmlRewriter` 同时替换官方 `game.js` 的 SRI 属性及内联常量。SRI 取自官方脚本拦截时返回的轻量占位 JS 的实际 SHA-384，保证浏览器校验一致；否则展示明确错误。
+4. 对官方引擎脚本仍返回轻量占位，避免与独立加载的本地引擎重复运行。目标网页其他资源保持正常联网。
+
+原有 `debug` / `release` 构建类型保持在线授权与运行时注入路径，不启用 HTML 改写及 localTest 的启动流程。

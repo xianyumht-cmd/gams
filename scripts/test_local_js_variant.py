@@ -1,6 +1,7 @@
 """Static contract checks for the isolated Android JS test build."""
 
-from hashlib import sha256
+from hashlib import sha256, sha384
+import base64
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -41,6 +42,22 @@ def main() -> None:
     assert "showBrowser(null, RuntimePayload.fromLocalAssets(getAssets()))" in activity
     assert "WebViewCompat.addDocumentStartJavaScript" in activity
     assert "shouldInterceptRequest" in activity
+    assert "source.replace(REMOTE_ENGINE_URL, RuntimeNames.virtualGameUrl())" in activity
+    assert "if (isLocalTest() && !nativeDocumentStartEnabled)" in activity
+    assert "LocalHtmlRewriter.rewrite(" in activity
+    shim_begin = activity.index("private WebResourceResponse emptyOfficialEngineResponse()")
+    shim_end = activity.index("private boolean isLocalGameHtml(", shim_begin)
+    assert 'headers.put("Access-Control-Allow-Origin", "*")' in activity[shim_begin:shim_end]
+    shim = b"window.__gg_official_engine_blocked__=true;"
+    shim_sri = "sha384-" + base64.b64encode(sha384(shim).digest()).decode("ascii")
+    smoke = (ROOT / "scripts/LocalHtmlRewriterSmoke.java").read_text(encoding="utf-8")
+    assert shim_sri in smoke, "The SRI replacement must match the intercepted official response"
+
+    source = (CLIENT / "src/localTest/assets/noname.js").read_text(encoding="utf-8")
+    remote = "https://gams-script-edge.2320006072.workers.dev/engine/stable.js"
+    assert source.count(remote) >= 2
+    injected = source.replace(remote, "https://ggv2.local/runtime/game.js")
+    assert remote not in injected and "https://ggv2.local/runtime/game.js" in injected
 
     for name, expected_hash in EXPECTED.items():
         payload = CLIENT / "src/localTest/assets" / name

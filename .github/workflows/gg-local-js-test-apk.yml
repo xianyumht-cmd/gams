@@ -48,6 +48,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Verify HTML integrity compatibility with the page inline check
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/local-html-test"
+          javac -d "$RUNNER_TEMP/local-html-test" \
+            v2/android/client/src/main/java/com/jinli/ggsecure/LocalHtmlRewriter.java \
+            scripts/LocalHtmlRewriterSmoke.java
+          java -cp "$RUNNER_TEMP/local-html-test" com.jinli.ggsecure.LocalHtmlRewriterSmoke
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
