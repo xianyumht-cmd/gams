@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-10T23:22:08Z",
+  "generatedAt": "2026-11-10T23:26:44Z",
   "state": "failed",
   "ok": false,
-  "deliveryRunId": 42922748992,
-  "deliveryRunUrl": "https://github.com/xianyumht-cmd/gams/actions/runs/42922748992",
+  "deliveryRunId": 42923391120,
+  "deliveryRunUrl": "https://github.com/xianyumht-cmd/gams/actions/runs/42923391120",
   "conclusion": "skipped",
   "artifactId": null,
   "artifactUrl": "",
