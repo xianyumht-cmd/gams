@@ -61,13 +61,16 @@ final class V2LicenseManager {
             try {
                 JSONObject state = secureStore.loadState();
                 String key = normalizeKey(state.optString("licenseKey", ""));
-                if (key.length() != 32) {
+                String token = state.optString("token", "");
+                int savedPlan = BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
+                        ? NativeRuntimeBridge.savedAuthPlan(key, token)
+                        : key.length() != 32 ? 0 : token.isEmpty() ? 1 : 2;
+                if (savedPlan == 0) {
                     deliver(callback, RuntimeResult.invalid("请输入激活码"));
                     return;
                 }
-                String token = state.optString("token", "");
                 AuthResult auth;
-                if (token.isEmpty()) {
+                if (savedPlan == 1) {
                     auth = activate(key);
                 } else {
                     try {
@@ -80,7 +83,10 @@ final class V2LicenseManager {
                         }
                     } catch (EdgeOneCandidateClient.ApiError error) {
                         if (BuildConfig.EDGEONE_CANDIDATE &&
-                                ("bad_session".equals(error.code) || "device_unbound".equals(error.code))) {
+                                (BuildConfig.GG_NATIVE_CORE
+                                        ? NativeRuntimeBridge.shouldReactivate(error.code)
+                                        : "bad_session".equals(error.code) ||
+                                                "device_unbound".equals(error.code))) {
                             auth = activate(key);
                         } else {
                             throw error;
@@ -111,7 +117,8 @@ final class V2LicenseManager {
 
     void activateAsync(String rawKey, RuntimeCallback callback, TransferProgressCallback progress) {
         String key = normalizeKey(rawKey);
-        if (key.length() != 32) {
+        if ((BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
+                ? NativeRuntimeBridge.savedAuthPlan(key, "") == 0 : key.length() != 32)) {
             deliver(callback, RuntimeResult.invalid("激活码格式错误"));
             return;
         }

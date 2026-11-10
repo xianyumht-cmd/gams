@@ -26,15 +26,21 @@ final class EdgeOneCandidateClient {
     EdgeOneCandidateClient(DeviceIdentity device) { this.device = device; }
 
     JSONObject activate(String key) throws Exception {
-        return requestJson("activate", proofBody("activate", key).put("licenseKey", key));
+        return requestJson("activate", BuildConfig.GG_NATIVE_CORE
+                ? nativeRequestBody("activate", key, "")
+                : proofBody("activate", key).put("licenseKey", key));
     }
 
     JSONObject check(String token) throws Exception {
-        return requestJson("check", proofBody("check", token).put("token", token));
+        return requestJson("check", BuildConfig.GG_NATIVE_CORE
+                ? nativeRequestBody("check", token, "")
+                : proofBody("check", token).put("token", token));
     }
 
     void unbind(String token) throws Exception {
-        requestJson("unbind", proofBody("unbind", token).put("token", token));
+        requestJson("unbind", BuildConfig.GG_NATIVE_CORE
+                ? nativeRequestBody("unbind", token, "")
+                : proofBody("unbind", token).put("token", token));
     }
 
     RuntimePayload loadRuntime(String token, RuntimeZipReader.Listener listener) throws Exception {
@@ -44,9 +50,10 @@ final class EdgeOneCandidateClient {
         KeyPair deliveryKey = generator.generateKeyPair();
         String deliveryPublicKey = Base64.encodeToString(
                 deliveryKey.getPublic().getEncoded(), Base64.NO_WRAP);
-        HttpURLConnection connection = connect("runtime", proofBody(
-                "runtime-v2", token + "|" + deliveryPublicKey)
-                .put("token", token).put("deliveryPublicKey", deliveryPublicKey));
+        HttpURLConnection connection = connect("runtime", BuildConfig.GG_NATIVE_CORE
+                ? nativeRequestBody("runtime-v2", token, deliveryPublicKey)
+                : proofBody("runtime-v2", token + "|" + deliveryPublicKey)
+                        .put("token", token).put("deliveryPublicKey", deliveryPublicKey));
         byte[] zip = null;
         byte[] encrypted = null;
         try {
@@ -80,7 +87,8 @@ final class EdgeOneCandidateClient {
                     Base64.decode(deliveryIv, Base64.DEFAULT), device.deviceId(), token);
             if (zip.length != expectedSize) throw new SecurityException("运行包大小校验失败");
             if (!expectedHash.equals(manifest.getString("sha256")) ||
-                    !expectedHash.equals(DeviceIdentity.hex(MessageDigest.getInstance("SHA-256").digest(zip)))) {
+                    (!BuildConfig.GG_NATIVE_CORE &&
+                    !expectedHash.equals(DeviceIdentity.hex(MessageDigest.getInstance("SHA-256").digest(zip))))) {
                 throw new SecurityException("运行包完整性校验失败");
             }
             return RuntimePayload.fromZip(zip, manifest);
@@ -94,15 +102,27 @@ final class EdgeOneCandidateClient {
     private JSONObject proofBody(String action, String material) throws Exception {
         long now = System.currentTimeMillis() / 1000L;
         String deviceId = device.deviceId();
-        String canonical = BuildConfig.GG_NATIVE_CORE
-                ? NativeRuntimeBridge.proofCanonical(action, now, deviceId, material)
-                : action + "\n" + now + "\n" + deviceId + "\n" +
-                        DeviceIdentity.sha256Hex(material);
+        String canonical = action + "\n" + now + "\n" + deviceId + "\n" +
+                DeviceIdentity.sha256Hex(material);
         return new JSONObject()
                 .put("deviceId", deviceId)
                 .put("devicePublicKey", device.publicKeyBase64())
                 .put("requestTime", now)
                 .put("proof", device.signRawBase64(canonical));
+    }
+
+    /** Native GG: C++ owns the entire EdgeOne request wire shape and policy. */
+    private JSONObject nativeRequestBody(String action, String credential,
+                                         String deliveryPublicKey) throws Exception {
+        long now = System.currentTimeMillis() / 1000L;
+        String deviceId = device.deviceId();
+        String material = "runtime-v2".equals(action)
+                ? credential + "|" + deliveryPublicKey : credential;
+        String canonical = NativeRuntimeBridge.proofCanonical(action, now, deviceId, material);
+        String signature = device.signRawBase64(canonical);
+        return new JSONObject(NativeRuntimeBridge.signedRequestJson(
+                action, deviceId, device.publicKeyBase64(), now, signature,
+                credential, deliveryPublicKey));
     }
 
     private JSONObject requestJson(String action, JSONObject body) throws Exception {

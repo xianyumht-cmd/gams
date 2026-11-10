@@ -28,7 +28,8 @@ struct RuntimeBundle {
 // Throws std::runtime_error on untrusted input; retains neither the ZIP nor a path to it.
 std::unique_ptr<RuntimeBundle> parseRuntimeZip(
     const std::uint8_t* bytes, std::size_t length,
-    const EntrySpec& noname, const EntrySpec& game);
+    const EntrySpec& noname, const EntrySpec& game,
+    const std::string& expectedBundleSha256 = "");
 
 std::string sha256Hex(const std::uint8_t* bytes, std::size_t length);
 std::array<std::uint8_t, 32> sha256Digest(const std::uint8_t* bytes, std::size_t length);

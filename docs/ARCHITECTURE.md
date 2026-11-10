@@ -23,6 +23,18 @@ Java's platform AES-GCM verifies ciphertext before C++ handles the ZIP.
 Neither device private keys nor a static runtime-decryption key are included
 in the APK. The native/Java wire contract is cross-tested against Node.
 
+The next native boundary owns the **full outbound authorization JSON** for
+`activate`, `check`, `unbind` and `runtime-v2`, including action-specific
+license/token/delivery-key fields. Android invokes the Keystore signature on
+the C++ canonical string and passes it back for strict-ASCII JSON creation.
+C++ also decides whether a saved session should be checked, freshly activated,
+or rejected due to a missing license; a malformed saved token is treated as a
+recoverable session. Java still owns asynchronous lifecycle, HTTPS connections,
+encrypted SharedPreferences and WebView. On inbound delivery, the native ZIP
+parser additionally matches the server's expected whole-ZIP SHA-256 before
+extracting and verifying each script. The Java APK retains its independent
+SHA-256 validation path.
+
 This is stage 1 of the requested C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

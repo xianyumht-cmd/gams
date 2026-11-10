@@ -44,6 +44,10 @@ int main(int argc, char** argv) {
                                     {first.size + 1, first.sha256}, second); });
     reject([&] { gg::parseRuntimeZip(archive.data(), archive.size(),
                                     {first.size, std::string(64, '0')}, second); });
+    reject([&] { gg::parseRuntimeZip(archive.data(), archive.size(), first, second,
+                                    std::string(64, '0')); });
+    gg::parseRuntimeZip(archive.data(), archive.size(), first, second,
+                        gg::sha256Hex(archive.data(), archive.size()));
     auto modified = archive;
     modified[30 + std::string("noname.js").size() + 20] ^= 0x40;
     reject([&] { gg::parseRuntimeZip(modified.data(), modified.size(), first, second); });

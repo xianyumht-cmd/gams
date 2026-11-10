@@ -9,6 +9,11 @@
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures
   and keep Keystore/EC/AES operations in the Android platform provider.
+- EdgeOne's session is `base64urlPayload.hexHmac`. A saved token can become
+  malformed or expire; strict native JSON validators must not turn an
+  otherwise recoverable `bad_session` into a permanent generic startup error.
+  The native saved-key policy reactivates when local token syntax is invalid;
+  real server `bad_session` and `device_unbound` still trigger reactivation.
 - Java and C++ test packages have different app-scoped Keystore/device IDs;
   if a single-device license reports bound elsewhere, unbind it in the EdgeOne
   browser administrator before testing the other package. Never add a hidden

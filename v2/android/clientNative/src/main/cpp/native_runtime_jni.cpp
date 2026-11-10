@@ -47,7 +47,8 @@ auto translate(JNIEnv* env, F&& work) -> decltype(work()) {
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_open(JNIEnv* env, jclass, jbyteArray input,
-        jint nonameSize, jstring nonameSha, jint gameSize, jstring gameSha) {
+        jstring bundleSha, jint nonameSize, jstring nonameSha,
+        jint gameSize, jstring gameSha) {
     return translate(env, [&]() -> jlong {
         if (!input || nonameSize <= 0 || gameSize <= 0) {
             throw std::runtime_error("Missing or invalid runtime ZIP");
@@ -61,7 +62,8 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_open(JNIEnv* env, jclass, jbyteArray
         try {
             bundle = gg::parseRuntimeZip(zip.data(), zip.size(),
                 {static_cast<std::size_t>(nonameSize), text(env, nonameSha)},
-                {static_cast<std::size_t>(gameSize), text(env, gameSha)});
+                {static_cast<std::size_t>(gameSize), text(env, gameSha)},
+                text(env, bundleSha));
         } catch (...) {
             gg::secureClear(zip);
             throw;
@@ -126,6 +128,34 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_proofCanonical(JNIEnv* env, jclass,
             text(env, action), static_cast<std::int64_t>(now),
             text(env, deviceId), text(env, material));
         return env->NewStringUTF(canonical.c_str());
+    });
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_savedAuthPlan(JNIEnv* env, jclass,
+        jstring key, jstring token) {
+    return translate(env, [&]() -> jint {
+        return gg::savedAuthPlan(text(env, key), text(env, token));
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_shouldReactivate(JNIEnv* env, jclass,
+        jstring errorCode) {
+    return translate(env, [&]() -> jboolean {
+        return gg::shouldReactivate(text(env, errorCode)) ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_signedRequestJson(JNIEnv* env, jclass,
+        jstring action, jstring deviceId, jstring devicePublicKey,
+        jlong requestTime, jstring proof, jstring credential, jstring deliveryPublicKey) {
+    return translate(env, [&]() -> jstring {
+        const std::string json = gg::signedRequestJson(text(env, action), text(env, deviceId),
+            text(env, devicePublicKey), static_cast<std::int64_t>(requestTime),
+            text(env, proof), text(env, credential), text(env, deliveryPublicKey));
+        return env->NewStringUTF(json.c_str());
     });
 }
 

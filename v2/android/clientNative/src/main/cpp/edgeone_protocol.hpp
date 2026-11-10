@@ -13,6 +13,20 @@ namespace gg {
 std::string proofCanonical(const std::string& action, std::int64_t epochSeconds,
                            const std::string& deviceId, const std::string& material);
 
+// Saved credential plan: 0 = missing/invalid key; 1 = activate; 2 = check.
+int savedAuthPlan(const std::string& normalizedLicense, const std::string& savedToken);
+bool shouldReactivate(const std::string& errorCode);
+
+// Full HTTP JSON body, using only already-validated ASCII protocol fields.
+// Actions: activate, check, unbind, runtime-v2. Wire paths stay in Java.
+std::string signedRequestJson(const std::string& action,
+                              const std::string& deviceId,
+                              const std::string& devicePublicKey,
+                              std::int64_t requestTime,
+                              const std::string& proof,
+                              const std::string& credential,
+                              const std::string& deliveryPublicKey);
+
 struct DeliveryMaterial {
     std::array<std::uint8_t, 32> key{};
     std::vector<std::uint8_t> aad;

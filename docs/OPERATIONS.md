@@ -10,6 +10,10 @@ plus `SHA256SUMS.txt`. **This is an internal test artifact, not a Release**.
 The second native increment also requires host C++ proof/HKDF known answers,
 host JVM→JNI call parity on the real native library and end-to-end
 Node→Java→JNI HKDF→AES-GCM decryption before Android package checks.
+The third increment extends these host gates with all four outbound EdgeOne
+JSON shapes, saved-license recovery decisions, unsafe credential rejection,
+and whole-archive SHA-256 checks through JNI. Keep both native and Java APK
+builds in CI to detect accidental impact on existing installs.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

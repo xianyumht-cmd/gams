@@ -29,7 +29,7 @@ final class RuntimePayload {
 
     static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest) throws Exception {
         if (BuildConfig.GG_NATIVE_CORE) {
-            long handle = NativeRuntimeBridge.open(zipBytes,
+            long handle = NativeRuntimeBridge.open(zipBytes, manifest.getString("sha256"),
                     manifest.getInt("nonameSize"), manifest.getString("nonameSha256"),
                     manifest.getInt("gameSize"), manifest.getString("gameSha256"));
             if (handle == 0) throw new SecurityException("运行数据验证失败");

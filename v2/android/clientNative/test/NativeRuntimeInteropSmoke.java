@@ -25,6 +25,29 @@ public final class NativeRuntimeInteropSmoke {
                 "\n1c1181e7f8dece465e066361d49886efa49b372e3e029fcdf21b9621e4021366",
                 NativeRuntimeBridge.proofCanonical("activate", 1794344400L, deviceId,
                         "ABCDEF0123456789"));
+        String license = "0123456789ABCDEF0123456789ABCDEF";
+        if (NativeRuntimeBridge.savedAuthPlan(license, "") != 1 ||
+                NativeRuntimeBridge.savedAuthPlan(license, "savedtoken.value") != 2 ||
+                NativeRuntimeBridge.savedAuthPlan(license, "bad") != 1 ||
+                NativeRuntimeBridge.savedAuthPlan("invalid", "") != 0 ||
+                !NativeRuntimeBridge.shouldReactivate("device_unbound") ||
+                !NativeRuntimeBridge.shouldReactivate("bad_session") ||
+                NativeRuntimeBridge.shouldReactivate("device_limit")) {
+            throw new AssertionError("JNI licensing state policy mismatch");
+        }
+        String publicKey = "A".repeat(124);
+        String proof = "B".repeat(88);
+        String expectedRequest = "{\"deviceId\":\"" + deviceId +
+                "\",\"devicePublicKey\":\"" + publicKey +
+                "\",\"requestTime\":1794344400,\"proof\":\"" + proof +
+                "\",\"licenseKey\":\"" + license + "\"}";
+        assertEqual(expectedRequest, NativeRuntimeBridge.signedRequestJson("activate",
+                deviceId, publicKey, 1794344400L, proof, license, ""));
+        try {
+            NativeRuntimeBridge.signedRequestJson("check", deviceId, publicKey,
+                    1794344400L, proof, "bad\"token", "");
+            throw new AssertionError("Untrusted JSON credential accepted");
+        } catch (SecurityException expected) { /* JNI rejects unsafe tokens. */ }
         byte[] shared = new byte[32];
         for (int i = 0; i < shared.length; ++i) shared[i] = (byte) i;
         byte[][] derived = NativeRuntimeBridge.deliveryMaterial(shared, deviceId,
@@ -40,7 +63,8 @@ public final class NativeRuntimeInteropSmoke {
         byte[] engine = Files.readAllBytes(Path.of(paths[2]));
         String nonameHash = hex(MessageDigest.getInstance("SHA-256").digest(control));
         String gameHash = hex(MessageDigest.getInstance("SHA-256").digest(engine));
-        long handle = NativeRuntimeBridge.open(zip, control.length, nonameHash,
+        String bundleHash = hex(MessageDigest.getInstance("SHA-256").digest(zip));
+        long handle = NativeRuntimeBridge.open(zip, bundleHash, control.length, nonameHash,
                 engine.length, gameHash);
         try {
             assertEqual(new String(control, StandardCharsets.UTF_8),
@@ -53,9 +77,14 @@ public final class NativeRuntimeInteropSmoke {
             NativeRuntimeBridge.close(handle);
         }
         try {
-            NativeRuntimeBridge.open(zip, control.length, "0".repeat(64),
+            NativeRuntimeBridge.open(zip, bundleHash, control.length, "0".repeat(64),
                     engine.length, gameHash);
             throw new AssertionError("Invalid JS SHA-256 accepted by JNI");
+        } catch (SecurityException expected) { /* Fail closed. */ }
+        try {
+            NativeRuntimeBridge.open(zip, "0".repeat(64), control.length, nonameHash,
+                    engine.length, gameHash);
+            throw new AssertionError("Invalid whole ZIP SHA-256 accepted by JNI");
         } catch (SecurityException expected) { /* Fail closed. */ }
         Arrays.fill(shared, (byte) 0);
         Arrays.fill(derived[0], (byte) 0);

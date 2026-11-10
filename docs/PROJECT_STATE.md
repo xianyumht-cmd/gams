@@ -2,6 +2,18 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Third native increment prepared, CI pending:** for the isolated
+  `:clientNative` app, C++ now controls the complete EdgeOne signed JSON
+  request shape (activate/check/unbind/runtime-v2), the saved-license
+  activation-versus-check policy, and recoverable invalid-session decisions.
+  Android Java retains Keystore signing and the system HTTPS transport.
+  An invalid locally saved session is reactivated rather than rejected at
+  the new native serialization boundary. The C++ ZIP decoder also validates
+  the signed manifest's **whole-archive SHA-256** during its existing parse,
+  letting the native candidate avoid a second Java SHA-256 pass; the Java
+  baseline remains unchanged. Host C++/Node tests pass; JNI/Android CI and
+  on-device feature parity have not yet been verified for this increment.
+
 - The second native increment moves EdgeOne request-proof canonicalization,
   SHA-256 of its signed material, and the runtime AES-256-GCM HKDF-SHA256
   key/AAD derivation into C++. The existing Android Keystore, JCA ephemeral

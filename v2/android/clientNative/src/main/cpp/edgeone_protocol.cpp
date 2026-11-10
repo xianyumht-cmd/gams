@@ -9,6 +9,17 @@
 namespace gg {
 namespace {
 
+bool validAscii(const std::string& value, const std::string& alphabet,
+                std::size_t minimum, std::size_t maximum) {
+    return value.size() >= minimum && value.size() <= maximum &&
+           value.find_first_not_of(alphabet) == std::string::npos;
+}
+
+constexpr char kHexUpper[] = "0123456789ABCDEF";
+constexpr char kHexLower[] = "0123456789abcdef";
+constexpr char kBase64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+constexpr char kToken[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-";
+
 void wipe(std::uint8_t* bytes, std::size_t length) noexcept {
     volatile std::uint8_t* p = bytes;
     for (std::size_t i = 0; i < length; ++i) p[i] = 0;
@@ -64,6 +75,53 @@ std::string proofCanonical(const std::string& action, std::int64_t epochSeconds,
     const auto bytes = reinterpret_cast<const std::uint8_t*>(material.data());
     return action + "\n" + std::to_string(epochSeconds) + "\n" + deviceId + "\n" +
            sha256Hex(bytes, material.size());
+}
+
+int savedAuthPlan(const std::string& normalizedLicense, const std::string& savedToken) {
+    if (!validAscii(normalizedLicense, kHexUpper, 32, 32)) return 0;
+    // A damaged saved session previously produced `bad_session` then activated
+    // again. Recover locally instead of rejecting during native JSON shaping.
+    return validAscii(savedToken, kToken, 10, 1600) ? 2 : 1;
+}
+
+bool shouldReactivate(const std::string& errorCode) {
+    return errorCode == "bad_session" || errorCode == "device_unbound";
+}
+
+std::string signedRequestJson(const std::string& action,
+                              const std::string& deviceId,
+                              const std::string& devicePublicKey,
+                              std::int64_t requestTime,
+                              const std::string& proof,
+                              const std::string& credential,
+                              const std::string& deliveryPublicKey) {
+    if (!validAscii(deviceId, kHexLower, 64, 64) ||
+        !validAscii(devicePublicKey, kBase64, 80, 1000) ||
+        !validAscii(proof, kBase64, 80, 200) || requestTime <= 0) {
+        throw std::runtime_error("Invalid signed request identity");
+    }
+    std::string additional;
+    if (action == "activate") {
+        if (!validAscii(credential, kHexUpper, 32, 32) || !deliveryPublicKey.empty())
+            throw std::runtime_error("Invalid activation credential");
+        additional = ",\"licenseKey\":\"" + credential + "\"";
+    } else if (action == "check" || action == "unbind" || action == "runtime-v2") {
+        if (!validAscii(credential, kToken, 10, 1600))
+            throw std::runtime_error("Invalid session token");
+        additional = ",\"token\":\"" + credential + "\"";
+        if (action == "runtime-v2") {
+            if (!validAscii(deliveryPublicKey, kBase64, 80, 1000))
+                throw std::runtime_error("Invalid one-use delivery key");
+            additional += ",\"deliveryPublicKey\":\"" + deliveryPublicKey + "\"";
+        } else if (!deliveryPublicKey.empty()) {
+            throw std::runtime_error("Unexpected delivery key");
+        }
+    } else {
+        throw std::runtime_error("Unsupported license action");
+    }
+    return "{\"deviceId\":\"" + deviceId + "\",\"devicePublicKey\":\"" +
+           devicePublicKey + "\",\"requestTime\":" + std::to_string(requestTime) +
+           ",\"proof\":\"" + proof + "\"" + additional + "}";
 }
 
 DeliveryMaterial deriveDeliveryMaterial(const std::uint8_t* shared, std::size_t length,

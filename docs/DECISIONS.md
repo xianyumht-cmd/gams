@@ -22,6 +22,16 @@ The Node reference vectors and Java→JNI cross-language decryption must pass
 before producing the next artifact. The code remains an incremental C++
 port, not a completed native rewrite.
 
+The third increment moves complete EdgeOne request-body serialization and
+saved-license reauthorization policy into C++. The existing `HttpURLConnection`
+and Android Keystore are deliberately retained as OS adapters: moving network
+transport to an unreviewed native TLS stack would create material compatibility
+and trust-store regressions without evidence of a performance gain. Only the
+native candidate selects this protocol; the legacy Java APK follows its
+original request builder. Strictly whitelist base64, hex and base64url session
+fields to prevent JSON injection, and turn malformed saved tokens into the
+same activation recovery that the old server-side `bad_session` path provided.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

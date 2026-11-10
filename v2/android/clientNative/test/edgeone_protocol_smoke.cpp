@@ -29,6 +29,39 @@ int main() {
         "\n1c1181e7f8dece465e066361d49886efa49b372e3e029fcdf21b9621e4021366";
     if (gg::proofCanonical("activate", 1794344400, device, "ABCDEF0123456789") != expectedProof)
         throw std::runtime_error("C++ proof mismatches the Node reference");
+    const std::string license = "0123456789ABCDEF0123456789ABCDEF";
+    const std::string pub(124, 'A');
+    const std::string proof(88, 'B');
+    if (gg::savedAuthPlan(license, "") != 1 ||
+        gg::savedAuthPlan(license, "validtoken.value") != 2 ||
+        gg::savedAuthPlan(license, "a.b") != 1 ||
+        gg::savedAuthPlan("short", "") != 0 ||
+        !gg::shouldReactivate("bad_session") ||
+        !gg::shouldReactivate("device_unbound") ||
+        gg::shouldReactivate("device_limit") ||
+        gg::shouldReactivate("license_expired")) {
+        throw std::runtime_error("Native saved-license policy mismatches Java");
+    }
+    const std::string prefix = "{\"deviceId\":\"" + device +
+        "\",\"devicePublicKey\":\"" + pub +
+        "\",\"requestTime\":1794344400,\"proof\":\"" + proof + "\"";
+    if (gg::signedRequestJson("activate", device, pub, 1794344400, proof, license, "") !=
+            prefix + ",\"licenseKey\":\"" + license + "\"}" ||
+        gg::signedRequestJson("check", device, pub, 1794344400, proof, "aaabbb.cccddd", "") !=
+            prefix + ",\"token\":\"aaabbb.cccddd\"}" ||
+        gg::signedRequestJson("unbind", device, pub, 1794344400, proof, "aaabbb.cccddd", "") !=
+            prefix + ",\"token\":\"aaabbb.cccddd\"}" ||
+        gg::signedRequestJson("runtime-v2", device, pub, 1794344400, proof,
+                              "aaabbb.cccddd", pub) != prefix +
+            ",\"token\":\"aaabbb.cccddd\",\"deliveryPublicKey\":\"" + pub + "\"}") {
+        throw std::runtime_error("Native EdgeOne JSON diverges from Java wire schema");
+    }
+    rejects([&] { gg::signedRequestJson("runtime-v2", device, pub, 1794344400,
+                                         proof, "aaabbb.cccddd", ""); });
+    rejects([&] { gg::signedRequestJson("activate", device, pub, 1794344400,
+                                         proof, license + "\"", ""); });
+    rejects([&] { gg::signedRequestJson("check", device, pub, 1794344400,
+                                         proof, "a\"b.c", ""); });
     std::array<std::uint8_t, 32> shared{};
     for (unsigned i = 0; i < shared.size(); ++i) shared[i] = static_cast<std::uint8_t>(i);
     const auto derived = gg::deriveDeliveryMaterial(shared.data(), shared.size(), device,
@@ -44,5 +77,5 @@ int main() {
                                                device, "token"); });
     rejects([&] { gg::deriveDeliveryMaterial(shared.data(), shared.size(),
                                                device, ""); });
-    std::cout << "C++ EdgeOne request canonical and HKDF match Node reference\n";
+    std::cout << "C++ EdgeOne saved auth, JSON, canonical and HKDF parity OK\n";
 }

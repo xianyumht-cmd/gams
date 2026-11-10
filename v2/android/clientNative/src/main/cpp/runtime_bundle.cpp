@@ -216,12 +216,23 @@ std::array<std::uint8_t, 32> sha256Digest(const std::uint8_t* bytes, std::size_t
 }
 
 std::unique_ptr<RuntimeBundle> parseRuntimeZip(const std::uint8_t* bytes,
-    std::size_t length, const EntrySpec& nonameSpec, const EntrySpec& gameSpec) {
+    std::size_t length, const EntrySpec& nonameSpec, const EntrySpec& gameSpec,
+    const std::string& expectedBundleSha256) {
     require(bytes != nullptr && length >= 22 && length <= 5'500'000,
             "Runtime ZIP length outside limits");
     require(nonameSpec.size > 0 && nonameSpec.size <= 2 * 1024 * 1024 &&
             gameSpec.size > 0 && gameSpec.size <= 16 * 1024 * 1024,
             "Runtime entry size outside limits");
+    if (!expectedBundleSha256.empty()) {
+        require(expectedBundleSha256.size() == 64 &&
+                expectedBundleSha256.find_first_not_of("0123456789abcdef") == std::string::npos,
+                "Invalid bundle SHA-256 manifest");
+        const auto actual = sha256Hex(bytes, length);
+        unsigned difference = 0;
+        for (std::size_t i = 0; i < actual.size(); ++i)
+            difference |= static_cast<unsigned char>(actual[i] ^ expectedBundleSha256[i]);
+        require(difference == 0, "Runtime ZIP SHA-256 mismatch");
+    }
     std::size_t eocd = length;
     const std::size_t first = length > 65557 ? length - 65557 : 0;
     for (std::size_t pos = length - 22;; --pos) {
