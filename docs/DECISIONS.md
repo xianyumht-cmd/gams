@@ -1,5 +1,19 @@
 # Technical decisions
 
+## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
+
+The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /
+AES-256-GCM to encrypt the remote ZIP for the requesting device's one-use key.
+This prevents a captured signed request from being replayed to obtain JS
+plaintext without the matching private delivery key. Keep a bounded,
+server-side replay ledger in private Blob to reject sequential duplicate
+proofs. Because the official Blob SDK explicitly does not support atomic
+`onlyIfNew` writes, this ledger alone is insufficient for concurrent replay
+prevention; do not claim global exactly-once delivery. The legacy runtime
+protocol remains available during upgrade, then the owner can explicitly
+set `GG_REQUIRE_RUNTIME_V2=1` and redeploy to disable plaintext legacy
+downloads. No change is made to the canonical Android release protocol.
+
 ## 2026-11-11: EdgeOne-native authorization candidate
 
 Use a separate EdgeOne Makers Cloud Functions / private Blob implementation

@@ -25,11 +25,16 @@ export async function onRequest({ request, env }) {
     const store = getStore({ name: 'gg-private', consistency: 'strong' });
     const result = await handle(action, JSON.parse(text), { store, env });
     if (action === 'runtime') {
-      const { bytes, manifest } = result;
+      const { bytes, manifest, delivery } = result;
       return new Response(bytes, { headers: {
-        ...HEADERS, 'Content-Type': 'application/zip',
+        ...HEADERS, 'Content-Type': delivery ? 'application/octet-stream' : 'application/zip',
         'X-GG-Bundle-Sha256': manifest.sha256,
         'X-GG-Manifest': Buffer.from(JSON.stringify(manifest)).toString('base64'),
+        ...(delivery ? {
+          'X-GG-Delivery-Version': String(delivery.version),
+          'X-GG-Delivery-Server-Key': delivery.serverPublicKey,
+          'X-GG-Delivery-Iv': delivery.iv,
+        } : {}),
       } });
     }
     return new Response(JSON.stringify(result),

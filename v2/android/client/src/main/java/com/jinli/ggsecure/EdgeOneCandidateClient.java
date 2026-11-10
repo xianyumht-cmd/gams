@@ -11,7 +11,10 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
+import java.security.spec.ECGenParameterSpec;
 import java.util.Arrays;
 
 /** Dedicated internal-build API. Normal GG releases retain their Cloudflare protocol unchanged. */
@@ -35,11 +38,29 @@ final class EdgeOneCandidateClient {
     }
 
     RuntimePayload loadRuntime(String token, RuntimeZipReader.Listener listener) throws Exception {
-        HttpURLConnection connection = connect("runtime", proofBody("runtime", token).put("token", token));
+        // This ephemeral key exists only for one download and is never stored in the APK or state.
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+        generator.initialize(new ECGenParameterSpec("secp256r1"));
+        KeyPair deliveryKey = generator.generateKeyPair();
+        String deliveryPublicKey = Base64.encodeToString(
+                deliveryKey.getPublic().getEncoded(), Base64.NO_WRAP);
+        HttpURLConnection connection = connect("runtime", proofBody(
+                "runtime-v2", token + "|" + deliveryPublicKey)
+                .put("token", token).put("deliveryPublicKey", deliveryPublicKey));
         byte[] zip = null;
+        byte[] encrypted = null;
         try {
             int status = connection.getResponseCode();
             if (status != 200) throwApiError(connection, status);
+            if (!"2".equals(connection.getHeaderField("X-GG-Delivery-Version"))) {
+                throw new SecurityException("运行包未使用设备专属加密");
+            }
+            String serverPublicKey = connection.getHeaderField("X-GG-Delivery-Server-Key");
+            String deliveryIv = connection.getHeaderField("X-GG-Delivery-Iv");
+            if (serverPublicKey == null || serverPublicKey.length() > 300 ||
+                    deliveryIv == null || deliveryIv.length() > 64) {
+                throw new SecurityException("运行包加密参数缺失");
+            }
             String rawManifest = connection.getHeaderField("X-GG-Manifest");
             String expectedHash = connection.getHeaderField("X-GG-Bundle-Sha256");
             if (rawManifest == null || rawManifest.length() > 4096 || expectedHash == null ||
@@ -49,7 +70,15 @@ final class EdgeOneCandidateClient {
             JSONObject manifest = new JSONObject(new String(
                     Base64.decode(rawManifest, Base64.DEFAULT), StandardCharsets.UTF_8));
             int expectedSize = manifest.getInt("size");
-            zip = RuntimeZipReader.read(connection.getInputStream(), MAX_ZIP, expectedSize, listener);
+            if (expectedSize < 1 || expectedSize > MAX_ZIP) {
+                throw new SecurityException("运行包长度无效");
+            }
+            encrypted = RuntimeZipReader.read(
+                    connection.getInputStream(), MAX_ZIP + 16, expectedSize + 16, listener);
+            zip = RuntimeDeliveryCrypto.decrypt(encrypted, deliveryKey.getPrivate(),
+                    Base64.decode(serverPublicKey, Base64.DEFAULT),
+                    Base64.decode(deliveryIv, Base64.DEFAULT), device.deviceId(), token);
+            if (zip.length != expectedSize) throw new SecurityException("运行包大小校验失败");
             if (!expectedHash.equals(manifest.getString("sha256")) ||
                     !expectedHash.equals(DeviceIdentity.hex(MessageDigest.getInstance("SHA-256").digest(zip)))) {
                 throw new SecurityException("运行包完整性校验失败");
@@ -57,6 +86,7 @@ final class EdgeOneCandidateClient {
             return RuntimePayload.fromZip(zip, manifest);
         } finally {
             if (zip != null) Arrays.fill(zip, (byte) 0);
+            if (encrypted != null) Arrays.fill(encrypted, (byte) 0);
             connection.disconnect();
         }
     }
@@ -103,7 +133,8 @@ final class EdgeOneCandidateClient {
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-        connection.setRequestProperty("Accept", action.equals("runtime") ? "application/zip" : "application/json");
+        connection.setRequestProperty("Accept", action.equals("runtime")
+                ? "application/octet-stream" : "application/json");
         connection.setRequestProperty("Cache-Control", "no-store");
         byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);
         if (data.length > 8192) throw new IOException("授权请求过大");

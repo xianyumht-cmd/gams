@@ -75,6 +75,14 @@ jobs:
             v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeZipReader.java \
             edgeone-license/test/RuntimeZipReaderSmoke.java
           java -cp /tmp/gg-edgeone-progress-smoke com.jinli.ggsecure.RuntimeZipReaderSmoke
+      - name: Node to Java encrypted runtime transport smoke
+        run: |
+          mkdir -p /tmp/gg-edgeone-crypto-smoke
+          javac -d /tmp/gg-edgeone-crypto-smoke \
+            v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeDeliveryCrypto.java \
+            edgeone-license/test/RuntimeDeliveryCryptoSmoke.java
+          node edgeone-license/test/runtime-crypto-fixture.mjs | \
+            java -cp /tmp/gg-edgeone-crypto-smoke com.jinli.ggsecure.RuntimeDeliveryCryptoSmoke
       - name: Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:

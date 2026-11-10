@@ -1,9 +1,11 @@
-import { createHash, createHmac, createPublicKey, timingSafeEqual, verify } from 'node:crypto';
+import { createCipheriv, createHash, createHmac, createPublicKey, diffieHellman,
+  generateKeyPairSync, hkdfSync, randomBytes, timingSafeEqual, verify } from 'node:crypto';
 
 const KEY_RE = /^[0-9A-F]{32}$/;
 const DEVICE_RE = /^[a-f0-9]{64}$/;
 const MAX_BUNDLE = 5_500_000; // EdgeOne Cloud Functions responses are capped at 6 MB.
 const TIME_SKEW = 180;
+const MAX_RECENT_REQUESTS = 64;
 
 export const hash = (value) => createHash('sha256').update(value).digest('hex');
 
@@ -78,6 +80,65 @@ function authResponse(record, token) {
     permanent: Boolean(record.permanent), latestAppVersion: 12, forceUpdate: false };
 }
 
+function runtimeDeliveryKey(raw) {
+  if (typeof raw !== 'string' || raw.length < 100 || raw.length > 300 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(raw)) {
+    fail(400, 'bad_request', '设备运行密钥格式无效');
+  }
+  try {
+    const key = createPublicKey({ key: Buffer.from(raw, 'base64'), format: 'der', type: 'spki' });
+    if (key.asymmetricKeyType !== 'ec' || key.asymmetricKeyDetails?.namedCurve !== 'prime256v1') {
+      fail(400, 'bad_request', '设备运行密钥类型无效');
+    }
+    return key;
+  } catch {
+    fail(400, 'bad_request', '设备运行密钥格式无效');
+  }
+}
+
+// Blob has strong reads, but no atomic create-if-absent/CAS. This limits *sequential*
+// request replay; v2 ECDH encryption additionally prevents a captured request
+// from revealing JS even if two functions concurrently accept that request.
+async function rejectRuntimeReplay(store, session, body, now) {
+  const path = `runtime/replay/${session.id}/${session.dev}.json`;
+  const fingerprint = hash(JSON.stringify([
+    body.requestTime, body.proof, hash(body.token), body.deliveryPublicKey || '',
+  ]));
+  const old = await store.get(path, { type: 'json', consistency: 'strong' });
+  const recent = (Array.isArray(old?.recent) ? old.recent : [])
+    .filter((entry) => typeof entry?.h === 'string' && /^[a-f0-9]{64}$/.test(entry.h) &&
+      Number.isSafeInteger(entry.t) && entry.t + TIME_SKEW >= now);
+  if (recent.some((entry) => entry.h === fingerprint)) {
+    fail(409, 'replayed_request', '请求已经使用，请重试');
+  }
+  if (recent.length >= MAX_RECENT_REQUESTS) fail(429, 'too_many_requests', '请求过于频繁');
+  recent.push({ h: fingerprint, t: body.requestTime });
+  await store.setJSON(path, { recent });
+  const observed = await store.get(path, { type: 'json', consistency: 'strong' });
+  if (!Array.isArray(observed?.recent) || !observed.recent.some((entry) => entry.h === fingerprint)) {
+    fail(409, 'replayed_request', '请求冲突，请重试');
+  }
+}
+
+function encryptRuntimeForDevice(plain, recipientKey, body) {
+  const ephemeral = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const shared = diffieHellman({ privateKey: ephemeral.privateKey, publicKey: recipientKey });
+  const info = Buffer.from(`gg-edgeone-runtime-v2|${body.deviceId}|${hash(body.token)}`);
+  const aesKey = Buffer.from(hkdfSync('sha256', shared, Buffer.from('gg-edgeone-v2'), info, 32));
+  const iv = randomBytes(12);
+  try {
+    const cipher = createCipheriv('aes-256-gcm', aesKey, iv);
+    cipher.setAAD(info);
+    const bytes = Buffer.concat([cipher.update(plain), cipher.final(), cipher.getAuthTag()]);
+    return { bytes, delivery: { version: 2,
+      serverPublicKey: ephemeral.publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
+      iv: iv.toString('base64') } };
+  } finally {
+    shared.fill(0);
+    aesKey.fill(0);
+  }
+}
+
 export async function handle(action, body, { store, env, now = Math.floor(Date.now() / 1000) }) {
   secret(env);
   if (!body || typeof body !== 'object' || Array.isArray(body)) fail(400, 'bad_request', '请求无效');
@@ -112,7 +173,10 @@ export async function handle(action, body, { store, env, now = Math.floor(Date.n
 
   if (!['check', 'runtime', 'unbind'].includes(action)) fail(404, 'not_found', '接口不存在');
   const session = verifyToken(body.token, env, now);
-  verifyDeviceProof(body, action, body.token, now);
+  const v2Delivery = action === 'runtime' && body.deliveryPublicKey !== undefined;
+  const recipientKey = v2Delivery ? runtimeDeliveryKey(body.deliveryPublicKey) : null;
+  verifyDeviceProof(body, v2Delivery ? 'runtime-v2' : action,
+    v2Delivery ? `${body.token}|${body.deliveryPublicKey}` : body.token, now);
   if (session.dev !== body.deviceId || session.pub !== hash(body.devicePublicKey)) {
     fail(401, 'bad_session', '授权设备不匹配');
   }
@@ -132,6 +196,11 @@ export async function handle(action, body, { store, env, now = Math.floor(Date.n
     return { ok: true };
   }
 
+  if (!v2Delivery && (env?.GG_REQUIRE_RUNTIME_V2 || process.env.GG_REQUIRE_RUNTIME_V2) === '1') {
+    fail(426, 'upgrade_required', '请更新客户端后重试');
+  }
+  await rejectRuntimeReplay(store, session, body, now);
+
   const manifest = await store.get('runtime/manifest.json', { type: 'json', consistency: 'strong' });
   if (!manifest || !Number.isInteger(manifest.size) || manifest.size < 1 || manifest.size > MAX_BUNDLE ||
       !/^[a-f0-9]{64}$/.test(manifest.sha256 || '') ||
@@ -144,7 +213,8 @@ export async function handle(action, body, { store, env, now = Math.floor(Date.n
   if (bytes.length !== manifest.size || hash(bytes) !== manifest.sha256) {
     fail(503, 'runtime_invalid', '云端脚本校验失败');
   }
-  return { ok: true, bytes, manifest };
+  return { ok: true, manifest,
+    ...(v2Delivery ? encryptRuntimeForDevice(bytes, recipientKey, body) : { bytes }) };
 }
 
 export function toHttpError(error) {

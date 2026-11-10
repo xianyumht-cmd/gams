@@ -16,6 +16,16 @@
 - EdgeOne KV's cached reads can lag. The candidate uses private Blob **strong**
   reads for license state and revocation. Even strong reads are not a database
   transaction, so simultaneous seat activation still needs a production fix.
+- `@edgeone/pages-blob` marks `onlyIfNew` as deprecated and explicitly not
+  enforced. A nonce/replay record with strong reads is **not** an atomic
+  one-time ticket: multiple Cloud Function instances can accept concurrent
+  copies. Use one-use recipient encryption to prevent captured-request
+  *plaintext extraction*; implement a transactional counter or atomic ledger
+  before claiming complete replay prevention.
+- New encrypted v2 transport requires the updated EdgeOne Cloud Function and
+  updated test APK. Deploy the dual-protocol server **before** the new APK,
+  verify on device, and only then set `GG_REQUIRE_RUNTIME_V2=1`. If strict
+  mode is enabled early, old test APKs will receive HTTP 426.
 - Distinguish public repository source from APK packaging: Git history remains
   public even if APK contains zero JS assets. Never describe this as making
   previously public scripts secret or impossible to extract from memory.

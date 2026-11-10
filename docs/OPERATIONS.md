@@ -87,6 +87,30 @@ Review old ZIP retention separately; no automatic deletion is performed.
 
 ## 3. Build the APK in GitHub Actions
 
+### Encrypted runtime v2 rollout (internal candidate only)
+
+1. Push the branch containing both the new `core.mjs` Cloud Function and the
+   updated Android client. **Deploy the new Makers Functions first** while
+   `GG_REQUIRE_RUNTIME_V2` is unset. This keeps the previous test APK working
+   during migration; it still uses plaintext legacy delivery.
+2. Let the `GG EdgeOne Internal APK` workflow finish and download its Actions
+   artifact. Confirm the new APK can activate, download, decrypt and inject
+   the runtime on an Android device, including a restart with a saved card.
+   CI runs a Node/Java ECDH/HKDF/AES-GCM interop smoke and server replay tests,
+   but these are not a substitute for on-device verification.
+3. **After** all test devices have the new APK, set the Makers environment
+   variable `GG_REQUIRE_RUNTIME_V2` to the literal `1`, save, and redeploy.
+   This rejects all old plaintext `/api/runtime` requests with HTTP 426.
+   Do not enable it before the device rollout. If you must roll back to an
+   old candidate APK, remove this environment variable and redeploy first.
+
+The replay ledger uses strong private Blob reads/writes and rejects sequential
+duplicates; Blob lacks atomic compare-and-set, so concurrent requests may
+still race. However a replayed v2 download remains encrypted for the original
+ephemeral client key; it cannot expose plaintext without the key or compromise
+of the authorized client. The client keeps JS in memory; no protector can
+promise that a fully instrumented authorized device cannot extract it.
+
 The test-branch workflow defaults to the owner's custom HTTPS domain
 `https://gg-api.xn--8pv109c.top`. To change that origin, set the **repository
 variable** `GG_EDGEONE_BASE_URL` or enter it in the workflow_dispatch
@@ -115,7 +139,8 @@ change the device identity, so the previous test card might require device
 unbinding in the EdgeOne admin UI. Do not silently deploy production signing.
 
 Automated: Node auth/proof/revocation tests, ZIP budget/hash preparation,
-standalone Java HTML/gzip smoke, Android lint/assemble, APK package identity,
+standalone Java HTML/gzip and Node-to-Java encrypted-delivery smokes,
+Android lint/assemble, APK package identity,
 signature validity and absence of JS/ZIP assets.
 
 Device (not covered by CI): install alongside production; issue a test key;

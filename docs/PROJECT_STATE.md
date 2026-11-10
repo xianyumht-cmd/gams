@@ -2,6 +2,15 @@
 
 - Base: `main` at `6f25a6f32b6ebf5dfc57e06a5612ef372466ec4e`.
 - Task branch: `feat/gg-edgeone-license-remote-js-20261111`.
+- In the current working branch, a **not-yet-deployed** EdgeOne runtime v2
+  enhancement adds per-download ephemeral P-256 ECDH / HKDF / AES-GCM delivery,
+  per-device replay receipts, staged backward compatibility and an opt-in
+  `GG_REQUIRE_RUNTIME_V2=1` strict mode. New Node tests reproduce and reject
+  sequential reuse of an identical proof and validate the encrypted response;
+  the local Node suite passes. Cross-language Java crypto CI, Android build,
+  Makers deployment, encrypted on-device startup and strict-mode rollout are
+  **pending** at this point. The private Blob SDK has no atomic conditional
+  write, so simultaneous duplicate requests remain a known limitation.
 - Added EdgeOne Node API, private Blob provisioning, isolated Android
   `edgeOneTest` build type, candidate-only 1.4.1 HTML compatibility, and a
   manual/branch-triggered GitHub Actions internal-artifact workflow.

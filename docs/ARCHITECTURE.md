@@ -18,13 +18,23 @@ or an encrypted copy of either into its APK.
    The time limit starts on first activation. Each check refreshes the token.
 3. Every runtime fetch is a signed request, even with a valid session token.
    The function reloads the license record and checks suspension, expiry and
-   device binding. It reads the versioned ZIP named by `runtime/manifest.json`
-   from private Blob storage, verifies its size/hash, and returns both in one
-   `no-store` HTTPS response. The bundle limit is **5,500,000 compressed bytes**
-   (EdgeOne Cloud Functions response limit is 6 MB). This candidate sets the
+   device binding. The strengthened EdgeOne v2 request additionally supplies
+   a fresh ephemeral P-256 delivery public key, bound into the device signature
+   under `runtime-v2`. The server uses its own ephemeral P-256 key, ECDH,
+   HKDF-SHA256 and AES-256-GCM to return **encrypted ZIP bytes**, with an
+   authenticated context containing the device ID and session-token hash.
+   The encrypted response includes its server public key and IV in headers.
+   The server verifies the plaintext versioned ZIP size/hash first; the Android
+   client decrypts and checks it again before injection. A captured v2 request
+   can be repeated only to obtain ciphertext, not the device's ephemeral key.
+   Server-side per-device replay receipts in strong Blob storage also reject
+   sequential reuse of an identical signed request. The plaintext ZIP limit
+   remains **5,500,000 bytes** (plus a 16-byte GCM tag), below the 6 MB EdgeOne
+   response limit. This candidate sets the
    Node Cloud Functions maximum duration to 120 seconds in `edgeone.json`
    after a 30-second runtime-download timeout was observed.
-4. `EdgeOneCandidateClient` checks the response digest, then passes the ZIP to
+4. `EdgeOneCandidateClient` decrypts the v2 response in memory with its
+   one-use private key, checks the response digest, then passes the ZIP to
    existing `RuntimePayload.fromZip()`, which validates both script hashes and
    retains them in memory. The established `MainActivity` document-start / JS
    interception pathway does not write the scripts to disk. For remote `1.4.1`
@@ -35,6 +45,12 @@ or an encrypted copy of either into its APK.
    license API reads retain the short 25-second timeout. Unexpected startup
    exceptions are written to Android Logcat under `GG-EdgeOne` without logging
    license keys or session tokens.
+
+For a staged upgrade, the EdgeOne server still accepts legacy `runtime` proofs
+and returns plaintext ZIP for old test APKs. Only after updating installed
+clients should the operator set `GG_REQUIRE_RUNTIME_V2=1` on the Makers project
+and redeploy; then legacy `/api/runtime` requests fail with HTTP 426. The
+existing Cloudflare production protocol and canonical builds are unaffected.
 
 The EdgeOne candidate's first activation and saved-license restart share one
 native `正在初始化中…` screen. Before a runtime response body arrives its cyan bar
@@ -82,6 +98,13 @@ expiry unchanged. Revocation is reversible with an administrator action.
 - Blob strong reads give read-after-write freshness, **not atomic compare-and-set**.
   Two simultaneous first activations could race. This implementation is an
   **internal candidate**, not a production-grade seat-allocation service.
+- Replay receipts stored in Blob also **cannot atomically claim a request**;
+  simultaneous requests may pass a check/write race. The independent v2
+  recipient encryption mitigates JS disclosure from captured requests even in
+  that case. Strict v2 mode is off until explicitly configured after rollout.
+- Authorization cannot prevent a legitimate client from inspecting its own
+  decrypted JavaScript inside the app/WebView at runtime. Transport encryption
+  and APK obfuscation are friction layers, not DRM guarantees.
 - Only the cloud controls whether a caller receives the runtime ZIP. The
   returned manifest is verified against the ZIP and each entry, but it is not
   independently signed; integrity currently depends on the authenticated TLS
