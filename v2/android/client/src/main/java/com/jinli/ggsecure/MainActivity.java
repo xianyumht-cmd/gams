@@ -43,6 +43,11 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
@@ -63,8 +68,9 @@ public final class MainActivity extends Activity {
     private TextView statusText;
     private ValueCallback<Uri[]> fileChooserCallback;
     private V2LicenseManager licenseManager;
-    private RuntimePayload runtimePayload;
+    private volatile RuntimePayload runtimePayload;
     private String wrappedControlScript;
+    private volatile String edgeOneUserAgent;
     private ScriptHandler scriptHandler;
     private boolean nativeDocumentStartEnabled;
     private boolean browserVisible;
@@ -240,7 +246,7 @@ public final class MainActivity extends Activity {
         createBrowserUi();
         configureWebView();
         if (savedInstanceState != null) webView.restoreState(savedInstanceState);
-        else webView.loadUrl(START_URL);
+        else webView.loadUrl(startUrl());
     }
 
     private void createBrowserUi() {
@@ -293,7 +299,7 @@ public final class MainActivity extends Activity {
             if (webView != null && webView.canGoBack()) webView.goBack();
             else finish();
         });
-        home.setOnClickListener(v -> webView.loadUrl(START_URL));
+        home.setOnClickListener(v -> webView.loadUrl(startUrl()));
         refresh.setOnClickListener(v -> webView.reload());
         reset.setOnClickListener(v -> resetWebData());
         service.setOnClickListener(v -> showServiceDialog());
@@ -311,7 +317,7 @@ public final class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        settings.setSupportZoom(true);
+        settings.setSupportZoom(!isEdgeOneDirectEngine());
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(false);
         settings.setAllowFileAccess(false);
@@ -323,6 +329,7 @@ public final class MainActivity extends Activity {
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
         cookies.setAcceptThirdPartyCookies(webView, true);
+        edgeOneUserAgent = settings.getUserAgentString();
 
         installDocumentStartScript();
 
@@ -349,6 +356,11 @@ public final class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(
                     WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                if (isEdgeOneDirectEngine()) {
+                    if (isOfficialEngineRequest(url)) return memoryGameResponse();
+                    if (shouldRewriteEdgeOnePage(request)) return rewriteEdgeOnePage(request);
+                    return null;
+                }
                 if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
                 if (isEngineRequest(url)) return memoryGameResponse();
                 if (isForbiddenCoreRequest(url)) {
@@ -465,6 +477,84 @@ public final class MainActivity extends Activity {
                 headers, new ByteArrayInputStream(body));
     }
 
+    private boolean isEdgeOneDirectEngine() {
+        RuntimePayload current = runtimePayload;
+        return BuildConfig.EDGEONE_CANDIDATE && current != null
+                && current.versionName().startsWith("1.4.1");
+    }
+
+    private String startUrl() {
+        return isEdgeOneDirectEngine() ? "https://m.66rpg.com/" : START_URL;
+    }
+
+    private boolean shouldRewriteEdgeOnePage(WebResourceRequest request) {
+        if (!request.isForMainFrame() || !"GET".equalsIgnoreCase(request.getMethod())) return false;
+        if (!"https".equalsIgnoreCase(request.getUrl().getScheme()) ||
+                !isTargetPage(request.getUrl().toString())) return false;
+        String accept = headerIgnoreCase(request, "Accept");
+        return accept != null && accept.toLowerCase(Locale.ROOT).contains("text/html");
+    }
+
+    private static String headerIgnoreCase(WebResourceRequest request, String key) {
+        Map<String, String> headers = request.getRequestHeaders();
+        if (headers == null) return null;
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            if (key.equalsIgnoreCase(entry.getKey())) return entry.getValue();
+        }
+        return null;
+    }
+
+    private WebResourceResponse rewriteEdgeOnePage(WebResourceRequest request) {
+        String address = request.getUrl().toString();
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(address).openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(15000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept-Encoding", "identity");
+            if (edgeOneUserAgent != null) connection.setRequestProperty("User-Agent", edgeOneUserAgent);
+            for (String name : new String[]{"Accept", "Accept-Language", "Referer"}) {
+                String value = headerIgnoreCase(request, name);
+                if (value != null && !value.isEmpty()) connection.setRequestProperty(name, value);
+            }
+            String cookies = CookieManager.getInstance().getCookie(address);
+            if (cookies != null && !cookies.isEmpty()) connection.setRequestProperty("Cookie", cookies);
+            int status = connection.getResponseCode();
+            if (status >= 300 && status < 400) return null; // Let WebView follow site redirects.
+            String contentType = connection.getContentType();
+            if (status != 200 || contentType == null ||
+                    !contentType.toLowerCase(Locale.ROOT).startsWith("text/html") ||
+                    (contentType.toLowerCase(Locale.ROOT).contains("charset=") &&
+                            !contentType.toLowerCase(Locale.ROOT).contains("utf-8"))) {
+                throw new IOException("页面不是可处理的 UTF-8 HTML");
+            }
+            String html;
+            try (InputStream source = connection.getInputStream()) {
+                html = new String(EdgeOneHtmlCompatibility.readHtml(source, 2 * 1024 * 1024),
+                        StandardCharsets.UTF_8);
+            }
+            RuntimePayload current = runtimePayload;
+            if (current == null) throw new IOException("运行时已经退出");
+            String rewritten = EdgeOneHtmlCompatibility.rewrite(html, current.nonameSource());
+            Map<String, String> headers = new java.util.HashMap<>();
+            headers.put("Cache-Control", "no-store");
+            String csp = connection.getHeaderField("Content-Security-Policy");
+            if (csp != null) headers.put("Content-Security-Policy", csp);
+            return new WebResourceResponse("text/html", "UTF-8", 200, "OK", headers,
+                    new ByteArrayInputStream(rewritten.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception error) {
+            byte[] html = "<!doctype html><meta charset='utf-8'><p>GG 页面兼容处理失败，请重试或更新客户端。</p>"
+                    .getBytes(StandardCharsets.UTF_8);
+            return new WebResourceResponse("text/html", "UTF-8", 503, "Unavailable",
+                    java.util.Collections.singletonMap("Cache-Control", "no-store"),
+                    new ByteArrayInputStream(html));
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
     private boolean isOfficialEngineRequest(String url) {
         String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
         return lower.contains("c2.cgyouxi.com/website/hfplayer/")
@@ -548,7 +638,7 @@ public final class MainActivity extends Activity {
                         WebStorage.getInstance().deleteAllData();
                         webView.evaluateJavascript(
                                 "try{localStorage.clear();sessionStorage.clear();}catch(e){}",
-                                ignored -> webView.loadUrl(START_URL));
+                                ignored -> webView.loadUrl(startUrl()));
                     });
                 })
                 .show();

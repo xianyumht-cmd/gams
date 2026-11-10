@@ -35,6 +35,7 @@ final class V2LicenseManager {
     private final SecureStore secureStore;
     private final DeviceIdentity identity;
     private final RuntimeKeyManager runtimeKeyManager;
+    private final EdgeOneCandidateClient edgeOneCandidateClient;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -43,6 +44,8 @@ final class V2LicenseManager {
         secureStore = new SecureStore(app);
         identity = new DeviceIdentity(app, secureStore);
         runtimeKeyManager = new RuntimeKeyManager();
+        edgeOneCandidateClient = BuildConfig.EDGEONE_CANDIDATE
+                ? new EdgeOneCandidateClient(identity) : null;
     }
 
     boolean hasSavedKey() {
@@ -71,6 +74,13 @@ final class V2LicenseManager {
                         } else {
                             throw error;
                         }
+                    } catch (EdgeOneCandidateClient.ApiError error) {
+                        if (BuildConfig.EDGEONE_CANDIDATE &&
+                                ("bad_session".equals(error.code) || "device_unbound".equals(error.code))) {
+                            auth = activate(key);
+                        } else {
+                            throw error;
+                        }
                     }
                 }
                 saveAuth(key, auth);
@@ -80,6 +90,8 @@ final class V2LicenseManager {
                 deliver(callback, RuntimeResult.invalid("需要联网启动，请检查网络后重试"));
             } catch (ApiException error) {
                 deliver(callback, RuntimeResult.invalid(userMessage(error)));
+            } catch (EdgeOneCandidateClient.ApiError error) {
+                deliver(callback, RuntimeResult.invalid(error.getMessage()));
             } catch (Exception error) {
                 deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
             }
@@ -102,6 +114,8 @@ final class V2LicenseManager {
                 deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"));
             } catch (ApiException error) {
                 deliver(callback, RuntimeResult.invalid(userMessage(error)));
+            } catch (EdgeOneCandidateClient.ApiError error) {
+                deliver(callback, RuntimeResult.invalid(error.getMessage()));
             } catch (Exception error) {
                 deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
             }
@@ -114,6 +128,12 @@ final class V2LicenseManager {
                 JSONObject state = secureStore.loadState();
                 String token = state.optString("token", "");
                 if (token.isEmpty()) throw new ApiException(401, "bad_session", "服务状态已失效");
+                if (BuildConfig.EDGEONE_CANDIDATE) {
+                    edgeOneCandidateClient.unbind(token);
+                    secureStore.clearAuthorization();
+                    deliver(callback, SimpleResult.success("当前设备已解除绑定"));
+                    return;
+                }
                 String deviceId = identity.deviceId();
                 JSONObject body = signedLicenseBody(
                         "unbind", DeviceIdentity.sha256Hex(token + "|unbind"), deviceId);
@@ -124,6 +144,8 @@ final class V2LicenseManager {
             } catch (Exception error) {
                 if (error instanceof ApiException) {
                     deliver(callback, SimpleResult.failure(userMessage((ApiException) error)));
+                } else if (error instanceof EdgeOneCandidateClient.ApiError) {
+                    deliver(callback, SimpleResult.failure(error.getMessage()));
                 } else {
                     deliver(callback, SimpleResult.failure("更换设备失败，请重试"));
                 }
@@ -148,6 +170,7 @@ final class V2LicenseManager {
     }
 
     private AuthResult activate(String key) throws Exception {
+        if (BuildConfig.EDGEONE_CANDIDATE) return parseAuth(edgeOneCandidateClient.activate(key));
         String deviceId = identity.deviceId();
         String publicKey = identity.publicKeyBase64();
         String label = identity.deviceLabel();
@@ -160,6 +183,7 @@ final class V2LicenseManager {
     }
 
     private AuthResult check(String token) throws Exception {
+        if (BuildConfig.EDGEONE_CANDIDATE) return parseAuth(edgeOneCandidateClient.check(token));
         String deviceId = identity.deviceId();
         JSONObject body = signedLicenseBody(
                 "check", DeviceIdentity.sha256Hex(token), deviceId);
@@ -168,6 +192,7 @@ final class V2LicenseManager {
     }
 
     private RuntimePayload loadRuntime(String token) throws Exception {
+        if (BuildConfig.EDGEONE_CANDIDATE) return edgeOneCandidateClient.loadRuntime(token);
         String deviceId = identity.deviceId();
         String runtimePublicKey = runtimeKeyManager.publicKeyBase64();
         String runtimeFingerprint = runtimeKeyManager.fingerprint();

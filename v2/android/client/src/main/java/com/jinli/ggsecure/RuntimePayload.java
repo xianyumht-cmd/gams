@@ -13,10 +13,12 @@ import java.util.zip.ZipInputStream;
 final class RuntimePayload {
     private byte[] noname;
     private byte[] game;
+    private final String versionName;
 
-    private RuntimePayload(byte[] noname, byte[] game) {
+    private RuntimePayload(byte[] noname, byte[] game, String versionName) {
         this.noname = noname;
         this.game = game;
+        this.versionName = versionName;
     }
 
     static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest) throws Exception {
@@ -34,8 +36,10 @@ final class RuntimePayload {
         if (noname == null || game == null) throw new SecurityException("运行包内容不完整");
         verify(noname, manifest.getInt("nonameSize"), manifest.getString("nonameSha256"), "控制层");
         verify(game, manifest.getInt("gameSize"), manifest.getString("gameSha256"), "引擎层");
-        return new RuntimePayload(noname, game);
+        return new RuntimePayload(noname, game, manifest.optString("versionName", ""));
     }
+
+    String versionName() { return versionName; }
 
     synchronized String nonameSource() {
         ensureAlive();

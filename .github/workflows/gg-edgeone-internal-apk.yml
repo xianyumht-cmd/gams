@@ -1,0 +1,97 @@
+name: GG EdgeOne Internal APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      edgeone_base_url:
+        description: 'Deployed EdgeOne Makers HTTPS origin; empty uses repository variable'
+        required: false
+        type: string
+  push:
+    branches:
+      - feat/gg-edgeone-license-remote-js-20261111
+    paths:
+      - 'edgeone-license/**'
+      - 'v2/android/**'
+      - '.github/workflows/gg-edgeone-internal-apk.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gg-edgeone-internal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Test EdgeOne licensing without cloud credentials
+        run: node --test edgeone-license/test/*.test.mjs
+      - name: Check remote archive budget from public historical pair
+        run: |
+          python3 edgeone-license/scripts/pack_runtime.py \
+            --noname remote-script/release/noname-1.1.4.js \
+            --game game-engine/release/game-1.0.5.js \
+            --version 1.1.4-1.0.5 --out edgeone-license/.local
+          python3 -m zipfile -t edgeone-license/.local/bundle.zip
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: HTML rewrite and gzip smoke
+        run: |
+          mkdir -p /tmp/gg-edgeone-html-smoke
+          javac -d /tmp/gg-edgeone-html-smoke \
+            v2/android/client/src/main/java/com/jinli/ggsecure/EdgeOneHtmlCompatibility.java \
+            edgeone-license/test/EdgeOneHtmlCompatibilitySmoke.java
+          java -cp /tmp/gg-edgeone-html-smoke com.jinli.ggsecure.EdgeOneHtmlCompatibilitySmoke
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Build isolated EdgeOne candidate
+        env:
+          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || vars.GG_EDGEONE_BASE_URL }}
+        run: |
+          if [[ -z "$GH_EDGEONE_BASE" ]]; then
+            echo '::warning::GG_EDGEONE_BASE_URL is not set. APK will show a setup error until rebuilt with an EdgeOne URL.'
+          fi
+          cd v2/android
+          gradle --no-daemon :client:lintEdgeOneTest :client:assembleEdgeOneTest \
+            "-PggEdgeOneBaseUrl=${GH_EDGEONE_BASE}"
+      - name: Validate candidate identity and ensure JS is not packaged
+        run: |
+          set -euo pipefail
+          apk=v2/android/client/build/outputs/apk/edgeOneTest/client-edgeOneTest.apk
+          test -s "$apk"
+          if unzip -Z1 "$apk" | grep -E '(^|/)(noname|game)([.-][^/]*)?\.js$'; then
+            echo 'Forbidden JavaScript asset in candidate APK' >&2
+            exit 1
+          fi
+          if unzip -Z1 "$apk" | grep -E '\.(ggenc|zip)$'; then
+            echo 'Unexpected bundled runtime in candidate APK' >&2
+            exit 1
+          fi
+          sdk_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$sdk_tools/aapt" dump badging "$apk" | grep -F "package: name='com.jinli.quickweb.edgeonetest'"
+          "$sdk_tools/apksigner" verify --verbose "$apk"
+          mkdir -p artifact
+          cp "$apk" artifact/GG-EdgeOne-internal.apk
+          (cd artifact && sha256sum GG-EdgeOne-internal.apk > SHA256SUMS.txt)
+      - name: Store private internal candidate as Actions Artifact only
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-EdgeOne-internal-${{ github.run_number }}
+          path: artifact/
+          retention-days: 14
+          if-no-files-found: error
