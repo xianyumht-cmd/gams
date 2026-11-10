@@ -53,8 +53,6 @@ jobs:
             v2/android/client/src/main/java/com/jinli/ggsecure/EdgeOneHtmlCompatibility.java \
             edgeone-license/test/EdgeOneHtmlCompatibilitySmoke.java
           java -cp /tmp/gg-edgeone-html-smoke com.jinli.ggsecure.EdgeOneHtmlCompatibilitySmoke
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
       - name: Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:

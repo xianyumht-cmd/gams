@@ -15,3 +15,6 @@
 - The `1.4.1` userscript directly uses the official `game.js` path rather than
   old `stable.js`. It needs its own HTML/gzip/SRI compatibility branch and
   must not inherit the older runtime's empty official-engine response.
+- On GitHub's 2026 Ubuntu runner, `android-actions/setup-android@v3` tries to
+  install the removed Android SDK `tools` package and fails before Gradle runs.
+  Use the runner's preinstalled SDK and Gradle's normal SDK package resolution.
