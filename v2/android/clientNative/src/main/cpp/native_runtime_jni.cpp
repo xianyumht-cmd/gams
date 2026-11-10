@@ -1,4 +1,5 @@
 #include "runtime_bundle.hpp"
+#include "edgeone_protocol.hpp"
 
 #include <jni.h>
 
@@ -115,4 +116,54 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_gameSize(JNIEnv* env, jclass, jlong 
 extern "C" JNIEXPORT void JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_close(JNIEnv*, jclass, jlong handle) {
     delete reinterpret_cast<gg::RuntimeBundle*>(static_cast<std::uintptr_t>(handle));
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_proofCanonical(JNIEnv* env, jclass,
+        jstring action, jlong now, jstring deviceId, jstring material) {
+    return translate(env, [&]() -> jstring {
+        const std::string canonical = gg::proofCanonical(
+            text(env, action), static_cast<std::int64_t>(now),
+            text(env, deviceId), text(env, material));
+        return env->NewStringUTF(canonical.c_str());
+    });
+}
+
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_deliveryMaterial(JNIEnv* env, jclass,
+        jbyteArray sharedInput, jstring deviceId, jstring token) {
+    return translate(env, [&]() -> jobjectArray {
+        if (!sharedInput || env->GetArrayLength(sharedInput) != 32) {
+            throw std::runtime_error("Invalid P-256 shared secret");
+        }
+        struct WipedShared {
+            std::array<std::uint8_t, 32> bytes{};
+            ~WipedShared() {
+                volatile std::uint8_t* p = bytes.data();
+                for (std::size_t i = 0; i < bytes.size(); ++i) p[i] = 0;
+            }
+        } shared;
+        env->GetByteArrayRegion(sharedInput, 0, 32, reinterpret_cast<jbyte*>(shared.bytes.data()));
+        if (env->ExceptionCheck()) return nullptr;
+        gg::DeliveryMaterial derived = gg::deriveDeliveryMaterial(
+            shared.bytes.data(), shared.bytes.size(), text(env, deviceId), text(env, token));
+        jclass bytesClass = env->FindClass("[B");
+        if (!bytesClass) return nullptr;
+        jobjectArray output = env->NewObjectArray(2, bytesClass, nullptr);
+        if (!output) return nullptr;
+        jbyteArray key = env->NewByteArray(static_cast<jsize>(derived.key.size()));
+        jbyteArray aad = env->NewByteArray(static_cast<jsize>(derived.aad.size()));
+        if (!key || !aad) return nullptr;
+        env->SetByteArrayRegion(key, 0, static_cast<jsize>(derived.key.size()),
+                                reinterpret_cast<const jbyte*>(derived.key.data()));
+        env->SetByteArrayRegion(aad, 0, static_cast<jsize>(derived.aad.size()),
+                                reinterpret_cast<const jbyte*>(derived.aad.data()));
+        if (!env->ExceptionCheck()) {
+            env->SetObjectArrayElement(output, 0, key);
+            env->SetObjectArrayElement(output, 1, aad);
+        }
+        env->DeleteLocalRef(key);
+        env->DeleteLocalRef(aad);
+        return output;
+    });
 }

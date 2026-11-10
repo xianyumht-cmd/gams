@@ -13,6 +13,15 @@ an Actions test artifact until the owner verifies first activation, saved-card
 relaunch and JS behavior on an Android device. Future C++ conversion of crypto
 and licensing requires explicit cross-language parity tests and a fresh gate.
 
+The second increment moves canonical proof construction and HKDF-SHA256
+derivation into native C++, while retaining the platform Android Keystore,
+ECDH and AES-GCM cryptographic providers. This avoids pulling unreviewed
+native EC/AES implementations into the APK, preserves the current wire
+protocol and keeps only a narrow JNI handoff of a per-download shared secret.
+The Node reference vectors and Java→JNI cross-language decryption must pass
+before producing the next artifact. The code remains an incremental C++
+port, not a completed native rewrite.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

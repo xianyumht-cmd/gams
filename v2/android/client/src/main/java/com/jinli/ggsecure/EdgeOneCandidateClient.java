@@ -94,8 +94,10 @@ final class EdgeOneCandidateClient {
     private JSONObject proofBody(String action, String material) throws Exception {
         long now = System.currentTimeMillis() / 1000L;
         String deviceId = device.deviceId();
-        String canonical = action + "\n" + now + "\n" + deviceId + "\n" +
-                DeviceIdentity.sha256Hex(material);
+        String canonical = BuildConfig.GG_NATIVE_CORE
+                ? NativeRuntimeBridge.proofCanonical(action, now, deviceId, material)
+                : action + "\n" + now + "\n" + deviceId + "\n" +
+                        DeviceIdentity.sha256Hex(material);
         return new JSONObject()
                 .put("deviceId", deviceId)
                 .put("devicePublicKey", device.publicKeyBase64())

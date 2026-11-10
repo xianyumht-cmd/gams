@@ -7,11 +7,21 @@ The `v2/android/clientNative` Gradle app builds its own NDK shared library
 side-by-side installation with `:client`'s
 `com.jinli.quickweb.edgeonetest` APK. Both compile the same existing Java
 WebView, network transport, ECDH authorization, UI and injection source.
-The per-module `BuildConfig.GG_NATIVE_CORE` flag switches only the verified
-runtime-payload parsing boundary. The C++ library validates the central ZIP
+The per-module `BuildConfig.GG_NATIVE_CORE` flag switches the verified
+runtime-payload parser and EdgeOne proof/HKDF boundaries. The C++ library validates the central ZIP
 directory and both fixed filenames, raw deflate, CRC-32, lengths, and manifest
 SHA-256, then keeps the JS bytes in native memory until `wipe()` calls JNI
 `close()`. The Java baseline does not load the native library.
+
+For the new protocol boundary, C++ builds the exact ECDSA signing text from
+`action`, timestamp, device ID and SHA-256(material). Java asks its Android
+Keystore-backed private key to sign these bytes and submits the original
+server request schema. On runtime delivery Java calls the Android provider
+for one-use P-256 ECDH, passes the ephemeral 32-byte shared secret over JNI,
+and receives the HKDF-SHA256 derived AES key and authenticated `info` bytes.
+Java's platform AES-GCM verifies ciphertext before C++ handles the ZIP.
+Neither device private keys nor a static runtime-decryption key are included
+in the APK. The native/Java wire contract is cross-tested against Node.
 
 This is stage 1 of the requested C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still

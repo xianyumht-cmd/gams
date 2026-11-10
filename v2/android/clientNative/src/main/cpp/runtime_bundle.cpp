@@ -199,9 +199,7 @@ RuntimeBundle::~RuntimeBundle() {
 }
 
 std::string sha256Hex(const std::uint8_t* bytes, std::size_t length) {
-    Sha256 hash;
-    hash.update(bytes, length);
-    const auto digest = hash.finish();
+    const auto digest = sha256Digest(bytes, length);
     constexpr char kHex[] = "0123456789abcdef";
     std::string result(64, '\0');
     for (std::size_t i = 0; i < digest.size(); ++i) {
@@ -209,6 +207,12 @@ std::string sha256Hex(const std::uint8_t* bytes, std::size_t length) {
         result[i * 2 + 1] = kHex[digest[i] & 15];
     }
     return result;
+}
+
+std::array<std::uint8_t, 32> sha256Digest(const std::uint8_t* bytes, std::size_t length) {
+    Sha256 hash;
+    hash.update(bytes, length);
+    return hash.finish();
 }
 
 std::unique_ptr<RuntimeBundle> parseRuntimeZip(const std::uint8_t* bytes,

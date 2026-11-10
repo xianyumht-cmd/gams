@@ -2,6 +2,16 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- The second native increment moves EdgeOne request-proof canonicalization,
+  SHA-256 of its signed material, and the runtime AES-256-GCM HKDF-SHA256
+  key/AAD derivation into C++. The existing Android Keystore, JCA ephemeral
+  P-256 ECDH and AES-GCM provider remain the OS-facing crypto boundary.
+  The HTTP protocol, server, Android UI and WebView injection are unchanged.
+  Independent Node/C++ host proof/HKDF vectors match. A newly added CI test
+  exercises the **real JNI bridge** plus Node→Java→native-HKDF→AES-GCM
+  decrypt to catch cross-language regressions. Android CI for this increment
+  is pending; do not infer on-device success.
+
 - Owner explicitly chose **plan A**: a C++ core with the smallest possible
   Android Java/WebView bridge, preserving every existing interaction before
   retiring any Java implementation. This is **not** a claim of a completed

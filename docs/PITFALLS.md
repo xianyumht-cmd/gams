@@ -5,6 +5,10 @@
   boundaries. The first native build currently migrates only ZIP/JS memory
   handling. A compiled `.so` or a successful smoke test is **not** proof of
   full feature parity. Avoid claiming otherwise.
+- The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
+  its timestamp/device/token-hash serialization breaks decryption even when
+  the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures
+  and keep Keystore/EC/AES operations in the Android platform provider.
 - Java and C++ test packages have different app-scoped Keystore/device IDs;
   if a single-device license reports bound elsewhere, unbind it in the EdgeOne
   browser administrator before testing the other package. Never add a hidden

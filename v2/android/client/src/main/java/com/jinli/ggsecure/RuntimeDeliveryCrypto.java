@@ -30,21 +30,33 @@ final class RuntimeDeliveryCrypto {
         agreement.init(clientPrivateKey);
         agreement.doPhase(serverKey, true);
         byte[] shared = agreement.generateSecret();
-        byte[] salt = "gg-edgeone-v2".getBytes(StandardCharsets.UTF_8);
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest(
-                token.getBytes(StandardCharsets.UTF_8));
-        byte[] info = ("gg-edgeone-runtime-v2|" + deviceId + "|" + toHex(digest))
-                .getBytes(StandardCharsets.UTF_8);
+        byte[] digest = null;
+        byte[] info = null;
         byte[] prk = null;
         byte[] key = null;
         try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(salt, "HmacSHA256"));
-            prk = mac.doFinal(shared);
-            mac.init(new SecretKeySpec(prk, "HmacSHA256"));
-            mac.update(info);
-            mac.update((byte) 1);
-            key = mac.doFinal(); // HKDF-SHA256 expand, first 32-byte block.
+            if (BuildConfig.GG_NATIVE_CORE) {
+                byte[][] derived = NativeRuntimeBridge.deliveryMaterial(shared, deviceId, token);
+                if (derived == null || derived.length != 2 || derived[0] == null ||
+                        derived[0].length != 32 || derived[1] == null) {
+                    throw new SecurityException("运行密钥派生失败");
+                }
+                key = derived[0];
+                info = derived[1];
+            } else {
+                byte[] salt = "gg-edgeone-v2".getBytes(StandardCharsets.UTF_8);
+                digest = MessageDigest.getInstance("SHA-256").digest(
+                        token.getBytes(StandardCharsets.UTF_8));
+                info = ("gg-edgeone-runtime-v2|" + deviceId + "|" + toHex(digest))
+                        .getBytes(StandardCharsets.UTF_8);
+                Mac mac = Mac.getInstance("HmacSHA256");
+                mac.init(new SecretKeySpec(salt, "HmacSHA256"));
+                prk = mac.doFinal(shared);
+                mac.init(new SecretKeySpec(prk, "HmacSHA256"));
+                mac.update(info);
+                mac.update((byte) 1);
+                key = mac.doFinal(); // HKDF-SHA256 expand, first 32-byte block.
+            }
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"),
                     new GCMParameterSpec(128, iv));
@@ -52,8 +64,8 @@ final class RuntimeDeliveryCrypto {
             return cipher.doFinal(encrypted);
         } finally {
             Arrays.fill(shared, (byte) 0);
-            Arrays.fill(digest, (byte) 0);
-            Arrays.fill(info, (byte) 0);
+            if (digest != null) Arrays.fill(digest, (byte) 0);
+            if (info != null) Arrays.fill(info, (byte) 0);
             if (prk != null) Arrays.fill(prk, (byte) 0);
             if (key != null) Arrays.fill(key, (byte) 0);
         }

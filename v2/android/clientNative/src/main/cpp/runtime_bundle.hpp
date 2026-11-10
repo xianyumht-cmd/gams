@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -30,6 +31,7 @@ std::unique_ptr<RuntimeBundle> parseRuntimeZip(
     const EntrySpec& noname, const EntrySpec& game);
 
 std::string sha256Hex(const std::uint8_t* bytes, std::size_t length);
+std::array<std::uint8_t, 32> sha256Digest(const std::uint8_t* bytes, std::size_t length);
 void secureClear(std::vector<std::uint8_t>& data) noexcept;
 
 }  // namespace gg

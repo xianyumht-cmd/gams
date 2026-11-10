@@ -7,6 +7,9 @@ The independent `GG EdgeOne C++ Internal APK` GitHub Actions workflow builds
 original `:client:assembleEdgeOneTest` as a regression check. Its artifact is
 named `GG-EdgeOne-CPP-internal-N` and contains `GG-EdgeOne-CPP-internal.apk`
 plus `SHA256SUMS.txt`. **This is an internal test artifact, not a Release**.
+The second native increment also requires host C++ proof/HKDF known answers,
+host JVM→JNI call parity on the real native library and end-to-end
+Node→Java→JNI HKDF→AES-GCM decryption before Android package checks.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

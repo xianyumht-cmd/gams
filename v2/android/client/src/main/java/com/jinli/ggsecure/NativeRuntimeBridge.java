@@ -18,4 +18,10 @@ final class NativeRuntimeBridge {
     static native int gameSize(long handle);
 
     static native void close(long handle);
+
+    static native String proofCanonical(String action, long epochSeconds,
+                                        String deviceId, String material);
+
+    /** Returns [AES-256 key, AES-GCM associated data], both newly allocated. */
+    static native byte[][] deliveryMaterial(byte[] ecdhShared, String deviceId, String token);
 }
