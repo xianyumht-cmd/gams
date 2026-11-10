@@ -34,3 +34,10 @@
   history/screenshots even if the subsequently typed input is hidden. Use the
   native prompt label without embedding a secret, rotate accidentally exposed
   Tokens, and do routine card operations in the password-protected browser UI.
+- The first deployed browser admin login reported `bad_origin` despite using
+  the owner's own domain and configuring `GG_ADMIN_PASSWORD`. The original
+  origin guard compared the browser `Origin` only to `request.url`; an EdgeOne
+  proxy may expose an internal deployment host in `request.url`. Retain a
+  strict, explicit allowlist for the project's custom domain and assigned
+  `edgeone.dev` host (plus exact-request-origin for local testing), rather than
+  blindly trusting arbitrary `X-Forwarded-Host` headers or disabling CSRF.

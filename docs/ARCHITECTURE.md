@@ -58,6 +58,10 @@ a per-session CSRF header. The public login page uses a nonce-based CSP and
 does not grant public access to any card records. The admin panel supports
 up to 100 listed entries per request; this is suitable for the current private
 candidate, not a full production licensing/CRM system.
+The Origin guard additionally accepts the project's explicit public custom
+domain and EdgeOne-generated host, because Makers' reverse proxy can present
+an internal `request.url` host to Cloud Functions. It does not trust arbitrary
+forwarded-host headers.
 
 Cards remain stored under `licenses/<sha256(plaintext-key)>.json`; the license
 key plaintext is shown once on issuance, and existing client records remain

@@ -45,3 +45,9 @@
   login and live Blob operations await Makers configuration of the new
   `GG_ADMIN_PASSWORD` environment variable and a fresh deployment. Do not
   claim the dashboard is live before those checks are performed.
+- The owner subsequently confirmed the administrator login page deployed and
+  both required environment variables configured, but the first login failed
+  with `请求来源校验失败` (`bad_origin`). A narrow Origin-allowlist fix for the
+  public custom domain and assigned deployment hostname passed local Node
+  regression tests. Successful live login and card unbind still require a
+  fresh Makers deployment and owner verification.

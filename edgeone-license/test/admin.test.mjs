@@ -70,6 +70,17 @@ test('login requires a configured password, valid origin, and correct credential
   assert.equal(missing.result.code, 'admin_not_configured');
 });
 
+test('same-site custom domain login survives an EdgeOne internal request URL', async () => {
+  const f = fixture();
+  // Makers can normalize request.url to the internal deployment host while
+  // the browser sends the public custom domain in its Origin header.
+  const result = await f.send('/api/admin/login', { password: PASSWORD }, {
+    headers: { Origin: 'https://gg-api.xn--8pv109c.top' },
+  });
+  assert.equal(result.response.status, 200);
+  assert.ok(result.result.csrf);
+});
+
 test('issue, list, unbind, revoke and restore operate on existing Blob schema', async () => {
   const f = fixture();
   const session = await login(f);

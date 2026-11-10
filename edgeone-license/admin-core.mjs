@@ -4,6 +4,13 @@ import { adminHtml } from './admin-page.mjs';
 const COOKIE_NAME = 'gg_admin_session';
 const CARD_PATH_RE = /^licenses\/([a-f0-9]{64})\.json$/;
 const SESSION_SECONDS = 8 * 3600;
+// Makers may internally rewrite request.url to its deployment host even when
+// the browser is visiting the custom domain. Accept only known project origins;
+// never trust arbitrary X-Forwarded-Host headers for this CSRF boundary.
+const ADMIN_ORIGINS = new Set([
+  'https://gg-api.xn--8pv109c.top',
+  'https://gg-license-api-dxk0o7j9.edgeone.dev',
+]);
 const NO_CACHE = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
 
 function error(status, code, message) {
@@ -78,7 +85,8 @@ function requireSession(request, env, now) {
 
 function checkOrigin(request) {
   const requestOrigin = new URL(request.url).origin;
-  if (request.headers.get('origin') !== requestOrigin) {
+  const suppliedOrigin = request.headers.get('origin');
+  if (!suppliedOrigin || (suppliedOrigin !== requestOrigin && !ADMIN_ORIGINS.has(suppliedOrigin))) {
     error(403, 'bad_origin', '请求来源校验失败');
   }
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) {
