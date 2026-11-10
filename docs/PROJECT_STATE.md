@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Third native increment prepared, CI pending:** for the isolated
+- **Third native increment verified by CI:** for the isolated
   `:clientNative` app, C++ now controls the complete EdgeOne signed JSON
   request shape (activate/check/unbind/runtime-v2), the saved-license
   activation-versus-check policy, and recoverable invalid-session decisions.
@@ -11,8 +11,15 @@
   the new native serialization boundary. The C++ ZIP decoder also validates
   the signed manifest's **whole-archive SHA-256** during its existing parse,
   letting the native candidate avoid a second Java SHA-256 pass; the Java
-  baseline remains unchanged. Host C++/Node tests pass; JNI/Android CI and
-  on-device feature parity have not yet been verified for this increment.
+  baseline remains unchanged. GitHub Actions run
+  [`42906657086`](https://github.com/xianyumht-cmd/gams/actions/runs/42906657086)
+  passed C++ sanitizer/Node protocol tests, actual JVM→JNI→native request/
+  ZIP/HKDF validation, Node→Java AES-GCM interop, Android NDK and Java
+  reference builds, lint, three ABI presence, APK identity/signing and no
+  private JS/ZIP checks. The 14-day Actions artifact is
+  `GG-EdgeOne-CPP-internal-3` (ID `13804643537`); its APK SHA-256 is
+  `9ba4989f6d9fb1b9aa5218781b14d84f1702d3bf6b45ff3b9638cec9500829ce`.
+  No on-device testing was requested, so device behavior remains unverified.
 
 - The second native increment moves EdgeOne request-proof canonicalization,
   SHA-256 of its signed material, and the runtime AES-256-GCM HKDF-SHA256
