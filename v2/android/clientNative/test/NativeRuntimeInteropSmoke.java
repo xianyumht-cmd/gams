@@ -168,6 +168,21 @@ public final class NativeRuntimeInteropSmoke {
         try {
             assertEqual(new String(control, StandardCharsets.UTF_8),
                     NativeRuntimeBridge.nonameSource(handle));
+            String html = "<html><HEAD class='game'><script integrity='sha384-abc=='>"
+                    + "window.location.replace('about:blank');"
+                    + "location.href=\"about:blank\";</script></HEAD><body>测试</body></html>";
+            byte[] nativeHtml = NativeRuntimeBridge.rewriteHtml(handle,
+                    html.getBytes(StandardCharsets.UTF_8));
+            byte[] javaHtml = EdgeOneHtmlCompatibility.rewrite(html,
+                    new String(control, StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8);
+            if (!Arrays.equals(javaHtml, nativeHtml)) {
+                throw new AssertionError("JNI 1.4.1 HTML rewrite differs from Java baseline");
+            }
+            try {
+                NativeRuntimeBridge.rewriteHtml(handle,
+                        "<body>no head</body>".getBytes(StandardCharsets.UTF_8));
+                throw new AssertionError("JNI accepted an HTML document without a head");
+            } catch (IllegalArgumentException expected) { /* Same Java failure category. */ }
             if (engine.length != NativeRuntimeBridge.gameSize(handle)) {
                 throw new AssertionError("Native engine length differs from Java runtime");
             }
@@ -221,6 +236,6 @@ public final class NativeRuntimeInteropSmoke {
         Arrays.fill(shared, (byte) 0);
         Arrays.fill(derived[0], (byte) 0);
         Arrays.fill(derived[1], (byte) 0);
-        System.out.println("Host Java→JNI→C++ proof, encrypted transfer, engine stream, HKDF and ZIP parity OK");
+        System.out.println("Host Java→JNI→C++ HTML rewrite, encrypted transfer, engine stream, HKDF and ZIP parity OK");
     }
 }

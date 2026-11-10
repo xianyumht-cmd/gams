@@ -626,13 +626,13 @@ public final class MainActivity extends Activity {
             }
             RuntimePayload current = runtimePayload;
             if (current == null) throw new IOException("运行时已经退出");
-            String rewritten = EdgeOneHtmlCompatibility.rewrite(html, current.nonameSource());
+            byte[] rewritten = current.rewriteHtml(html);
             Map<String, String> headers = new java.util.HashMap<>();
             headers.put("Cache-Control", "no-store");
             String csp = connection.getHeaderField("Content-Security-Policy");
             if (csp != null) headers.put("Content-Security-Policy", csp);
             return new WebResourceResponse("text/html", "UTF-8", 200, "OK", headers,
-                    new ByteArrayInputStream(rewritten.getBytes(StandardCharsets.UTF_8)));
+                    new ByteArrayInputStream(rewritten));
         } catch (Exception error) {
             byte[] html = "<!doctype html><meta charset='utf-8'><p>GG 页面兼容处理失败，请重试或更新客户端。</p>"
                     .getBytes(StandardCharsets.UTF_8);

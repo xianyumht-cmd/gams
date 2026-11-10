@@ -13,6 +13,9 @@ final class NativeRuntimeBridge {
 
     static native String nonameSource(long handle);
 
+    /** Pure compatibility rewrite using C++-resident control JS. */
+    static native byte[] rewriteHtml(long handle, byte[] htmlUtf8);
+
     /** Copies at most one bounded chunk; never returns an entire private engine buffer. */
     static native int copyGameRange(long handle, int position, byte[] output,
                                     int outputOffset, int count);

@@ -1,6 +1,7 @@
 #include "runtime_bundle.hpp"
 #include "edgeone_protocol.hpp"
 #include "encrypted_transfer.hpp"
+#include "html_compatibility.hpp"
 
 #include <jni.h>
 
@@ -112,6 +113,39 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_nonameSource(JNIEnv* env, jclass, jl
         env->DeleteLocalRef(charset);
         return static_cast<jstring>(result);
     });
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_rewriteHtml(JNIEnv* env, jclass,
+        jlong handle, jbyteArray htmlBytes) {
+    struct WipedBytes {
+        std::vector<std::uint8_t> data;
+        ~WipedBytes() { gg::secureClear(data); }
+    } input, rewritten;
+    try {
+        if (!htmlBytes) throw std::runtime_error("HTML input missing");
+        const jsize length = env->GetArrayLength(htmlBytes);
+        if (length < 1 || length > 6 * 1024 * 1024) {
+            throw std::runtime_error("HTML length invalid");
+        }
+        input.data.resize(static_cast<std::size_t>(length));
+        env->GetByteArrayRegion(htmlBytes, 0, length,
+                                reinterpret_cast<jbyte*>(input.data.data()));
+        if (env->ExceptionCheck()) return nullptr;
+        rewritten.data = gg::rewriteEdgeOneHtml(input.data.data(), input.data.size(),
+                                                 resolve(handle)->noname);
+        auto result = env->NewByteArray(static_cast<jsize>(rewritten.data.size()));
+        if (result) env->SetByteArrayRegion(result, 0,
+            static_cast<jsize>(rewritten.data.size()),
+            reinterpret_cast<const jbyte*>(rewritten.data.data()));
+        return env->ExceptionCheck() ? nullptr : result;
+    } catch (const std::exception& error) {
+        throwJava(env, "java/lang/IllegalArgumentException", error.what());
+        return nullptr;
+    } catch (...) {
+        throwJava(env, "java/lang/IllegalArgumentException", "HTML rewrite failed");
+        return nullptr;
+    }
 }
 
 extern "C" JNIEXPORT jint JNICALL

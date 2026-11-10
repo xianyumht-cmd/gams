@@ -2,6 +2,18 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Ninth increment awaiting CI:** The isolated C++ candidate now performs
+  the `1.4.1` EdgeOne HTML compatibility rewrite directly against its resident
+  native control-script bytes: ordered `about:blank` call/href replacements,
+  `sha384` SRI removal, first `<head>` insertion, and escaping embedded
+  `</script` sequences. `RuntimePayload.rewriteHtml()` synchronizes native
+  handle use with `wipe()`; the Java-only reference continues to use its
+  original `EdgeOneHtmlCompatibility.rewrite()`. Android retains the existing
+  bounded gzip/HTML input reader, HTTPS/Cookie handling, and WebView response
+  creation. Host C++ sanitizer tests pass; the GitHub Java→JNI byte-for-byte
+  fixture, Android builds, ABI and packaging gates are pending. No device
+  testing was requested; HTML/navigation behavior on a device is unverified.
+
 - **Eighth increment verified by CI:** C++ now classifies the
   post-authorization startup presentation (`activation form`, `WebView`, or
   `mandatory update`) and computes actual-byte initialization progress from

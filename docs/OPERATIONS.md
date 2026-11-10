@@ -39,6 +39,13 @@ compares native initialization percentages with the Java reference for zero,
 partial, complete, oversized, invalid and large transfer values. After APK
 builds, check that the first-time activation **and** saved-key restart show
 the same mandatory-update dialog when the server requires a newer version.
+The ninth increment also compiles `html_compatibility.cpp` under the host
+ASan/UBSan smoke gate and through the real Java→JNI native library fixture.
+The JNI fixture uses the public historical control script to compare the
+entire rewritten UTF-8 HTML byte array against the untouched Java reference;
+it checks mixed-case `<head>`, `sha384` removal, blank navigation and a
+missing-head rejection. After CI, a device must still verify the live
+`1.4.1` site, compressed HTML, WebView navigation and document-start behavior.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

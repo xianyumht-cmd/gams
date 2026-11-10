@@ -93,6 +93,21 @@ activation both show the mandatory-update dialog, closing a previously missed
 manual branch. The Java-only build keeps the same result mapping but never
 loads the native library.
 
+The ninth native boundary owns the *text-only* `1.4.1` HTML compatibility
+rewrite. `RuntimePayload.rewriteHtml()` holds its monitor during the JNI
+call so that native script memory cannot be released by `wipe()` mid-rewrite.
+C++ applies the same ordered regular-expression replacements for
+`location.replace/assign('about:blank')`, `location.href`, and `sha384`
+integrity attributes as the reference Java adapter. It then inserts a
+`<script>` after the first case-insensitive `<head>` tag, escaping any
+`</script` fragments inside the native control script. The bridge returns
+UTF-8 HTML response bytes directly; it no longer creates a separate Java
+control-script String merely to rewrite the intercepted page. The normal
+document-start injection still needs the Android WebView String API. Java
+continues to own HTTPS, Cookie headers, bounded gzip decoding, UTF-8 input,
+and WebResourceResponse. The original Java rewrite stays the reference for
+`:client`, and host JNI tests compare entire UTF-8 HTML outputs.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.
@@ -105,7 +120,7 @@ pass the complete acceptance matrix below before replacing the baseline.
 | v2 ECDH/HKDF/AES-GCM download and ZIP SHA-256 | Server tests; on-device required |
 | Exact-length encrypted runtime stream in C++ | Host JNI and Android CI; on-device required |
 | `noname.js` document-start injection | On-device required |
-| `game.js` intercept and HTML rewrite / gzip | On-device required |
+| `game.js` intercept and HTML rewrite / gzip | Native HTML host parity; gzip remains Java; on-device required |
 | `about:blank` and navigation without breaking WebView | On-device required |
 | Toolbar, back/home/reset, picker/download/dialogs | On-device required |
 | No bundled JS, encrypted archives, or secrets | APK CI gate |

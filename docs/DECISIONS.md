@@ -71,6 +71,16 @@ activation and saved-card launch; forced-update results are not allowed to
 open WebView or skip the update dialog, and unused payloads must be wiped.
 This is a parity-oriented native migration, not a rewrite of Android widgets.
 
+The ninth increment moves only the pure HTML transformation behind JNI:
+preserve the Java reference's replacement **order**, literals, first `<head>`
+match and control-script `</script` escaping. Use resident C++ bundle bytes
+and a synchronized owner handle; wipe temporary native HTML/control copies.
+Keep `HttpURLConnection`, Android gzip/UTF-8 decoding and
+`WebResourceResponse` in Java so the `1.4.1` browser behavior remains
+identical. The document-start `WebView` injection still requires a Java
+String. Compile and test the original Java implementation alongside C++
+rather than deleting the comparison oracle before real-device acceptance.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

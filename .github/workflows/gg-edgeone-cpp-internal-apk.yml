@@ -51,6 +51,12 @@ jobs:
             v2/android/clientNative/test/edgeone_protocol_smoke.cpp \
             -lz -o /tmp/gg-cpp-protocol-smoke
           /tmp/gg-cpp-protocol-smoke
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined \
+            -fno-omit-frame-pointer \
+            v2/android/clientNative/src/main/cpp/html_compatibility.cpp \
+            v2/android/clientNative/test/html_compatibility_smoke.cpp \
+            -o /tmp/gg-cpp-html-smoke
+          /tmp/gg-cpp-html-smoke
       - name: Java 17
         uses: actions/setup-java@v4
         with:
@@ -64,6 +70,7 @@ jobs:
             v2/android/clientNative/src/main/cpp/runtime_bundle.cpp \
             v2/android/clientNative/src/main/cpp/edgeone_protocol.cpp \
             v2/android/clientNative/src/main/cpp/encrypted_transfer.cpp \
+            v2/android/clientNative/src/main/cpp/html_compatibility.cpp \
             v2/android/clientNative/src/main/cpp/native_runtime_jni.cpp \
             -lz -o /tmp/gg-cpp-jni/libggnative.so
           javac -d /tmp/gg-cpp-java-classes \
@@ -71,6 +78,7 @@ jobs:
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeGameInputStream.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeZipReader.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeCiphertextReader.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/EdgeOneHtmlCompatibility.java \
             v2/android/clientNative/test/NativeRuntimeInteropSmoke.java \
             v2/android/clientNative/test/NativeCryptoBuildConfig.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeDeliveryCrypto.java \

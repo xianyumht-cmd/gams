@@ -61,6 +61,16 @@ final class RuntimePayload {
         return new String(noname, java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    synchronized byte[] rewriteHtml(String html) {
+        ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) {
+            return NativeRuntimeBridge.rewriteHtml(nativeHandle,
+                    html.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+        return EdgeOneHtmlCompatibility.rewrite(html, nonameSource())
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
     synchronized InputStream openGameStream() {
         ensureAlive();
         if (BuildConfig.GG_NATIVE_CORE) {
