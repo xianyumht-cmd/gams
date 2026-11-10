@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Fourth increment implemented, CI pending:** C++ now owns successful
+- **Fourth increment verified by CI:** C++ now owns successful
   authorization response classification, session-token shape validation, and
   encrypted-runtime delivery header/manifest bounds (delivery version, strict
   base64 key/IV, archive and entry sizes, and matching SHA-256 fields).
@@ -10,8 +10,15 @@
   encrypted response; its existing Java HTTPS/JSON/JCA adapters still handle
   platform interfaces. Tests add native rejected-response/envelope cases and
   actual Java→JNI error propagation. Local C++ sanitizer smoke and all ten
-  Node EdgeOne API tests passed. GitHub Actions build and Android parity remain
-  to be recorded; no real-device testing was requested.
+  Node EdgeOne API tests passed. GitHub Actions run
+  [`42908690497`](https://github.com/xianyumht-cmd/gams/actions/runs/42908690497)
+  also passed host C++/JNI/crypto tests, Android native and Java reference
+  builds, Android lint, APK signing, all three native ABIs, and checks for
+  absent private JS/ZIP. Its 14-day Actions artifact is
+  `GG-EdgeOne-CPP-internal-4` (ID `13805314620`), APK SHA-256
+  `070dd4b10b7cf4b3a062d4073c1479613cf7087b1713c7ee61fa0a6ff41343d8`.
+  On-device parity remains **unverified** because the owner deferred manual
+  tests.
 
 - **Third native increment verified by CI:** for the isolated
   `:clientNative` app, C++ now controls the complete EdgeOne signed JSON
