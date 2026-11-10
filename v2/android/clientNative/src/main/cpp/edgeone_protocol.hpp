@@ -27,6 +27,20 @@ std::string signedRequestJson(const std::string& action,
                               const std::string& credential,
                               const std::string& deliveryPublicKey);
 
+// Inbound wire policy. The Android HTTP/JSON adapter only transports bytes and
+// projects typed fields; these decisions belong to the native candidate.
+// Return 0 for success, 1 for rejected HTTP status, 2 for a rejected JSON body.
+int classifyApiResponse(const std::string& action, int httpStatus, bool bodyOk);
+void validateAuthResponse(const std::string& sessionToken, std::int64_t licenseExpiresAt,
+                          bool permanent, int latestAppVersion);
+void validateDeliveryHeaders(const std::string& version, const std::string& serverKey,
+                             const std::string& iv, const std::string& manifestBase64,
+                             const std::string& bundleSha);
+void validateDeliveryManifest(int archiveSize, const std::string& manifestSha,
+                              int nonameSize, const std::string& nonameSha,
+                              int gameSize, const std::string& gameSha,
+                              const std::string& headerSha);
+
 struct DeliveryMaterial {
     std::array<std::uint8_t, 32> key{};
     std::vector<std::uint8_t> aad;

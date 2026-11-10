@@ -14,6 +14,10 @@ The third increment extends these host gates with all four outbound EdgeOne
 JSON shapes, saved-license recovery decisions, unsafe credential rejection,
 and whole-archive SHA-256 checks through JNI. Keep both native and Java APK
 builds in CI to detect accidental impact on existing installs.
+The fourth increment additionally rejects 2xx JSON responses with `ok:false`,
+malformed session tokens, mismatched runtime manifest hashes and invalid
+encryption envelope fields. The host C++ sanitizer suite and real JVM→JNI
+smoke tests exercise both valid and invalid forms before the APK build.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

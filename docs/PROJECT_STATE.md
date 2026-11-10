@@ -2,6 +2,17 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Fourth increment implemented, CI pending:** C++ now owns successful
+  authorization response classification, session-token shape validation, and
+  encrypted-runtime delivery header/manifest bounds (delivery version, strict
+  base64 key/IV, archive and entry sizes, and matching SHA-256 fields).
+  The candidate validates these before persisting the token or reading the
+  encrypted response; its existing Java HTTPS/JSON/JCA adapters still handle
+  platform interfaces. Tests add native rejected-response/envelope cases and
+  actual Java→JNI error propagation. Local C++ sanitizer smoke and all ten
+  Node EdgeOne API tests passed. GitHub Actions build and Android parity remain
+  to be recorded; no real-device testing was requested.
+
 - **Third native increment verified by CI:** for the isolated
   `:clientNative` app, C++ now controls the complete EdgeOne signed JSON
   request shape (activate/check/unbind/runtime-v2), the saved-license

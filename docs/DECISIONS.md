@@ -32,6 +32,13 @@ original request builder. Strictly whitelist base64, hex and base64url session
 fields to prevent JSON injection, and turn malformed saved tokens into the
 same activation recovery that the old server-side `bad_session` path provided.
 
+The fourth increment moves the inbound API success/error decision, session
+response shape, and encrypted-delivery header/manifest bounds into C++. Java
+continues to decode JSON and use Android's vetted HTTPS/Keystore/crypto APIs;
+the C++ layer rejects malformed or contradictory metadata *before* fetching
+the private ciphertext. Tests cover malformed responses and headers on the
+host JNI boundary while preserving the existing Java baseline unchanged.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

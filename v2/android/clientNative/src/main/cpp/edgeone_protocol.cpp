@@ -19,6 +19,21 @@ constexpr char kHexUpper[] = "0123456789ABCDEF";
 constexpr char kHexLower[] = "0123456789abcdef";
 constexpr char kBase64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 constexpr char kToken[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-";
+constexpr char kBase64Url[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+
+bool strictBase64(const std::string& input, std::size_t minimum, std::size_t maximum,
+                  std::size_t* decodedSize = nullptr) {
+    if (input.size() < minimum || input.size() > maximum || input.size() % 4 != 0 ||
+        !validAscii(input, kBase64, minimum, maximum)) return false;
+    const auto firstPad = input.find('=');
+    const auto padding = firstPad == std::string::npos ? 0 : input.size() - firstPad;
+    if (padding > 2) return false;
+    // A padding character must be part of the final quartet, and a single
+    // trailing base64 character cannot encode a complete byte.
+    if (padding == 1 && (input[input.size() - 2] == '=')) return false;
+    if (decodedSize) *decodedSize = input.size() / 4 * 3 - padding;
+    return true;
+}
 
 void wipe(std::uint8_t* bytes, std::size_t length) noexcept {
     volatile std::uint8_t* p = bytes;
@@ -122,6 +137,55 @@ std::string signedRequestJson(const std::string& action,
     return "{\"deviceId\":\"" + deviceId + "\",\"devicePublicKey\":\"" +
            devicePublicKey + "\",\"requestTime\":" + std::to_string(requestTime) +
            ",\"proof\":\"" + proof + "\"" + additional + "}";
+}
+
+int classifyApiResponse(const std::string& action, int httpStatus, bool bodyOk) {
+    if (action != "activate" && action != "check" && action != "unbind") {
+        throw std::runtime_error("Unexpected license response action");
+    }
+    if (httpStatus < 200 || httpStatus >= 300) return 1;
+    return bodyOk ? 0 : 2;
+}
+
+void validateAuthResponse(const std::string& sessionToken, std::int64_t licenseExpiresAt,
+                          bool permanent, int latestAppVersion) {
+    (void) permanent;  // The server may preserve a historical expiry on a permanent record.
+    const auto separator = sessionToken.find('.');
+    if (separator == std::string::npos || separator == 0 ||
+        separator > 1535 || sessionToken.find('.', separator + 1) != std::string::npos ||
+        !validAscii(sessionToken.substr(0, separator), kBase64Url, 1, 1535) ||
+        !validAscii(sessionToken.substr(separator + 1), kHexLower, 64, 64) ||
+        sessionToken.size() > 1600 || licenseExpiresAt < 0 || latestAppVersion <= 0) {
+        throw std::runtime_error("Invalid authorization session response");
+    }
+}
+
+void validateDeliveryHeaders(const std::string& version, const std::string& serverKey,
+                             const std::string& iv, const std::string& manifestBase64,
+                             const std::string& bundleSha) {
+    std::size_t serverKeyLength = 0;
+    std::size_t ivLength = 0;
+    if (version != "2" || !strictBase64(serverKey, 100, 300, &serverKeyLength) ||
+        serverKeyLength < 70 || serverKeyLength > 200 ||
+        !strictBase64(iv, 16, 64, &ivLength) || ivLength != 12 ||
+        !strictBase64(manifestBase64, 8, 4096) ||
+        !validAscii(bundleSha, kHexLower, 64, 64)) {
+        throw std::runtime_error("Invalid encrypted runtime delivery headers");
+    }
+}
+
+void validateDeliveryManifest(int archiveSize, const std::string& manifestSha,
+                              int nonameSize, const std::string& nonameSha,
+                              int gameSize, const std::string& gameSha,
+                              const std::string& headerSha) {
+    if (archiveSize < 1 || archiveSize > 5'500'000 ||
+        nonameSize < 1 || nonameSize > 2 * 1024 * 1024 ||
+        gameSize < 1 || gameSize > 16 * 1024 * 1024 ||
+        !validAscii(headerSha, kHexLower, 64, 64) || manifestSha != headerSha ||
+        !validAscii(nonameSha, kHexLower, 64, 64) ||
+        !validAscii(gameSha, kHexLower, 64, 64)) {
+        throw std::runtime_error("Invalid encrypted runtime manifest");
+    }
 }
 
 DeliveryMaterial deriveDeliveryMaterial(const std::uint8_t* shared, std::size_t length,

@@ -48,6 +48,31 @@ public final class NativeRuntimeInteropSmoke {
                     1794344400L, proof, "bad\"token", "");
             throw new AssertionError("Untrusted JSON credential accepted");
         } catch (SecurityException expected) { /* JNI rejects unsafe tokens. */ }
+        if (NativeRuntimeBridge.classifyApiResponse("activate", 200, true) != 0 ||
+                NativeRuntimeBridge.classifyApiResponse("check", 200, false) != 2 ||
+                NativeRuntimeBridge.classifyApiResponse("unbind", 403, true) != 1) {
+            throw new AssertionError("JNI inbound JSON policy mismatch");
+        }
+        String session = "A".repeat(160) + "." + "a".repeat(64);
+        NativeRuntimeBridge.validateAuthResponse(session, 0L, true, 12);
+        try {
+            NativeRuntimeBridge.validateAuthResponse("bad_session", 0L, true, 12);
+            throw new AssertionError("JNI accepted a malformed server token");
+        } catch (SecurityException expected) { /* Invalid server response. */ }
+        String hash = "a".repeat(64);
+        NativeRuntimeBridge.validateDeliveryHeaders(
+                "2", "A".repeat(124), "A".repeat(16), "A".repeat(32), hash);
+        NativeRuntimeBridge.validateDeliveryManifest(5120, hash, 500, hash, 4000, hash, hash);
+        try {
+            NativeRuntimeBridge.validateDeliveryHeaders(
+                    "2", "A".repeat(124), "A".repeat(20), "A".repeat(32), hash);
+            throw new AssertionError("JNI accepted an invalid GCM nonce size");
+        } catch (SecurityException expected) { /* Invalid encrypted envelope. */ }
+        try {
+            NativeRuntimeBridge.validateDeliveryManifest(
+                    5120, hash, 500, hash, 4000, hash, "b".repeat(64));
+            throw new AssertionError("JNI accepted a mismatched manifest digest");
+        } catch (SecurityException expected) { /* Invalid manifest. */ }
         byte[] shared = new byte[32];
         for (int i = 0; i < shared.length; ++i) shared[i] = (byte) i;
         byte[][] derived = NativeRuntimeBridge.deliveryMaterial(shared, deviceId,
@@ -89,6 +114,6 @@ public final class NativeRuntimeInteropSmoke {
         Arrays.fill(shared, (byte) 0);
         Arrays.fill(derived[0], (byte) 0);
         Arrays.fill(derived[1], (byte) 0);
-        System.out.println("Host Java→JNI→C++ proof, HKDF and runtime ZIP parity OK");
+        System.out.println("Host Java→JNI→C++ proof, inbound envelope, HKDF and ZIP parity OK");
     }
 }

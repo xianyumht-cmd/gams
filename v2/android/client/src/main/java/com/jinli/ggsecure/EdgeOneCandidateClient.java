@@ -59,25 +59,36 @@ final class EdgeOneCandidateClient {
         try {
             int status = connection.getResponseCode();
             if (status != 200) throwApiError(connection, status);
-            if (!"2".equals(connection.getHeaderField("X-GG-Delivery-Version"))) {
-                throw new SecurityException("运行包未使用设备专属加密");
-            }
+            String deliveryVersion = connection.getHeaderField("X-GG-Delivery-Version");
             String serverPublicKey = connection.getHeaderField("X-GG-Delivery-Server-Key");
             String deliveryIv = connection.getHeaderField("X-GG-Delivery-Iv");
-            if (serverPublicKey == null || serverPublicKey.length() > 300 ||
-                    deliveryIv == null || deliveryIv.length() > 64) {
-                throw new SecurityException("运行包加密参数缺失");
-            }
             String rawManifest = connection.getHeaderField("X-GG-Manifest");
             String expectedHash = connection.getHeaderField("X-GG-Bundle-Sha256");
-            if (rawManifest == null || rawManifest.length() > 4096 || expectedHash == null ||
-                    !expectedHash.matches("[0-9a-f]{64}")) {
-                throw new SecurityException("运行包清单缺失");
+            if (BuildConfig.GG_NATIVE_CORE) {
+                NativeRuntimeBridge.validateDeliveryHeaders(
+                        deliveryVersion, serverPublicKey, deliveryIv, rawManifest, expectedHash);
+            } else {
+                if (!"2".equals(deliveryVersion)) {
+                    throw new SecurityException("运行包未使用设备专属加密");
+                }
+                if (serverPublicKey == null || serverPublicKey.length() > 300 ||
+                        deliveryIv == null || deliveryIv.length() > 64) {
+                    throw new SecurityException("运行包加密参数缺失");
+                }
+                if (rawManifest == null || rawManifest.length() > 4096 || expectedHash == null ||
+                        !expectedHash.matches("[0-9a-f]{64}")) {
+                    throw new SecurityException("运行包清单缺失");
+                }
             }
             JSONObject manifest = new JSONObject(new String(
                     Base64.decode(rawManifest, Base64.DEFAULT), StandardCharsets.UTF_8));
             int expectedSize = manifest.getInt("size");
-            if (expectedSize < 1 || expectedSize > MAX_ZIP) {
+            if (BuildConfig.GG_NATIVE_CORE) {
+                NativeRuntimeBridge.validateDeliveryManifest(expectedSize,
+                        manifest.optString("sha256", ""), manifest.optInt("nonameSize", 0),
+                        manifest.optString("nonameSha256", ""), manifest.optInt("gameSize", 0),
+                        manifest.optString("gameSha256", ""), expectedHash);
+            } else if (expectedSize < 1 || expectedSize > MAX_ZIP) {
                 throw new SecurityException("运行包长度无效");
             }
             encrypted = RuntimeZipReader.read(
@@ -130,7 +141,15 @@ final class EdgeOneCandidateClient {
         try {
             int status = connection.getResponseCode();
             if (status < 200 || status >= 300) throwApiError(connection, status);
-            return new JSONObject(new String(readLimited(connection.getInputStream(), MAX_JSON), StandardCharsets.UTF_8));
+            JSONObject response = new JSONObject(new String(
+                    readLimited(connection.getInputStream(), MAX_JSON), StandardCharsets.UTF_8));
+            if (BuildConfig.GG_NATIVE_CORE && NativeRuntimeBridge.classifyApiResponse(
+                    action, status, response.optBoolean("ok", false)) != 0) {
+                String message = response.optString("message", "授权失败");
+                throw new ApiError(response.optString("code", "request_failed"),
+                        message.length() > 100 ? message.substring(0, 100) : message);
+            }
+            return response;
         } finally {
             connection.disconnect();
         }

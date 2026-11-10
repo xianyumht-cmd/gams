@@ -35,7 +35,20 @@ parser additionally matches the server's expected whole-ZIP SHA-256 before
 extracting and verifying each script. The Java APK retains its independent
 SHA-256 validation path.
 
-This is stage 1 of the requested C++ migration, not an assertion that the
+In the fourth increment, the isolated native core also classifies successful
+EdgeOne API JSON responses (a 2xx response with `ok:false` is rejected),
+validates the shape of server-issued session tokens before the credential is
+persisted, and checks the encrypted-runtime response envelope. The Java HTTPS
+adapter still reads response bytes and parses JSON, but C++ enforces the
+delivery-version, base64 P-256 key/96-bit IV shape, archive/entry size limits,
+and matching lower-case SHA-256 hashes from the manifest and HTTP header.
+The existing Android provider independently validates the P-256 key and
+authenticates AES-GCM; the native ZIP reader independently verifies the
+archive's digest and each script. Java-only builds retain their previous
+response checks. A validated header is not itself proof of authenticity;
+the TLS transport and AES-GCM tag remain essential.
+
+This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.
 

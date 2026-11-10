@@ -30,6 +30,19 @@ final class NativeRuntimeBridge {
             String devicePublicKey, long requestTime, String proof,
             String credential, String deliveryPublicKey);
 
+    /** 0 = accepted, 1 = HTTP error, 2 = JSON `ok` rejected. */
+    static native int classifyApiResponse(String action, int httpStatus, boolean bodyOk);
+
+    static native void validateAuthResponse(String token, long licenseExpiresAt,
+                                            boolean permanent, int latestAppVersion);
+
+    static native void validateDeliveryHeaders(String version, String serverPublicKey,
+            String iv, String manifestBase64, String bundleSha);
+
+    static native void validateDeliveryManifest(int size, String manifestSha,
+            int nonameSize, String nonameSha, int gameSize, String gameSha,
+            String headerSha);
+
     /** Returns [AES-256 key, AES-GCM associated data], both newly allocated. */
     static native byte[][] deliveryMaterial(byte[] ecdhShared, String deviceId, String token);
 }

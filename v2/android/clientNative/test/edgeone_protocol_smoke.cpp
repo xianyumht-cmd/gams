@@ -62,6 +62,36 @@ int main() {
                                          proof, license + "\"", ""); });
     rejects([&] { gg::signedRequestJson("check", device, pub, 1794344400,
                                          proof, "a\"b.c", ""); });
+    // Both successful and unsuccessful HTTP/JSON replies exercise the native
+    // inbound policy. An HTTP 200 carrying `ok:false` must never be accepted.
+    if (gg::classifyApiResponse("activate", 200, true) != 0 ||
+        gg::classifyApiResponse("check", 201, true) != 0 ||
+        gg::classifyApiResponse("unbind", 200, true) != 0 ||
+        gg::classifyApiResponse("check", 200, false) != 2 ||
+        gg::classifyApiResponse("activate", 401, true) != 1) {
+        throw std::runtime_error("Native response policy accepted a failed response");
+    }
+    rejects([&] { gg::classifyApiResponse("runtime", 200, true); });
+    const std::string token = std::string(160, 'A') + "." + std::string(64, 'a');
+    gg::validateAuthResponse(token, 0, true, 12);
+    gg::validateAuthResponse(token, 1794444400, false, 12);
+    rejects([&] { gg::validateAuthResponse("a.b", 0, true, 12); });
+    rejects([&] { gg::validateAuthResponse(token + ".extra", 0, true, 12); });
+    rejects([&] { gg::validateAuthResponse(token, -1, false, 12); });
+    rejects([&] { gg::validateAuthResponse(token, 0, false, 0); });
+    const std::string hash(64, 'a');
+    const std::string serverKey(124, 'A');
+    const std::string iv(16, 'A');
+    const std::string manifest(32, 'A');
+    gg::validateDeliveryHeaders("2", serverKey, iv, manifest, hash);
+    gg::validateDeliveryManifest(5120, hash, 500, hash, 4000, hash, hash);
+    rejects([&] { gg::validateDeliveryHeaders("1", serverKey, iv, manifest, hash); });
+    rejects([&] { gg::validateDeliveryHeaders("2", serverKey, "A=AA" + iv, manifest, hash); });
+    rejects([&] { gg::validateDeliveryHeaders("2", serverKey, iv, manifest, std::string(64, 'A')); });
+    rejects([&] { gg::validateDeliveryManifest(5'500'001, hash, 500, hash, 4000, hash, hash); });
+    rejects([&] { gg::validateDeliveryManifest(5120, hash, 0, hash, 4000, hash, hash); });
+    rejects([&] { gg::validateDeliveryManifest(5120, hash, 500, hash, 4000, hash,
+                                                std::string(64, 'b')); });
     std::array<std::uint8_t, 32> shared{};
     for (unsigned i = 0; i < shared.size(); ++i) shared[i] = static_cast<std::uint8_t>(i);
     const auto derived = gg::deriveDeliveryMaterial(shared.data(), shared.size(), device,
@@ -77,5 +107,5 @@ int main() {
                                                device, "token"); });
     rejects([&] { gg::deriveDeliveryMaterial(shared.data(), shared.size(),
                                                device, ""); });
-    std::cout << "C++ EdgeOne saved auth, JSON, canonical and HKDF parity OK\n";
+    std::cout << "C++ EdgeOne saved auth, inbound/outbound JSON, envelope and HKDF parity OK\n";
 }

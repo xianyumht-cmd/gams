@@ -159,6 +159,46 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_signedRequestJson(JNIEnv* env, jclas
     });
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_classifyApiResponse(JNIEnv* env, jclass,
+        jstring action, jint httpStatus, jboolean bodyOk) {
+    return translate(env, [&]() -> jint {
+        return gg::classifyApiResponse(text(env, action), httpStatus, bodyOk == JNI_TRUE);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_validateAuthResponse(JNIEnv* env, jclass,
+        jstring token, jlong expiresAt, jboolean permanent, jint latestAppVersion) {
+    translate(env, [&]() -> bool {
+        gg::validateAuthResponse(text(env, token), expiresAt,
+                                 permanent == JNI_TRUE, latestAppVersion);
+        return true;
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_validateDeliveryHeaders(JNIEnv* env, jclass,
+        jstring version, jstring serverKey, jstring iv, jstring manifest, jstring sha) {
+    translate(env, [&]() -> bool {
+        gg::validateDeliveryHeaders(text(env, version), text(env, serverKey),
+                                    text(env, iv), text(env, manifest), text(env, sha));
+        return true;
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_validateDeliveryManifest(JNIEnv* env, jclass,
+        jint size, jstring manifestSha, jint nonameSize, jstring nonameSha,
+        jint gameSize, jstring gameSha, jstring headerSha) {
+    translate(env, [&]() -> bool {
+        gg::validateDeliveryManifest(size, text(env, manifestSha), nonameSize,
+                                     text(env, nonameSha), gameSize, text(env, gameSha),
+                                     text(env, headerSha));
+        return true;
+    });
+}
+
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_deliveryMaterial(JNIEnv* env, jclass,
         jbyteArray sharedInput, jstring deviceId, jstring token) {

@@ -352,11 +352,19 @@ final class V2LicenseManager {
         if (!object.optBoolean("ok", false)) throw apiError(object, 400);
         String token = object.optString("token", "");
         if (token.isEmpty()) throw new ApiException(500, "bad_response", "授权服务响应无效");
+        long licenseExpiresAt = object.isNull("licenseExpiresAt")
+                ? 0L : object.optLong("licenseExpiresAt", 0L);
+        boolean permanent = object.optBoolean("permanent", false);
+        int latestAppVersion = object.optInt("latestAppVersion", PROTOCOL_APP_VERSION);
+        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
+            NativeRuntimeBridge.validateAuthResponse(
+                    token, licenseExpiresAt, permanent, latestAppVersion);
+        }
         return new AuthResult(
                 token,
-                object.isNull("licenseExpiresAt") ? 0L : object.optLong("licenseExpiresAt", 0L),
-                object.optBoolean("permanent", false),
-                object.optInt("latestAppVersion", PROTOCOL_APP_VERSION),
+                licenseExpiresAt,
+                permanent,
+                latestAppVersion,
                 object.optBoolean("forceUpdate", false),
                 object.optString("updateUrl", ""),
                 object.optString("updateMessage", "")
