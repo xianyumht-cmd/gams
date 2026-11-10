@@ -71,6 +71,17 @@ final class RuntimePayload {
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    synchronized String nativeWrappedControlScript() {
+        ensureAlive();
+        if (!BuildConfig.GG_NATIVE_CORE) throw new IllegalStateException("Native core disabled");
+        byte[] wrapped = NativeRuntimeBridge.wrappedControlBytes(nativeHandle);
+        try {
+            return new String(wrapped, java.nio.charset.StandardCharsets.UTF_8);
+        } finally {
+            java.util.Arrays.fill(wrapped, (byte) 0);
+        }
+    }
+
     synchronized InputStream openGameStream() {
         ensureAlive();
         if (BuildConfig.GG_NATIVE_CORE) {

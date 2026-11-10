@@ -46,6 +46,12 @@ entire rewritten UTF-8 HTML byte array against the untouched Java reference;
 it checks mixed-case `<head>`, `sha384` removal, blank navigation and a
 missing-head rejection. After CI, a device must still verify the live
 `1.4.1` site, compressed HTML, WebView navigation and document-start behavior.
+The tenth increment adds an independent C++ sanitizer fixture for all five
+resource-routing outcomes and the exact Java script-wrapper prefix/suffix.
+The real Java→JNI fixture loads the historical public control script from the
+ZIP, compares full wrapper bytes and exercises direct-engine/legacy/HTML
+routing decisions. After CI, manually inspect engine requests, ignored
+subresources and the main-document rewrite, including both navigation modes.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

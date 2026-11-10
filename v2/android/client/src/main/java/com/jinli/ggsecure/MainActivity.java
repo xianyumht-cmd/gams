@@ -314,7 +314,9 @@ public final class MainActivity extends Activity {
         startupProgressBar = null;
         releaseRuntime();
         runtimePayload = payload;
-        wrappedControlScript = wrapControlScript(payload.nonameSource());
+        wrappedControlScript = BuildConfig.GG_NATIVE_CORE
+                ? payload.nativeWrappedControlScript()
+                : wrapControlScript(payload.nonameSource());
         browserVisible = true;
         createBrowserUi();
         configureWebView();
@@ -429,6 +431,22 @@ public final class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(
                     WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
+                    boolean direct = isEdgeOneDirectEngine();
+                    String accept = direct && request.isForMainFrame()
+                            ? headerIgnoreCase(request, "Accept") : null;
+                    int route = NativeRuntimeBridge.resourceRoute(direct,
+                            url, RuntimeNames.virtualGameUrl(), request.isForMainFrame(),
+                            request.getMethod(), request.getUrl().getScheme(),
+                            request.getUrl().getHost(), accept);
+                    switch (route) {
+                        case 1: return memoryGameResponse();
+                        case 2: return emptyOfficialEngineResponse();
+                        case 3: return forbiddenCoreResponse();
+                        case 4: return rewriteEdgeOnePage(request);
+                        default: return direct ? null : super.shouldInterceptRequest(view, request);
+                    }
+                }
                 if (isEdgeOneDirectEngine()) {
                     if (isOfficialEngineRequest(url)) return memoryGameResponse();
                     if (shouldRewriteEdgeOnePage(request)) return rewriteEdgeOnePage(request);
@@ -437,10 +455,7 @@ public final class MainActivity extends Activity {
                 if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
                 if (isEngineRequest(url)) return memoryGameResponse();
                 if (isForbiddenCoreRequest(url)) {
-                    return new WebResourceResponse(
-                            "text/plain", "UTF-8", 403, "Blocked",
-                            java.util.Collections.singletonMap("Cache-Control", "no-store"),
-                            new ByteArrayInputStream(new byte[0]));
+                    return forbiddenCoreResponse();
                 }
                 return super.shouldInterceptRequest(view, request);
             }
@@ -553,6 +568,13 @@ public final class MainActivity extends Activity {
                 new ByteArrayInputStream(new byte[0]));
     }
 
+    private static WebResourceResponse forbiddenCoreResponse() {
+        return new WebResourceResponse(
+                "text/plain", "UTF-8", 403, "Blocked",
+                java.util.Collections.singletonMap("Cache-Control", "no-store"),
+                new ByteArrayInputStream(new byte[0]));
+    }
+
     private WebResourceResponse emptyOfficialEngineResponse() {
         byte[] body = "window.__gg_official_engine_blocked__=true;".getBytes(
                 java.nio.charset.StandardCharsets.UTF_8);
@@ -568,6 +590,10 @@ public final class MainActivity extends Activity {
 
     private boolean isEdgeOneDirectEngine() {
         RuntimePayload current = runtimePayload;
+        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
+            return NativeRuntimeBridge.directEngine(true,
+                    current == null ? "" : current.versionName());
+        }
         return BuildConfig.EDGEONE_CANDIDATE && current != null
                 && current.versionName().startsWith("1.4.1");
     }

@@ -78,6 +78,11 @@
   `<\\/script` escape exactly aligned with the Java reference. Never treat
   a passing host text fixture as verification of Android WebView/gzip behavior;
   those are deliberately still handled by the original platform adapter.
+- For the C++ WebView routing boundary, official `game.js` requests must win
+  over document rewriting. A direct `1.4.1` browser passes unrelated resources
+  through without legacy core blocking, while the old runtime must still
+  return an empty official-engine response and block source-repository JS.
+  Never move Android URI parsing or WebView response APIs into this pure policy.
 - On GitHub's 2026 Ubuntu runner, `android-actions/setup-android@v3` tries to
   install the removed Android SDK `tools` package and fails before Gradle runs.
   Use the runner's preinstalled SDK and Gradle's normal SDK package resolution.

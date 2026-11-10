@@ -2,6 +2,7 @@
 #include "edgeone_protocol.hpp"
 #include "encrypted_transfer.hpp"
 #include "html_compatibility.hpp"
+#include "browser_policy.hpp"
 
 #include <jni.h>
 
@@ -25,6 +26,15 @@ std::string text(JNIEnv* env, jstring value) {
     if (!value) throw std::runtime_error("Missing ZIP manifest field");
     const char* utf = env->GetStringUTFChars(value, nullptr);
     if (!utf) throw std::runtime_error("Could not read ZIP manifest");
+    std::string result(utf);
+    env->ReleaseStringUTFChars(value, utf);
+    return result;
+}
+
+std::string optionalText(JNIEnv* env, jstring value) {
+    if (!value) return {};
+    const char* utf = env->GetStringUTFChars(value, nullptr);
+    if (!utf) throw std::runtime_error("Unable to read WebView request string");
     std::string result(utf);
     env->ReleaseStringUTFChars(value, utf);
     return result;
@@ -112,6 +122,46 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_nonameSource(JNIEnv* env, jclass, jl
         env->DeleteLocalRef(array);
         env->DeleteLocalRef(charset);
         return static_cast<jstring>(result);
+    });
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_wrappedControlBytes(JNIEnv* env, jclass,
+        jlong handle) {
+    return translate(env, [&]() -> jbyteArray {
+        struct WipedControl {
+            std::vector<std::uint8_t> bytes;
+            ~WipedControl() { gg::secureClear(bytes); }
+        } wrapped;
+        wrapped.bytes = gg::wrapControlScript(resolve(handle)->noname);
+        jbyteArray result = env->NewByteArray(static_cast<jsize>(wrapped.bytes.size()));
+        if (result) env->SetByteArrayRegion(result, 0,
+            static_cast<jsize>(wrapped.bytes.size()),
+            reinterpret_cast<const jbyte*>(wrapped.bytes.data()));
+        return env->ExceptionCheck() ? nullptr : result;
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_directEngine(JNIEnv* env, jclass,
+        jboolean candidate, jstring version) {
+    return translate(env, [&]() -> jboolean {
+        return gg::isEdgeOneDirectEngine(candidate == JNI_TRUE,
+                                          optionalText(env, version)) ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_resourceRoute(JNIEnv* env, jclass,
+        jboolean directEngine, jstring url, jstring virtualGameUrl,
+        jboolean mainFrame, jstring method, jstring scheme,
+        jstring host, jstring accept) {
+    return translate(env, [&]() -> jint {
+        return static_cast<jint>(gg::routeWebResource(directEngine == JNI_TRUE,
+            optionalText(env, url), optionalText(env, virtualGameUrl),
+            mainFrame == JNI_TRUE, optionalText(env, method),
+            optionalText(env, scheme), optionalText(env, host),
+            optionalText(env, accept)));
     });
 }
 

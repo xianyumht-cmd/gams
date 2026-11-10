@@ -2,6 +2,17 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Tenth increment awaiting CI:** The separate C++ Android candidate now
+  decides WebView resource routes (native `game.js`, disabled legacy official
+  engine, forbidden GitHub core, or `1.4.1` main-frame HTML rewrite), including
+  version-gated direct-engine mode. C++ also wraps the resident control script
+  for document-start injection using the original Java wrapper bytes. Android
+  still parses the request URI and headers, owns the WebView response and
+  injection APIs, and the Java-only reference retains its old routing and
+  script wrapper. C++ sanitizer test and the ten Node API tests passed
+  locally. Real JVM→JNI comparison, dual Android builds and APK checks are
+  pending GitHub Actions; device behavior remains unverified.
+
 - **Ninth increment verified by CI:** The isolated C++ candidate now performs
   the `1.4.1` EdgeOne HTML compatibility rewrite directly against its resident
   native control-script bytes: ordered `about:blank` call/href replacements,

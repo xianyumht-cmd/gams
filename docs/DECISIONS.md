@@ -81,6 +81,15 @@ identical. The document-start `WebView` injection still requires a Java
 String. Compile and test the original Java implementation alongside C++
 rather than deleting the comparison oracle before real-device acceptance.
 
+The tenth increment moves WebView **request classification and control-script
+wrapping** to C++ but leaves the actual Android WebView/URI/HTTP/Intent APIs
+in Java. This preserves request/header parsing and platform behavior while
+reducing duplicated Java-side script copies and enforcing the existing
+official-engine versus HTML-rewrite precedence in a single native policy.
+The native app routes only through the C++ policy; the Java reference retains
+its original classifier for side-by-side regression tests. Passing host JNI
+and Android builds does not certify navigation in a live WebView.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

@@ -108,6 +108,21 @@ continues to own HTTPS, Cookie headers, bounded gzip decoding, UTF-8 input,
 and WebResourceResponse. The original Java rewrite stays the reference for
 `:client`, and host JNI tests compare entire UTF-8 HTML outputs.
 
+The tenth native boundary takes the **deterministic WebView resource-routing
+decision** and document-start script wrapping into C++. For the isolated
+native APK, Java passes its Android `Uri` scheme/host, request method,
+main-frame flag and Accept value to `resourceRoute`. C++ checks the exact
+legacy official/virtual/forbidden-engine patterns and the `1.4.1` direct
+engine HTML eligibility in the same precedence as the original Java WebView
+client. The native version gate preserves the old `1.4.1` prefix check.
+Java remains responsible for rendering or bypassing the intercepted request,
+HTTP/cookies, UI and file downloads; the Java-only APK continues using its
+original route checks. `wrappedControlBytes` constructs the original JS
+guard/try/catch wrapper around native-resident control-script bytes, and
+Android decodes the resulting UTF-8 for its WebView API and wipes the
+temporary Java byte array. Native tests cover route precedence and wrapper
+bytes; live WebView behavior still requires device acceptance.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

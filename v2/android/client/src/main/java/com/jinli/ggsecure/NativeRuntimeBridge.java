@@ -15,6 +15,15 @@ final class NativeRuntimeBridge {
 
     /** Pure compatibility rewrite using C++-resident control JS. */
     static native byte[] rewriteHtml(long handle, byte[] htmlUtf8);
+    /** Complete WebView wrapper assembled from the C++-resident control script. */
+    static native byte[] wrappedControlBytes(long handle);
+
+    static native boolean directEngine(boolean candidate, String version);
+
+    /** 0 pass; 1 native runtime; 2 empty official engine; 3 blocked; 4 rewrite HTML. */
+    static native int resourceRoute(boolean directEngine, String url, String virtualGameUrl,
+                                    boolean mainFrame, String method, String scheme,
+                                    String host, String accept);
 
     /** Copies at most one bounded chunk; never returns an entire private engine buffer. */
     static native int copyGameRange(long handle, int position, byte[] output,

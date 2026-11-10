@@ -168,6 +168,36 @@ public final class NativeRuntimeInteropSmoke {
         try {
             assertEqual(new String(control, StandardCharsets.UTF_8),
                     NativeRuntimeBridge.nonameSource(handle));
+            String controlText = new String(control, StandardCharsets.UTF_8);
+            String baselineWrapper = "(function(){"
+                    + "if(window.__GG_V2_CONTROL_LOADED__)return;"
+                    + "window.__GG_V2_CONTROL_LOADED__=true;"
+                    + "try{\n" + controlText + "\n}catch(e){"
+                    + "window.__GG_V2_CONTROL_LOADED__=false;"
+                    + "console.error('[GG]',e);}"
+                    + "})();";
+            if (!Arrays.equals(baselineWrapper.getBytes(StandardCharsets.UTF_8),
+                    NativeRuntimeBridge.wrappedControlBytes(handle))) {
+                throw new AssertionError("JNI WebView control wrapper differs from Java baseline");
+            }
+            if (!NativeRuntimeBridge.directEngine(true, "1.4.1-1.0.41") ||
+                    NativeRuntimeBridge.directEngine(false, "1.4.1-1.0.41") ||
+                    NativeRuntimeBridge.directEngine(true, "1.1.4-1.0.5")) {
+                throw new AssertionError("JNI direct-engine version decision drift");
+            }
+            assertEqual(1, NativeRuntimeBridge.resourceRoute(true,
+                    "https://c2.cgyouxi.com/website/hfplayer/bin/official/game.js", "https://v/engine.js",
+                    false, "GET", "https", "c2.cgyouxi.com", null));
+            assertEqual(2, NativeRuntimeBridge.resourceRoute(false,
+                    "https://c2.cgyouxi.com/website/hfplayer/bin/official/game.js", "https://v/engine.js",
+                    false, "GET", "https", "c2.cgyouxi.com", null));
+            assertEqual(3, NativeRuntimeBridge.resourceRoute(false,
+                    "https://raw.githubusercontent.com/xianyumht-cmd/gams/main/remote-script/a.js",
+                    "https://v/engine.js", false, "GET", "https", "raw.githubusercontent.com", null));
+            assertEqual(4, NativeRuntimeBridge.resourceRoute(true, "https://m.66rpg.com/",
+                    "https://v/engine.js", true, "GET", "https", "m.66rpg.com", "text/html"));
+            assertEqual(0, NativeRuntimeBridge.resourceRoute(true, "https://m.66rpg.com/",
+                    "https://v/engine.js", true, "POST", "https", "m.66rpg.com", "text/html"));
             String html = "<html><HEAD class='game'><script integrity='sha384-abc=='>"
                     + "window.location.replace('about:blank');"
                     + "location.href=\"about:blank\";</script></HEAD><body>测试</body></html>";
@@ -236,6 +266,6 @@ public final class NativeRuntimeInteropSmoke {
         Arrays.fill(shared, (byte) 0);
         Arrays.fill(derived[0], (byte) 0);
         Arrays.fill(derived[1], (byte) 0);
-        System.out.println("Host Java→JNI→C++ HTML rewrite, encrypted transfer, engine stream, HKDF and ZIP parity OK");
+        System.out.println("Host Java→JNI→C++ WebView policy, HTML rewrite, encrypted transfer, engine stream, HKDF and ZIP parity OK");
     }
 }
