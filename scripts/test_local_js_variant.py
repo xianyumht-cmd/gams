@@ -2,6 +2,7 @@
 
 from hashlib import sha256, sha384
 import base64
+import gzip
 from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
@@ -9,8 +10,10 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
 CLIENT = ROOT / "v2/android/client"
-PAIRS = {"1.1.4": "1.0.5", "1.1.3": "1.0.5", "1.1.2": "1.0.4"}
+PAIRS = {"1.4.1": "1.0.41", "1.1.4": "1.0.5", "1.1.3": "1.0.5", "1.1.2": "1.0.4"}
 EXPECTED_SHA256 = {
+    "noname-1.4.1.js": "456f7765c290665d9a4e233206e4768474b04ca1aa464ae32a228fd7ce129f7d",
+    "game-1.0.41.js": "6794d40288e202ab54e81bc51c1df4f05d9acf805514d8cbcf76b2928b178e2e",
     "noname-1.1.4.js": "ac4d465795a59fe9b6fe5f3f9fe29c2733de332de70f09228c04108792ea6818",
     "noname-1.1.3.js": "bb0337e6398658eec79e20da174206eb211807428960ea254b6bb4258dbe0a84",
     "noname-1.1.2.js": "0e2209f6091543d5e69e3c9a039366c88ca388da4df9007fa73ff9a420d732e7",
@@ -38,8 +41,7 @@ def main() -> None:
     assert 'applicationIdSuffix = ".localtest$localVariantCode"' in gradle
     assert 'manifestPlaceholders["ggLocalTestLabel"]' in gradle
     workflow = (ROOT / ".github/workflows/gg-local-js-test-apk.yml").read_text(encoding="utf-8")
-    for version, engine in PAIRS.items():
-        assert f'"{version}:{engine}"' in workflow
+    assert f'"{noname_version}:{game_version}"' in workflow
     assert "GG-local-noname-${noname}-game-${game}.apk" in workflow
 
     manifest = ET.parse(CLIENT / "src/localTest/AndroidManifest.xml").getroot()
@@ -68,20 +70,38 @@ def main() -> None:
 
     source = (CLIENT / "src/localTest/assets/noname.js").read_text(encoding="utf-8")
     remote = "https://gams-script-edge.2320006072.workers.dev/engine/stable.js"
-    assert source.count(remote) >= 2
-    injected = source.replace(remote, "https://ggv2.local/runtime/game.js")
-    assert remote not in injected and "https://ggv2.local/runtime/game.js" in injected
+    if noname_version == "1.4.1":
+        assert remote not in source, "New userscript must leave official game.js URL intact"
+        assert '"gg-fab"' in source and '"gg-panel"' in source
+        assert "return isDirectEngineLocalTest() ? memoryGameResponse() : emptyOfficialEngineResponse();" in activity
+        assert '"https://m.66rpg.com/h5/1695336?ohp=v3&quality=32"' in activity
+        sources = {
+            "noname.js": gzip.decompress(
+                (CLIENT / "localtest-payload/noname-1.4.1.js.gz").read_bytes()),
+            "game.js": gzip.decompress(b"".join(
+                part.read_bytes() for part in sorted((CLIENT / "localtest-payload").glob(
+                    "game-1.0.41.js.gz.part*")))),
+        }
+        assert len(list((CLIENT / "localtest-payload").glob("game-1.0.41.js.gz.part*"))) == 9
+        expected_sri = "sha384-" + base64.b64encode(sha384(sources["game.js"]).digest()).decode("ascii")
+        assert expected_sri == "sha384-KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ"
+        assert expected_sri in activity, "APK SRI must match local game bytes, not a shim"
+    else:
+        assert source.count(remote) >= 2
+        injected = source.replace(remote, "https://ggv2.local/runtime/game.js")
+        assert remote not in injected and "https://ggv2.local/runtime/game.js" in injected
+        sources = {
+            "noname.js": (ROOT / f"remote-script/release/noname-{noname_version}.js").read_bytes(),
+            "game.js": (ROOT / f"game-engine/release/game-{game_version}.js").read_bytes(),
+        }
 
-    for name, source_path in {
-        "noname.js": ROOT / f"remote-script/release/noname-{noname_version}.js",
-        "game.js": ROOT / f"game-engine/release/game-{game_version}.js",
-    }.items():
-        expected_hash = EXPECTED_SHA256[source_path.name]
-        source_hash = sha256(source_path.read_bytes()).hexdigest()
-        assert source_hash == expected_hash, f"Repository source differs: {source_path}: {source_hash}"
+    for name, source_bytes in sources.items():
+        versioned = f"noname-{noname_version}.js" if name == "noname.js" else f"game-{game_version}.js"
+        expected_hash = EXPECTED_SHA256[versioned]
+        assert sha256(source_bytes).hexdigest() == expected_hash, f"Original {versioned} SHA256 mismatch"
         payload = CLIENT / "src/localTest/assets" / name
         digest = sha256(payload.read_bytes()).hexdigest()
-        assert digest == expected_hash, f"{name} differs from repository {source_path.name}: {digest}"
+        assert digest == expected_hash, f"{name} differs from original {versioned}: {digest}"
         print(f"Verified {name}: {payload.stat().st_size} bytes, SHA256 {digest}")
     print("Verified isolated build, local mode, and WebView injection contract")
 

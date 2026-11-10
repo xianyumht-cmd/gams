@@ -40,7 +40,7 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Build and verify three independently installable APKs
+      - name: Build and verify newest local engine APK
         shell: bash
         run: |
           set -euo pipefail
@@ -50,10 +50,10 @@ jobs:
           aapt="$(find "$sdk_root/build-tools" -type f -name aapt | sort -V | tail -n1)"
           apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -n1)"
           test -x "$aapt" && test -x "$apksigner"
-          for pair in "1.1.4:1.0.5" "1.1.3:1.0.5" "1.1.2:1.0.4"; do
+          for pair in "1.4.1:1.0.41"; do
             IFS=: read -r noname game <<< "$pair"
-            cp "remote-script/release/noname-${noname}.js" "$dest/noname.js"
-            cp "game-engine/release/game-${game}.js" "$dest/game.js"
+            gzip -dc "v2/android/client/localtest-payload/noname-${noname}.js.gz" > "$dest/noname.js"
+            cat v2/android/client/localtest-payload/game-1.0.41.js.gz.part* | gzip -dc > "$dest/game.js"
             python3 scripts/test_local_js_variant.py "$noname" "$game"
             node --check "$dest/noname.js"
             node --check "$dest/game.js"
@@ -65,16 +65,16 @@ jobs:
             "$aapt" dump badging "$apk" | grep -Fq "application-label:'GG测试$noname'"
             "$apksigner" verify --min-sdk-version 24 "$apk"
             test "$(unzip -p "$apk" assets/noname.js | sha256sum | cut -d' ' -f1)" = \
-              "$(sha256sum "remote-script/release/noname-${noname}.js" | cut -d' ' -f1)"
+              '456f7765c290665d9a4e233206e4768474b04ca1aa464ae32a228fd7ce129f7d'
             test "$(unzip -p "$apk" assets/game.js | sha256sum | cut -d' ' -f1)" = \
-              "$(sha256sum "game-engine/release/game-${game}.js" | cut -d' ' -f1)"
+              '6794d40288e202ab54e81bc51c1df4f05d9acf805514d8cbcf76b2928b178e2e'
             cp "$apk" "dist/GG-local-noname-${noname}-game-${game}.apk"
           done
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GG-local-three-compatibility-apks
+          name: GG-local-noname-1.4.1-game-1.0.41
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -96,8 +96,8 @@ jobs:
               dist/SHA256SUMS.txt \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "GG 三版本本地 JS 对比测试 (${GITHUB_SHA:0:7})" \
-              --notes '同一仓库原生注入框架生成三个独立包名 APK：noname 1.1.4 + game 1.0.5；noname 1.1.3 + game 1.0.5；noname 1.1.2 + game 1.0.4。三个 APK 免 GG 激活码及在线授权校验，可同时安装。游戏网页自身仍需网络。本版本仅用于测试，正式版不受影响。' \
+              --title "GG 本地 1.4.1 + 1.0.41 测试版 (${GITHUB_SHA:0:7})" \
+              --notes '独立安装包 com.jinli.quickweb.localtest141，原生 WebView document-start 注入用户上传的 noname 1.4.1，并以原始官方 game.js URL 返回用户上传的 game 1.0.41 引擎。HTML SRI 使用已验证引擎字节对应的 SHA-384。首页直达 /h5/1695336?ohp=v3&quality=32。无需 GG 在线授权，但游戏页面自身仍需联网。之前的三份历史测试版可从上一版预发布下载，正式版不受影响。' \
               --prerelease \
               --latest=false
           fi

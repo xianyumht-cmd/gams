@@ -77,6 +77,19 @@ GAMS 是 GG Android 客户端、管理端、运行时脚本、在线授权服务
 
 ### Android
 
+#### 独立 GG JS 实机测试包（Draft，不影响正式版）
+
+测试分支 `feat/gg-local-js-test-20261110` 的 Actions `GG Local JS Test APK` 将用户上传的 `noname 1.4.1 + game 1.0.41` 无损还原到 `v2/android/client/src/localTest/assets` 后运行：
+
+```bash
+cd v2/android
+gradle :client:lintLocalTest :client:assembleLocalTest -PggLocalNonameVersion=1.4.1
+```
+
+APK 包名 `com.jinli.quickweb.localtest141`，首页 `/h5/1695336?ohp=v3&quality=32`；免 GG 账号/激活码，原生 WebView document-start 注入，官方 `game.js` 由本地引擎替代，网页仍需网络。构建时核对脚本 SHA-256 和引擎 SRI，完成后可从 Actions artifact / 独立预发布下载。
+
+验收：① 首页留在游戏 WebView，不唤起外部浏览器或多标签；② 不跳 `about:blank`；③ 右下角可见 `G` 悬浮按钮且能展开设置；④ 游戏可以启动。前两项可做静态校验，四项最终都需要 Android 实机确认。参见 [构建和兼容差异](docs/OPERATIONS.md)。
+
 Android 构建主要由 GitHub Actions 和 `scripts/` 下的脚本完成。自动生成的状态 JSON 是构建事实记录，不应手工把失败状态改成成功。
 
 当前 2.0.14 自动构建链会从专用实现分支取源码并生成状态记录；如果需要发布 APK，应同时确认：

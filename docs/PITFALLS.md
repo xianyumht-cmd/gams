@@ -11,3 +11,4 @@
 - 发现：2026-11-10，新的游戏页在 HTML 中为官方 `game.js` 设置 SHA-384 SRI，同时内联 JS 将 `tempName.indexOf("game.js")` 与 `el.integrity` 的固定值一起用于决定是否跳转 `about:blank`。
 - 原因：仅将 JS 内容拦截为本地文件并不足够；`stable.js` 名称不满足路径判定，拦截到的脚本内容不匹配 HTML SRI 也会被浏览器拒绝。曾引用的 `sha384-ZLB...` 与本次实际上传的 `game-1.0.6.js` 字节不一致。
 - 防止：内存改写自托管引擎 URL 至现有 `/runtime/game.js`，确保 document-start；针对实际官方脚本拦截响应，先计算 SHA-384，再在 HTML 解析前同步替换属性与内联常量；失败时给出可见提示。不要硬编码未经字节校验的哈希。
+- 版本差异（2026-11-10）：上传的 `noname 1.4.1` 已移除旧 `stable.js` 替换逻辑。此版本不应使用旧版官方引擎占位响应，必须在原始 `.../official/game.js` URL 直接回传 `game 1.0.41`，并用其实际 SHA-384 `KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ` 改写两个位置。哈希在构建时与资产字节比较，禁止未经验证的硬编码。

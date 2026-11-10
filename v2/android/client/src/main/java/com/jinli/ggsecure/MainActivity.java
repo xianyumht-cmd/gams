@@ -61,6 +61,11 @@ import java.util.Set;
 
 public final class MainActivity extends Activity {
     private static final String START_URL = RuntimeNames.startUrl();
+    private static final String DIRECT_TEST_START_URL =
+            "https://m.66rpg.com/h5/1695336?ohp=v3&quality=32";
+    // Verified at build time against the exact 15,059,308-byte game-1.0.41.js asset.
+    private static final String DIRECT_TEST_GAME_SRI =
+            "sha384-KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ";
     private static final String REMOTE_ENGINE_URL =
             "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
     private static final byte[] OFFICIAL_ENGINE_SHIM =
@@ -105,6 +110,14 @@ public final class MainActivity extends Activity {
 
     private boolean isLocalTest() {
         return getResources().getBoolean(R.bool.gg_local_test_mode);
+    }
+
+    private boolean isDirectEngineLocalTest() {
+        return isLocalTest() && "com.jinli.quickweb.localtest141".equals(getPackageName());
+    }
+
+    private String startUrl() {
+        return isDirectEngineLocalTest() ? DIRECT_TEST_START_URL : START_URL;
     }
 
     private void initializeLocalTest() {
@@ -273,20 +286,26 @@ public final class MainActivity extends Activity {
         runtimePayload = payload;
         String source = payload.nonameSource();
         if (isLocalTest()) {
-            // Preserve the uploaded asset, but expose the locally intercepted engine
-            // under a name ending in game.js, as required by the page loader.
-            if (!source.contains(REMOTE_ENGINE_URL)) {
-                throw new IllegalStateException("本地 noname 缺少预期的引擎地址");
+            if (isDirectEngineLocalTest()) {
+                // 1.4.1 intentionally does not rewrite the official game.js URL.
+                // Intercept that same official URL and use its asset's actual SRI.
+                localOfficialSri = DIRECT_TEST_GAME_SRI;
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } else {
+                // Historical 1.1.x scripts request stable.js; provide local game.js.
+                if (!source.contains(REMOTE_ENGINE_URL)) {
+                    throw new IllegalStateException("本地 noname 缺少预期的引擎地址");
+                }
+                source = source.replace(REMOTE_ENGINE_URL, RuntimeNames.virtualGameUrl());
+                localOfficialSri = calculateSri(OFFICIAL_ENGINE_SHIM);
             }
-            source = source.replace(REMOTE_ENGINE_URL, RuntimeNames.virtualGameUrl());
-            localOfficialSri = calculateSri(OFFICIAL_ENGINE_SHIM);
         }
         wrappedControlScript = wrapControlScript(source);
         browserVisible = true;
         createBrowserUi();
         configureWebView();
         if (savedInstanceState != null) webView.restoreState(savedInstanceState);
-        else webView.loadUrl(START_URL);
+        else webView.loadUrl(startUrl());
     }
 
     private void createBrowserUi() {
@@ -339,7 +358,7 @@ public final class MainActivity extends Activity {
             if (webView != null && webView.canGoBack()) webView.goBack();
             else finish();
         });
-        home.setOnClickListener(v -> webView.loadUrl(START_URL));
+        home.setOnClickListener(v -> webView.loadUrl(startUrl()));
         refresh.setOnClickListener(v -> webView.reload());
         reset.setOnClickListener(v -> resetWebData());
         service.setOnClickListener(v -> showServiceDialog());
@@ -357,7 +376,7 @@ public final class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        settings.setSupportZoom(true);
+        settings.setSupportZoom(!isDirectEngineLocalTest());
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(false);
         settings.setAllowFileAccess(false);
@@ -401,7 +420,9 @@ public final class MainActivity extends Activity {
                 if (isLocalTest() && isLocalGameHtml(request)) {
                     return localGameHtmlResponse(request);
                 }
-                if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
+                if (isOfficialEngineRequest(url)) {
+                    return isDirectEngineLocalTest() ? memoryGameResponse() : emptyOfficialEngineResponse();
+                }
                 if (isEngineRequest(url)) return memoryGameResponse();
                 if (isForbiddenCoreRequest(url)) {
                     return new WebResourceResponse(
@@ -416,6 +437,19 @@ public final class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
+                if (isDirectEngineLocalTest() && request.isForMainFrame()
+                        && ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))) {
+                    if (isTrustedGameHost(uri.getHost())) {
+                        view.loadUrl(uri.toString());
+                    } else {
+                        try {
+                            startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                        } catch (Exception ignored) {
+                            Toast.makeText(MainActivity.this, "无法打开此链接", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    return true;
+                }
                 if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) return false;
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, uri));
@@ -433,6 +467,34 @@ public final class MainActivity extends Activity {
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog,
+                    boolean isUserGesture, android.os.Message resultMsg) {
+                // Multiple windows are disabled; never create a second tab/WebView.
+                return false;
+            }
+
+            @Override
+            public void onPermissionRequest(android.webkit.PermissionRequest request) {
+                if (!isDirectEngineLocalTest()) {
+                    super.onPermissionRequest(request);
+                    return;
+                }
+                if (!isTrustedGameHost(request.getOrigin().getHost())) {
+                    request.deny();
+                    return;
+                }
+                java.util.List<String> allowed = new java.util.ArrayList<>();
+                for (String resource : request.getResources()) {
+                    if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)
+                            || android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                        allowed.add(resource);
+                    }
+                }
+                if (allowed.isEmpty()) request.deny();
+                else request.grant(allowed.toArray(new String[0]));
+            }
+
             @Override
             public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
                 if (isSuppressedEngineReadyAlert(message)) {
@@ -625,6 +687,13 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private static boolean isTrustedGameHost(String host) {
+        if (host == null) return false;
+        String value = host.toLowerCase(Locale.ROOT);
+        return value.equals("66rpg.com") || value.endsWith(".66rpg.com")
+                || value.equals("cgyouxi.com") || value.endsWith(".cgyouxi.com");
+    }
+
     private String wrapControlScript(String source) {
         return "(function(){" +
                 "if(window.__GG_V2_CONTROL_LOADED__)return;" +
@@ -678,7 +747,7 @@ public final class MainActivity extends Activity {
                         WebStorage.getInstance().deleteAllData();
                         webView.evaluateJavascript(
                                 "try{localStorage.clear();sessionStorage.clear();}catch(e){}",
-                                ignored -> webView.loadUrl(START_URL));
+                                ignored -> webView.loadUrl(startUrl()));
                     });
                 })
                 .show();

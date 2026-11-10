@@ -1,6 +1,6 @@
 plugins { id("com.android.application") }
 val localNonameVersion = providers.gradleProperty("ggLocalNonameVersion").orElse("1.1.4").get()
-require(localNonameVersion in setOf("1.1.4", "1.1.3", "1.1.2")) {
+require(localNonameVersion in setOf("1.4.1", "1.1.4", "1.1.3", "1.1.2")) {
     "Unsupported local JS test version: $localNonameVersion"
 }
 val localVariantCode = localNonameVersion.replace(".", "")
