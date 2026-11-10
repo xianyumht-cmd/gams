@@ -7,10 +7,10 @@
 - 来源：用户 `4646.zip` 原始脚本，`noname-1.4.1.js`（36,414 字节、SHA-256 `456f7765c290665d9a4e233206e4768474b04ca1aa464ae32a228fd7ce129f7d`）和 `game-1.0.41.js`（15,059,308 字节、SHA-256 `6794d40288e202ab54e81bc51c1df4f05d9acf805514d8cbcf76b2928b178e2e`）。
 - 构建：`gg-local-js-test-apk.yml` 还原仓库 `v2/android/client/localtest-payload` 的无损 gzip 资产（引擎分为 9 个有序分片），执行 `python3 scripts/test_local_js_variant.py 1.4.1 1.0.41` 和 Android lint/assemble、APK 签名/文件字节验证。可在 `v2/android` 手动运行 `gradle :client:lintLocalTest :client:assembleLocalTest -PggLocalNonameVersion=1.4.1`，前提是已还原 `src/localTest/assets`。
 - APK：`GG-local-noname-1.4.1-game-1.0.41.apk`，`com.jinli.quickweb.localtest141`，图标名称「GG测试1.4.1」，与正式版及旧三个测试版可并存。
-- 首页：`https://m.66rpg.com/h5/1695336?ohp=v3&quality=32`；保留单 WebView、自动播放、Cookie 和 document-start 注入。非 `66rpg.com`/`cgyouxi.com` 的主窗口 HTTP(S) 导航交给系统浏览器。
+- 首页：`https://m.66rpg.com/`，首次启动、点击「首页」及重置数据后均返回该站点首页，由使用者自己选择游戏，**不自动跳至 `/h5/1695336` 或其他单个作品**；保留单 WebView、自动播放、Cookie 和 document-start 注入。非 `66rpg.com`/`cgyouxi.com` 的主窗口 HTTP(S) 导航交给系统浏览器。
 - **与旧版路径不同**：新 noname 不再引用 `stable.js`。仅此 1.4.1 变体按原始官方 `/bin/official/game.js` 请求返回 APK 内 **真实引擎字节**；HTML 里官方 `<script>` 的 integrity 和内联对比常量一起替换为 `sha384-KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ`，等于这份引擎的实际 SHA-384。绝不能再给此变体返回旧版空占位脚本。
 - 保留用户脚本的原始字节，不将脚本正文插入 HTML；使用现有 `WebViewCompat.addDocumentStartJavaScript` 在解析开始前注入，避免 HTML CSP 阻止内联脚本。若网页的官方脚本或 SRI 结构发生变化，清晰显示错误而不是宣称加载成功。
-- 只绕过 GG 自身授权，游戏网页请求仍联网；Actions 可验证 APK 内容但无法代替 Android 实机确认 `/h5/1695336`、右下角 G 按钮和游戏启动。
+- 只绕过 GG 自身授权，游戏网页请求仍联网；Actions 可验证 APK 内容但无法代替 Android 实机确认首页导航、用户手动选择游戏后不跳 `about:blank`、右下角 G 按钮和游戏启动。
 
 ### 历史仓库版：三个已发布对照包
 

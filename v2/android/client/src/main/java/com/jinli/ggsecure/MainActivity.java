@@ -62,7 +62,7 @@ import java.util.Set;
 public final class MainActivity extends Activity {
     private static final String START_URL = RuntimeNames.startUrl();
     private static final String DIRECT_TEST_START_URL =
-            "https://m.66rpg.com/h5/1695336?ohp=v3&quality=32";
+            "https://m.66rpg.com/";
     // Verified at build time against the exact 15,059,308-byte game-1.0.41.js asset.
     private static final String DIRECT_TEST_GAME_SRI =
             "sha384-KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ";

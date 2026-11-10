@@ -86,9 +86,9 @@ cd v2/android
 gradle :client:lintLocalTest :client:assembleLocalTest -PggLocalNonameVersion=1.4.1
 ```
 
-APK 包名 `com.jinli.quickweb.localtest141`，首页 `/h5/1695336?ohp=v3&quality=32`；免 GG 账号/激活码，原生 WebView document-start 注入，官方 `game.js` 由本地引擎替代，网页仍需网络。构建时核对脚本 SHA-256 和引擎 SRI，完成后可从 Actions artifact / 独立预发布下载。
+APK 包名 `com.jinli.quickweb.localtest141`，启动及首页按钮打开 `https://m.66rpg.com/`，由使用者自己选择游戏；免 GG 账号/激活码，原生 WebView document-start 注入，官方 `game.js` 由本地引擎替代，网页仍需网络。构建时核对脚本 SHA-256 和引擎 SRI，完成后可从 Actions artifact / 独立预发布下载。
 
-验收：① 首页留在游戏 WebView，不唤起外部浏览器或多标签；② 不跳 `about:blank`；③ 右下角可见 `G` 悬浮按钮且能展开设置；④ 游戏可以启动。前两项可做静态校验，四项最终都需要 Android 实机确认。参见 [构建和兼容差异](docs/OPERATIONS.md)。
+验收：① 首页显示 `m.66rpg.com`，不自动进入游戏，点选作品后仍留在 WebView 且不唤起外部浏览器或多标签；② 不跳 `about:blank`；③ 右下角可见 `G` 悬浮按钮且能展开设置；④ 选定游戏可以启动。可做静态注入/路由检查，四项最终都需要 Android 实机确认。参见 [构建和兼容差异](docs/OPERATIONS.md)。
 
 Android 构建主要由 GitHub Actions 和 `scripts/` 下的脚本完成。自动生成的状态 JSON 是构建事实记录，不应手工把失败状态改成成功。
 

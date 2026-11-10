@@ -74,7 +74,9 @@ def main() -> None:
         assert remote not in source, "New userscript must leave official game.js URL intact"
         assert '"gg-fab"' in source and '"gg-panel"' in source
         assert "return isDirectEngineLocalTest() ? memoryGameResponse() : emptyOfficialEngineResponse();" in activity
-        assert '"https://m.66rpg.com/h5/1695336?ohp=v3&quality=32"' in activity
+        assert '"https://m.66rpg.com/"' in activity
+        assert 'else webView.loadUrl(startUrl())' in activity
+        assert 'home.setOnClickListener(v -> webView.loadUrl(startUrl()))' in activity
         sources = {
             "noname.js": gzip.decompress(
                 (CLIENT / "localtest-payload/noname-1.4.1.js.gz").read_bytes()),
