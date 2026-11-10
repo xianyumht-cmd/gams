@@ -5,6 +5,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.zip.ZipEntry;
@@ -62,7 +63,16 @@ final class RuntimePayload {
 
     synchronized InputStream openGameStream() {
         ensureAlive();
-        if (BuildConfig.GG_NATIVE_CORE) return new ByteArrayInputStream(NativeRuntimeBridge.gameBytes(nativeHandle));
+        if (BuildConfig.GG_NATIVE_CORE) {
+            return new NativeGameInputStream(NativeRuntimeBridge.gameSize(nativeHandle),
+                    (position, output, offset, count) -> {
+                        synchronized (RuntimePayload.this) {
+                            if (nativeHandle == 0) throw new IOException("运行时已经退出");
+                            return NativeRuntimeBridge.copyGameRange(nativeHandle,
+                                    position, output, offset, count);
+                        }
+                    });
+        }
         return new ByteArrayInputStream(game);
     }
 

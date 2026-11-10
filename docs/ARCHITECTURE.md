@@ -58,6 +58,18 @@ authorization, C++ evaluates `forceUpdate` against current app version
 `updateRequired` result shape while preventing unnecessary private-runtime
 delivery to a candidate that must upgrade first.
 
+The sixth increment changes native engine delivery from a whole-script
+`gameBytes()` JNI copy to a **bounded range reader**. `NativeGameInputStream`
+is a pure Java `InputStream` adapter with a 16 KiB per-read maximum; each
+read enters `RuntimePayload`'s monitor before invoking C++ `copyGameRange`
+(64 KiB hard JNI bound). `wipe()` uses the same monitor to destroy the native
+bundle. Multiple WebView requests maintain independent cursors over the same
+immutable native data. If teardown happened first, the stream raises a Java
+`IOException` rather than invoking JNI on the disposed handle. This avoids
+full-size Java heap replicas for engine-resource requests, but the WebView
+consumer still necessarily receives plaintext chunks. The smaller control
+script remains a Java String for Android document-start injection.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

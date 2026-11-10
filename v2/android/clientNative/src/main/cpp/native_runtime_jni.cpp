@@ -3,6 +3,7 @@
 
 #include <jni.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <exception>
 #include <memory>
@@ -97,14 +98,25 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_nonameSource(JNIEnv* env, jclass, jl
     });
 }
 
-extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_jinli_ggsecure_NativeRuntimeBridge_gameBytes(JNIEnv* env, jclass, jlong handle) {
-    return translate(env, [&]() -> jbyteArray {
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_copyGameRange(JNIEnv* env, jclass,
+        jlong handle, jint position, jbyteArray output, jint outputOffset, jint count) {
+    return translate(env, [&]() -> jint {
+        if (!output || position < 0 || outputOffset < 0 || count < 1 || count > 65'536) {
+            throw std::runtime_error("Invalid native engine chunk request");
+        }
+        const jsize length = env->GetArrayLength(output);
+        if (outputOffset > length || count > length - outputOffset) {
+            throw std::runtime_error("Native engine output slice out of bounds");
+        }
         const auto& game = resolve(handle)->game;
-        jbyteArray result = env->NewByteArray(static_cast<jsize>(game.size()));
-        if (result) env->SetByteArrayRegion(result, 0, static_cast<jsize>(game.size()),
-                                            reinterpret_cast<const jbyte*>(game.data()));
-        return result;
+        if (static_cast<std::size_t>(position) >= game.size()) return 0;
+        const auto remaining = game.size() - static_cast<std::size_t>(position);
+        const auto copied = static_cast<jsize>(std::min<std::size_t>(remaining,
+                                            static_cast<std::size_t>(count)));
+        env->SetByteArrayRegion(output, outputOffset, copied,
+             reinterpret_cast<const jbyte*>(game.data() + position));
+        return env->ExceptionCheck() ? 0 : copied;
     });
 }
 

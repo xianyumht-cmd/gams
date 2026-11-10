@@ -22,6 +22,11 @@ The fifth increment tests Java-equivalent license normalization, manual and
 saved-session startup branches, recoverable check failures, and forced-update
 download blocking. Re-run real JNI tests plus both Android APK builds to
 verify these startup decisions did not alter the reference client.
+The sixth increment also compiles `NativeGameInputStream.java` in the host
+Java→JNI test. The native fixture reads `game.js` via repeated bounded slices,
+compares exact bytes, verifies a second independent cursor, closed-stream
+handling, and out-of-bounds native destination rejection. An Android device
+must still verify WebView streaming during navigation, refresh, and logout.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

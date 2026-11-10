@@ -1,5 +1,7 @@
 package com.jinli.ggsecure;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -105,10 +107,43 @@ public final class NativeRuntimeInteropSmoke {
         try {
             assertEqual(new String(control, StandardCharsets.UTF_8),
                     NativeRuntimeBridge.nonameSource(handle));
-            if (!Arrays.equals(engine, NativeRuntimeBridge.gameBytes(handle)) ||
-                    engine.length != NativeRuntimeBridge.gameSize(handle)) {
-                throw new AssertionError("Native script bytes differ from Java runtime");
+            if (engine.length != NativeRuntimeBridge.gameSize(handle)) {
+                throw new AssertionError("Native engine length differs from Java runtime");
             }
+            NativeGameInputStream.Reader reader = (position, output, offset, count) ->
+                    NativeRuntimeBridge.copyGameRange(handle, position, output, offset, count);
+            try (NativeGameInputStream streamed = new NativeGameInputStream(engine.length, reader);
+                 ByteArrayOutputStream collected = new ByteArrayOutputStream()) {
+                if (streamed.available() != engine.length || streamed.read() != (engine[0] & 255)) {
+                    throw new AssertionError("Native stream first byte/size mismatch");
+                }
+                collected.write(engine[0]);
+                byte[] chunk = new byte[4099];
+                int n;
+                while ((n = streamed.read(chunk, 3, chunk.length - 3)) != -1) {
+                    collected.write(chunk, 3, n);
+                }
+                if (!Arrays.equals(engine, collected.toByteArray()) || streamed.available() != 0 ||
+                        streamed.read(new byte[0], 0, 0) != 0) {
+                    throw new AssertionError("Chunked JNI stream changed engine bytes");
+                }
+                try (NativeGameInputStream second = new NativeGameInputStream(engine.length, reader)) {
+                    if (second.skip(7) != 7 || second.read() != (engine[7] & 255)) {
+                        throw new AssertionError("Independent native stream cursor mismatched");
+                    }
+                }
+            }
+            try (NativeGameInputStream closed = new NativeGameInputStream(engine.length, reader)) {
+                closed.close();
+                try {
+                    closed.read();
+                    throw new AssertionError("Closed engine stream was readable");
+                } catch (IOException expected) { /* Closed streams fail safely. */ }
+            }
+            try {
+                NativeRuntimeBridge.copyGameRange(handle, 0, new byte[3], 2, 2);
+                throw new AssertionError("JNI wrote beyond the destination array");
+            } catch (SecurityException expected) { /* No out-of-bounds JNI write. */ }
         } finally {
             NativeRuntimeBridge.close(handle);
         }
@@ -125,6 +160,6 @@ public final class NativeRuntimeInteropSmoke {
         Arrays.fill(shared, (byte) 0);
         Arrays.fill(derived[0], (byte) 0);
         Arrays.fill(derived[1], (byte) 0);
-        System.out.println("Host Java→JNI→C++ proof, inbound envelope, HKDF and ZIP parity OK");
+        System.out.println("Host Java→JNI→C++ proof, chunked engine stream, HKDF and ZIP parity OK");
     }
 }

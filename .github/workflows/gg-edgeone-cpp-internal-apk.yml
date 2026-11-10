@@ -66,6 +66,7 @@ jobs:
             -lz -o /tmp/gg-cpp-jni/libggnative.so
           javac -d /tmp/gg-cpp-java-classes \
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeRuntimeBridge.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/NativeGameInputStream.java \
             v2/android/clientNative/test/NativeRuntimeInteropSmoke.java \
             v2/android/clientNative/test/NativeCryptoBuildConfig.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeDeliveryCrypto.java \

@@ -13,7 +13,9 @@ final class NativeRuntimeBridge {
 
     static native String nonameSource(long handle);
 
-    static native byte[] gameBytes(long handle);
+    /** Copies at most one bounded chunk; never returns an entire private engine buffer. */
+    static native int copyGameRange(long handle, int position, byte[] output,
+                                    int outputOffset, int count);
 
     static native int gameSize(long handle);
 

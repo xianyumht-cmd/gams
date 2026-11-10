@@ -47,6 +47,15 @@ progress callbacks and WebView are left in place to avoid race and UI
 regressions. Gating before the runtime download means a forced update cannot
 needlessly transfer private JS into a process that will reject startup.
 
+The sixth increment replaces whole-engine JNI copies with a streaming bridge
+that borrows the *existing* native bundle handle only while synchronized with
+`RuntimePayload.wipe()`. Do not create unmanaged per-stream native pointers:
+their lifetime can outlive the Activity and risk stale-pointer reads if a
+WebView cancels a request before closing the response body. Keep the Android
+HTTP/WebView stream adapter in Java, use bounded native range reads, and
+fail closed if teardown wins a race. The Java baseline keeps its independent
+existing `ByteArrayInputStream` behavior.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

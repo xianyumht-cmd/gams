@@ -5,6 +5,13 @@
   boundaries. The first native build currently migrates only ZIP/JS memory
   handling. A compiled `.so` or a successful smoke test is **not** proof of
   full feature parity. Avoid claiming otherwise.
+- `WebView.shouldInterceptRequest` runs off the Activity's main thread.
+  Returning a full `game.js` byte array on every request multiplied Java
+  heap usage, while releasing the native ZIP between `gameSize()` and
+  `openGameStream()` could race with JNI reads. For the C++ candidate,
+  capture the response length and stream under the same payload monitor,
+  bound each native range read, and synchronize it with `wipe()`. A stream
+  used after teardown must produce `IOException`, never access an old handle.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

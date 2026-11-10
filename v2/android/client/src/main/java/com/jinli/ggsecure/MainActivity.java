@@ -503,20 +503,36 @@ public final class MainActivity extends Activity {
     private WebResourceResponse memoryGameResponse() {
         RuntimePayload payload = runtimePayload;
         if (payload == null) {
-            return new WebResourceResponse(
-                    "text/plain", "UTF-8", 503, "Runtime unavailable",
-                    java.util.Collections.singletonMap("Cache-Control", "no-store"),
-                    new ByteArrayInputStream(new byte[0]));
+            return unavailableGameResponse();
+        }
+        final int size;
+        final InputStream script;
+        try {
+            // WebView resource interception is asynchronous. Avoid a release
+            // between reading Content-Length and opening the native stream.
+            synchronized (payload) {
+                size = payload.gameSize();
+                script = payload.openGameStream();
+            }
+        } catch (IllegalStateException error) {
+            return unavailableGameResponse();
         }
         Map<String, String> headers = new java.util.HashMap<>();
         headers.put("Cache-Control", "no-store, no-cache, max-age=0");
         headers.put("Pragma", "no-cache");
         headers.put("X-Content-Type-Options", "nosniff");
         headers.put("Access-Control-Allow-Origin", "*");
-        headers.put("Content-Length", String.valueOf(payload.gameSize()));
+        headers.put("Content-Length", String.valueOf(size));
         return new WebResourceResponse(
                 "application/javascript", "UTF-8", 200, "OK",
-                headers, payload.openGameStream());
+                headers, script);
+    }
+
+    private static WebResourceResponse unavailableGameResponse() {
+        return new WebResourceResponse(
+                "text/plain", "UTF-8", 503, "Runtime unavailable",
+                java.util.Collections.singletonMap("Cache-Control", "no-store"),
+                new ByteArrayInputStream(new byte[0]));
     }
 
     private WebResourceResponse emptyOfficialEngineResponse() {
