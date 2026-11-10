@@ -131,6 +131,18 @@ bool shouldDownloadRuntime(bool forceUpdate, int latestVersion, int clientVersio
     return !forceUpdate || latestVersion <= clientVersion;
 }
 
+int startupPresentation(bool valid, bool hasRuntime, bool updateRequired) {
+    if (updateRequired) return 2;
+    return valid && hasRuntime ? 1 : 0;
+}
+
+int initializationPercent(int received, int expected) {
+    if (expected <= 0 || received < 0) return 0;
+    // Widen before multiplication: a runtime length may be near INT_MAX.
+    const auto bounded = std::min(received, expected);
+    return static_cast<int>(90LL * bounded / expected);
+}
+
 std::string signedRequestJson(const std::string& action,
                               const std::string& deviceId,
                               const std::string& devicePublicKey,

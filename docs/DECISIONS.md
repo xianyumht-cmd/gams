@@ -64,6 +64,13 @@ append only bounded 8192-byte ranges, release/zero it in Java `finally`, and
 copy only the completed ciphertext back to Java for JCA. The standalone Java
 reference keeps its original `RuntimeZipReader`.
 
+The eighth increment consolidates native startup **presentation policy** and
+byte-based progress calculations, while keeping Android Activity lifecycle
+and UI rendering in Java. One `startupPresentation()` contract covers initial
+activation and saved-card launch; forced-update results are not allowed to
+open WebView or skip the update dialog, and unused payloads must be wiped.
+This is a parity-oriented native migration, not a rewrite of Android widgets.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

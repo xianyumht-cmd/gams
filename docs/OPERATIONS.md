@@ -33,6 +33,12 @@ encrypted bytes/progress for a historical public ZIP, truncated/oversized
 input, invalid JNI source slices, incomplete and repeated finalization.
 The C++ sanitizer fixture covers native declared-size and chunk bounds;
 actual on-device EdgeOne decryption remains an independent acceptance gate.
+The eighth increment adds C++ host and actual JNI cases for every combination
+of authorization validity, payload presence and mandatory update. It also
+compares native initialization percentages with the Java reference for zero,
+partial, complete, oversized, invalid and large transfer values. After APK
+builds, check that the first-time activation **and** saved-key restart show
+the same mandatory-update dialog when the server requires a newer version.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

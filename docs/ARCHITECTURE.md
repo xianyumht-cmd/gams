@@ -82,6 +82,17 @@ parser. This avoids Java `ByteArrayOutputStream` growth/copies, but cannot
 eliminate the JCA adapter. The Java-only candidate retains its original
 runtime stream reader.
 
+The eighth native boundary moves the final startup result and initialization
+percentage **decisions** to C++ without moving Android widgets, main-thread
+callbacks or lifecycle methods. `startupPresentation(valid, hasPayload,
+updateRequired)` prioritizes mandatory updates, then permits WebView only
+with both an authorized result and a payload; other outcomes return to the
+activation form and wipe any unused payload. `initializationPercent()` follows
+the Java reference's byte-driven 0–90% convention. Saved-card and manual
+activation both show the mandatory-update dialog, closing a previously missed
+manual branch. The Java-only build keeps the same result mapping but never
+loads the native library.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

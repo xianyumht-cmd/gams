@@ -248,6 +248,19 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_shouldDownloadRuntime(JNIEnv* env, j
     });
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_startupPresentation(JNIEnv*, jclass,
+        jboolean valid, jboolean hasRuntime, jboolean updateRequired) {
+    return gg::startupPresentation(valid == JNI_TRUE, hasRuntime == JNI_TRUE,
+                                    updateRequired == JNI_TRUE);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_initializationPercent(JNIEnv*, jclass,
+        jint received, jint expected) {
+    return gg::initializationPercent(received, expected);
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_shouldReactivate(JNIEnv* env, jclass,
         jstring errorCode) {

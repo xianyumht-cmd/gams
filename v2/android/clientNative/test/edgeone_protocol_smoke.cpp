@@ -50,6 +50,25 @@ int main() {
         throw std::runtime_error("Native upgrade gate allowed a mandatory client update");
     }
     rejects([&] { gg::shouldDownloadRuntime(true, 12, 0); });
+    if (gg::startupPresentation(true, true, false) != 1 ||
+        gg::startupPresentation(false, false, false) != 0 ||
+        gg::startupPresentation(true, false, false) != 0 ||
+        gg::startupPresentation(false, true, false) != 0 ||
+        gg::startupPresentation(false, false, true) != 2 ||
+        gg::startupPresentation(true, true, true) != 2) {
+        throw std::runtime_error("Native startup result presentation policy mismatch");
+    }
+    if (gg::initializationPercent(0, 500) != 0 ||
+        gg::initializationPercent(1, 500) != 0 ||
+        gg::initializationPercent(250, 500) != 45 ||
+        gg::initializationPercent(499, 500) != 89 ||
+        gg::initializationPercent(500, 500) != 90 ||
+        gg::initializationPercent(700, 500) != 90 ||
+        gg::initializationPercent(50, 0) != 0 ||
+        gg::initializationPercent(-1, 500) != 0 ||
+        gg::initializationPercent(2'147'483'647, 2'147'483'647) != 90) {
+        throw std::runtime_error("Native initialization progress diverges from Java");
+    }
     const std::string pub(124, 'A');
     const std::string proof(88, 'B');
     if (gg::savedAuthPlan(license, "") != 1 ||

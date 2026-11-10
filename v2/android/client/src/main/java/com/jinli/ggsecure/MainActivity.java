@@ -102,9 +102,11 @@ public final class MainActivity extends Activity {
                 if (result.payload != null) result.payload.wipe();
                 return;
             }
-            if (!result.valid || result.payload == null) {
+            int presentation = startupPresentation(result);
+            if (presentation != 1) {
+                if (result.payload != null) result.payload.wipe();
                 showLicenseScreen(result.message);
-                if (result.updateRequired) {
+                if (presentation == 2) {
                     showUpdateDialog(result.updateMessage, result.updateUrl, true);
                 }
                 return;
@@ -174,7 +176,18 @@ public final class MainActivity extends Activity {
         if (current == null || current != startupProgressBar || isFinishing() || isDestroyed()) return;
         if (received <= 0 || expected <= 0) return;
         current.setIndeterminate(false);
-        current.setProgress(RuntimeZipReader.displayPercent(received, expected));
+        current.setProgress(BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
+                ? NativeRuntimeBridge.initializationPercent(received, expected)
+                : RuntimeZipReader.displayPercent(received, expected));
+    }
+
+    private int startupPresentation(V2LicenseManager.RuntimeResult result) {
+        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
+            return NativeRuntimeBridge.startupPresentation(
+                    result.valid, result.payload != null, result.updateRequired);
+        }
+        if (result.updateRequired) return 2;
+        return result.valid && result.payload != null ? 1 : 0;
     }
 
     private void showLicenseScreen(String initialMessage) {
@@ -276,13 +289,18 @@ public final class MainActivity extends Activity {
                 }
                 activate.setEnabled(true);
                 paste.setEnabled(true);
-                if (!result.valid || result.payload == null) {
+                int presentation = startupPresentation(result);
+                if (presentation != 1) {
+                    if (result.payload != null) result.payload.wipe();
                     if (initialization != null) {
                         showLicenseScreen(result.message, key);
-                        return;
+                    } else {
+                        status.setTextColor(Color.rgb(185, 28, 28));
+                        status.setText(result.message);
                     }
-                    status.setTextColor(Color.rgb(185, 28, 28));
-                    status.setText(result.message);
+                    if (presentation == 2) {
+                        showUpdateDialog(result.updateMessage, result.updateUrl, true);
+                    }
                     return;
                 }
                 showBrowser(null, result.payload);

@@ -26,6 +26,15 @@ int authorizationStart(const std::string& rawLicense, const std::string& savedTo
 // False means the server requires an app upgrade, so never request the JS ZIP.
 bool shouldDownloadRuntime(bool forceUpdate, int latestVersion, int clientVersion);
 
+// Main-thread startup outcome after auth + optional runtime delivery.
+// 0 = show activation form/error, 1 = open WebView, 2 = show mandatory update.
+// A payload that is not selected for WebView must be disposed by the caller.
+int startupPresentation(bool valid, bool hasRuntime, bool updateRequired);
+
+// Preserve Java RuntimeZipReader.displayPercent for the native candidate:
+// 0 while awaiting bytes and at most 90 before ZIP/JCA/WebView verification.
+int initializationPercent(int received, int expected);
+
 // Full HTTP JSON body, using only already-validated ASCII protocol fields.
 // Actions: activate, check, unbind, runtime-v2. Wire paths stay in Java.
 std::string signedRequestJson(const std::string& action,

@@ -46,6 +46,12 @@ final class NativeRuntimeBridge {
     static native boolean shouldDownloadRuntime(boolean forceUpdate,
                                                 int latestAppVersion, int currentAppVersion);
 
+    /** 0 = activation screen, 1 = WebView, 2 = mandatory update dialog. */
+    static native int startupPresentation(boolean valid, boolean hasRuntime,
+                                          boolean updateRequired);
+
+    static native int initializationPercent(int received, int expected);
+
     static native boolean shouldReactivate(String errorCode);
 
     static native String signedRequestJson(String action, String deviceId,

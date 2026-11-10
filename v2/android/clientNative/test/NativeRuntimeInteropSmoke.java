@@ -40,6 +40,25 @@ public final class NativeRuntimeInteropSmoke {
                 !NativeRuntimeBridge.shouldDownloadRuntime(true, 12, 12)) {
             throw new AssertionError("JNI startup/update transitions mismatch");
         }
+        for (int valid = 0; valid <= 1; valid++) {
+            for (int payload = 0; payload <= 1; payload++) {
+                for (int update = 0; update <= 1; update++) {
+                    int expected = update == 1 ? 2 : valid == 1 && payload == 1 ? 1 : 0;
+                    if (NativeRuntimeBridge.startupPresentation(
+                            valid == 1, payload == 1, update == 1) != expected) {
+                        throw new AssertionError("JNI startup result outcome mismatch");
+                    }
+                }
+            }
+        }
+        int[][] progressCases = {{0, 0}, {-1, 100}, {1, 100}, {50, 100},
+                {99, 100}, {100, 100}, {200, 100}, {2000000000, 2000000000}};
+        for (int[] sample : progressCases) {
+            if (NativeRuntimeBridge.initializationPercent(sample[0], sample[1]) !=
+                    RuntimeZipReader.displayPercent(sample[0], sample[1])) {
+                throw new AssertionError("JNI initialization progress differs from Java UI");
+            }
+        }
         if (NativeRuntimeBridge.savedAuthPlan(license, "") != 1 ||
                 NativeRuntimeBridge.savedAuthPlan(license, "savedtoken.value") != 2 ||
                 NativeRuntimeBridge.savedAuthPlan(license, "bad") != 1 ||

@@ -20,6 +20,13 @@
   past the declared length or forget native release on truncated input or a
   callback failure. This is a memory/lifecycle improvement, not an assertion
   that an authorized client cannot inspect its eventual plaintext.
+- Saved-card startup showed the mandatory update prompt, but the manual-card
+  callback returned to the activation form without opening that dialog when
+  authorization reported `forceUpdate`. Both entry points must use the same
+  browser/form/update outcome, and a result not opening WebView must wipe any
+  unexpected runtime payload. Keep the initialization bar capped at 90%
+  until validation and WebView setup complete; use widened integer math to
+  avoid overflow for large transfer counts.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

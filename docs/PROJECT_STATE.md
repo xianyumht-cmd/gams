@@ -2,6 +2,19 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Eighth increment implemented, CI pending:** C++ now classifies the
+  post-authorization startup presentation (`activation form`, `WebView`, or
+  `mandatory update`) and computes actual-byte initialization progress from
+  0 to 90% using overflow-safe arithmetic. The Java Android UI remains the
+  presentation adapter; both initial key activation and saved-card startup now
+  use the same result policy. The manual activation path previously returned
+  to the card form without an update dialog when `forceUpdate` was required;
+  it now shows the same mandatory update dialog as saved-card startup. Any
+  unexpected payload on a non-browser result is wiped. The Java-only app uses
+  equivalent local decisions and its original `RuntimeZipReader.displayPercent`.
+  Host C++ sanitizer tests and ten Node tests pass; actual JNI/Android CI and
+  device parity still require confirmation.
+
 - **Seventh increment verified by CI:** native candidate runtime-v2
   ciphertext now streams through a dedicated C++ exact-length transfer buffer
   rather than Java `ByteArrayOutputStream`. C++ validates declared maximum,
