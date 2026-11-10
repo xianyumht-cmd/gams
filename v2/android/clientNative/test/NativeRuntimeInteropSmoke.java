@@ -198,6 +198,32 @@ public final class NativeRuntimeInteropSmoke {
                     "https://v/engine.js", true, "GET", "https", "m.66rpg.com", "text/html"));
             assertEqual(0, NativeRuntimeBridge.resourceRoute(true, "https://m.66rpg.com/",
                     "https://v/engine.js", true, "POST", "https", "m.66rpg.com", "text/html"));
+            long[][] resumeCases = {{1000, 300999}, {1000, 301000},
+                    {2000, 1000}, {0, 301000}, {Long.MAX_VALUE, Long.MIN_VALUE}};
+            for (long[] pair : resumeCases) {
+                boolean reference = pair[0] > 0 && pair[1] - pair[0] >= 300000;
+                assertEqual(reference, NativeRuntimeBridge.shouldReloadBrowser(
+                        true, pair[0], pair[1], 300000));
+                assertEqual(false, NativeRuntimeBridge.shouldReloadBrowser(
+                        false, pair[0], pair[1], 300000));
+            }
+            for (String scheme : new String[]{null, "HTTP", "https", "intent", "file", ""}) {
+                boolean reference = !("http".equalsIgnoreCase(scheme) ||
+                        "https".equalsIgnoreCase(scheme));
+                assertEqual(reference, NativeRuntimeBridge.openExternalScheme(scheme));
+            }
+            for (String host : new String[]{null, "m.66rpg.com", "WWW.66RPG.COM",
+                    "fake.66rpg.com", ""}) {
+                boolean reference = "m.66rpg.com".equalsIgnoreCase(host) ||
+                        "www.66rpg.com".equalsIgnoreCase(host);
+                assertEqual(reference, NativeRuntimeBridge.targetSiteHost(host));
+            }
+            for (String alert : new String[]{null, "脚本加载完成~", "  脚本加载完成～\n",
+                    "\u3000脚本加载完成~", "脚本加载完成～～", "其它消息"}) {
+                boolean reference = alert != null &&
+                        "脚本加载完成~".equals(alert.trim().replace('～', '~'));
+                assertEqual(reference, NativeRuntimeBridge.suppressedReadyAlert(alert));
+            }
             String html = "<html><HEAD class='game'><script integrity='sha384-abc=='>"
                     + "window.location.replace('about:blank');"
                     + "location.href=\"about:blank\";</script></HEAD><body>测试</body></html>";
@@ -266,6 +292,6 @@ public final class NativeRuntimeInteropSmoke {
         Arrays.fill(shared, (byte) 0);
         Arrays.fill(derived[0], (byte) 0);
         Arrays.fill(derived[1], (byte) 0);
-        System.out.println("Host Java→JNI→C++ WebView policy, HTML rewrite, encrypted transfer, engine stream, HKDF and ZIP parity OK");
+        System.out.println("Host Java→JNI→C++ WebView lifecycle, navigation, HTML rewrite, encrypted transfer, engine stream, HKDF and ZIP parity OK");
     }
 }

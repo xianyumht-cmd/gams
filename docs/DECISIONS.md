@@ -90,6 +90,15 @@ The native app routes only through the C++ policy; the Java reference retains
 its original classifier for side-by-side regression tests. Passing host JNI
 and Android builds does not certify navigation in a live WebView.
 
+The eleventh increment adds the remaining side-effect-free WebView lifecycle
+checks to the C++ policy and intentionally **does not** port Android lifecycle
+callbacks, navigation Intents or script evaluation. Reproduce the Java
+five-minute background threshold without C++ signed-overflow undefined
+behavior, and use UTF-16 for the user-facing alert comparison so Java's trim
+and fullwidth-tilde rules stay byte-for-byte equivalent. Both native and Java
+paths remain available for parity validation; no network or authorization
+contract changes are allowed in this increment.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

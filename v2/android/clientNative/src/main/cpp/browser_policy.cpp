@@ -30,6 +30,45 @@ bool isEdgeOneDirectEngine(bool candidate, std::string_view runtimeVersion) {
     return candidate && runtimeVersion.substr(0, 5) == "1.4.1";
 }
 
+bool shouldReloadBrowser(bool browserVisible, std::int64_t backgroundAtMs,
+                         std::int64_t nowMs, std::int64_t reloadDelayMs) {
+    if (!browserVisible || backgroundAtMs <= 0) return false;
+    // Java long subtraction wraps modulo 2^64; compute its signed comparison
+    // without triggering undefined C++ signed overflow at extreme values.
+    constexpr std::uint64_t signBit = std::uint64_t{1} << 63;
+    const auto elapsed = static_cast<std::uint64_t>(nowMs) -
+                         static_cast<std::uint64_t>(backgroundAtMs);
+    const auto delay = static_cast<std::uint64_t>(reloadDelayMs);
+    if ((elapsed ^ delay) & signBit) return (elapsed & signBit) == 0;
+    return elapsed >= delay;
+}
+
+bool shouldOpenExternalScheme(std::string_view scheme) {
+    const std::string normalized = asciiLower(scheme);
+    return normalized != "http" && normalized != "https";
+}
+
+bool isTargetSiteHost(std::string_view host) {
+    const std::string normalized = asciiLower(host);
+    return normalized == "m.66rpg.com" || normalized == "www.66rpg.com";
+}
+
+bool isSuppressedReadyAlert(std::u16string_view message) {
+    // Matches Java String.trim(): only UTF-16 code units <= U+0020 disappear.
+    std::size_t first = 0;
+    std::size_t last = message.size();
+    while (first < last && message[first] <= u' ') ++first;
+    while (last > first && message[last - 1] <= u' ') --last;
+    constexpr std::u16string_view expected = u"脚本加载完成~";
+    if (last - first != expected.size()) return false;
+    for (std::size_t i = 0; i < expected.size(); ++i) {
+        const char16_t normalized = message[first + i] == u'～'
+            ? u'~' : message[first + i];
+        if (normalized != expected[i]) return false;
+    }
+    return true;
+}
+
 ResourceRoute routeWebResource(bool directEngine, std::string_view url,
                                std::string_view virtualGameUrl, bool mainFrame,
                                std::string_view method, std::string_view scheme,
@@ -41,7 +80,7 @@ ResourceRoute routeWebResource(bool directEngine, std::string_view url,
         if (official) return ResourceRoute::runtimeEngine;
         if (mainFrame && asciiLower(method) == "get" && asciiLower(scheme) == "https") {
             const std::string lowerHost = asciiLower(host);
-            if ((lowerHost == "m.66rpg.com" || lowerHost == "www.66rpg.com") &&
+            if (isTargetSiteHost(lowerHost) &&
                 contains(asciiLower(accept), "text/html")) {
                 return ResourceRoute::rewriteHtml;
             }

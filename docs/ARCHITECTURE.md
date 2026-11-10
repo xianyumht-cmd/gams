@@ -123,6 +123,17 @@ Android decodes the resulting UTF-8 for its WebView API and wipes the
 temporary Java byte array. Native tests cover route precedence and wrapper
 bytes; live WebView behavior still requires device acceptance.
 
+The eleventh native boundary extends `browser_policy.cpp` to pure lifecycle
+and navigation decisions: the existing five-minute background reload policy,
+external link handling for non-HTTP(S) URI schemes, document-start target
+hosts, and suppression of the historical engine-ready JavaScript alert.
+The JNI alert bridge reads UTF-16 code units so C++ reproduces Java's
+`String.trim()` and U+FF5E-to-ASCII-tilde replacement without different
+UTF-8 whitespace semantics. The timestamp comparison preserves Java long
+arithmetic even at overflow boundaries. Android still captures wall-clock
+time, parses `Uri`, launches external `Intent`s, injects scripts, and manages
+`Activity`/`WebView` lifetimes; the Java-only APK stays on the old code paths.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

@@ -52,6 +52,13 @@ The real Java→JNI fixture loads the historical public control script from the
 ZIP, compares full wrapper bytes and exercises direct-engine/legacy/HTML
 routing decisions. After CI, manually inspect engine requests, ignored
 subresources and the main-document rewrite, including both navigation modes.
+The eleventh increment additionally checks native background reinitialization
+timing (before/at the five-minute threshold, hidden browser, absent timestamp,
+clock jumps and signed-overflow boundary), URI scheme handoff, the two
+document-start target hosts, and Java-equivalent engine-ready alert text.
+The host JNI fixture compares the native choices with Java expressions;
+on-device return-from-background and Intent/WebView behaviors are independent
+acceptance gates and must not be inferred from a green APK build.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

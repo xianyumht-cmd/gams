@@ -1,6 +1,7 @@
 #include "../src/main/cpp/browser_policy.hpp"
 
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -20,6 +21,34 @@ void check(gg::ResourceRoute want, bool direct, std::string url,
 
 int main() {
     using gg::ResourceRoute;
+    if (!gg::shouldReloadBrowser(true, 1000, 301000, 300000) ||
+        gg::shouldReloadBrowser(true, 1000, 300999, 300000) ||
+        gg::shouldReloadBrowser(false, 1000, 301000, 300000) ||
+        gg::shouldReloadBrowser(true, 0, 301000, 300000) ||
+        gg::shouldReloadBrowser(true, 2000, 1000, 300000) ||
+        !gg::shouldReloadBrowser(true, std::numeric_limits<std::int64_t>::max(),
+            std::numeric_limits<std::int64_t>::min(), 1)) {
+        throw std::runtime_error("Android resume/reinitialize lifecycle policy drift");
+    }
+    if (gg::shouldOpenExternalScheme("HTTP") ||
+        gg::shouldOpenExternalScheme("https") ||
+        !gg::shouldOpenExternalScheme("intent") ||
+        !gg::shouldOpenExternalScheme("")) {
+        throw std::runtime_error("Android external-scheme navigation policy drift");
+    }
+    if (!gg::isTargetSiteHost("M.66RPG.COM") ||
+        !gg::isTargetSiteHost("www.66rpg.com") ||
+        gg::isTargetSiteHost("fake-m.66rpg.com") ||
+        gg::isTargetSiteHost("")) {
+        throw std::runtime_error("WebView document-start target host policy drift");
+    }
+    if (!gg::isSuppressedReadyAlert(u"脚本加载完成~") ||
+        !gg::isSuppressedReadyAlert(u" \t脚本加载完成～\r\n") ||
+        gg::isSuppressedReadyAlert(u"\u3000脚本加载完成~") ||
+        gg::isSuppressedReadyAlert(u"脚本加载完成～～") ||
+        gg::isSuppressedReadyAlert(u"脚本加载完成")) {
+        throw std::runtime_error("Suppressed WebView JS alert policy drift");
+    }
     if (!gg::isEdgeOneDirectEngine(true, "1.4.1-1.0.41") ||
         gg::isEdgeOneDirectEngine(true, "1.1.4-1.0.5") ||
         gg::isEdgeOneDirectEngine(false, "1.4.1-1.0.41")) {

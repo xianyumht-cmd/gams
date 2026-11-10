@@ -83,6 +83,11 @@
   through without legacy core blocking, while the old runtime must still
   return an empty official-engine response and block source-repository JS.
   Never move Android URI parsing or WebView response APIs into this pure policy.
+- Java's WebView alert suppression uses UTF-16 `trim()` (removing only code
+  units at most U+0020) followed by a fullwidth-tilde U+FF5E replacement.
+  A native UTF-8 whitespace trim can change which alerts are suppressed.
+  Java `long` elapsed-time subtraction also wraps; avoid undefined signed C++
+  overflow when moving background resume policy into the native layer.
 - On GitHub's 2026 Ubuntu runner, `android-actions/setup-android@v3` tries to
   install the removed Android SDK `tools` package and fails before Gradle runs.
   Use the runner's preinstalled SDK and Gradle's normal SDK package resolution.

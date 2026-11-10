@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <string>
 #include <vector>
 
 namespace gg {
@@ -17,6 +18,14 @@ enum class ResourceRoute : int {
 // Android supplies URI-parsed scheme/host and the request headers; native C++
 // owns only the deterministic routing decision, not the WebView response.
 bool isEdgeOneDirectEngine(bool candidate, std::string_view runtimeVersion);
+
+// The Android lifecycle and Intent handling stay in Java. These native
+// functions reproduce their existing pure decisions only.
+bool shouldReloadBrowser(bool browserVisible, std::int64_t backgroundAtMs,
+                         std::int64_t nowMs, std::int64_t reloadDelayMs);
+bool shouldOpenExternalScheme(std::string_view scheme);
+bool isTargetSiteHost(std::string_view host);
+bool isSuppressedReadyAlert(std::u16string_view message);
 
 ResourceRoute routeWebResource(bool directEngine, std::string_view url,
                                std::string_view virtualGameUrl, bool mainFrame,

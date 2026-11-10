@@ -464,7 +464,10 @@ public final class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
-                if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) return false;
+                boolean external = BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
+                        ? NativeRuntimeBridge.openExternalScheme(scheme)
+                        : !("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme));
+                if (!external) return false;
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, uri));
                 } catch (Exception ignored) {
@@ -693,6 +696,9 @@ public final class MainActivity extends Activity {
         if (url == null) return false;
         try {
             String host = Uri.parse(url).getHost();
+            if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
+                return NativeRuntimeBridge.targetSiteHost(host);
+            }
             return "m.66rpg.com".equalsIgnoreCase(host)
                     || "www.66rpg.com".equalsIgnoreCase(host);
         } catch (Exception error) {
@@ -712,6 +718,9 @@ public final class MainActivity extends Activity {
 
     private boolean isSuppressedEngineReadyAlert(String message) {
         if (message == null) return false;
+        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
+            return NativeRuntimeBridge.suppressedReadyAlert(message);
+        }
         String normalized = message.trim().replace('～', '~');
         return "脚本加载完成~".equals(normalized);
     }
@@ -873,10 +882,16 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (browserVisible && backgroundAtMs > 0
-                && System.currentTimeMillis() - backgroundAtMs >= BACKGROUND_RELOAD_MS) {
-            backgroundAtMs = 0L;
-            initializeV2(null);
+        if (browserVisible && backgroundAtMs > 0) {
+            long nowMs = System.currentTimeMillis();
+            boolean reload = BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
+                    ? NativeRuntimeBridge.shouldReloadBrowser(true, backgroundAtMs,
+                            nowMs, BACKGROUND_RELOAD_MS)
+                    : nowMs - backgroundAtMs >= BACKGROUND_RELOAD_MS;
+            if (reload) {
+                backgroundAtMs = 0L;
+                initializeV2(null);
+            }
         }
     }
 

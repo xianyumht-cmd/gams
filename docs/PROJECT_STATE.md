@@ -2,6 +2,18 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Eleventh increment awaiting CI:** The native Android candidate now
+  performs additional pure WebView/lifecycle decisions in C++: five-minute
+  background return reinitialization, HTTP(S)-versus-system external URL
+  routing, the two recognized document-start hosts, and the exact
+  `脚本加载完成~` alert suppression rule (including U+FF5E replacement and
+  Java-style UTF-16 trimming). C++ reproduces Java `long` subtraction's
+  wraparound comparison for the background timer. Java still executes Android
+  lifecycle, Intent, WebView and UI operations; the Java-only reference keeps
+  its original decisions. Local C++ sanitizer and all ten EdgeOne Node tests
+  passed. Actual Java→JNI/Android build checks are pending GitHub Actions;
+  device behavior is still unverified by the owner's request.
+
 - **Tenth increment verified by CI:** The separate C++ Android candidate now
   decides WebView resource routes (native `game.js`, disabled legacy official
   engine, forbidden GitHub core, or `1.4.1` main-frame HTML rewrite), including

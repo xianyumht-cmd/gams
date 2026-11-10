@@ -20,6 +20,15 @@ final class NativeRuntimeBridge {
 
     static native boolean directEngine(boolean candidate, String version);
 
+    static native boolean shouldReloadBrowser(boolean browserVisible, long backgroundAtMs,
+                                              long nowMs, long reloadDelayMs);
+
+    static native boolean openExternalScheme(String scheme);
+
+    static native boolean targetSiteHost(String uriParsedHost);
+
+    static native boolean suppressedReadyAlert(String message);
+
     /** 0 pass; 1 native runtime; 2 empty official engine; 3 blocked; 4 rewrite HTML. */
     static native int resourceRoute(boolean directEngine, String url, String virtualGameUrl,
                                     boolean mainFrame, String method, String scheme,

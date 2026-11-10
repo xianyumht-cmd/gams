@@ -151,6 +151,54 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_directEngine(JNIEnv* env, jclass,
     });
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_shouldReloadBrowser(JNIEnv* env, jclass,
+        jboolean visible, jlong backgroundAtMs, jlong nowMs, jlong reloadDelayMs) {
+    return translate(env, [&]() -> jboolean {
+        return gg::shouldReloadBrowser(visible == JNI_TRUE, backgroundAtMs,
+                nowMs, reloadDelayMs) ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_openExternalScheme(JNIEnv* env, jclass,
+        jstring scheme) {
+    return translate(env, [&]() -> jboolean {
+        return gg::shouldOpenExternalScheme(optionalText(env, scheme)) ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_targetSiteHost(JNIEnv* env, jclass,
+        jstring host) {
+    return translate(env, [&]() -> jboolean {
+        return gg::isTargetSiteHost(optionalText(env, host)) ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_suppressedReadyAlert(JNIEnv* env, jclass,
+        jstring message) {
+    return translate(env, [&]() -> jboolean {
+        if (!message) return JNI_FALSE;
+        const jsize length = env->GetStringLength(message);
+        const jchar* chars = env->GetStringChars(message, nullptr);
+        if (!chars) return JNI_FALSE;
+        std::u16string alert;
+        try {
+            alert.reserve(static_cast<std::size_t>(length));
+            for (jsize i = 0; i < length; ++i) {
+                alert.push_back(static_cast<char16_t>(chars[i]));
+            }
+        } catch (...) {
+            env->ReleaseStringChars(message, chars);
+            throw;
+        }
+        env->ReleaseStringChars(message, chars);
+        return gg::isSuppressedReadyAlert(alert) ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_resourceRoute(JNIEnv* env, jclass,
         jboolean directEngine, jstring url, jstring virtualGameUrl,
