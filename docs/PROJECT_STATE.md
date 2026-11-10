@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Eighth increment implemented, CI pending:** C++ now classifies the
+- **Eighth increment verified by CI:** C++ now classifies the
   post-authorization startup presentation (`activation form`, `WebView`, or
   `mandatory update`) and computes actual-byte initialization progress from
   0 to 90% using overflow-safe arithmetic. The Java Android UI remains the
@@ -12,8 +12,14 @@
   it now shows the same mandatory update dialog as saved-card startup. Any
   unexpected payload on a non-browser result is wiped. The Java-only app uses
   equivalent local decisions and its original `RuntimeZipReader.displayPercent`.
-  Host C++ sanitizer tests and ten Node tests pass; actual JNI/Android CI and
-  device parity still require confirmation.
+  Host C++ sanitizer tests and ten Node tests passed. GitHub Actions
+  [`42920817856`](https://github.com/xianyumht-cmd/gams/actions/runs/42920817856)
+  passed the actual Java→JNI startup and progress parity fixture, both
+  Android builds, lint, APK signing, three ABIs and the no-private-JS check.
+  The 14-day artifact `GG-EdgeOne-CPP-internal-8` (ID `13812330939`)
+  contains APK SHA-256
+  `6e27dec02f5fee072ed4b5e2a9c27d978db0f732d7e8dae814e5e36e2efee9d6`.
+  On-device startup/update behavior remains unverified at the owner's request.
 
 - **Seventh increment verified by CI:** native candidate runtime-v2
   ciphertext now streams through a dedicated C++ exact-length transfer buffer
