@@ -4,7 +4,7 @@
 
 `v2/android/client` 的 `localTest` 构建类型使用独立包名与测试签名。它从 APK assets 读取仓库历史发布的 `noname.js` 和对应 `game.js`（测试配对：1.1.4+1.0.5、1.1.3+1.0.5、1.1.2+1.0.4），不启动 GG License API。构建时通过 `-PggLocalNonameVersion` 给三个包设置各自包名、显示名及版本，并依次放入对应的原始发布脚本。
 
-新增上传版 `1.4.1+1.0.41` 使用同一 `localTest` 构建类型、document-start 注入及包名隔离（`com.jinli.quickweb.localtest141`），但通过 `isDirectEngineLocalTest()` 使用独立加载分支：脚本保持原貌、不再重写远端 `stable.js`；真实的官方 `.../official/game.js` 请求由 `shouldInterceptRequest` 直接返回 `game-1.0.41.js`，HTML 内两个 SHA-384 与此文件原始字节一致；启动页和「首页」按钮均指向 `https://m.66rpg.com/`，用户自己选择游戏。旧三个 APK 的虚拟 `game.js` + 官方占位响应逻辑仍保留。不更改 `debug` / `release` 授权路径。
+新增上传版 `1.4.1+1.0.41` 使用同一 `localTest` 构建类型、document-start 注入及包名隔离（`com.jinli.quickweb.localtest141`），但通过 `isDirectEngineLocalTest()` 使用独立加载分支：脚本保持原貌、不再重写远端 `stable.js`；真实的官方 `.../official/game.js` 请求由 `shouldInterceptRequest` 直接返回 `game-1.0.41.js`；只有主文档、GET、`Accept: text/html` 和指定站点满足时才执行 HTML 兼容改写（移除 `about:blank` 跳转、清空 SRI、`<head>` 首位内联原始脚本），其它资源由 WebView 直接加载。首页仍是 `https://m.66rpg.com/`，用户自己选择游戏。旧三个 APK 的虚拟 `game.js` + 官方占位响应逻辑仍保留。不更改 `debug` / `release` 授权路径。
 
 1. 启动时注册 `WebViewCompat.addDocumentStartJavaScript`；设备不支持则停止并提示更新系统 WebView，避免脚本晚于页面 `Common.js` / `ssologin.js`。
 2. 注入的 `noname.js` **内存副本**将远端 `stable.js` URL 换成 `https://ggv2.local/runtime/game.js`，保留原始 assets SHA-256；`shouldInterceptRequest` 对此 URL 返回本地引擎字节。

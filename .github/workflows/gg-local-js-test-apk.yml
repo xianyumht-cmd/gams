@@ -97,7 +97,7 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "GG 本地 1.4.1 + 1.0.41 测试版 (${GITHUB_SHA:0:7})" \
-              --notes '独立安装包 com.jinli.quickweb.localtest141，原生 WebView document-start 注入用户上传的 noname 1.4.1，并以原始官方 game.js URL 返回用户上传的 game 1.0.41 引擎。HTML SRI 使用已验证引擎字节对应的 SHA-384。启动页和首页按钮均为 https://m.66rpg.com/，由使用者选择游戏，不自动进入任何指定游戏。无需 GG 在线授权，但游戏页面自身仍需联网。之前的三份历史测试版可从上一版预发布下载，正式版不受影响。' \
+              --notes '独立安装包 com.jinli.quickweb.localtest141，启动页 https://m.66rpg.com/。原生 WebView document-start 注入 noname 1.4.1；另外对同源主文档 HTML 去除 about:blank 跳转、清空 sha384 integrity 并在 head 首位插入原始用户脚本；官方 game.js 原 URL 返回本地 game 1.0.41 引擎。只拦截官方引擎及主文档 Accept:text/html，其它资源交还 WebView。无需 GG 在线授权，游戏网页仍需联网。本版本仅供测试，正式版不受影响。' \
               --prerelease \
               --latest=false
           fi

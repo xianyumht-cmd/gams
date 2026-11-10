@@ -73,7 +73,12 @@ def main() -> None:
     if noname_version == "1.4.1":
         assert remote not in source, "New userscript must leave official game.js URL intact"
         assert '"gg-fab"' in source and '"gg-panel"' in source
-        assert "return isDirectEngineLocalTest() ? memoryGameResponse() : emptyOfficialEngineResponse();" in activity
+        assert "if (isOfficialEngineRequest(url)) return memoryGameResponse();" in activity
+        assert "if (isDirectLocalHtmlDocument(request)) return localGameHtmlResponse(request);" in activity
+        assert "LocalHtmlRewriter.rewriteGuardFree(html, runtimePayload.nonameSource())" in activity
+        assert "request.isForMainFrame()" in activity
+        assert 'contains("text/html")' in activity
+        assert "localOfficialSri = null;" in activity
         assert '"https://m.66rpg.com/"' in activity
         assert 'else webView.loadUrl(startUrl())' in activity
         assert 'home.setOnClickListener(v -> webView.loadUrl(startUrl()))' in activity
@@ -85,9 +90,7 @@ def main() -> None:
                     "game-1.0.41.js.gz.part*")))),
         }
         assert len(list((CLIENT / "localtest-payload").glob("game-1.0.41.js.gz.part*"))) == 9
-        expected_sri = "sha384-" + base64.b64encode(sha384(sources["game.js"]).digest()).decode("ascii")
-        assert expected_sri == "sha384-KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ"
-        assert expected_sri in activity, "APK SRI must match local game bytes, not a shim"
+        assert 'DIRECT_TEST_GAME_SRI' not in activity, "New flavor must not enforce the old SRI guard"
     else:
         assert source.count(remote) >= 2
         injected = source.replace(remote, "https://ggv2.local/runtime/game.js")

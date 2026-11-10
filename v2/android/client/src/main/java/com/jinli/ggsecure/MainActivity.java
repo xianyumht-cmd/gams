@@ -63,9 +63,6 @@ public final class MainActivity extends Activity {
     private static final String START_URL = RuntimeNames.startUrl();
     private static final String DIRECT_TEST_START_URL =
             "https://m.66rpg.com/";
-    // Verified at build time against the exact 15,059,308-byte game-1.0.41.js asset.
-    private static final String DIRECT_TEST_GAME_SRI =
-            "sha384-KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ";
     private static final String REMOTE_ENGINE_URL =
             "https://gams-script-edge.2320006072.workers.dev/engine/stable.js";
     private static final byte[] OFFICIAL_ENGINE_SHIM =
@@ -85,6 +82,7 @@ public final class MainActivity extends Activity {
     private RuntimePayload runtimePayload;
     private String wrappedControlScript;
     private String localOfficialSri;
+    private volatile String localUserAgent;
     private ScriptHandler scriptHandler;
     private boolean nativeDocumentStartEnabled;
     private boolean browserVisible;
@@ -288,8 +286,8 @@ public final class MainActivity extends Activity {
         if (isLocalTest()) {
             if (isDirectEngineLocalTest()) {
                 // 1.4.1 intentionally does not rewrite the official game.js URL.
-                // Intercept that same official URL and use its asset's actual SRI.
-                localOfficialSri = DIRECT_TEST_GAME_SRI;
+                // The local HTML transform removes the page guard; no SRI comparison.
+                localOfficialSri = null;
                 getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             } else {
                 // Historical 1.1.x scripts request stable.js; provide local game.js.
@@ -388,6 +386,7 @@ public final class MainActivity extends Activity {
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
         cookies.setAcceptThirdPartyCookies(webView, true);
+        localUserAgent = settings.getUserAgentString();
 
         installDocumentStartScript();
         if (isLocalTest() && !nativeDocumentStartEnabled) {
@@ -417,12 +416,16 @@ public final class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(
                     WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                if (isDirectEngineLocalTest()) {
+                    if (isOfficialEngineRequest(url)) return memoryGameResponse();
+                    if (isDirectLocalHtmlDocument(request)) return localGameHtmlResponse(request);
+                    // Subresources, subframes and other URLs belong to WebView itself.
+                    return null;
+                }
                 if (isLocalTest() && isLocalGameHtml(request)) {
                     return localGameHtmlResponse(request);
                 }
-                if (isOfficialEngineRequest(url)) {
-                    return isDirectEngineLocalTest() ? memoryGameResponse() : emptyOfficialEngineResponse();
-                }
+                if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
                 if (isEngineRequest(url)) return memoryGameResponse();
                 if (isForbiddenCoreRequest(url)) {
                     return new WebResourceResponse(
@@ -587,6 +590,23 @@ public final class MainActivity extends Activity {
         return path != null && (path.matches("/h5/[0-9]+/?") || path.matches("/game/[0-9]+/?"));
     }
 
+    private boolean isDirectLocalHtmlDocument(WebResourceRequest request) {
+        if (!request.isForMainFrame() || !"GET".equalsIgnoreCase(request.getMethod())) return false;
+        Uri uri = request.getUrl();
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !isTargetPage(uri.toString())) return false;
+        String accept = requestHeader(request, "Accept");
+        return accept != null && accept.toLowerCase(Locale.ROOT).contains("text/html");
+    }
+
+    private static String requestHeader(WebResourceRequest request, String name) {
+        Map<String, String> headers = request.getRequestHeaders();
+        if (headers == null) return null;
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            if (name.equalsIgnoreCase(entry.getKey())) return entry.getValue();
+        }
+        return null;
+    }
+
     private WebResourceResponse localGameHtmlResponse(WebResourceRequest request) {
         HttpURLConnection connection = null;
         try {
@@ -597,8 +617,11 @@ public final class MainActivity extends Activity {
             connection.setInstanceFollowRedirects(false);
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept-Encoding", "identity");
-            for (String name : new String[]{"User-Agent", "Accept", "Accept-Language", "Referer"}) {
-                String value = request.getRequestHeaders().get(name);
+            if (localUserAgent != null && !localUserAgent.isEmpty()) {
+                connection.setRequestProperty("User-Agent", localUserAgent);
+            }
+            for (String name : new String[]{"Accept", "Accept-Language", "Referer"}) {
+                String value = requestHeader(request, name);
                 if (value != null && !value.isEmpty()) connection.setRequestProperty(name, value);
             }
             String cookie = CookieManager.getInstance().getCookie(address);
@@ -624,9 +647,11 @@ public final class MainActivity extends Activity {
                     buffer.write(chunk, 0, count);
                 }
             }
-            String rewritten = LocalHtmlRewriter.rewrite(
-                    new String(buffer.toByteArray(), StandardCharsets.UTF_8), localOfficialSri);
-            if (rewritten == null) throw new IOException("游戏页的 SRI 检查结构已变化");
+            String html = new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+            String rewritten = isDirectEngineLocalTest()
+                    ? LocalHtmlRewriter.rewriteGuardFree(html, runtimePayload.nonameSource())
+                    : LocalHtmlRewriter.rewrite(html, localOfficialSri);
+            if (rewritten == null) throw new IOException("游戏页的 HTML 结构已变化");
             Map<String, String> headers = new java.util.HashMap<>();
             headers.put("Cache-Control", "no-store");
             String csp = connection.getHeaderField("Content-Security-Policy");

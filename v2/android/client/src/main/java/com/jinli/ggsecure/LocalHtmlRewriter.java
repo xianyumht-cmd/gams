@@ -4,13 +4,41 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Replaces both copies of the official engine SRI in the test page, before HTML parsing. */
+/** Small HTML compatibility transforms used only by the isolated Android test flavor. */
 final class LocalHtmlRewriter {
+    private static final Pattern HEAD_TAG = Pattern.compile("<head\\b[^>]*>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SCRIPT_END = Pattern.compile("</script", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SHA384_ATTRIBUTE = Pattern.compile(
+            "\\bintegrity\\s*=\\s*(['\"])sha384-[A-Za-z0-9+/=]*\\1", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BLANK_REPLACE = Pattern.compile(
+            "(?:window\\s*\\.\\s*)?location\\s*\\.\\s*(?:replace|assign)\\s*\\(\\s*(['\"])about:blank\\1\\s*\\)",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern BLANK_HREF = Pattern.compile(
+            "(?:window\\s*\\.\\s*)?location\\s*\\.\\s*href\\s*=\\s*(['\"])about:blank\\1",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern SCRIPT_TAG = Pattern.compile("<script\\b[^>]*>", Pattern.CASE_INSENSITIVE);
     private static final Pattern INTEGRITY = Pattern.compile(
             "\\bintegrity\\s*=\\s*['\"](sha384-[A-Za-z0-9+/=]+)['\"]", Pattern.CASE_INSENSITIVE);
 
     private LocalHtmlRewriter() { }
+
+    /** For the 1.4.1 local test: do not require or rewrite any SRI digest. */
+    static String rewriteGuardFree(String html, String userscript) {
+        if (html == null || userscript == null || userscript.isEmpty()) {
+            throw new IllegalArgumentException("HTML 或用户脚本不正确");
+        }
+        String rewritten = BLANK_REPLACE.matcher(html).replaceAll("void 0");
+        rewritten = BLANK_HREF.matcher(rewritten).replaceAll("void 0");
+        rewritten = SHA384_ATTRIBUTE.matcher(rewritten).replaceAll("integrity=\"\"");
+        Matcher head = HEAD_TAG.matcher(rewritten);
+        if (!head.find()) return null;
+
+        // Prevent a literal closing script tag inside the asset from ending this injection.
+        String inline = SCRIPT_END.matcher(userscript)
+                .replaceAll(Matcher.quoteReplacement("<\\/script"));
+        return rewritten.substring(0, head.end()) + "<script>" + inline + "</script>"
+                + rewritten.substring(head.end());
+    }
 
     static String rewrite(String html, String replacementSri) {
         if (html == null || replacementSri == null || !replacementSri.startsWith("sha384-")) {
