@@ -29,7 +29,12 @@
   Functions timeout while delivering a 4.98 MB ZIP. The candidate now proposes
   `cloudFunctions.nodejs.maxDuration=120` via project-root `edgeone.json`,
   increases only the Android runtime read timeout to 135 seconds, and logs
-  unexpected candidate startup exceptions. A new EdgeOne deployment and APK
-  rebuild must pass before claiming the timeout is fixed. Cloud activation,
+  unexpected candidate startup exceptions. GitHub Actions internal run
+  [`42875890765`](https://github.com/xianyumht-cmd/gams/actions/runs/42875890765)
+  built `GG-EdgeOne-internal-5` successfully, validating the duration config,
+  Android build, APK identity/signature and absence of bundled JS. Its downloaded
+  artifact also passed ZIP and SHA256 checks. The Makers deployment of the
+  120-second config and on-device complete transfer still require verification;
+  do not yet claim the startup timeout is fixed. Cloud activation,
   runtime injection and Android device acceptance remain **unverified**.
 - No formal release or production authorization protocol has changed.
