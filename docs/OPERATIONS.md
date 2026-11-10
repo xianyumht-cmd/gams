@@ -62,16 +62,17 @@ Review old ZIP retention separately; no automatic deletion is performed.
 
 ## 3. Build the APK in GitHub Actions
 
-Set the **repository variable** `GG_EDGEONE_BASE_URL` to the deployed HTTPS
-origin, or enter it in the workflow_dispatch `edgeone_base_url` input. Run
+The test-branch workflow defaults to the owner's custom HTTPS domain
+`https://gg-api.xn--8pv109c.top`. To change that origin, set the **repository
+variable** `GG_EDGEONE_BASE_URL` or enter it in the workflow_dispatch
+`edgeone_base_url` input (both override the default). Run
 `GG EdgeOne Internal APK` on branch
 `feat/gg-edgeone-license-remote-js-20261111`. A push to its paths also triggers
 the workflow. The installed package is `com.jinli.quickweb.edgeonetest`,
 R8-minified and signed using the disposable Android debug keystore.
 
-If the URL is missing, Actions intentionally produces an **unconfigured build**
-that shows an error at activation; it is suitable only for static packaging
-checks and must be rebuilt after the service is online. The workflow uploads
+If a configured URL is unavailable at runtime, activation reports a connection
+error; verify the public domain and redeploy/rebuild if necessary. The workflow uploads
 only a 14-day Actions Artifact, **never a Release** and never a production JKS.
 
 ## 4. Acceptance checks
