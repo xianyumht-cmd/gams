@@ -49,7 +49,7 @@ final class V2LicenseManager {
     }
 
     boolean hasSavedKey() {
-        return normalizeKey(secureStore.loadState().optString("licenseKey", "")).length() == 32;
+        return normalizedClientKey(secureStore.loadState().optString("licenseKey", "")).length() == 32;
     }
 
     void initializeSavedAsync(RuntimeCallback callback) {
@@ -60,10 +60,10 @@ final class V2LicenseManager {
         executor.execute(() -> {
             try {
                 JSONObject state = secureStore.loadState();
-                String key = normalizeKey(state.optString("licenseKey", ""));
+                String key = normalizedClientKey(state.optString("licenseKey", ""));
                 String token = state.optString("token", "");
                 int savedPlan = BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
-                        ? NativeRuntimeBridge.savedAuthPlan(key, token)
+                        ? NativeRuntimeBridge.authorizationStart(key, token, false)
                         : key.length() != 32 ? 0 : token.isEmpty() ? 1 : 2;
                 if (savedPlan == 0) {
                     deliver(callback, RuntimeResult.invalid("请输入激活码"));
@@ -93,9 +93,7 @@ final class V2LicenseManager {
                         }
                     }
                 }
-                saveAuth(key, auth);
-                RuntimePayload payload = loadRuntime(auth.token, progress);
-                deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
+                deliver(callback, finishAuthorizedStartup(key, auth, progress));
             } catch (java.io.IOException error) {
                 deliver(callback, RuntimeResult.invalid("需要联网启动，请检查网络后重试"));
             } catch (ApiException error) {
@@ -116,18 +114,16 @@ final class V2LicenseManager {
     }
 
     void activateAsync(String rawKey, RuntimeCallback callback, TransferProgressCallback progress) {
-        String key = normalizeKey(rawKey);
+        String key = normalizedClientKey(rawKey);
         if ((BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
-                ? NativeRuntimeBridge.savedAuthPlan(key, "") == 0 : key.length() != 32)) {
+                ? NativeRuntimeBridge.authorizationStart(key, "", true) == 0 : key.length() != 32)) {
             deliver(callback, RuntimeResult.invalid("激活码格式错误"));
             return;
         }
         executor.execute(() -> {
             try {
                 AuthResult auth = activate(key);
-                saveAuth(key, auth);
-                RuntimePayload payload = loadRuntime(auth.token, progress);
-                deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
+                deliver(callback, finishAuthorizedStartup(key, auth, progress));
             } catch (java.io.IOException error) {
                 deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"));
             } catch (ApiException error) {
@@ -210,6 +206,20 @@ final class V2LicenseManager {
                 "check", DeviceIdentity.sha256Hex(token), deviceId);
         body.put("token", token);
         return parseAuth(postLicense("/v1/check", body));
+    }
+
+    /** Keep state persistence and Android callbacks identical for both startup paths. */
+    private RuntimeResult finishAuthorizedStartup(String key, AuthResult auth,
+                                                   TransferProgressCallback progress) throws Exception {
+        saveAuth(key, auth);
+        // C++ owns the candidate's post-authorization update gate. Do not fetch
+        // or decrypt private scripts when the server requires an app upgrade.
+        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE &&
+                !NativeRuntimeBridge.shouldDownloadRuntime(auth.forceUpdate,
+                        auth.latestAppVersion, PROTOCOL_APP_VERSION)) {
+            return RuntimeResult.valid(null, auth, "启动成功");
+        }
+        return RuntimeResult.valid(loadRuntime(auth.token, progress), auth, "启动成功");
     }
 
     private RuntimePayload loadRuntime(String token, TransferProgressCallback progress) throws Exception {
@@ -373,7 +383,7 @@ final class V2LicenseManager {
 
     private void saveAuth(String key, AuthResult auth) throws Exception {
         JSONObject state = secureStore.loadState();
-        state.put("licenseKey", normalizeKey(key));
+        state.put("licenseKey", normalizedClientKey(key));
         state.put("token", auth.token);
         state.put("licenseExpiresAt", auth.licenseExpiresAt);
         state.put("permanent", auth.permanent);
@@ -467,6 +477,11 @@ final class V2LicenseManager {
 
     private void deliver(SimpleCallback callback, SimpleResult result) {
         if (callback != null) mainHandler.post(() -> callback.onResult(result));
+    }
+
+    private static String normalizedClientKey(String input) {
+        return BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
+                ? NativeRuntimeBridge.normalizeLicenseKey(input) : normalizeKey(input);
     }
 
     static String normalizeKey(String input) {

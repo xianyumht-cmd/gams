@@ -18,6 +18,10 @@ The fourth increment additionally rejects 2xx JSON responses with `ok:false`,
 malformed session tokens, mismatched runtime manifest hashes and invalid
 encryption envelope fields. The host C++ sanitizer suite and real JVM→JNI
 smoke tests exercise both valid and invalid forms before the APK build.
+The fifth increment tests Java-equivalent license normalization, manual and
+saved-session startup branches, recoverable check failures, and forced-update
+download blocking. Re-run real JNI tests plus both Android APK builds to
+verify these startup decisions did not alter the reference client.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

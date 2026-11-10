@@ -39,6 +39,14 @@ the C++ layer rejects malformed or contradictory metadata *before* fetching
 the private ciphertext. Tests cover malformed responses and headers on the
 host JNI boundary while preserving the existing Java baseline unchanged.
 
+The fifth increment keeps the Android lifecycle orchestration in Java and
+concentrates only the authorization **decisions** in C++: key normalization,
+manual-versus-saved login start, recoverable-session classification, and
+mandatory-update gating. Existing SecureStore, the single-thread executor,
+progress callbacks and WebView are left in place to avoid race and UI
+regressions. Gating before the runtime download means a forced update cannot
+needlessly transfer private JS into a process that will reject startup.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

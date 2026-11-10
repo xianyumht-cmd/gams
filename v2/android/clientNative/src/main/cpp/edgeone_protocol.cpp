@@ -92,15 +92,43 @@ std::string proofCanonical(const std::string& action, std::int64_t epochSeconds,
            sha256Hex(bytes, material.size());
 }
 
-int savedAuthPlan(const std::string& normalizedLicense, const std::string& savedToken) {
-    if (!validAscii(normalizedLicense, kHexUpper, 32, 32)) return 0;
+std::string normalizeLicenseKey(const std::string& rawLicense) {
+    // Java's /[^0-9A-Fa-f]/g filters ASCII only, then uppercases with Locale.ROOT.
+    // Reject implausibly long corrupted preferences instead of buffering them.
+    if (rawLicense.size() > 8192) return {};
+    std::string result;
+    result.reserve(std::min<std::size_t>(rawLicense.size(), 33));
+    for (const char ch : rawLicense) {
+        if (ch >= '0' && ch <= '9') result.push_back(ch);
+        else if (ch >= 'A' && ch <= 'F') result.push_back(ch);
+        else if (ch >= 'a' && ch <= 'f') result.push_back(static_cast<char>(ch - 'a' + 'A'));
+        if (result.size() > 32) return result; // An oversized license is invalid.
+    }
+    return result;
+}
+
+int authorizationStart(const std::string& rawLicense, const std::string& savedToken,
+                       bool manualActivation) {
+    if (!validAscii(normalizeLicenseKey(rawLicense), kHexUpper, 32, 32)) return 0;
+    if (manualActivation) return 1;
     // A damaged saved session previously produced `bad_session` then activated
     // again. Recover locally instead of rejecting during native JSON shaping.
     return validAscii(savedToken, kToken, 10, 1600) ? 2 : 1;
 }
 
+int savedAuthPlan(const std::string& normalizedLicense, const std::string& savedToken) {
+    return authorizationStart(normalizedLicense, savedToken, false);
+}
+
 bool shouldReactivate(const std::string& errorCode) {
     return errorCode == "bad_session" || errorCode == "device_unbound";
+}
+
+bool shouldDownloadRuntime(bool forceUpdate, int latestVersion, int clientVersion) {
+    if (latestVersion <= 0 || clientVersion <= 0) {
+        throw std::runtime_error("Invalid app version in authorization policy");
+    }
+    return !forceUpdate || latestVersion <= clientVersion;
 }
 
 std::string signedRequestJson(const std::string& action,

@@ -139,6 +139,34 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_savedAuthPlan(JNIEnv* env, jclass,
     });
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_normalizeLicenseKey(JNIEnv* env, jclass,
+        jstring rawLicense) {
+    return translate(env, [&]() -> jstring {
+        const std::string normalized = gg::normalizeLicenseKey(rawLicense
+            ? text(env, rawLicense) : "");
+        return env->NewStringUTF(normalized.c_str());
+    });
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_authorizationStart(JNIEnv* env, jclass,
+        jstring key, jstring token, jboolean manualActivation) {
+    return translate(env, [&]() -> jint {
+        return gg::authorizationStart(key ? text(env, key) : "",
+            token ? text(env, token) : "", manualActivation == JNI_TRUE);
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_shouldDownloadRuntime(JNIEnv* env, jclass,
+        jboolean forceUpdate, jint latestAppVersion, jint currentAppVersion) {
+    return translate(env, [&]() -> jboolean {
+        return gg::shouldDownloadRuntime(forceUpdate == JNI_TRUE,
+                    latestAppVersion, currentAppVersion) ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_shouldReactivate(JNIEnv* env, jclass,
         jstring errorCode) {

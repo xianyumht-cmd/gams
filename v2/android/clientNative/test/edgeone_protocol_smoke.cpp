@@ -30,6 +30,25 @@ int main() {
     if (gg::proofCanonical("activate", 1794344400, device, "ABCDEF0123456789") != expectedProof)
         throw std::runtime_error("C++ proof mismatches the Node reference");
     const std::string license = "0123456789ABCDEF0123456789ABCDEF";
+    if (gg::normalizeLicenseKey("01-23 45:67:89 ab cd ef 0123456789abcdef") != license ||
+        gg::normalizeLicenseKey("ＧＧ12☃ab") != "12AB" ||
+        gg::normalizeLicenseKey(std::string(8193, 'A')) != "") {
+        throw std::runtime_error("Native card normalizer diverges from Java ASCII filter");
+    }
+    if (gg::authorizationStart(license, "", false) != 1 ||
+        gg::authorizationStart(license, "savedtoken.value", false) != 2 ||
+        gg::authorizationStart(license, "savedtoken.value", true) != 1 ||
+        gg::authorizationStart("invalid", "savedtoken.value", true) != 0 ||
+        gg::authorizationStart(license, "bad", false) != 1) {
+        throw std::runtime_error("Native initial activation/check state diverges from Java");
+    }
+    if (!gg::shouldDownloadRuntime(false, 15, 12) ||
+        !gg::shouldDownloadRuntime(true, 12, 12) ||
+        !gg::shouldDownloadRuntime(true, 11, 12) ||
+        gg::shouldDownloadRuntime(true, 13, 12)) {
+        throw std::runtime_error("Native upgrade gate allowed a mandatory client update");
+    }
+    rejects([&] { gg::shouldDownloadRuntime(true, 12, 0); });
     const std::string pub(124, 'A');
     const std::string proof(88, 'B');
     if (gg::savedAuthPlan(license, "") != 1 ||
@@ -107,5 +126,5 @@ int main() {
                                                device, "token"); });
     rejects([&] { gg::deriveDeliveryMaterial(shared.data(), shared.size(),
                                                device, ""); });
-    std::cout << "C++ EdgeOne saved auth, inbound/outbound JSON, envelope and HKDF parity OK\n";
+    std::cout << "C++ EdgeOne startup/update policy, inbound/outbound JSON, envelope and HKDF parity OK\n";
 }

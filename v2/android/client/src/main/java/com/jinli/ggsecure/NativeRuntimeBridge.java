@@ -24,6 +24,15 @@ final class NativeRuntimeBridge {
 
     static native int savedAuthPlan(String normalizedLicense, String savedToken);
 
+    static native String normalizeLicenseKey(String rawLicense);
+
+    /** 0 = invalid card, 1 = activate, 2 = check saved session. */
+    static native int authorizationStart(String license, String token, boolean manualActivation);
+
+    /** False means the server requires an update before any JS is downloaded. */
+    static native boolean shouldDownloadRuntime(boolean forceUpdate,
+                                                int latestAppVersion, int currentAppVersion);
+
     static native boolean shouldReactivate(String errorCode);
 
     static native String signedRequestJson(String action, String deviceId,

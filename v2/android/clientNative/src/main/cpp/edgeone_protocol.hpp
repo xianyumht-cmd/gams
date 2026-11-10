@@ -17,6 +17,15 @@ std::string proofCanonical(const std::string& action, std::int64_t epochSeconds,
 int savedAuthPlan(const std::string& normalizedLicense, const std::string& savedToken);
 bool shouldReactivate(const std::string& errorCode);
 
+// Native startup policy: preserve the Java license-field normalization and
+// decide between invalid input (0), activation (1), and existing-session check
+// (2) without moving Android Keystore/network/async callbacks out of Java.
+std::string normalizeLicenseKey(const std::string& rawLicense);
+int authorizationStart(const std::string& rawLicense, const std::string& savedToken,
+                       bool manualActivation);
+// False means the server requires an app upgrade, so never request the JS ZIP.
+bool shouldDownloadRuntime(bool forceUpdate, int latestVersion, int clientVersion);
+
 // Full HTTP JSON body, using only already-validated ASCII protocol fields.
 // Actions: activate, check, unbind, runtime-v2. Wire paths stay in Java.
 std::string signedRequestJson(const std::string& action,

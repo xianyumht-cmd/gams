@@ -2,6 +2,19 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Fifth increment implemented, CI pending:** the native candidate now
+  normalizes typed and saved license keys with the same ASCII-hex filter as
+  the Java baseline, then makes the initial activation-versus-check decision
+  for manual and saved-card launches. Its existing C++ recovery policy still
+  reactivates only for `bad_session` or `device_unbound`. C++ now also gates
+  post-authorization runtime download when an update is mandatory: the
+  candidate saves the refreshed authorization but does not request/decrypt
+  private JS if the server requires a higher client version. Android Java
+  retains secure preferences, networking, the single-thread executor,
+  initialization progress and WebView. Host C++/Node tests pass; new JNI
+  acceptance cases and Android builds await Actions. Real-device parity is
+  still unverified at the owner's request.
+
 - **Fourth increment verified by CI:** C++ now owns successful
   authorization response classification, session-token shape validation, and
   encrypted-runtime delivery header/manifest bounds (delivery version, strict

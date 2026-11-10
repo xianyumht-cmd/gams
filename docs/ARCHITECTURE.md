@@ -48,6 +48,16 @@ archive's digest and each script. Java-only builds retain their previous
 response checks. A validated header is not itself proof of authenticity;
 the TLS transport and AES-GCM tag remain essential.
 
+The fifth native increment consolidates **license field normalization** and
+the first-launch / saved-session decision into C++, retaining Java's exact
+ASCII-hex normalization semantics and rejecting a corrupted saved key. Java
+continues to own execution order, cancellation and callbacks; a failed check
+is reactivated only for the native-approved session errors. After a server
+authorization, C++ evaluates `forceUpdate` against current app version
+*before* Java asks EdgeOne for the encrypted ZIP. This preserves the existing
+`updateRequired` result shape while preventing unnecessary private-runtime
+delivery to a candidate that must upgrade first.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

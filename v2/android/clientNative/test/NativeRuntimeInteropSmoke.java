@@ -26,6 +26,17 @@ public final class NativeRuntimeInteropSmoke {
                 NativeRuntimeBridge.proofCanonical("activate", 1794344400L, deviceId,
                         "ABCDEF0123456789"));
         String license = "0123456789ABCDEF0123456789ABCDEF";
+        assertEqual(license, NativeRuntimeBridge.normalizeLicenseKey(
+                "01-23 45:67:89 ab cd ef 0123456789abcdef"));
+        assertEqual("12AB", NativeRuntimeBridge.normalizeLicenseKey("ＧＧ12☃ab"));
+        if (NativeRuntimeBridge.authorizationStart(license, "", false) != 1 ||
+                NativeRuntimeBridge.authorizationStart(license, "savedtoken.value", false) != 2 ||
+                NativeRuntimeBridge.authorizationStart(license, "savedtoken.value", true) != 1 ||
+                NativeRuntimeBridge.authorizationStart("invalid", "savedtoken.value", true) != 0 ||
+                NativeRuntimeBridge.shouldDownloadRuntime(true, 13, 12) ||
+                !NativeRuntimeBridge.shouldDownloadRuntime(true, 12, 12)) {
+            throw new AssertionError("JNI startup/update transitions mismatch");
+        }
         if (NativeRuntimeBridge.savedAuthPlan(license, "") != 1 ||
                 NativeRuntimeBridge.savedAuthPlan(license, "savedtoken.value") != 2 ||
                 NativeRuntimeBridge.savedAuthPlan(license, "bad") != 1 ||
