@@ -15,11 +15,31 @@ This does not change the existing website or Cloudflare production API.
 - Set secret environment variable `GG_TOKEN_SECRET` to at least 32 cryptographically
   random characters, generated **locally** (for example with `openssl rand -hex 32`).
   Never commit or paste this value to a chat or public Actions log.
+- To enable the new card-management webpage, additionally set
+  `GG_ADMIN_PASSWORD` to a different, unique, at-least-20-character random
+  password via Makers > `gg-license-api` > Settings > Environment Variables.
+  The password must never be put in GitHub code, screenshots or chat; after
+  saving it, **redeploy the latest branch** so Cloud Functions receive it.
 - Deploy the project and check `https://<actual-edgeone-project-host>/api/health`.
   Use the assigned HTTPS host or your configured subdomain, not a guessed URL.
 - EdgeOne Blob namespace `gg-private` is created by the first SDK call; do not
   create a publicly served static folder for runtime ZIP files. The license
   API fails closed until a valid license record and manifest exist.
+
+### Card management in the browser (recommended)
+
+After the new `GG_ADMIN_PASSWORD` deployment has completed, open
+`https://gg-api.xn--8pv109c.top/api/admin` in your browser. Enter the admin
+password (not the EdgeOne API Token). The page lists existing hashed card
+records and provides buttons to **Generate (7/30/90/365 days or permanent)**,
+**Unbind device**, **Suspend**, **Restore**, and **Copy newly generated key**.
+If the page says the administrator is not configured, ensure both
+`GG_ADMIN_PASSWORD` and `GG_TOKEN_SECRET` are set and trigger a new Makers
+deployment. Existing cards are retained; unbind does not restart an already
+begun validity period. The original key cannot be recovered from its hash.
+The page intentionally does not accept JS files or Makers API Tokens: keep
+using the separate one-click local upload helper for private runtime updates.
+Do not publish or merge this candidate as the production license service.
 
 ## 2. Initialize private JS and license records
 

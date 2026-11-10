@@ -1,9 +1,14 @@
 import { getStore } from '@edgeone/pages-blob';
 import { handle, toHttpError } from '../../core.mjs';
+import { handleAdminRequest } from '../../admin-core.mjs';
 
 const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
 export async function onRequest({ request, env }) {
   const url = new URL(request.url);
+  if (url.pathname === '/api/admin' || url.pathname.startsWith('/api/admin/')) {
+    return handleAdminRequest(request, { env,
+      storeFactory: () => getStore({ name: 'gg-private', consistency: 'strong' }) });
+  }
   if (request.method === 'GET' && url.pathname === '/api/health') {
     return new Response(JSON.stringify({ ok: true, service: 'gg-edgeone-internal' }),
       { headers: { ...HEADERS, 'Content-Type': 'application/json' } });

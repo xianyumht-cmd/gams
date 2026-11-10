@@ -38,3 +38,10 @@
   do not yet claim the startup timeout is fixed. Cloud activation,
   runtime injection and Android device acceptance remain **unverified**.
 - No formal release or production authorization protocol has changed.
+- A browser administration panel is added to the same internal test branch at
+  `/api/admin`. It enables password login, listing cards, generation, device
+  unbinding, suspension and restoration via private Blob, with no browser-side
+  EdgeOne API Token. Local Node admin/security tests pass, but deployment,
+  login and live Blob operations await Makers configuration of the new
+  `GG_ADMIN_PASSWORD` environment variable and a fresh deployment. Do not
+  claim the dashboard is live before those checks are performed.

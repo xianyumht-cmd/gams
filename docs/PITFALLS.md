@@ -29,3 +29,8 @@
   errors. Provide a downloadable `.cmd`/`.ps1` helper with file pickers rather
   than asking them to paste a long, brace-heavy provisioning command. The
   helper must hide the API Token, avoid printing it and use local-only files.
+- A PowerShell `Read-Host 'prompt' -AsSecureString` prompt argument is **visible**
+  text; pasting an API Token between its quotes leaks the token into terminal
+  history/screenshots even if the subsequently typed input is hidden. Use the
+  native prompt label without embedding a secret, rotate accidentally exposed
+  Tokens, and do routine card operations in the password-protected browser UI.

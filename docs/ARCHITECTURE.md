@@ -40,6 +40,30 @@ Functions: `edgeone-license/cloud-functions/api/[[default]].js` exposes
 `POST /api/activate`, `/api/check`, `/api/unbind`, `/api/runtime` and
 `GET /api/health`. Shared, framework-independent validation is in `core.mjs`.
 
+## Private browser administrator (internal candidate)
+
+`GET /api/admin` serves a self-contained Chinese admin page from the same
+Makers Cloud Function. `admin-core.mjs` handles password login, session
+verification, CSRF/origin checks, card creation/listing, device unbinding and
+card suspension/restoration. `admin-page.mjs` is the UI. The server alone reads
+the private `gg-private` Blob namespace; the browser receives neither the
+EdgeOne API Token nor `GG_TOKEN_SECRET`.
+
+The administrator provides `GG_ADMIN_PASSWORD` (at least 20 characters) as a
+Makers server-side environment variable. Login compares its SHA-256 digest in
+constant time. An eight-hour, `Secure; HttpOnly; SameSite=Strict` cookie is
+HMAC-authenticated using a domain-separated key derived from `GG_TOKEN_SECRET`.
+Mutating admin requests require same-origin JSON, an authenticated cookie and
+a per-session CSRF header. The public login page uses a nonce-based CSP and
+does not grant public access to any card records. The admin panel supports
+up to 100 listed entries per request; this is suitable for the current private
+candidate, not a full production licensing/CRM system.
+
+Cards remain stored under `licenses/<sha256(plaintext-key)>.json`; the license
+key plaintext is shown once on issuance, and existing client records remain
+compatible. Unbinding clears only device identity and leaves activation-based
+expiry unchanged. Revocation is reversible with an administrator action.
+
 ## Limitations and trust boundaries
 
 - Blob strong reads give read-after-write freshness, **not atomic compare-and-set**.
