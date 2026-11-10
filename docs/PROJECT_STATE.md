@@ -51,3 +51,12 @@
   public custom domain and assigned deployment hostname passed local Node
   regression tests. Successful live login and card unbind still require a
   fresh Makers deployment and owner verification.
+- On 2026-11-11 the owner reported that the GG EdgeOne internal APK could
+  complete activation and launch normally on their test device. This
+  owner-reported end-to-end acceptance supersedes the earlier pending-startup
+  status above, but does not constitute a production release acceptance.
+  The next candidate now includes a common `正在初始化中…` progress bar for first
+  activation and saved-license restart, driven by actual ZIP transfer bytes
+  (indeterminate while waiting, maximum 90% before validation/WebView setup).
+  A standalone Java transfer smoke check has been added to CI. The resulting
+  APK still requires Actions build success and device confirmation.

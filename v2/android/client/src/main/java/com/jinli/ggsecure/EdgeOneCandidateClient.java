@@ -34,7 +34,7 @@ final class EdgeOneCandidateClient {
         requestJson("unbind", proofBody("unbind", token).put("token", token));
     }
 
-    RuntimePayload loadRuntime(String token) throws Exception {
+    RuntimePayload loadRuntime(String token, RuntimeZipReader.Listener listener) throws Exception {
         HttpURLConnection connection = connect("runtime", proofBody("runtime", token).put("token", token));
         byte[] zip = null;
         try {
@@ -48,9 +48,9 @@ final class EdgeOneCandidateClient {
             }
             JSONObject manifest = new JSONObject(new String(
                     Base64.decode(rawManifest, Base64.DEFAULT), StandardCharsets.UTF_8));
-            zip = readLimited(connection.getInputStream(), MAX_ZIP);
-            if (zip.length != manifest.getInt("size") ||
-                    !expectedHash.equals(manifest.getString("sha256")) ||
+            int expectedSize = manifest.getInt("size");
+            zip = RuntimeZipReader.read(connection.getInputStream(), MAX_ZIP, expectedSize, listener);
+            if (!expectedHash.equals(manifest.getString("sha256")) ||
                     !expectedHash.equals(DeviceIdentity.hex(MessageDigest.getInstance("SHA-256").digest(zip)))) {
                 throw new SecurityException("运行包完整性校验失败");
             }

@@ -7,6 +7,7 @@ import android.app.DownloadManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -65,6 +66,7 @@ public final class MainActivity extends Activity {
 
     private WebView webView;
     private ProgressBar progressBar;
+    private ProgressBar startupProgressBar;
     private TextView statusText;
     private ValueCallback<Uri[]> fileChooserCallback;
     private V2LicenseManager licenseManager;
@@ -92,7 +94,9 @@ public final class MainActivity extends Activity {
     private void initializeV2(@Nullable Bundle savedInstanceState) {
         browserVisible = false;
         releaseRuntime();
-        showLoading("正在启动…");
+        final ProgressBar initialization = BuildConfig.EDGEONE_CANDIDATE
+                ? showInitialization() : null;
+        if (initialization == null) showLoading("正在启动…");
         licenseManager.initializeSavedAsync(result -> {
             if (isFinishing() || isDestroyed()) {
                 if (result.payload != null) result.payload.wipe();
@@ -107,19 +111,31 @@ public final class MainActivity extends Activity {
             }
             showBrowser(savedInstanceState, result.payload);
             Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
-        });
+        }, (received, expected) -> updateInitializationProgress(initialization, received, expected));
     }
 
     private void showLoading(String message) {
+        showLoading(message, false);
+    }
+
+    private ProgressBar showInitialization() {
+        showLoading("正在初始化中…", true);
+        return startupProgressBar;
+    }
+
+    private void showLoading(String message, boolean initializing) {
         destroyWebView();
+        startupProgressBar = null;
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER);
         root.setPadding(dp(28), dp(48), dp(28), dp(48));
         root.setBackgroundColor(Color.rgb(7, 10, 35));
 
-        ProgressBar loading = new ProgressBar(this);
-        root.addView(loading, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        if (!initializing) {
+            ProgressBar loading = new ProgressBar(this);
+            root.addView(loading, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        }
 
         TextView title = new TextView(this);
         title.setText("GG");
@@ -133,15 +149,41 @@ public final class MainActivity extends Activity {
         TextView text = new TextView(this);
         text.setText(message);
         text.setTextSize(15);
-        text.setTextColor(Color.rgb(196, 181, 253));
+        text.setTextColor(initializing ? Color.rgb(173, 225, 241) : Color.rgb(196, 181, 253));
         text.setGravity(Gravity.CENTER);
         text.setPadding(0, dp(12), 0, 0);
         root.addView(text, matchWrap(0));
+
+        if (initializing) {
+            ProgressBar downloadBar = new ProgressBar(this, null,
+                    android.R.attr.progressBarStyleHorizontal);
+            downloadBar.setIndeterminate(true);
+            downloadBar.setMax(100);
+            ColorStateList cyan = ColorStateList.valueOf(Color.rgb(22, 190, 222));
+            downloadBar.setProgressTintList(cyan);
+            downloadBar.setIndeterminateTintList(cyan);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(250), dp(5));
+            params.topMargin = dp(24);
+            root.addView(downloadBar, params);
+            startupProgressBar = downloadBar;
+        }
         setContentView(root);
     }
 
+    private void updateInitializationProgress(ProgressBar current, int received, int expected) {
+        if (current == null || current != startupProgressBar || isFinishing() || isDestroyed()) return;
+        if (received <= 0 || expected <= 0) return;
+        current.setIndeterminate(false);
+        current.setProgress(RuntimeZipReader.displayPercent(received, expected));
+    }
+
     private void showLicenseScreen(String initialMessage) {
+        showLicenseScreen(initialMessage, "");
+    }
+
+    private void showLicenseScreen(String initialMessage, String rememberedKey) {
         browserVisible = false;
+        startupProgressBar = null;
         releaseRuntime();
         destroyWebView();
 
@@ -179,6 +221,10 @@ public final class MainActivity extends Activity {
         input.setTextSize(17);
         input.setTypeface(Typeface.MONOSPACE);
         input.setPadding(dp(14), dp(14), dp(14), dp(14));
+        if (rememberedKey != null && !rememberedKey.isEmpty()) {
+            input.setText(rememberedKey);
+            input.setSelection(input.length());
+        }
         root.addView(input, matchWrap(dp(14)));
 
         LinearLayout actions = new LinearLayout(this);
@@ -217,8 +263,12 @@ public final class MainActivity extends Activity {
             }
             activate.setEnabled(false);
             paste.setEnabled(false);
-            status.setTextColor(Color.rgb(55, 65, 81));
-            status.setText("正在验证，请稍候…");
+            final ProgressBar initialization = BuildConfig.EDGEONE_CANDIDATE
+                    ? showInitialization() : null;
+            if (initialization == null) {
+                status.setTextColor(Color.rgb(55, 65, 81));
+                status.setText("正在验证，请稍候…");
+            }
             licenseManager.activateAsync(key, result -> {
                 if (isFinishing() || isDestroyed()) {
                     if (result.payload != null) result.payload.wipe();
@@ -227,18 +277,23 @@ public final class MainActivity extends Activity {
                 activate.setEnabled(true);
                 paste.setEnabled(true);
                 if (!result.valid || result.payload == null) {
+                    if (initialization != null) {
+                        showLicenseScreen(result.message, key);
+                        return;
+                    }
                     status.setTextColor(Color.rgb(185, 28, 28));
                     status.setText(result.message);
                     return;
                 }
                 showBrowser(null, result.payload);
-            });
+            }, (received, expected) -> updateInitializationProgress(initialization, received, expected));
         });
 
         setContentView(scroll);
     }
 
     private void showBrowser(@Nullable Bundle savedInstanceState, RuntimePayload payload) {
+        startupProgressBar = null;
         releaseRuntime();
         runtimePayload = payload;
         wrappedControlScript = wrapControlScript(payload.nonameSource());
@@ -794,6 +849,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         browserVisible = false;
+        startupProgressBar = null;
         destroyWebView();
         releaseRuntime();
         if (licenseManager != null) {

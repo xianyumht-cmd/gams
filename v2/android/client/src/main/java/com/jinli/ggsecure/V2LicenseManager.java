@@ -53,6 +53,10 @@ final class V2LicenseManager {
     }
 
     void initializeSavedAsync(RuntimeCallback callback) {
+        initializeSavedAsync(callback, null);
+    }
+
+    void initializeSavedAsync(RuntimeCallback callback, TransferProgressCallback progress) {
         executor.execute(() -> {
             try {
                 JSONObject state = secureStore.loadState();
@@ -84,7 +88,7 @@ final class V2LicenseManager {
                     }
                 }
                 saveAuth(key, auth);
-                RuntimePayload payload = loadRuntime(auth.token);
+                RuntimePayload payload = loadRuntime(auth.token, progress);
                 deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
             } catch (java.io.IOException error) {
                 deliver(callback, RuntimeResult.invalid("需要联网启动，请检查网络后重试"));
@@ -102,6 +106,10 @@ final class V2LicenseManager {
     }
 
     void activateAsync(String rawKey, RuntimeCallback callback) {
+        activateAsync(rawKey, callback, null);
+    }
+
+    void activateAsync(String rawKey, RuntimeCallback callback, TransferProgressCallback progress) {
         String key = normalizeKey(rawKey);
         if (key.length() != 32) {
             deliver(callback, RuntimeResult.invalid("激活码格式错误"));
@@ -111,7 +119,7 @@ final class V2LicenseManager {
             try {
                 AuthResult auth = activate(key);
                 saveAuth(key, auth);
-                RuntimePayload payload = loadRuntime(auth.token);
+                RuntimePayload payload = loadRuntime(auth.token, progress);
                 deliver(callback, RuntimeResult.valid(payload, auth, "启动成功"));
             } catch (java.io.IOException error) {
                 deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"));
@@ -197,8 +205,12 @@ final class V2LicenseManager {
         return parseAuth(postLicense("/v1/check", body));
     }
 
-    private RuntimePayload loadRuntime(String token) throws Exception {
-        if (BuildConfig.EDGEONE_CANDIDATE) return edgeOneCandidateClient.loadRuntime(token);
+    private RuntimePayload loadRuntime(String token, TransferProgressCallback progress) throws Exception {
+        if (BuildConfig.EDGEONE_CANDIDATE) {
+            RuntimeZipReader.Listener listener = progress == null ? null : (received, expected) ->
+                    mainHandler.post(() -> progress.onProgress(received, expected));
+            return edgeOneCandidateClient.loadRuntime(token, listener);
+        }
         String deviceId = identity.deviceId();
         String runtimePublicKey = runtimeKeyManager.publicKeyBase64();
         String runtimeFingerprint = runtimeKeyManager.fingerprint();
@@ -456,6 +468,10 @@ final class V2LicenseManager {
 
     interface RuntimeCallback {
         void onResult(RuntimeResult result);
+    }
+
+    interface TransferProgressCallback {
+        void onProgress(int received, int expected);
     }
 
     interface SimpleCallback {

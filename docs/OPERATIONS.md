@@ -102,6 +102,18 @@ only a 14-day Actions Artifact, **never a Release** and never a production JKS.
 
 ## 4. Acceptance checks
 
+For the EdgeOne initialization-progress candidate, validate **both** first
+activation and saved-license restart. Each should display only
+`正在初始化中…` and a cyan horizontal bar. The bar should animate while awaiting
+the private runtime, then follow actual ZIP bytes up to 90% and be replaced by
+WebView on successful verification. An error must return to the license form
+instead of leaving the bar stuck. Run `RuntimeZipReaderSmoke` in Actions.
+
+GitHub-hosted test artifacts are signed with a disposable Android debug
+keystore; an older candidate may not install as an update. Reinstalling can
+change the device identity, so the previous test card might require device
+unbinding in the EdgeOne admin UI. Do not silently deploy production signing.
+
 Automated: Node auth/proof/revocation tests, ZIP budget/hash preparation,
 standalone Java HTML/gzip smoke, Android lint/assemble, APK package identity,
 signature validity and absence of JS/ZIP assets.

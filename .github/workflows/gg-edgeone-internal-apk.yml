@@ -68,6 +68,13 @@ jobs:
             v2/android/client/src/main/java/com/jinli/ggsecure/EdgeOneHtmlCompatibility.java \
             edgeone-license/test/EdgeOneHtmlCompatibilitySmoke.java
           java -cp /tmp/gg-edgeone-html-smoke com.jinli.ggsecure.EdgeOneHtmlCompatibilitySmoke
+      - name: Real runtime download progress smoke
+        run: |
+          mkdir -p /tmp/gg-edgeone-progress-smoke
+          javac -d /tmp/gg-edgeone-progress-smoke \
+            v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeZipReader.java \
+            edgeone-license/test/RuntimeZipReaderSmoke.java
+          java -cp /tmp/gg-edgeone-progress-smoke com.jinli.ggsecure.RuntimeZipReaderSmoke
       - name: Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:

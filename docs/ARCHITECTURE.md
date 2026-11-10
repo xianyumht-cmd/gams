@@ -36,6 +36,15 @@ or an encrypted copy of either into its APK.
    exceptions are written to Android Logcat under `GG-EdgeOne` without logging
    license keys or session tokens.
 
+The EdgeOne candidate's first activation and saved-license restart share one
+native `正在初始化中…` screen. Before a runtime response body arrives its cyan bar
+is indeterminate; `RuntimeZipReader` streams the ZIP into bounded memory and
+reports only actually received bytes, capped visually at 90%. The remainder
+is reserved for archive integrity validation and WebView startup. Progress
+callbacks are delivered onto the Android main thread and ignored after the
+loading view is replaced. Production Cloudflare builds remain unchanged.
+Failed initial activation returns to the form with the entered key intact.
+
 Functions: `edgeone-license/cloud-functions/api/[[default]].js` exposes
 `POST /api/activate`, `/api/check`, `/api/unbind`, `/api/runtime` and
 `GET /api/health`. Shared, framework-independent validation is in `core.mjs`.
