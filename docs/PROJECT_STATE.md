@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Seventh increment implemented, CI pending:** native candidate runtime-v2
+- **Seventh increment verified by CI:** native candidate runtime-v2
   ciphertext now streams through a dedicated C++ exact-length transfer buffer
   rather than Java `ByteArrayOutputStream`. C++ validates declared maximum,
   bounds each JNI append to 8192 bytes, rejects trailing or missing bytes,
@@ -10,8 +10,15 @@
   the existing received-byte progress callback, system JCA AES-GCM, and
   WebView injection. The Java reference retains `RuntimeZipReader` unchanged.
   A new Java→JNI test covers complete, truncated, oversized and invalid-source
-  transfers. Local C++ sanitizer checks and ten Node API tests pass;
-  Android/JNI CI compilation and on-device parity remain to be verified.
+  transfers. Local C++ sanitizer checks and ten Node API tests passed.
+  GitHub Actions
+  [`42918661930`](https://github.com/xianyumht-cmd/gams/actions/runs/42918661930)
+  passed the real JNI fixture, C++ parity, both Android builds, lint, APK
+  signing, all three native ABIs and the no-private-JS package check.
+  The 14-day artifact `GG-EdgeOne-CPP-internal-7` (ID `13809204790`)
+  contains APK SHA-256
+  `70b22fda26627a353b38422f49b7346869eba35c7bf097f91b7429ea4e9341d5`.
+  On-device parity remains unverified at the owner's request.
 
 - **Sixth increment verified by CI:** the C++ candidate no longer
   copies the entire `game.js` engine to a Java `byte[]` for each intercepted
