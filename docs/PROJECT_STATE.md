@@ -58,5 +58,10 @@
   The next candidate now includes a common `正在初始化中…` progress bar for first
   activation and saved-license restart, driven by actual ZIP transfer bytes
   (indeterminate while waiting, maximum 90% before validation/WebView setup).
-  A standalone Java transfer smoke check has been added to CI. The resulting
-  APK still requires Actions build success and device confirmation.
+  A standalone Java transfer smoke check has been added to CI. GitHub Actions
+  run [`42889209803`](https://github.com/xianyumht-cmd/gams/actions/runs/42889209803)
+  completed successfully for code commit `a31d01a`, including Node auth tests,
+  Java HTML/ZIP progress smokes, Android lint/assemble, APK identity, signing
+  and absence of bundled JS. The 14-day internal-only artifact is
+  `GG-EdgeOne-internal-8` (artifact ID `13797482921`). The new initialization
+  UI still needs owner on-device verification; no formal release was created.
