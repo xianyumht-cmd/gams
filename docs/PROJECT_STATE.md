@@ -9,8 +9,16 @@
   The HTTP protocol, server, Android UI and WebView injection are unchanged.
   Independent Node/C++ host proof/HKDF vectors match. A newly added CI test
   exercises the **real JNI bridge** plus Node→Java→native-HKDF→AES-GCM
-  decrypt to catch cross-language regressions. Android CI for this increment
-  is pending; do not infer on-device success.
+  decrypt to catch cross-language regressions. GitHub Actions run
+  [`42904507733`](https://github.com/xianyumht-cmd/gams/actions/runs/42904507733)
+  **passed** its C++ sanitizer tests, Node reference vectors, real
+  Java→JNI→C++ ZIP/proof/HKDF tests, tampered ciphertext rejection,
+  Android native and Java baseline builds, lint, signed package identity,
+  three ABI libraries and no embedded JS/ZIP checks. Internal artifact
+  `GG-EdgeOne-CPP-internal-2` (ID `13803419518`) contains APK SHA-256
+  `3dc5ea213542ad3fca855b7976f8e98676d21c952240157fe421c53b14f6b705`.
+  Owner requested uninterrupted development without intermediate manual
+  testing; **on-device parity remains unverified**, not implicitly accepted.
 
 - Owner explicitly chose **plan A**: a C++ core with the smallest possible
   Android Java/WebView bridge, preserving every existing interaction before
