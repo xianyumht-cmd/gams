@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Fifth increment implemented, CI pending:** the native candidate now
+- **Fifth increment verified by CI:** the native candidate now
   normalizes typed and saved license keys with the same ASCII-hex filter as
   the Java baseline, then makes the initial activation-versus-check decision
   for manual and saved-card launches. Its existing C++ recovery policy still
@@ -11,9 +11,16 @@
   candidate saves the refreshed authorization but does not request/decrypt
   private JS if the server requires a higher client version. Android Java
   retains secure preferences, networking, the single-thread executor,
-  initialization progress and WebView. Host C++/Node tests pass; new JNI
-  acceptance cases and Android builds await Actions. Real-device parity is
-  still unverified at the owner's request.
+  initialization progress and WebView. Local C++ sanitizer smoke and all ten
+  Node API tests passed. GitHub Actions
+  [`42910264189`](https://github.com/xianyumht-cmd/gams/actions/runs/42910264189)
+  also passed actual Java→JNI startup/update policy cases, Node crypto
+  interoperability, native + Java reference Android builds, lint, three
+  native ABIs, APK signing and the no-private-JS/ZIP packaging check. The
+  internal 14-day artifact `GG-EdgeOne-CPP-internal-5` (ID `13808110144`)
+  contains APK SHA-256
+  `44d5483728dfd7ef125f739f06a633f55b8dde6c756012301915c2a6841c2f2a`.
+  Real-device parity is still unverified at the owner's request.
 
 - **Fourth increment verified by CI:** C++ now owns successful
   authorization response classification, session-token shape validation, and
