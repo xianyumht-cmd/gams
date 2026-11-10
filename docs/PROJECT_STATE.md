@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Tenth increment awaiting CI:** The separate C++ Android candidate now
+- **Tenth increment verified by CI:** The separate C++ Android candidate now
   decides WebView resource routes (native `game.js`, disabled legacy official
   engine, forbidden GitHub core, or `1.4.1` main-frame HTML rewrite), including
   version-gated direct-engine mode. C++ also wraps the resident control script
@@ -10,8 +10,14 @@
   still parses the request URI and headers, owns the WebView response and
   injection APIs, and the Java-only reference retains its old routing and
   script wrapper. C++ sanitizer test and the ten Node API tests passed
-  locally. Real JVM→JNI comparison, dual Android builds and APK checks are
-  pending GitHub Actions; device behavior remains unverified.
+  locally. GitHub Actions
+  [`42924722960`](https://github.com/xianyumht-cmd/gams/actions/runs/42924722960)
+  passed actual Java→JNI script-wrapper and routing fixtures, Android NDK
+  and Java reference builds, lint, all three ABIs, signing and no-private-JS
+  packaging checks. The 14-day artifact `GG-EdgeOne-CPP-internal-10`
+  (ID `13812973948`) contains APK SHA-256
+  `c3c6576e3b85ed12aaf33871490660af5cc566e9d47dd064b10b25b6d1b6c8c3`.
+  Device WebView routing and injection behavior remain unverified by request.
 
 - **Ninth increment verified by CI:** The isolated C++ candidate now performs
   the `1.4.1` EdgeOne HTML compatibility rewrite directly against its resident
