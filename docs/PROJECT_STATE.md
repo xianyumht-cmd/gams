@@ -2,15 +2,20 @@
 
 - Base: `main` at `6f25a6f32b6ebf5dfc57e06a5612ef372466ec4e`.
 - Task branch: `feat/gg-edgeone-license-remote-js-20261111`.
-- In the current working branch, a **not-yet-deployed** EdgeOne runtime v2
-  enhancement adds per-download ephemeral P-256 ECDH / HKDF / AES-GCM delivery,
+- EdgeOne runtime v2 on remote code commit `bf9861e7d4a27376fca7af6ca9c5fef504d4e7cb`
+  adds per-download ephemeral P-256 ECDH / HKDF / AES-GCM delivery,
   per-device replay receipts, staged backward compatibility and an opt-in
   `GG_REQUIRE_RUNTIME_V2=1` strict mode. New Node tests reproduce and reject
-  sequential reuse of an identical proof and validate the encrypted response;
-  the local Node suite passes. Cross-language Java crypto CI, Android build,
-  Makers deployment, encrypted on-device startup and strict-mode rollout are
-  **pending** at this point. The private Blob SDK has no atomic conditional
-  write, so simultaneous duplicate requests remain a known limitation.
+  sequential reuse of an identical proof and validate the encrypted response.
+  GitHub Actions internal run
+  [`42896834272`](https://github.com/xianyumht-cmd/gams/actions/runs/42896834272)
+  succeeded with Node suite, Java cross-language crypto/transfer and HTML
+  smokes, Android lint/assemble, signed APK identity and no bundled JS checks.
+  Output is the 14-day **Actions artifact** `GG-EdgeOne-internal-9` (ID
+  `13799669660`), **not a formal Release**. Makers deployment, encrypted
+  on-device startup and strict-mode rollout still require owner verification.
+  The private Blob SDK has no atomic conditional write, so simultaneous
+  duplicate requests remain a known limitation.
 - Added EdgeOne Node API, private Blob provisioning, isolated Android
   `edgeOneTest` build type, candidate-only 1.4.1 HTML compatibility, and a
   manual/branch-triggered GitHub Actions internal-artifact workflow.
