@@ -13,6 +13,7 @@ import java.util.zip.ZipInputStream;
 final class RuntimePayload {
     private byte[] noname;
     private byte[] game;
+    private long nativeHandle;
     private final String versionName;
 
     private RuntimePayload(byte[] noname, byte[] game, String versionName) {
@@ -21,7 +22,19 @@ final class RuntimePayload {
         this.versionName = versionName;
     }
 
+    private RuntimePayload(long nativeHandle, String versionName) {
+        this.nativeHandle = nativeHandle;
+        this.versionName = versionName;
+    }
+
     static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest) throws Exception {
+        if (BuildConfig.GG_NATIVE_CORE) {
+            long handle = NativeRuntimeBridge.open(zipBytes,
+                    manifest.getInt("nonameSize"), manifest.getString("nonameSha256"),
+                    manifest.getInt("gameSize"), manifest.getString("gameSha256"));
+            if (handle == 0) throw new SecurityException("运行数据验证失败");
+            return new RuntimePayload(handle, manifest.optString("versionName", ""));
+        }
         byte[] noname = null;
         byte[] game = null;
         try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
@@ -43,20 +56,27 @@ final class RuntimePayload {
 
     synchronized String nonameSource() {
         ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) return NativeRuntimeBridge.nonameSource(nativeHandle);
         return new String(noname, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     synchronized InputStream openGameStream() {
         ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) return new ByteArrayInputStream(NativeRuntimeBridge.gameBytes(nativeHandle));
         return new ByteArrayInputStream(game);
     }
 
     synchronized int gameSize() {
         ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) return NativeRuntimeBridge.gameSize(nativeHandle);
         return game.length;
     }
 
     synchronized void wipe() {
+        if (nativeHandle != 0) {
+            NativeRuntimeBridge.close(nativeHandle);
+            nativeHandle = 0;
+        }
         if (noname != null) Arrays.fill(noname, (byte) 0);
         if (game != null) Arrays.fill(game, (byte) 0);
         noname = null;
@@ -64,6 +84,10 @@ final class RuntimePayload {
     }
 
     private void ensureAlive() {
+        if (BuildConfig.GG_NATIVE_CORE) {
+            if (nativeHandle == 0) throw new IllegalStateException("运行数据已清除");
+            return;
+        }
         if (noname == null || game == null) throw new IllegalStateException("运行数据已清除");
     }
 

@@ -1,5 +1,18 @@
 # Technical decisions
 
+## 2026-11-11: Plan A staged native GG client, with functional parity as gate
+
+Use a separately installable Android `clientNative` module with a C++17 native
+runtime core and a minimal Java WebView/Android API adapter. Reuse the **exact**
+current screen, injection, initialization progress, license state machine and
+network handling while replacing subsystems; do not rewrite all interactions
+simultaneously or remove Java source before behavior is reproduced. The first
+native boundary handles ZIP extraction, verification and native lifetime; this
+first candidate is **not** a full native license/crypto rewrite. Produce only
+an Actions test artifact until the owner verifies first activation, saved-card
+relaunch and JS behavior on an Android device. Future C++ conversion of crypto
+and licensing requires explicit cross-language parity tests and a fresh gate.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

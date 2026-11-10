@@ -1,5 +1,24 @@
 # EdgeOne GG internal deployment and verification
 
+## Build and test the C++ client side by side
+
+The independent `GG EdgeOne C++ Internal APK` GitHub Actions workflow builds
+`:clientNative:lintRelease :clientNative:assembleRelease` and also builds the
+original `:client:assembleEdgeOneTest` as a regression check. Its artifact is
+named `GG-EdgeOne-CPP-internal-N` and contains `GG-EdgeOne-CPP-internal.apk`
+plus `SHA256SUMS.txt`. **This is an internal test artifact, not a Release**.
+It is signed only with a disposable debug certificate. Install alongside the
+original APK; it uses the same EdgeOne server and existing license records
+but an independent Android package/app data directory. An existing
+single-device-bound test key may need to be unbound in the web admin before
+first activation on the native candidate (device identifiers are app-scoped).
+
+Compare both packages on the same test device in this order: first activation;
+saved-card reopen; progress/blank startup; script injection and official
+game engine request; `about:blank`, refresh/home/back; toolbar and picker;
+download, dialogs and errors; invalid/expired/revoked/license-bound rejection;
+and process restart. Report mismatches before replacing the Java baseline.
+
 ## 1. Create the EdgeOne Makers project
 
 In Tencent EdgeOne Makers/Pages, create a **new project** from the public

@@ -1,5 +1,25 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-11: Isolated Android C++ core migration (in progress)
+
+- Owner explicitly chose **plan A**: a C++ core with the smallest possible
+  Android Java/WebView bridge, preserving every existing interaction before
+  retiring any Java implementation. This is **not** a claim of a completed
+  100% C++ rewrite.
+- Added standalone `:clientNative` (`com.jinli.quickweb.edgeonecpp`) that shares
+  the exact existing `MainActivity`, authorization flow, WebView document-start
+  injection, 1.4.1 HTML compatibility, UI and resources with the already-tested
+  EdgeOne candidate. Existing `:client` production and `edgeOneTest` builds
+  still select their original Java payload parser.
+- `:clientNative` selects a C++17/NDK ZIP parser, deflate, CRC32/SHA256/size
+  verification, and native-memory payload lifetime exposed through a narrow JNI
+  bridge. No private JS bundle or license credential is added to the APK.
+- The C++ host smoke compiled and passed on a historical public script pair,
+  including byte-for-byte parity, SHA-256 known-answer, truncated ZIP,
+  corruption and mismatch rejections. All ten Node EdgeOne API tests pass.
+  Android NDK/Gradle build and on-device parity must still be verified in CI
+  and by the owner; do not label it a finished replacement yet.
+
 - Base: `main` at `6f25a6f32b6ebf5dfc57e06a5612ef372466ec4e`.
 - Task branch: `feat/gg-edgeone-license-remote-js-20261111`.
 - EdgeOne runtime v2 on remote code commit `bf9861e7d4a27376fca7af6ca9c5fef504d4e7cb`

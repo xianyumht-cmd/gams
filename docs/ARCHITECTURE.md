@@ -1,5 +1,35 @@
 # GG Android / EdgeOne internal candidate
 
+## Isolated C++ candidate (`:clientNative`)
+
+The `v2/android/clientNative` Gradle app builds its own NDK shared library
+(`libggnative.so`) and package `com.jinli.quickweb.edgeonecpp`, allowing
+side-by-side installation with `:client`'s
+`com.jinli.quickweb.edgeonetest` APK. Both compile the same existing Java
+WebView, network transport, ECDH authorization, UI and injection source.
+The per-module `BuildConfig.GG_NATIVE_CORE` flag switches only the verified
+runtime-payload parsing boundary. The C++ library validates the central ZIP
+directory and both fixed filenames, raw deflate, CRC-32, lengths, and manifest
+SHA-256, then keeps the JS bytes in native memory until `wipe()` calls JNI
+`close()`. The Java baseline does not load the native library.
+
+This is stage 1 of the requested C++ migration, not an assertion that the
+remaining Java license/WebView logic has been translated. The app must still
+pass the complete acceptance matrix below before replacing the baseline.
+
+| Existing behavior to preserve | Native candidate verification |
+| --- | --- |
+| First key activation and device binding | On-device required |
+| Relaunch with saved key / expiry / revoked key | On-device required |
+| Download progress and `正在初始化中…` | On-device required |
+| v2 ECDH/HKDF/AES-GCM download and ZIP SHA-256 | Server tests; on-device required |
+| `noname.js` document-start injection | On-device required |
+| `game.js` intercept and HTML rewrite / gzip | On-device required |
+| `about:blank` and navigation without breaking WebView | On-device required |
+| Toolbar, back/home/reset, picker/download/dialogs | On-device required |
+| No bundled JS, encrypted archives, or secrets | APK CI gate |
+| Exact native unzip + SHA-256 parity with Java runtime | Native host test passed |
+
 The canonical Android `debug`/`release` builds still use the existing Cloudflare
 license and signed runtime-bundle protocol. The separate `edgeOneTest` build type
 (`com.jinli.quickweb.edgeonetest`) routes only its authorization and JS delivery

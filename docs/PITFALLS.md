@@ -1,5 +1,15 @@
 # EdgeOne candidate pitfalls
 
+- The C++ project is **not** a pure-native Android WebView: `WebView`, activity
+  lifecycle, platform permission prompts and Keystore calls remain Java API
+  boundaries. The first native build currently migrates only ZIP/JS memory
+  handling. A compiled `.so` or a successful smoke test is **not** proof of
+  full feature parity. Avoid claiming otherwise.
+- Java and C++ test packages have different app-scoped Keystore/device IDs;
+  if a single-device license reports bound elsewhere, unbind it in the EdgeOne
+  browser administrator before testing the other package. Never add a hidden
+  bypass of the license check for the C++ build.
+
 - Keygate requires a long-running Go process and PostgreSQL, so copying its
   Docker configuration to EdgeOne Functions does not deploy it. The branch
   implements a smaller, independently tested authorization service instead.
