@@ -1,5 +1,11 @@
 # 构建与开发陷阱
 
+## `Accept-Encoding: identity` 不能保证页面返回未压缩 HTML
+
+- 发现：2026-11-10，用户的 QQ 游戏中心安卓模拟器 Logcat 显示首页跳转到 `https://m.66rpg.com/mini/home` 后 HTTP 200、`Content-Encoding=gzip`、压缩体 64,495 字节。旧实现直接 `new String(rawBytes, UTF_8)`，三类改写全部 0 命中，`<head>` 也为 0，随即产生 `HTML_COMPAT_ERROR` 与自有 503 页。
+- 原因：虽然 `HttpURLConnection` 请求显式设置了 `Accept-Encoding: identity`，站点/CDN 仍可以返回 gzip；Java 连接上的原始 `InputStream` 不应被假定为已解压的 HTML 文本。
+- 防止：主文档 HTML 重写之前先按字节魔数识别并解码 gzip（而非仅信响应头），对**解压后**大小设置上限，然后再解码 UTF-8 和匹配 `<head>`；日志保留响应的 `Content-Encoding` 并增加 `gzipDecoded`。用模拟 gzip 首页、纯文本、截断流及解压超限的 Java 冒烟测试覆盖。首页本来没有游戏守卫，`blankRedirects=0`、`integrity=0` 不代表异常。
+
 ## Android 测试变体覆盖主清单属性
 
 - 发现：2026-11-10，`GG Local JS Test APK` 首轮 Actions 在 `:client:processLocalTestMainManifest` 失败；测试变体的 `android:label="GG 本地测试"` 与主清单的 `android:label="GG"` 冲突。

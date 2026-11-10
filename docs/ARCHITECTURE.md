@@ -8,6 +8,8 @@
 
 此变体的 `LocalHtmlRewriter.RewriteResult` 同时返回 HTML 和三类命中数量，`MainActivity` 以 `GG-Local` 输出带有限片段的缺失警报；HTTP 获取日志与 `onPageFinished` 的最终 URL / 自有错误页标记一起用于区分站点守卫跳空白页、未命中改写以及兼容层提前失败。此诊断逻辑不进入旧正式授权路径。
 
+主文档的 `HttpURLConnection` 响应先交由 `LocalHtmlBodyReader` 判断 gzip 魔数并按需解压，限制解压后的 HTML 不超过 2 MiB，再进入 UTF-8 解码与 `LocalHtmlRewriter`。即使发送 `Accept-Encoding: identity` 仍可能收到 gzip；解压诊断由 `GG-Local` 的 `gzipDecoded` 字段确认。测试路径仍不会转发子资源，也不会为 `debug` / `release` 修改网络拦截策略。
+
 1. 启动时注册 `WebViewCompat.addDocumentStartJavaScript`；设备不支持则停止并提示更新系统 WebView，避免脚本晚于页面 `Common.js` / `ssologin.js`。
 2. 注入的 `noname.js` **内存副本**将远端 `stable.js` URL 换成 `https://ggv2.local/runtime/game.js`，保留原始 assets SHA-256；`shouldInterceptRequest` 对此 URL 返回本地引擎字节。
 3. 对指定 HTTPS 游戏 HTML 页面（含 iframe）在解析前获取源文档，`LocalHtmlRewriter` 同时替换官方 `game.js` 的 SRI 属性及内联常量。SRI 取自官方脚本拦截时返回的轻量占位 JS 的实际 SHA-384，保证浏览器校验一致；否则展示明确错误。

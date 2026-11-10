@@ -45,7 +45,6 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -663,21 +662,15 @@ public final class MainActivity extends Activity {
             if (contentType.contains("charset=") && !contentType.contains("utf-8")) {
                 throw new IOException("游戏页编码不是 UTF-8");
             }
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            LocalHtmlBodyReader.Result body;
             try (InputStream input = connection.getInputStream()) {
-                byte[] chunk = new byte[8192];
-                int count;
-                while ((count = input.read(chunk)) != -1) {
-                    if (buffer.size() + count > 2 * 1024 * 1024) {
-                        throw new IOException("游戏页 HTML 过大");
-                    }
-                    buffer.write(chunk, 0, count);
-                }
+                body = LocalHtmlBodyReader.read(input, 2 * 1024 * 1024);
             }
             Log.i(LOCAL_LOG_TAG, "htmlFetch status=" + status + " finalUrl=" + connection.getURL()
                     + " Content-Encoding=" + connection.getContentEncoding()
-                    + " bodyBytes=" + buffer.size());
-            String html = new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+                    + " bodyBytes=" + body.bytes.length
+                    + " gzipDecoded=" + body.gzipDecoded);
+            String html = new String(body.bytes, StandardCharsets.UTF_8);
             String rewritten;
             if (isDirectEngineLocalTest()) {
                 LocalHtmlRewriter.RewriteResult result = LocalHtmlRewriter.rewriteGuardFreeWithStats(

@@ -33,8 +33,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/local-html-test"
           javac -d "$RUNNER_TEMP/local-html-test" \
             v2/android/client/src/main/java/com/jinli/ggsecure/LocalHtmlRewriter.java \
-            scripts/LocalHtmlRewriterSmoke.java
+            v2/android/client/src/main/java/com/jinli/ggsecure/LocalHtmlBodyReader.java \
+            scripts/LocalHtmlRewriterSmoke.java \
+            scripts/LocalHtmlBodyReaderSmoke.java
           java -cp "$RUNNER_TEMP/local-html-test" com.jinli.ggsecure.LocalHtmlRewriterSmoke
+          java -cp "$RUNNER_TEMP/local-html-test" com.jinli.ggsecure.LocalHtmlBodyReaderSmoke
 
       - uses: gradle/actions/setup-gradle@v4
         with:
