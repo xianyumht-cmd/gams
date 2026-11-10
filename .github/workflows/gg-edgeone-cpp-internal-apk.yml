@@ -47,6 +47,7 @@ jobs:
             -fno-omit-frame-pointer \
             v2/android/clientNative/src/main/cpp/runtime_bundle.cpp \
             v2/android/clientNative/src/main/cpp/edgeone_protocol.cpp \
+            v2/android/clientNative/src/main/cpp/encrypted_transfer.cpp \
             v2/android/clientNative/test/edgeone_protocol_smoke.cpp \
             -lz -o /tmp/gg-cpp-protocol-smoke
           /tmp/gg-cpp-protocol-smoke
@@ -62,11 +63,14 @@ jobs:
             -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" \
             v2/android/clientNative/src/main/cpp/runtime_bundle.cpp \
             v2/android/clientNative/src/main/cpp/edgeone_protocol.cpp \
+            v2/android/clientNative/src/main/cpp/encrypted_transfer.cpp \
             v2/android/clientNative/src/main/cpp/native_runtime_jni.cpp \
             -lz -o /tmp/gg-cpp-jni/libggnative.so
           javac -d /tmp/gg-cpp-java-classes \
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeRuntimeBridge.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeGameInputStream.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeZipReader.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/NativeCiphertextReader.java \
             v2/android/clientNative/test/NativeRuntimeInteropSmoke.java \
             v2/android/clientNative/test/NativeCryptoBuildConfig.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeDeliveryCrypto.java \

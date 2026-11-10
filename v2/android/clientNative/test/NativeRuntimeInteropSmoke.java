@@ -1,6 +1,7 @@
 package com.jinli.ggsecure;
 
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -99,6 +100,47 @@ public final class NativeRuntimeInteropSmoke {
         byte[] zip = Files.readAllBytes(Path.of(paths[0]));
         byte[] control = Files.readAllBytes(Path.of(paths[1]));
         byte[] engine = Files.readAllBytes(Path.of(paths[2]));
+        final int[] finalProgress = {-1, -1};
+        byte[] receivedZip = NativeCiphertextReader.read(new ByteArrayInputStream(zip),
+                5_500_016, zip.length, (received, expected) -> {
+                    finalProgress[0] = received;
+                    finalProgress[1] = expected;
+                });
+        if (!Arrays.equals(zip, receivedZip) || finalProgress[0] != zip.length ||
+                finalProgress[1] != zip.length) {
+            throw new AssertionError("Native encrypted stream lost bytes or progress");
+        }
+        try {
+            NativeCiphertextReader.read(new ByteArrayInputStream(
+                    Arrays.copyOf(zip, zip.length - 1)), 5_500_016, zip.length, null);
+            throw new AssertionError("Truncated encrypted stream accepted by native reader");
+        } catch (IOException expected) { /* Exact length is mandatory. */ }
+        try {
+            NativeCiphertextReader.read(new ByteArrayInputStream(
+                    Arrays.copyOf(zip, zip.length + 1)), 5_500_016, zip.length, null);
+            throw new AssertionError("Oversized encrypted stream accepted by native reader");
+        } catch (IOException expected) { /* No trailing ciphertext accepted. */ }
+        long transfer = NativeRuntimeBridge.beginEncryptedTransfer(4, 4);
+        try {
+            try {
+                NativeRuntimeBridge.appendEncryptedTransfer(transfer, new byte[4], 3, 2);
+                throw new AssertionError("Native transfer read past Java input buffer");
+            } catch (IOException expected) { /* Source bounds enforced by JNI. */ }
+            try {
+                NativeRuntimeBridge.finishEncryptedTransfer(transfer);
+                throw new AssertionError("Native transfer completed without all bytes");
+            } catch (IOException expected) { /* Incomplete transfer rejected. */ }
+            NativeRuntimeBridge.appendEncryptedTransfer(transfer, new byte[4], 0, 4);
+            if (NativeRuntimeBridge.finishEncryptedTransfer(transfer).length != 4) {
+                throw new AssertionError("Native transfer complete length mismatch");
+            }
+            try {
+                NativeRuntimeBridge.finishEncryptedTransfer(transfer);
+                throw new AssertionError("Native transfer finalized twice");
+            } catch (IOException expected) { /* Finish cannot repeat. */ }
+        } finally {
+            NativeRuntimeBridge.releaseEncryptedTransfer(transfer);
+        }
         String nonameHash = hex(MessageDigest.getInstance("SHA-256").digest(control));
         String gameHash = hex(MessageDigest.getInstance("SHA-256").digest(engine));
         String bundleHash = hex(MessageDigest.getInstance("SHA-256").digest(zip));
@@ -160,6 +202,6 @@ public final class NativeRuntimeInteropSmoke {
         Arrays.fill(shared, (byte) 0);
         Arrays.fill(derived[0], (byte) 0);
         Arrays.fill(derived[1], (byte) 0);
-        System.out.println("Host Java→JNI→C++ proof, chunked engine stream, HKDF and ZIP parity OK");
+        System.out.println("Host Java→JNI→C++ proof, encrypted transfer, engine stream, HKDF and ZIP parity OK");
     }
 }

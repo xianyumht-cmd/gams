@@ -2,6 +2,17 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Seventh increment implemented, CI pending:** native candidate runtime-v2
+  ciphertext now streams through a dedicated C++ exact-length transfer buffer
+  rather than Java `ByteArrayOutputStream`. C++ validates declared maximum,
+  bounds each JNI append to 8192 bytes, rejects trailing or missing bytes,
+  and clears its ciphertext buffer on exit. Java retains Android HTTPS,
+  the existing received-byte progress callback, system JCA AES-GCM, and
+  WebView injection. The Java reference retains `RuntimeZipReader` unchanged.
+  A new Java→JNI test covers complete, truncated, oversized and invalid-source
+  transfers. Local C++ sanitizer checks and ten Node API tests pass;
+  Android/JNI CI compilation and on-device parity remain to be verified.
+
 - **Sixth increment verified by CI:** the C++ candidate no longer
   copies the entire `game.js` engine to a Java `byte[]` for each intercepted
   WebView request. A bounded JNI range reader (maximum 64 KiB per native

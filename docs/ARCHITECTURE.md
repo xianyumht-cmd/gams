@@ -70,6 +70,18 @@ full-size Java heap replicas for engine-resource requests, but the WebView
 consumer still necessarily receives plaintext chunks. The smaller control
 script remains a Java String for Android document-start injection.
 
+In the seventh increment, encrypted runtime-v2 download accumulation crosses
+the native boundary too. `NativeCiphertextReader` keeps the Android HTTPS
+stream and progress callback, forwarding up to 8192 ciphertext bytes per JNI
+call into a C++ `EncryptedTransfer` reserved to the manifest's exact encrypted
+size. Native bounds checking rejects extra bytes, incomplete EOF and duplicate
+finalization; `releaseEncryptedTransfer()` wipes the ciphertext vector on
+success or exception. Java still needs one final ciphertext `byte[]` for
+system JCA AES-GCM, and the decrypted ZIP goes to the existing native runtime
+parser. This avoids Java `ByteArrayOutputStream` growth/copies, but cannot
+eliminate the JCA adapter. The Java-only candidate retains its original
+runtime stream reader.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.
@@ -80,6 +92,7 @@ pass the complete acceptance matrix below before replacing the baseline.
 | Relaunch with saved key / expiry / revoked key | On-device required |
 | Download progress and `正在初始化中…` | On-device required |
 | v2 ECDH/HKDF/AES-GCM download and ZIP SHA-256 | Server tests; on-device required |
+| Exact-length encrypted runtime stream in C++ | Host JNI and Android CI; on-device required |
 | `noname.js` document-start injection | On-device required |
 | `game.js` intercept and HTML rewrite / gzip | On-device required |
 | `about:blank` and navigation without breaking WebView | On-device required |

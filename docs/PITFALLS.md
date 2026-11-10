@@ -12,6 +12,14 @@
   capture the response length and stream under the same payload monitor,
   bound each native range read, and synchronize it with `wipe()`. A stream
   used after teardown must produce `IOException`, never access an old handle.
+- The ~5 MB encrypted EdgeOne download previously accumulated in a growing
+  Java `ByteArrayOutputStream`, leaving intermediate allocations before JCA
+  decryption. The C++ candidate now reserves an exact-size native ciphertext
+  collector and wipes it in `finally`, but **must still return a short-lived
+  Java byte array** for Android AES-GCM. Never finish before EOF, accept bytes
+  past the declared length or forget native release on truncated input or a
+  callback failure. This is a memory/lifecycle improvement, not an assertion
+  that an authorized client cannot inspect its eventual plaintext.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

@@ -27,6 +27,12 @@ Java→JNI test. The native fixture reads `game.js` via repeated bounded slices,
 compares exact bytes, verifies a second independent cursor, closed-stream
 handling, and out-of-bounds native destination rejection. An Android device
 must still verify WebView streaming during navigation, refresh, and logout.
+The seventh increment also compiles `NativeCiphertextReader.java` and
+`RuntimeZipReader.java` in the host Java→JNI fixture. It checks exact
+encrypted bytes/progress for a historical public ZIP, truncated/oversized
+input, invalid JNI source slices, incomplete and repeated finalization.
+The C++ sanitizer fixture covers native declared-size and chunk bounds;
+actual on-device EdgeOne decryption remains an independent acceptance gate.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

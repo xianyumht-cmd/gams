@@ -1,9 +1,11 @@
 #include "runtime_bundle.hpp"
 #include "edgeone_protocol.hpp"
+#include "encrypted_transfer.hpp"
 
 #include <jni.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <exception>
 #include <memory>
@@ -40,6 +42,20 @@ auto translate(JNIEnv* env, F&& work) -> decltype(work()) {
         throwJava(env, "java/lang/SecurityException", error.what());
     } catch (...) {
         throwJava(env, "java/lang/SecurityException", "Native runtime rejected an unexpected input");
+    }
+    return {};
+}
+
+// Transfer length/network failures have historically been I/O failures in
+// RuntimeZipReader; preserve the same Java caller/error handling boundary.
+template <class F>
+auto translateTransfer(JNIEnv* env, F&& work) -> decltype(work()) {
+    try {
+        return work();
+    } catch (const std::exception& error) {
+        throwJava(env, "java/io/IOException", error.what());
+    } catch (...) {
+        throwJava(env, "java/io/IOException", "Encrypted runtime transfer failed");
     }
     return {};
 }
@@ -130,6 +146,59 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_gameSize(JNIEnv* env, jclass, jlong 
 extern "C" JNIEXPORT void JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_close(JNIEnv*, jclass, jlong handle) {
     delete reinterpret_cast<gg::RuntimeBundle*>(static_cast<std::uintptr_t>(handle));
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_beginEncryptedTransfer(JNIEnv* env, jclass,
+        jint expectedBytes, jint maximumBytes) {
+    return translateTransfer(env, [&]() -> jlong {
+        auto transfer = std::make_unique<gg::EncryptedTransfer>(expectedBytes, maximumBytes);
+        return static_cast<jlong>(reinterpret_cast<std::uintptr_t>(transfer.release()));
+    });
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_appendEncryptedTransfer(JNIEnv* env, jclass,
+        jlong handle, jbyteArray source, jint offset, jint count) {
+    return translateTransfer(env, [&]() -> jint {
+        if (!handle || !source || offset < 0 || count < 1 || count > 8192) {
+            throw std::runtime_error("Invalid encrypted transfer chunk");
+        }
+        const jsize length = env->GetArrayLength(source);
+        if (offset > length || count > length - offset) {
+            throw std::runtime_error("Encrypted transfer source slice out of bounds");
+        }
+        std::array<std::uint8_t, 8192> chunk{};
+        env->GetByteArrayRegion(source, offset, count, reinterpret_cast<jbyte*>(chunk.data()));
+        if (env->ExceptionCheck()) return 0;
+        // The source contains encrypted ciphertext only; the native buffer
+        // owns a separate copy until finish/release, even on early failure.
+        const int received = reinterpret_cast<gg::EncryptedTransfer*>(
+            static_cast<std::uintptr_t>(handle))->append(chunk.data(),
+                                                         static_cast<std::size_t>(count));
+        std::fill(chunk.begin(), chunk.end(), 0);
+        return received;
+    });
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_finishEncryptedTransfer(JNIEnv* env, jclass,
+        jlong handle) {
+    return translateTransfer(env, [&]() -> jbyteArray {
+        if (!handle) throw std::runtime_error("Missing encrypted transfer");
+        const auto& data = reinterpret_cast<gg::EncryptedTransfer*>(
+            static_cast<std::uintptr_t>(handle))->finish();
+        auto output = env->NewByteArray(static_cast<jsize>(data.size()));
+        if (output) env->SetByteArrayRegion(output, 0, static_cast<jsize>(data.size()),
+                                           reinterpret_cast<const jbyte*>(data.data()));
+        return env->ExceptionCheck() ? nullptr : output;
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_releaseEncryptedTransfer(JNIEnv*, jclass,
+        jlong handle) {
+    delete reinterpret_cast<gg::EncryptedTransfer*>(static_cast<std::uintptr_t>(handle));
 }
 
 extern "C" JNIEXPORT jstring JNICALL

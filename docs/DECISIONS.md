@@ -56,6 +56,14 @@ HTTP/WebView stream adapter in Java, use bounded native range reads, and
 fail closed if teardown wins a race. The Java baseline keeps its independent
 existing `ByteArrayInputStream` behavior.
 
+The seventh increment gives C++ ownership of the **encrypted download buffer**
+and exact-length transfer policy. Keep `HttpURLConnection` and system JCA
+AES-GCM in Java, where Android's trusted providers and existing callbacks
+already work. Preallocate at most `5,500,016` bytes in the native collector,
+append only bounded 8192-byte ranges, release/zero it in Java `finally`, and
+copy only the completed ciphertext back to Java for JCA. The standalone Java
+reference keeps its original `RuntimeZipReader`.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

@@ -91,8 +91,11 @@ final class EdgeOneCandidateClient {
             } else if (expectedSize < 1 || expectedSize > MAX_ZIP) {
                 throw new SecurityException("运行包长度无效");
             }
-            encrypted = RuntimeZipReader.read(
-                    connection.getInputStream(), MAX_ZIP + 16, expectedSize + 16, listener);
+            encrypted = BuildConfig.GG_NATIVE_CORE
+                    ? NativeCiphertextReader.read(connection.getInputStream(),
+                            MAX_ZIP + 16, expectedSize + 16, listener)
+                    : RuntimeZipReader.read(connection.getInputStream(),
+                            MAX_ZIP + 16, expectedSize + 16, listener);
             zip = RuntimeDeliveryCrypto.decrypt(encrypted, deliveryKey.getPrivate(),
                     Base64.decode(serverPublicKey, Base64.DEFAULT),
                     Base64.decode(deliveryIv, Base64.DEFAULT), device.deviceId(), token);

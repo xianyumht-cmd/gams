@@ -1,4 +1,5 @@
 #include "../src/main/cpp/edgeone_protocol.hpp"
+#include "../src/main/cpp/encrypted_transfer.hpp"
 
 #include <array>
 #include <cstdint>
@@ -126,5 +127,29 @@ int main() {
                                                device, "token"); });
     rejects([&] { gg::deriveDeliveryMaterial(shared.data(), shared.size(),
                                                device, ""); });
-    std::cout << "C++ EdgeOne startup/update policy, inbound/outbound JSON, envelope and HKDF parity OK\n";
+    std::array<std::uint8_t, 8192> ciphertext{};
+    for (std::size_t i = 0; i < ciphertext.size(); ++i)
+        ciphertext[i] = static_cast<std::uint8_t>(i & 255);
+    gg::EncryptedTransfer transfer(9000, 10'000);
+    if (transfer.append(ciphertext.data(), ciphertext.size()) != 8192 ||
+        transfer.append(ciphertext.data(), 808) != 9000) {
+        throw std::runtime_error("Native encrypted transfer progress is inconsistent");
+    }
+    const auto& complete = transfer.finish();
+    if (complete.size() != 9000 || complete[0] != ciphertext[0] ||
+        complete[8191] != ciphertext[8191] || complete[8192] != ciphertext[0] ||
+        complete.back() != ciphertext[807]) {
+        throw std::runtime_error("Native encrypted transfer changed ciphertext bytes");
+    }
+    rejects([&] { transfer.finish(); });
+    rejects([&] { transfer.append(ciphertext.data(), 1); });
+    gg::EncryptedTransfer truncated(3, 3);
+    truncated.append(ciphertext.data(), 2);
+    rejects([&] { truncated.finish(); });
+    gg::EncryptedTransfer oversized(2, 3);
+    rejects([&] { oversized.append(ciphertext.data(), 3); });
+    rejects([&] { gg::EncryptedTransfer bad(5'500'017, 5'500'017); });
+    rejects([&] { gg::EncryptedTransfer bad(100, 99); });
+    rejects([&] { gg::EncryptedTransfer bad(0, 500); });
+    std::cout << "C++ EdgeOne auth policy, HKDF and bounded ciphertext transfer parity OK\n";
 }

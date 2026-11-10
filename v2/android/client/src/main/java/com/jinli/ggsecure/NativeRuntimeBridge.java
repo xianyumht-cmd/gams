@@ -21,6 +21,17 @@ final class NativeRuntimeBridge {
 
     static native void close(long handle);
 
+    /** C++ owns bounded encrypted-download accumulation; JCA still decrypts. */
+    static native long beginEncryptedTransfer(int expectedBytes, int maximumBytes)
+            throws java.io.IOException;
+
+    static native int appendEncryptedTransfer(long handle, byte[] bytes, int offset, int count)
+            throws java.io.IOException;
+
+    static native byte[] finishEncryptedTransfer(long handle) throws java.io.IOException;
+
+    static native void releaseEncryptedTransfer(long handle);
+
     static native String proofCanonical(String action, long epochSeconds,
                                         String deviceId, String material);
 
