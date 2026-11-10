@@ -17,8 +17,16 @@
 - The C++ host smoke compiled and passed on a historical public script pair,
   including byte-for-byte parity, SHA-256 known-answer, truncated ZIP,
   corruption and mismatch rejections. All ten Node EdgeOne API tests pass.
-  Android NDK/Gradle build and on-device parity must still be verified in CI
-  and by the owner; do not label it a finished replacement yet.
+  GitHub Actions C++ internal run
+  [`42901857291`](https://github.com/xianyumht-cmd/gams/actions/runs/42901857291)
+  passed the host C++ sanitizers/parity gate, Android NDK `lintRelease` /
+  `assembleRelease`, the Java candidate reference APK build, three-native-ABI
+  `.so` presence checks, signing, distinct package identity and absence of
+  bundled private JS/ZIP. The internal artifact is `GG-EdgeOne-CPP-internal-1`
+  (ID `13803616264`; native APK SHA-256
+  `ef1afe1e14376667589107d29ac816b1a1d31e9ef41811df4b4c18636f822d6c`).
+  **On-device full parity remains unverified.** Do not label this a finished
+  complete C++ rewrite or publish it as a formal production release.
 
 - Base: `main` at `6f25a6f32b6ebf5dfc57e06a5612ef372466ec4e`.
 - Task branch: `feat/gg-edgeone-license-remote-js-20261111`.
