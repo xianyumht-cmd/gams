@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Sixth increment implemented, CI pending:** the C++ candidate no longer
+- **Sixth increment verified by CI:** the C++ candidate no longer
   copies the entire `game.js` engine to a Java `byte[]` for each intercepted
   WebView request. A bounded JNI range reader (maximum 64 KiB per native
   call) feeds a Java `InputStream` in 16 KiB chunks, with independent read
@@ -11,9 +11,15 @@
   stream reports `IOException` instead of accessing freed native memory.
   WebView's resource-response creation now pairs length and stream creation
   under the same lock and returns HTTP 503 if teardown won the race. Java-only
-  payload parsing remains unchanged. C++ host checks and ten Node API tests
-  pass locally; a real JVM→JNI chunked-stream fixture, Android builds, and
-  device parity remain to be verified.
+  payload parsing remains unchanged. C++ host sanitizer checks and ten Node
+  API tests passed locally. GitHub Actions
+  [`42915193572`](https://github.com/xianyumht-cmd/gams/actions/runs/42915193572)
+  passed the real JVM→JNI chunked-stream fixture, C++ core parity tests,
+  native and Java-reference Android builds, lint, three native ABIs, APK
+  signing, and the no-private-JS packaging check. The 14-day internal
+  artifact `GG-EdgeOne-CPP-internal-6` (ID `13808877931`) contains APK
+  SHA-256 `0ef7f646444066b302d32a79527619d3e072d72f45a5c8e8b0cb140a64d7cfe7`.
+  Real-device parity remains unverified at the owner's request.
 
 - **Fifth increment verified by CI:** the native candidate now
   normalizes typed and saved license keys with the same ASCII-hex filter as
