@@ -18,3 +18,7 @@
 - On GitHub's 2026 Ubuntu runner, `android-actions/setup-android@v3` tries to
   install the removed Android SDK `tools` package and fails before Gradle runs.
   Use the runner's preinstalled SDK and Gradle's normal SDK package resolution.
+- The owner's Windows PowerShell console has shown multi-line paste ordering
+  errors. Provide a downloadable `.cmd`/`.ps1` helper with file pickers rather
+  than asking them to paste a long, brace-heavy provisioning command. The
+  helper must hide the API Token, avoid printing it and use local-only files.

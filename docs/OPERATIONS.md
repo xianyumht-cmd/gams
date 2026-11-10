@@ -23,6 +23,19 @@ The generated `.local/` files are ignored by Git. This CLI requires the
 EdgeOne Blob SDK (`npm install` / `npm ci`) and **your** EdgeOne API token;
 the token is never needed by GitHub Actions.
 
+**Windows one-click option:** extract the `edgeone-license` directory locally,
+keeping `package.json`, `scripts/pack_runtime.py` and
+`scripts/provision.mjs` together. Double-click `GG-EdgeOne-Upload.cmd` to run
+`scripts/GG-EdgeOne-Upload.ps1` with Windows PowerShell 5.1. The helper defaults
+to the owner's `makers-v0q1urwnypkn` project and the `1.4.1-1.0.41` runtime
+pair, opens separate `.js` file pickers, installs the official Blob SDK locally,
+packs a fresh private `.local/run-*` archive, requests the Makers API Token
+with hidden input and performs `upload` followed by `issue 30`. It never sends
+the API Token to GitHub Actions and clears the environment variables afterwards.
+The local computer must already have Node.js/npm and Python 3 installed.
+Do not screenshot or share the printed key; if the upload fails, the generated
+archive remains locally for diagnosis and no license is issued.
+
 ```bash
 python3 scripts/pack_runtime.py \
   --noname ../remote-script/release/noname-1.1.4.js \

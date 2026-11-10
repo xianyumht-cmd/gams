@@ -5,9 +5,12 @@
 - Added EdgeOne Node API, private Blob provisioning, isolated Android
   `edgeOneTest` build type, candidate-only 1.4.1 HTML compatibility, and a
   manual/branch-triggered GitHub Actions internal-artifact workflow.
-- Independent cloud runtime is **not yet deployed**: requires the owner's
-  EdgeOne Makers project, a private `GG_TOKEN_SECRET`, API host and private Blob
-  provisioning. No actual license/key values are stored in this repository.
+- Owner has deployed an independent Makers project named `gg-license-api`
+  (`makers-v0q1urwnypkn`) and reported receiving
+  `{ "ok": true, "service": "gg-edgeone-internal" }` from the API health
+  route, including its `https://gg-api.xn--8pv109c.top` custom domain.
+  This is **owner-reported live evidence**, not independent integration testing.
+  Private Blob provisioning and real Android activation remain pending.
 - GitHub Actions internal candidate run
   [`42857438084`](https://github.com/xianyumht-cmd/gams/actions/runs/42857438084)
   passed Node license tests, Java HTML compatibility smoke, Android build,
@@ -16,8 +19,9 @@
 - The earlier run `42857192391` failed because `android-actions/setup-android`
   attempted an obsolete `sdkmanager tools` package; CI now uses the hosted
   runner's preinstalled Android SDK.
-- The candidate APK is currently a **structural build only** unless the owner
-  supplies `GG_EDGEONE_BASE_URL`, deploys the independent EdgeOne service and
-  provisions private runtime payloads and licenses. Cloud activation, runtime
-  injection and Android device acceptance remain **unverified**.
+- The existing APK is a **structural build only** until the owner provisions
+  the private runtime payloads and a license, supplies `GG_EDGEONE_BASE_URL`,
+  and rebuilds in Actions. `GG-EdgeOne-Upload.cmd` provides a local Windows
+  onboarding path for the confirmed `1.4.1-1.0.41` pair. Cloud activation,
+  runtime injection and Android device acceptance remain **unverified**.
 - No formal release or production authorization protocol has changed.

@@ -34,6 +34,18 @@ jobs:
           node-version: '20'
       - name: Test EdgeOne licensing without cloud credentials
         run: node --test edgeone-license/test/*.test.mjs
+      - name: Check Windows uploader PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            'edgeone-license/scripts/GG-EdgeOne-Upload.ps1',
+            [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
       - name: Check remote archive budget from public historical pair
         run: |
           python3 edgeone-license/scripts/pack_runtime.py \
