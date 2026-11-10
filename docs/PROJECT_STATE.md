@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Ninth increment awaiting CI:** The isolated C++ candidate now performs
+- **Ninth increment verified by CI:** The isolated C++ candidate now performs
   the `1.4.1` EdgeOne HTML compatibility rewrite directly against its resident
   native control-script bytes: ordered `about:blank` call/href replacements,
   `sha384` SRI removal, first `<head>` insertion, and escaping embedded
@@ -10,9 +10,15 @@
   handle use with `wipe()`; the Java-only reference continues to use its
   original `EdgeOneHtmlCompatibility.rewrite()`. Android retains the existing
   bounded gzip/HTML input reader, HTTPS/Cookie handling, and WebView response
-  creation. Host C++ sanitizer tests pass; the GitHub Java→JNI byte-for-byte
-  fixture, Android builds, ABI and packaging gates are pending. No device
-  testing was requested; HTML/navigation behavior on a device is unverified.
+  creation. Host C++ sanitizer tests, all ten Node API tests and GitHub
+  Actions [`42922732974`](https://github.com/xianyumht-cmd/gams/actions/runs/42922732974)
+  passed the real Java→JNI byte-for-byte reference fixture, native and Java
+  baseline Android builds, lint, three ABIs, APK signing and no-private-JS
+  packaging. The 14-day Actions artifact `GG-EdgeOne-CPP-internal-9`
+  (ID `13812168341`) contains APK SHA-256
+  `e33324d868ba2b381620e8faf0fc5eeb4cf82bcf5edea0d5c772eacdc057ebfc`.
+  No device testing was requested; HTML/navigation behavior on a device
+  remains unverified.
 
 - **Eighth increment verified by CI:** C++ now classifies the
   post-authorization startup presentation (`activation form`, `WebView`, or
