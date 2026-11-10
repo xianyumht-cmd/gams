@@ -34,6 +34,9 @@ jobs:
           node-version: '20'
       - name: Test EdgeOne licensing without cloud credentials
         run: node --test edgeone-license/test/*.test.mjs
+      - name: Validate Cloud Functions runtime duration configuration
+        run: |
+          node -e 'const config=require("./edgeone-license/edgeone.json"); const seconds=config.cloudFunctions?.nodejs?.maxDuration; if (!Number.isInteger(seconds) || seconds < 60 || seconds > 120) { throw new Error("Invalid EdgeOne runtime maxDuration"); }'
       - name: Check Windows uploader PowerShell syntax
         shell: pwsh
         run: |

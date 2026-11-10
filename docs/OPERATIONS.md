@@ -7,6 +7,11 @@ In Tencent EdgeOne Makers/Pages, create a **new project** from the public
 This does not change the existing website or Cloudflare production API.
 
 - Node Cloud Functions entry is `cloud-functions/api/[[default]].js`.
+- `edgeone.json` at the project root sets `cloudFunctions.nodejs.maxDuration`
+  to 120 seconds for the ~5 MB private runtime transfer (the default 30-second
+  limit previously cut off a 200 response while copying the body). Deploy the
+  branch again after changing this setting; the Android internal candidate
+  allows 135 seconds for this download but keeps shorter auth timeouts.
 - Set secret environment variable `GG_TOKEN_SECRET` to at least 32 cryptographically
   random characters, generated **locally** (for example with `openssl rand -hex 32`).
   Never commit or paste this value to a chat or public Actions log.
@@ -88,3 +93,10 @@ select a game, confirm the G button and `game.js` injection, and check no
 `about:blank` redirect. Finally test CloudInject + APK shelling on a **copy**
 of the internal artifact and verify signing again. Do not merge/publish before
 those checks are complete.
+
+If startup still fails, inspect Makers > the project > Log Analysis > Cloud
+Functions for `/api/activate` and `/api/runtime` timing/status, then collect
+Android Logcat filtered by `GG-EdgeOne`. In the candidate, unexpected Java
+exceptions print a stack trace there, without printing keys/tokens. An HTTP
+200 together with a proxy body-copy timeout is an incomplete transfer, not a
+successful runtime load.

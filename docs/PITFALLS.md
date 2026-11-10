@@ -6,6 +6,13 @@
 - EdgeOne Cloud Functions cap request/response bodies at 6 MB. Do not return
   the raw >10 MB game JS; ZIP it under 5.5 MB and check the runtime archive in
   the builder, server and client.
+- Even a correctly sized 4.98 MB ZIP timed out at the default **30-second**
+  Makers Node Cloud Functions duration: the project log showed HTTP 200 but
+  `ReverseProxy read error during body copy: context deadline exceeded` at
+  30,000 ms. An HTTP 200 is not proof of a complete binary body. Configure
+  `cloudFunctions.nodejs.maxDuration` in `edgeone.json` and keep the Android
+  runtime read timeout longer than the server limit. Confirm complete transfer
+  and APK integrity checks on-device; do not treat CI success as integration proof.
 - EdgeOne KV's cached reads can lag. The candidate uses private Blob **strong**
   reads for license state and revocation. Even strong reads are not a database
   transaction, so simultaneous seat activation still needs a production fix.

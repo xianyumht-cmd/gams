@@ -12,19 +12,24 @@
   This is **owner-reported live evidence**, not independent integration testing.
   The owner subsequently reported successful private Blob upload for the
   `1.4.1-1.0.41` pair and creation of a 30-day test key via the local helper.
-  Real Android activation remains pending.
+  During the first device attempt, `/api/runtime` returned an apparent HTTP
+  200 but Makers logged a 30,000 ms Cloud Functions execution followed by
+  `ReverseProxy read error during body copy: context deadline exceeded`.
+  That is **owner-supplied server evidence** of an incomplete runtime transfer;
+  successful Android runtime installation remains unverified.
 - GitHub Actions internal candidate run
-  [`42857438084`](https://github.com/xianyumht-cmd/gams/actions/runs/42857438084)
+  [`42871796349`](https://github.com/xianyumht-cmd/gams/actions/runs/42871796349)
   passed Node license tests, Java HTML compatibility smoke, Android build,
-  package/signature/embedded-JS checks and artifact upload. Its output is
-  `GG-EdgeOne-internal-2`, a 14-day **Actions artifact**, not a Release.
+  package/signature/embedded-JS checks and artifact upload. The configured
+  output was `GG-EdgeOne-internal-4`, a 14-day **Actions artifact**, not a Release.
 - The earlier run `42857192391` failed because `android-actions/setup-android`
   attempted an obsolete `sdkmanager tools` package; CI now uses the hosted
   runner's preinstalled Android SDK.
-- The early APK is a **structural build only**, generated before the private
-  upload and without a configured URL. The candidate workflow now defaults to
-  `https://gg-api.xn--8pv109c.top` and supports optional overrides; rebuild
-  in Actions before device testing. `GG-EdgeOne-Upload.cmd` provides a local
-  Windows onboarding path for the confirmed `1.4.1-1.0.41` pair. Cloud activation,
+- The first configured device build encountered the 30-second default Cloud
+  Functions timeout while delivering a 4.98 MB ZIP. The candidate now proposes
+  `cloudFunctions.nodejs.maxDuration=120` via project-root `edgeone.json`,
+  increases only the Android runtime read timeout to 135 seconds, and logs
+  unexpected candidate startup exceptions. A new EdgeOne deployment and APK
+  rebuild must pass before claiming the timeout is fixed. Cloud activation,
   runtime injection and Android device acceptance remain **unverified**.
 - No formal release or production authorization protocol has changed.

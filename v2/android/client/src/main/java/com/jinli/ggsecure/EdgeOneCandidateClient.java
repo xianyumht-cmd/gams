@@ -95,7 +95,9 @@ final class EdgeOneCandidateClient {
         }
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setConnectTimeout(7000);
-        connection.setReadTimeout(25000);
+        // The private runtime ZIP is ~5 MB and Makers Functions can take up to 120 s.
+        // Keep interactive license requests responsive; only the runtime download waits longer.
+        connection.setReadTimeout("runtime".equals(action) ? 135000 : 25000);
         connection.setInstanceFollowRedirects(false);
         connection.setUseCaches(false);
         connection.setRequestMethod("POST");

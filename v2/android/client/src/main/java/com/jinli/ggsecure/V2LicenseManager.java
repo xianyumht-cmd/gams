@@ -93,6 +93,9 @@ final class V2LicenseManager {
             } catch (EdgeOneCandidateClient.ApiError error) {
                 deliver(callback, RuntimeResult.invalid(error.getMessage()));
             } catch (Exception error) {
+                if (BuildConfig.EDGEONE_CANDIDATE) {
+                    android.util.Log.e("GG-EdgeOne", "Saved startup failed", error);
+                }
                 deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
             }
         });
@@ -117,6 +120,9 @@ final class V2LicenseManager {
             } catch (EdgeOneCandidateClient.ApiError error) {
                 deliver(callback, RuntimeResult.invalid(error.getMessage()));
             } catch (Exception error) {
+                if (BuildConfig.EDGEONE_CANDIDATE) {
+                    android.util.Log.e("GG-EdgeOne", "Activation/startup failed", error);
+                }
                 deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
             }
         });
