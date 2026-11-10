@@ -13,3 +13,4 @@
 - 防止：内存改写自托管引擎 URL 至现有 `/runtime/game.js`，确保 document-start；针对实际官方脚本拦截响应，先计算 SHA-384，再在 HTML 解析前同步替换属性与内联常量；失败时给出可见提示。不要硬编码未经字节校验的哈希。
 - 版本差异（2026-11-10）：上传的 `noname 1.4.1` 已移除旧 `stable.js` 替换逻辑。此版本不应使用旧版官方引擎占位响应，必须在原始 `.../official/game.js` URL 直接回传 `game 1.0.41`，并用其实际 SHA-384 `KoqnKYX/Agwvncta87t5MVOkU1dM791aaGlf5kvWRzJbmJsLejeRz59MGAEE6JlJ` 改写两个位置。哈希在构建时与资产字节比较，禁止未经验证的硬编码。
 - 本地测试新版策略（2026-11-10）：用户改为明确要求取消网页引擎完整性守卫。仅 `1.4.1` 测试变体改用 `rewriteGuardFree`，不再依赖目标网页的 SHA-384 常量；只对主框架的 HTML 导航响应改写，并保留 document-start 注入兜底。先前 SHA-384 匹配说明是历史路径，不能再被误认为新版验收门槛。禁止把测试变体的守卫移除逻辑应用到正式 `debug` / `release`。
+- 诊断补充：HTML 正文与真实引擎加载可能发生在不同资源/框架中；`Accept` 不包含 `text/html` 时新的主框架改写会被跳过。查看 `GG-Local` 的拦截入口头、HTTP 状态/编码/长度、三类替换计数和 `onPageFinished`。0 命中需要结合实际页面路径判断（站点首页本来没有守卫）。自有 503 错误页的 URL 可能仍显示原 URL，需根据 `PAGE_COMPAT_ERROR` 标记识别，而不是误认为网页加载成功。

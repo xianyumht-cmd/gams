@@ -75,9 +75,13 @@ def main() -> None:
         assert '"gg-fab"' in source and '"gg-panel"' in source
         assert "if (isOfficialEngineRequest(url)) return memoryGameResponse();" in activity
         assert "if (isDirectLocalHtmlDocument(request)) return localGameHtmlResponse(request);" in activity
-        assert "LocalHtmlRewriter.rewriteGuardFree(html, runtimePayload.nonameSource())" in activity
+        assert "LocalHtmlRewriter.rewriteGuardFreeWithStats(" in activity
         assert "request.isForMainFrame()" in activity
         assert 'contains("text/html")' in activity
+        for marker in ("isForMainFrame=", "htmlFetch status=", "Content-Encoding=",
+                       "bodyBytes=", "rewriteCounts url=", "REWRITE_ZERO_HITS",
+                       "onPageFinished finalUrl=", "PAGE_BLANK", "PAGE_COMPAT_ERROR"):
+            assert marker in activity, f"Missing local-test diagnostic: {marker}"
         assert "localOfficialSri = null;" in activity
         assert '"https://m.66rpg.com/"' in activity
         assert 'else webView.loadUrl(startUrl())' in activity

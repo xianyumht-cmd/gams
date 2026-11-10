@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class MainActivity extends Activity {
+    private static final String LOCAL_LOG_TAG = "GG-Local";
     private static final String START_URL = RuntimeNames.startUrl();
     private static final String DIRECT_TEST_START_URL =
             "https://m.66rpg.com/";
@@ -83,6 +84,7 @@ public final class MainActivity extends Activity {
     private String wrappedControlScript;
     private String localOfficialSri;
     private volatile String localUserAgent;
+    private volatile String localHtmlErrorUrl;
     private ScriptHandler scriptHandler;
     private boolean nativeDocumentStartEnabled;
     private boolean browserVisible;
@@ -398,6 +400,7 @@ public final class MainActivity extends Activity {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 statusText.setText("加载中…");
                 progressBar.setVisibility(View.VISIBLE);
+                if (isDirectEngineLocalTest()) localHtmlErrorUrl = null;
                 if (!nativeDocumentStartEnabled && isTargetPage(url)) {
                     view.evaluateJavascript(wrappedControlScript, null);
                 }
@@ -407,6 +410,18 @@ public final class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 statusText.setText("已就绪");
                 CookieManager.getInstance().flush();
+                if (isDirectEngineLocalTest()) {
+                    boolean compatibilityError = url != null && url.equals(localHtmlErrorUrl);
+                    Log.i(LOCAL_LOG_TAG, "onPageFinished finalUrl=" + url
+                            + " compatibilityErrorPage=" + compatibilityError);
+                    if (url != null && url.startsWith("about:blank")) {
+                        Log.e(LOCAL_LOG_TAG, "PAGE_BLANK: guard or navigation still redirected to " + url);
+                    }
+                    if (compatibilityError) {
+                        statusText.setText("兼容处理失败");
+                        Log.e(LOCAL_LOG_TAG, "PAGE_COMPAT_ERROR: our HTML 503 fallback was displayed");
+                    }
+                }
                 if (!nativeDocumentStartEnabled && isTargetPage(url)) {
                     view.evaluateJavascript(wrappedControlScript, null);
                 }
@@ -417,6 +432,9 @@ public final class MainActivity extends Activity {
                     WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
                 if (isDirectEngineLocalTest()) {
+                    Log.d(LOCAL_LOG_TAG, "intercept url=" + url
+                            + " isForMainFrame=" + request.isForMainFrame()
+                            + " Accept=" + requestHeader(request, "Accept"));
                     if (isOfficialEngineRequest(url)) return memoryGameResponse();
                     if (isDirectLocalHtmlDocument(request)) return localGameHtmlResponse(request);
                     // Subresources, subframes and other URLs belong to WebView itself.
@@ -608,9 +626,9 @@ public final class MainActivity extends Activity {
     }
 
     private WebResourceResponse localGameHtmlResponse(WebResourceRequest request) {
+        String address = request.getUrl().toString();
         HttpURLConnection connection = null;
         try {
-            String address = request.getUrl().toString();
             connection = (HttpURLConnection) new URL(address).openConnection();
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(15000);
@@ -627,9 +645,18 @@ public final class MainActivity extends Activity {
             String cookie = CookieManager.getInstance().getCookie(address);
             if (cookie != null && !cookie.isEmpty()) connection.setRequestProperty("Cookie", cookie);
             int status = connection.getResponseCode();
-            if (status >= 300 && status < 400) return null; // Let WebView follow a real redirect.
+            if (status >= 300 && status < 400) {
+                Log.i(LOCAL_LOG_TAG, "htmlFetch status=" + status + " finalUrl=" + connection.getURL()
+                        + " redirectLocation=" + connection.getHeaderField("Location")
+                        + " Content-Encoding=" + connection.getContentEncoding() + " bodyBytes=0"
+                        + " (redirect delegated to WebView)");
+                return null;
+            }
             if (status != 200 || connection.getContentType() == null
                     || !connection.getContentType().toLowerCase(Locale.ROOT).startsWith("text/html")) {
+                Log.w(LOCAL_LOG_TAG, "htmlFetch status=" + status + " finalUrl=" + connection.getURL()
+                        + " Content-Encoding=" + connection.getContentEncoding()
+                        + " declaredBodyBytes=" + connection.getContentLengthLong());
                 throw new IOException("游戏页返回状态 " + status);
             }
             String contentType = connection.getContentType().toLowerCase(Locale.ROOT);
@@ -647,11 +674,21 @@ public final class MainActivity extends Activity {
                     buffer.write(chunk, 0, count);
                 }
             }
+            Log.i(LOCAL_LOG_TAG, "htmlFetch status=" + status + " finalUrl=" + connection.getURL()
+                    + " Content-Encoding=" + connection.getContentEncoding()
+                    + " bodyBytes=" + buffer.size());
             String html = new String(buffer.toByteArray(), StandardCharsets.UTF_8);
-            String rewritten = isDirectEngineLocalTest()
-                    ? LocalHtmlRewriter.rewriteGuardFree(html, runtimePayload.nonameSource())
-                    : LocalHtmlRewriter.rewrite(html, localOfficialSri);
+            String rewritten;
+            if (isDirectEngineLocalTest()) {
+                LocalHtmlRewriter.RewriteResult result = LocalHtmlRewriter.rewriteGuardFreeWithStats(
+                        html, runtimePayload.nonameSource());
+                logRewriteCounts(address, html, result);
+                rewritten = result.html;
+            } else {
+                rewritten = LocalHtmlRewriter.rewrite(html, localOfficialSri);
+            }
             if (rewritten == null) throw new IOException("游戏页的 HTML 结构已变化");
+            localHtmlErrorUrl = null;
             Map<String, String> headers = new java.util.HashMap<>();
             headers.put("Cache-Control", "no-store");
             String csp = connection.getHeaderField("Content-Security-Policy");
@@ -661,9 +698,10 @@ public final class MainActivity extends Activity {
             return new WebResourceResponse("text/html", "UTF-8", 200, "OK", headers,
                     new ByteArrayInputStream(rewritten.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception error) {
-            Log.w("GG-Local", "本地游戏 HTML 兼容处理失败", error);
-            byte[] message = ("<!doctype html><meta charset='utf-8'><title>GG 本地测试</title>"
-                    + "<p>网页兼容处理失败，请检查网络或游戏页面是否更新，然后点击刷新。</p>")
+            localHtmlErrorUrl = address;
+            Log.e(LOCAL_LOG_TAG, "HTML_COMPAT_ERROR url=" + address + " our 503 page will be shown", error);
+            byte[] message = ("<!doctype html><meta charset='utf-8'><title>GG HTML 兼容错误</title>"
+                    + "<p>GG HTML 兼容处理失败，请检查网络或游戏页面是否更新，然后点击刷新。</p>")
                     .getBytes(StandardCharsets.UTF_8);
             return new WebResourceResponse("text/html", "UTF-8", 503, "Unavailable",
                     java.util.Collections.singletonMap("Cache-Control", "no-store"),
@@ -671,6 +709,30 @@ public final class MainActivity extends Activity {
         } finally {
             if (connection != null) connection.disconnect();
         }
+    }
+
+    private static void logRewriteCounts(String url, String original,
+            LocalHtmlRewriter.RewriteResult result) {
+        int blankTotal = result.blankCalls + result.blankHref;
+        Log.i(LOCAL_LOG_TAG, "rewriteCounts url=" + url
+                + " blankRedirects=" + blankTotal + " (replace/assign=" + result.blankCalls
+                + ", href=" + result.blankHref + ")"
+                + " integrity=" + result.integrityAttributes + " head=" + result.headTags);
+        if (blankTotal == 0) logRewriteMiss(url, "blankRedirects", original, "about:blank");
+        if (result.integrityAttributes == 0) logRewriteMiss(url, "integrity", original, "integrity");
+        if (result.headTags == 0) logRewriteMiss(url, "head", original, "<head");
+    }
+
+    private static void logRewriteMiss(String url, String name, String html, String anchor) {
+        String lower = html.toLowerCase(Locale.ROOT);
+        int at = lower.indexOf(anchor.toLowerCase(Locale.ROOT));
+        if (at < 0) at = lower.indexOf("<script");
+        if (at < 0) at = 0;
+        int from = Math.max(0, at - 50);
+        int to = Math.min(html.length(), at + 150);
+        String snippet = html.substring(from, to).replace('\n', ' ').replace('\r', ' ').replace('\t', ' ');
+        Log.w(LOCAL_LOG_TAG, "REWRITE_ZERO_HITS type=" + name + " url=" + url
+                + " fragment=" + snippet);
     }
 
     private static String calculateSri(byte[] bytes) {

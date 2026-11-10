@@ -90,6 +90,8 @@ APK 包名 `com.jinli.quickweb.localtest141`，启动及首页按钮打开 `http
 
 验收：① 首页显示 `m.66rpg.com`，不自动进入游戏，点选作品后仍留在 WebView 且不唤起外部浏览器或多标签；② 不跳 `about:blank`；③ 右下角可见 `G` 悬浮按钮且能展开设置；④ 选定游戏可以启动。可做静态注入/路由检查，四项最终都需要 Android 实机确认。参见 [构建和兼容差异](docs/OPERATIONS.md)。
 
+调试空白页请连接安卓设备运行 `adb logcat -s GG-Local:D`：日志包括请求 URL/mainframe/Accept、HTML HTTP 与响应长度、三类替换计数及最终 URL，能区分站点 `about:blank` 和客户端自有的兼容错误页。
+
 Android 构建主要由 GitHub Actions 和 `scripts/` 下的脚本完成。自动生成的状态 JSON 是构建事实记录，不应手工把失败状态改成成功。
 
 当前 2.0.14 自动构建链会从专用实现分支取源码并生成状态记录；如果需要发布 APK，应同时确认：

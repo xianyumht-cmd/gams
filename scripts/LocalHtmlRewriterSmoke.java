@@ -30,7 +30,13 @@ public final class LocalHtmlRewriterSmoke {
                 + "window.location.assign('about:blank');"
                 + "</script></HEAD><body></body></html>";
         String userscript = "window.__GG_TEST__='$42';/* backslash \\\\ */";
-        String direct = LocalHtmlRewriter.rewriteGuardFree(directHtml, userscript);
+        LocalHtmlRewriter.RewriteResult stats =
+                LocalHtmlRewriter.rewriteGuardFreeWithStats(directHtml, userscript);
+        String direct = stats.html;
+        if (stats.blankCalls != 3 || stats.blankHref != 1
+                || stats.integrityAttributes != 1 || stats.headTags != 1) {
+            throw new AssertionError("Diagnostic rewrite counts do not match the real replacements");
+        }
         if (direct == null || !direct.contains("<HEAD data-test='yes'><script>" + userscript + "</script>")) {
             throw new AssertionError("New userscript must be the first child of <head>");
         }
@@ -40,7 +46,9 @@ public final class LocalHtmlRewriterSmoke {
         if (count(direct, "void 0") != 4 || direct.contains("about:blank")) {
             throw new AssertionError("HTML guard navigation was not fully disabled");
         }
-        if (LocalHtmlRewriter.rewriteGuardFree("<html><body></body></html>", userscript) != null) {
+        LocalHtmlRewriter.RewriteResult missingHead =
+                LocalHtmlRewriter.rewriteGuardFreeWithStats("<html><body></body></html>", userscript);
+        if (missingHead.html != null || missingHead.headTags != 0) {
             throw new AssertionError("Headless document cannot be safely injected");
         }
         System.out.println("HTML SRI legacy and 1.4.1 guard-free inline injection tests passed");
