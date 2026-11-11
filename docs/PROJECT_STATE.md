@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Thirteenth increment, awaiting GitHub Android CI:** A canceled C++
+- **Thirteenth increment verified by CI:** A canceled C++
   startup-generation ticket now propagates into the EdgeOne HTTPS runtime
   adapter. When an operation is replaced, the client makes a best-effort
   `HttpURLConnection.disconnect()` on the prior runtime request, including
@@ -12,10 +12,16 @@
   rejects obsolete append/finalize calls. It releases its allocation and
   closes the input stream when canceled. The manager checks the gate
   again before ECDH decryption/ZIP delivery, and wipes any payload produced
-  after invalidation. Host C++ sanitizer and ten EdgeOne Node tests passed;
-  real Java→JNI cancellation tests and Android dual-APK builds are pending.
-  A Java network-stack disconnect is best effort and
-  does not promise instant interruption of every blocked socket read.
+  after invalidation. Host C++ sanitizer and ten EdgeOne Node tests passed.
+  GitHub Actions
+  [`42931837182`](https://github.com/xianyumht-cmd/gams/actions/runs/42931837182)
+  passed real Java→JNI cancellation tests, both Android builds, lint,
+  three native ABIs, signing and no-private-JS packaging verification.
+  The 14-day artifact `GG-EdgeOne-CPP-internal-13` (ID `13816243112`)
+  contains APK SHA-256
+  `8f9a1d7b6354a1f7c65e6a3cad8d144e71b1c2c5c1630e718b9d987e4b91bac8`.
+  A Java network-stack disconnect is best effort and does not promise instant
+  interruption of every blocked socket read. Device behavior is unverified.
 
 - **Twelfth increment verified by CI:** An isolated C++
   `StartupCoordinator` now owns per-manager monotonic authorization operation
