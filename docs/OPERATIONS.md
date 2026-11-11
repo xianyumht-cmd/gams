@@ -7,6 +7,15 @@ The independent `GG EdgeOne C++ Internal APK` GitHub Actions workflow builds
 original `:client:assembleEdgeOneTest` as a regression check. Its artifact is
 named `GG-EdgeOne-CPP-internal-N` and contains `GG-EdgeOne-CPP-internal.apk`
 plus `SHA256SUMS.txt`. **This is an internal test artifact, not a Release**.
+Because each Actions job uses a fresh disposable debug certificate while the
+displayed version remains `2.0.3-native-internal` for multiple builds, do not
+rely on an app screenshot to prove an updated APK was installed. The #16 and
+#17 APK certificates were measured to be different. Verify the device's
+installed `base.apk` SHA-256 against `SHA256SUMS.txt`, or uninstall only the
+independent `com.jinli.quickweb.edgeonecpp` test package before installing a
+new artifact. Uninstalling wipes that test package's local preferences and
+saved activation; a card may need a separate admin unbind. The production app
+is unaffected, and its signing key must never be used for this workaround.
 The sixteenth increment adds an actual Java JCA P-256 DER→P1363 signature,
 C++ JNI canonical/JSON serialization and unmodified Node EdgeOne handler
 round trip; a bit-flipped signature must be rejected. This detects a

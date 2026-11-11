@@ -2,6 +2,18 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Owner's follow-up after build #17:** The emulator still displays
+  `设备签名无效`, but its visible version is `2.0.3-native-internal`—the fixed
+  value shared by APK #16 and #17. Inspection of the two actual release APKs
+  found that their ephemeral CI debug-signing certificates differ (SHA-256
+  `4c07ad6970d44cb57bd47dc2ed1930c36b0c509647bccd647eaf31c1c1492a13`
+  versus `eea01a4e7967d5c5902cb721773a574723d572b6d36056cde8a2124a1c3e3088`).
+  Android therefore cannot install #17 in place over #16; the version screenshot
+  is not evidence that the new signer actually ran. **Next evidence needed:**
+  SHA-256 of the emulator's installed `com.jinli.quickweb.edgeonecpp` base APK,
+  or removal of this internal package followed by a clean #17 install and one
+  activation. Do not claim the device-proof failure resolved until that check.
+
 - **Sixteenth increment verified by CI; device acceptance pending:** The owner
   reported `设备签名无效` on the C++
   internal emulator APK after unbinding the license through the EdgeOne

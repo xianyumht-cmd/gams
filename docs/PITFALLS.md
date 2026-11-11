@@ -1,5 +1,17 @@
 # EdgeOne candidate pitfalls
 
+- **An unchanged version label does not prove that an updated internal APK is
+  installed.** `clientNative` hardcodes `2.0.3-native-internal` and `versionCode=16`
+  for the separate C++ builds. Each GitHub-hosted Actions runner creates a
+  new disposable Android debug keystore: APK #16 and APK #17 were confirmed
+  to have *different* APK signing certificates (SHA-256 fingerprints beginning
+  `4c07ad69` and `eea01a4e`). Android rejects an in-place installation over
+  the prior certificate, potentially leaving an older APK running. This APK
+  *installation* signature is unrelated to the Keystore ECDSA *device proof*
+  validated by EdgeOne. Check the installed `base.apk` SHA-256 against the
+  published build, or uninstall only the `com.jinli.quickweb.edgeonecpp` test
+  package (which deletes its local state) before installing. Never uninstall
+  the production GG package or reuse production signing keys to solve this.
 - EdgeOne `invalid_device` / `设备签名无效` is raised by Node when a
   P-256 ECDSA proof fails. `/api/activate` verifies proof *before* license
   lookup or checking existing device binding, so an admin unbind cannot
