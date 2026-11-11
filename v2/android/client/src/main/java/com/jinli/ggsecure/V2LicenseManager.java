@@ -13,6 +13,7 @@ final class V2LicenseManager {
     private static final int PROTOCOL_APP_VERSION = LegacyLicenseProtocol.APP_VERSION;
 
     private final LicenseSessionStore sessionStore;
+    private final DeviceIdentity identity;
     private final EdgeOneCandidateClient edgeOneCandidateClient;
     private final LegacyLicenseProtocol legacyLicenseProtocol;
     private final LegacyRuntimeLoader legacyRuntimeLoader;
@@ -25,7 +26,7 @@ final class V2LicenseManager {
         Context app = context.getApplicationContext();
         SecureStore secureStore = new SecureStore(app);
         sessionStore = new LicenseSessionStore(secureStore);
-        DeviceIdentity identity = new DeviceIdentity(app, secureStore);
+        identity = new DeviceIdentity(app, secureStore);
         RuntimeKeyManager runtimeKeyManager = new RuntimeKeyManager();
         legacyLicenseProtocol = new LegacyLicenseProtocol(identity);
         legacyRuntimeLoader = new LegacyRuntimeLoader(
@@ -47,6 +48,7 @@ final class V2LicenseManager {
         executor.execute(() -> {
             if (!startupGate.isCurrent(ticket)) return;
             try {
+                ensureOfficialApkSigner();
                 JSONObject state = sessionStore.load();
                 String key = normalizedClientKey(state.optString("licenseKey", ""));
                 String token = state.optString("token", "");
@@ -88,6 +90,8 @@ final class V2LicenseManager {
                 deliver(callback, RuntimeResult.invalid(userMessage(error)), ticket);
             } catch (EdgeOneCandidateClient.ApiError error) {
                 deliver(callback, RuntimeResult.invalid(error.getMessage()), ticket);
+            } catch (ApkSignatureException error) {
+                deliver(callback, RuntimeResult.invalid(UiText.get(UiText.BAD_APK_SIGNATURE)), ticket);
             } catch (Exception error) {
                 if (BuildConfig.EDGEONE_CANDIDATE) {
                     android.util.Log.e("GG-EdgeOne", "Saved startup failed", error);
@@ -112,6 +116,7 @@ final class V2LicenseManager {
         executor.execute(() -> {
             if (!startupGate.isCurrent(ticket)) return;
             try {
+                ensureOfficialApkSigner();
                 AuthResult auth = activate(key);
                 deliver(callback, finishAuthorizedStartup(key, auth, progress, ticket), ticket);
             } catch (java.io.IOException error) {
@@ -120,6 +125,8 @@ final class V2LicenseManager {
                 deliver(callback, RuntimeResult.invalid(userMessage(error)), ticket);
             } catch (EdgeOneCandidateClient.ApiError error) {
                 deliver(callback, RuntimeResult.invalid(error.getMessage()), ticket);
+            } catch (ApkSignatureException error) {
+                deliver(callback, RuntimeResult.invalid(UiText.get(UiText.BAD_APK_SIGNATURE)), ticket);
             } catch (Exception error) {
                 if (BuildConfig.EDGEONE_CANDIDATE) {
                     android.util.Log.e("GG-EdgeOne", "Activation/startup failed", error);
@@ -134,6 +141,7 @@ final class V2LicenseManager {
         executor.execute(() -> {
             if (!startupGate.isCurrent(ticket)) return;
             try {
+                ensureOfficialApkSigner();
                 JSONObject state = sessionStore.load();
                 String token = state.optString("token", "");
                 if (token.isEmpty()) throw new LegacyLicenseProtocol.ApiException(
@@ -153,6 +161,8 @@ final class V2LicenseManager {
                             (LegacyLicenseProtocol.ApiException) error)), ticket);
                 } else if (error instanceof EdgeOneCandidateClient.ApiError) {
                     deliver(callback, SimpleResult.failure(error.getMessage()), ticket);
+                } else if (error instanceof ApkSignatureException) {
+                    deliver(callback, SimpleResult.failure(UiText.get(UiText.BAD_APK_SIGNATURE)), ticket);
                 } else {
                     deliver(callback, SimpleResult.failure("更换设备失败，请重试"), ticket);
                 }
@@ -162,6 +172,32 @@ final class V2LicenseManager {
 
     String getStatusSummary() {
         return sessionStore.summary(BuildConfig.VERSION_NAME);
+    }
+
+    private void ensureOfficialApkSigner() throws Exception {
+        // Only official-key-signed candidate builds enforce this. Internal
+        // disposable-debug APKs remain usable in the owner's emulator until
+        // the permanent JKS is installed in protected CI secrets.
+        if (!BuildConfig.GG_NATIVE_CORE || !BuildConfig.GG_REQUIRE_OFFICIAL_APK_SIGNER) return;
+        final String digest;
+        try {
+            digest = identity.certificateDigest();
+        } catch (Exception error) {
+            throw new ApkSignatureException("Cannot read APK signing certificate", error);
+        }
+        try {
+            if (!NativeRuntimeBridge.officialApkSignerMatches(digest)) {
+                throw new ApkSignatureException("APK is not signed by the official GG certificate");
+            }
+        } catch (SecurityException error) {
+            if (error instanceof ApkSignatureException) throw error;
+            throw new ApkSignatureException("Invalid APK signer policy", error);
+        }
+    }
+
+    private static final class ApkSignatureException extends SecurityException {
+        ApkSignatureException(String message) { super(message); }
+        ApkSignatureException(String message, Throwable cause) { super(message, cause); }
     }
 
     void clear() {

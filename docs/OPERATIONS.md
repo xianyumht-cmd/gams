@@ -1,5 +1,33 @@
 # EdgeOne GG internal deployment and verification
 
+## Official GG signing identity (2026-11-11)
+
+Owner's offline signing directory (Windows only):
+`D:\project2\gams\gams-signing-key-official`. It contains a JKS, a public
+certificate, a fingerprint report and Windows DPAPI-protected credentials.
+Do not copy, commit, attach or print its private key/password material.
+The intended JKS alias is `gg-release`; the expected new certificate SHA-256
+is `70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34`.
+Cross-check the public `.cer` against the fingerprint report with a
+certificate-inspection tool before any signed release, and verify the actual
+APK afterward with `apksigner verify --print-certs`.
+
+When all four `GG_INTERNAL_*` settings exist, the native candidate applies
+an on-device official-signer check before licensing and the workflow refuses
+to distribute a persistently signed artifact with the wrong certificate.
+When none exist, it stays `ephemeral-debug` and the owner can continue
+emulator testing. This candidate's application ID differs from older GG
+packages; Android installs are distinct unless they share a package name.
+Persistently signed APKs cannot simply upgrade debug-signed APKs of the
+same application ID. **Do not install the official JKS into unrestricted
+feature-branch CI secrets:** use protected release signing with branch/approval
+gates and the least possible access before activating that build mode.
+
+No EdgeOne Makers redeploy is required for this local APK signer check. The
+current EdgeOne service validates Android Keystore device proofs, not the
+release certificate. Remotely trustworthy APK identity would require a
+separate verified attestation design, including emulator compatibility.
+
 ## Native candidate build signing and artifact provenance (2026-11-11)
 
 The `.github/workflows/gg-edgeone-cpp-internal-apk.yml` job increments the

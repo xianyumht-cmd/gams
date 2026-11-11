@@ -117,6 +117,12 @@ public final class NativeRuntimeInteropSmoke {
                 NativeRuntimeBridge.shouldReactivate("device_limit")) {
             throw new AssertionError("JNI licensing state policy mismatch");
         }
+        if (!NativeRuntimeBridge.officialApkSignerMatches(
+                    "70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34") ||
+            NativeRuntimeBridge.officialApkSignerMatches(
+                    "f220c5d47513c744cb9b5f17c0f8f39b0c109f8f7dc892989713eef33fdbe0c4")) {
+            throw new AssertionError("JNI official APK signing fingerprint policy mismatch");
+        }
         String publicKey = "A".repeat(124);
         String proof = "B".repeat(88);
         String expectedRequest = "{\"deviceId\":\"" + deviceId +

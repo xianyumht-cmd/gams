@@ -91,6 +91,9 @@ final class NativeRuntimeBridge {
 
     static native boolean shouldReactivate(String errorCode);
 
+    /** Compares the installed APK signer to the official release certificate. */
+    static native boolean officialApkSignerMatches(String certificateSha256);
+
     static native String signedRequestJson(String action, String deviceId,
             String devicePublicKey, long requestTime, String proof,
             String credential, String deliveryPublicKey);

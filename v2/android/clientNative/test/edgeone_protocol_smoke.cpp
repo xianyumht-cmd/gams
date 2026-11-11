@@ -32,6 +32,17 @@ int main() {
         "\n1c1181e7f8dece465e066361d49886efa49b372e3e029fcdf21b9621e4021366";
     if (gg::proofCanonical("activate", 1794344400, device, "ABCDEF0123456789") != expectedProof)
         throw std::runtime_error("C++ proof mismatches the Node reference");
+    const std::string officialCert =
+        "70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34";
+    const std::string previousCert =
+        "f220c5d47513c744cb9b5f17c0f8f39b0c109f8f7dc892989713eef33fdbe0c4";
+    if (!gg::officialApkSignerMatches(officialCert) ||
+        gg::officialApkSignerMatches(previousCert) ||
+        gg::officialApkSignerMatches(officialCert.substr(0, 62) + "00") ||
+        gg::officialApkSignerMatches(std::string(64, 'G')) ||
+        gg::officialApkSignerMatches("")) {
+        throw std::runtime_error("Native official APK signing fingerprint policy failed");
+    }
     const std::string license = "0123456789ABCDEF0123456789ABCDEF";
     if (gg::normalizeLicenseKey("01-23 45:67:89 ab cd ef 0123456789abcdef") != license ||
         gg::normalizeLicenseKey("ＧＧ12☃ab") != "12AB" ||

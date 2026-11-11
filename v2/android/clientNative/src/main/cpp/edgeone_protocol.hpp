@@ -17,6 +17,10 @@ std::string proofCanonical(const std::string& action, std::int64_t epochSeconds,
 int savedAuthPlan(const std::string& normalizedLicense, const std::string& savedToken);
 bool shouldReactivate(const std::string& errorCode);
 
+// Public X.509 certificate pin for the owner's official GG release signer.
+// The previous release certificate is a migration record, not accepted here.
+bool officialApkSignerMatches(const std::string& signingCertificateSha256);
+
 // Native startup policy: preserve the Java license-field normalization and
 // decide between invalid input (0), activation (1), and existing-session check
 // (2) without moving Android Keystore/network/async callbacks out of Java.

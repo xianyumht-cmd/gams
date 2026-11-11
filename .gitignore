@@ -1,3 +1,5 @@
 edgeone-license/.local/
 edgeone-license/node_modules/
 __pycache__/
+# Owner-local APK signing material (JKS, DPAPI credentials and recovery docs).
+/gams-signing-key-official/

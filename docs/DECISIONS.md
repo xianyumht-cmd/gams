@@ -1,5 +1,20 @@
 # Technical decisions
 
+## 2026-11-11: Pin owner-designated official signer locally, leave server attestation separate
+
+The owner explicitly chose the existing `gams-signing-key-official` JKS
+instead of issuing another internal signing lineage. This supersedes the
+earlier preference below *not* to reuse the production signer for this
+particular candidate, but does **not** authorize putting its JKS or DPAPI
+credentials into Git or broad unprotected feature-branch Actions secrets.
+Pin its owner-reported new certificate SHA-256 in native code and CI; retain
+the former certificate only as a rotation record. Recheck the actual JKS
+certificate and signing permissions independently before enabling persistent
+signing. A certificate digest comparison executed in the client cannot prove
+APK identity to EdgeOne because a patched client can lie. Keep the existing
+Keystore device proof wire protocol unchanged; assess hardware-backed app
+attestation and emulator compatibility before proposing any server gate.
+
 ## 2026-11-11: Isolate legacy authorization protocol without changing wire semantics
 
 Extract the old challenge/sign/activate/check/unbind and encrypted-runtime

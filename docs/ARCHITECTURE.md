@@ -1,5 +1,29 @@
 # GG Android / EdgeOne internal candidate
 
+## 2026-11-11: Official APK signing identity boundary
+
+The owner-selected official GG release certificate has SHA-256
+`70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34`
+(fingerprint supplied by the owner; independently validate the JKS before
+provisioning). An older certificate `f220c5d47513c744cb9b5f17c0f8f39b0c109f8f7dc892989713eef33fdbe0c4`
+is *migration history*, not an automatically accepted current signer. When
+the persistent keystore is present, `:clientNative` configures
+`GG_REQUIRE_OFFICIAL_APK_SIGNER`: `V2LicenseManager` checks the installed
+package signer via `DeviceIdentity.certificateDigest()` and an exact native
+SHA-256 match before startup/activation/unbind network activity. CI also
+checks the signed APK's certificate and rejects a mismatched persistent
+keystore. The shared Java reference app and ephemeral-debug emulator build
+do not enforce this official-signature gate.
+
+This is a local self-check against casual APK repackaging, **not a remotely
+attested app identity**. EdgeOne currently verifies Android Keystore device
+ECDSA proofs (plus its license/session policy); it cannot trust an arbitrary
+certificate digest claimed in JSON by a modified client. Hardware-backed
+Android key attestation with an app-signing identity, or an independently
+validated platform integrity service, requires a separate server/client
+contract and compatibility policy before any server-side signer enforcement.
+Keep JKS and password material outside source control and client binaries.
+
 ## 2026-11-11: Lightweight UI, browser, session boundaries
 
 The current migration retains one Android `Activity`, the original Views,

@@ -15,6 +15,7 @@ android {
         versionName = "2.0.3-stable"
         buildConfigField("boolean", "EDGEONE_CANDIDATE", "false")
         buildConfigField("boolean", "GG_NATIVE_CORE", "false")
+        buildConfigField("boolean", "GG_REQUIRE_OFFICIAL_APK_SIGNER", "false")
         buildConfigField("String", "EDGEONE_BASE_URL", "\"\"")
     }
     buildTypes {

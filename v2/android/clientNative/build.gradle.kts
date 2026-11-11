@@ -37,6 +37,10 @@ android {
         versionName = nativeVersionName
         buildConfigField("boolean", "EDGEONE_CANDIDATE", "true")
         buildConfigField("boolean", "GG_NATIVE_CORE", "true")
+        // A debug-signed internal artifact remains usable for emulator tests.
+        // Once official signing is configured, the APK enforces its pinned
+        // certificate before issuing any license/runtime request.
+        buildConfigField("boolean", "GG_REQUIRE_OFFICIAL_APK_SIGNER", hasInternalSigning.toString())
         buildConfigField("String", "EDGEONE_BASE_URL", "\"${edgeOneBaseUrl}\"")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")

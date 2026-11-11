@@ -554,6 +554,15 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_shouldReactivate(JNIEnv* env, jclass
     });
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_officialApkSignerMatches(JNIEnv* env, jclass,
+        jstring certificateSha256) {
+    return translate(env, [&]() -> jboolean {
+        return gg::officialApkSignerMatches(text(env, certificateSha256))
+                ? JNI_TRUE : JNI_FALSE;
+    });
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_signedRequestJson(JNIEnv* env, jclass,
         jstring action, jstring deviceId, jstring devicePublicKey,

@@ -175,7 +175,7 @@ jobs:
           markers = [
               '请输入激活码后启动', '请输入32位激活码',
               '正在初始化中…', '正在解除设备绑定…',
-              '重置网页数据', '确认更换设备',
+              '重置网页数据', '确认更换设备', '安装包签名校验失败',
           ]
           with zipfile.ZipFile(Path(sys.argv[1])) as apk:
               dex_names = [n for n in apk.namelist()
@@ -204,6 +204,14 @@ jobs:
           "$sdk_tools/aapt" dump badging "$cpp" | grep -F "versionCode='${GG_NATIVE_VERSION_CODE}' versionName='${GG_NATIVE_VERSION_NAME}'"
           "$sdk_tools/aapt" dump badging "$java" | grep -F "package: name='com.jinli.quickweb.edgeonetest'"
           "$sdk_tools/apksigner" verify --verbose --print-certs "$cpp"
+          signer_digest="$("$sdk_tools/apksigner" verify --print-certs "$cpp" | \
+            grep -m1 -E 'Signer: certificate SHA-256 digest:' | awk '{print $NF}' | \
+            tr '[:upper:]' '[:lower:]')"
+          if [[ "$GG_SIGNING_MODE" == "persistent-internal" &&
+                "$signer_digest" != "70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34" ]]; then
+            echo '::error::Configured persistent signing key differs from the official GG certificate' >&2
+            exit 1
+          fi
           mkdir -p artifact
           cp "$cpp" artifact/GG-EdgeOne-CPP-internal.apk
           (cd artifact && sha256sum GG-EdgeOne-CPP-internal.apk > SHA256SUMS.txt)

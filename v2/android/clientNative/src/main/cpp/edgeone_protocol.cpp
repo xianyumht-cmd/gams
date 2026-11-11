@@ -128,6 +128,30 @@ bool shouldReactivate(const std::string& errorCode) {
     return errorCode == "bad_session" || errorCode == "device_unbound";
 }
 
+bool officialApkSignerMatches(const std::string& signingCertificateSha256) {
+    // Published certificate fingerprint, not a secret. Store raw digest bytes
+    // so the full official hex fingerprint is not an easy strings() anchor.
+    constexpr std::array<std::uint8_t, 32> official{{
+        0x70, 0x60, 0x83, 0x47, 0xee, 0x8c, 0xc3, 0xcd,
+        0x72, 0xe7, 0xdc, 0x70, 0xc5, 0x04, 0x01, 0x3e,
+        0x26, 0x1c, 0x9a, 0x2f, 0xee, 0x98, 0x50, 0x53,
+        0x92, 0x19, 0xcd, 0xa5, 0x19, 0xc8, 0x7f, 0x34
+    }};
+    if (!validAscii(signingCertificateSha256, kHexLower, 64, 64)) return false;
+    auto nibble = [](char value) -> std::uint8_t {
+        return static_cast<std::uint8_t>(value <= '9'
+                ? value - '0' : value - 'a' + 10);
+    };
+    unsigned difference = 0;
+    for (std::size_t i = 0; i < official.size(); ++i) {
+        const auto value = static_cast<std::uint8_t>(
+                (nibble(signingCertificateSha256[i * 2]) << 4) |
+                nibble(signingCertificateSha256[i * 2 + 1]));
+        difference |= static_cast<unsigned>(official[i] ^ value);
+    }
+    return difference == 0;
+}
+
 bool shouldDownloadRuntime(bool forceUpdate, int latestVersion, int clientVersion) {
     if (latestVersion <= 0 || clientVersion <= 0) {
         throw std::runtime_error("Invalid app version in authorization policy");

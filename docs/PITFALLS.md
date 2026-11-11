@@ -1,5 +1,16 @@
 # EdgeOne candidate pitfalls
 
+- **Do not mistake APK signature pinning for server identity attestation.**
+  `PackageManager` exposes the installed APK signing certificate to local
+  checks, but a modified app can bypass such a check or forge a claimed
+  digest in an HTTP request. EdgeOne's existing device ECDSA proof verifies a
+  *device key*, not that the official GG JKS signed the requesting APK.
+  Protect the original JKS outside Git and verify its certificate against the
+  owner-supplied fingerprint; never grant arbitrary feature-branch workflow
+  code access to the release key merely to obtain a persistent test APK.
+  New and previous release fingerprints do not by themselves create a valid
+  Android signing rotation lineage.
+
 - **APK-signature metadata has tool-specific wording.** The Android SDK
   `apksigner verify --print-certs` currently prints
   `V2 Signer: certificate SHA-256 digest:` for a v2-only internal APK, not
