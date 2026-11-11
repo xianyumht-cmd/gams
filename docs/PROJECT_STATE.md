@@ -2,8 +2,8 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Sixteenth increment: device-proof compatibility repair (pending full CI
-  and on-device acceptance):** The owner reported `设备签名无效` on the C++
+- **Sixteenth increment verified by CI; device acceptance pending:** The owner
+  reported `设备签名无效` on the C++
   internal emulator APK after unbinding the license through the EdgeOne
   administrator. On `/api/activate`, the server validates the device ECDSA
   proof *before* it reads the license record; unbinding does not change a
@@ -15,8 +15,17 @@
   through C++ JNI request construction into the unmodified Node handler,
   including a deliberately corrupted proof. The current deployed EdgeOne
   contract has not changed, so no server redeploy is required for this client
-  repair. A green host CI cannot prove the emulator's AndroidKeystore works:
-  install the new artifact and retry activation before calling this resolved.
+  repair. A live synthetic activation with a valid P1363 proof produced
+  `bad_key` (nonexistent random license), showing that the deployed service
+  accepts the expected proof format before license lookup. GitHub Actions
+  [`42941762580`](https://github.com/xianyumht-cmd/gams/actions/runs/42941762580)
+  passed the Java ECDSA→C++ JNI→Node proof fixture, native sanitizer parity,
+  Android lint, both APK builds, native ABI, signing and no-private-JS checks.
+  Its 14-day artifact `GG-EdgeOne-CPP-internal-17` (ID `13821051701`)
+  contains a 2,624,019-byte APK with verified SHA-256
+  `9c08e39b95169decbaae6dddd7dd7ec841caea9d0a44250852a13c6137648346`.
+  A green host CI cannot prove the emulator's AndroidKeyStore works: install
+  this APK and retry activation before calling the reported failure resolved.
 
 - **Fifteenth increment verified by CI:** Bind the C++ runtime ZIP registry
   entries to the *same* native authorization coordinator and generation
