@@ -12,6 +12,8 @@ on:
       - feat/gg-edgeone-license-remote-js-20261111
     paths:
       - 'v2/android/**'
+      - 'scripts/Install-GG-Android-BuildTools.ps1'
+      - 'scripts/Sign-GG-Official-APK.ps1'
       - '.github/workflows/gg-edgeone-cpp-internal-apk.yml'
 
 permissions:
