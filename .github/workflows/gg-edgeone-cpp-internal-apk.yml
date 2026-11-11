@@ -261,6 +261,7 @@ jobs:
           mkdir -p official-signing-kit
           cp "$unsigned" official-signing-kit/GG-EdgeOne-CPP-official-unsigned.apk
           cp scripts/Sign-GG-Official-APK.ps1 official-signing-kit/
+          cp scripts/Install-GG-Android-BuildTools.ps1 official-signing-kit/
           (cd official-signing-kit && sha256sum GG-EdgeOne-CPP-official-unsigned.apk > SHA256SUMS.txt)
           {
             printf 'source_commit=%s\n' "$GITHUB_SHA"
@@ -274,8 +275,12 @@ jobs:
         run: |
           $tokens = $null
           $parseErrors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile('scripts/Sign-GG-Official-APK.ps1', [ref]$tokens, [ref]$parseErrors) | Out-Null
-          if ($parseErrors) { $parseErrors | Out-String | Write-Error; exit 1 }
+          foreach ($script in @('scripts/Sign-GG-Official-APK.ps1', 'scripts/Install-GG-Android-BuildTools.ps1')) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors) { $parseErrors | Out-String | Write-Error; exit 1 }
+          }
       - name: Upload unsigned official-local signing kit
         uses: actions/upload-artifact@v4
         with:

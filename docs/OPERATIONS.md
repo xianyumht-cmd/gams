@@ -7,14 +7,21 @@
 The C++ internal workflow publishes a second artifact named
 `GG-EdgeOne-CPP-official-local-N`. It contains an **unsigned** release APK
 compiled with `GG_REQUIRE_OFFICIAL_APK_SIGNER=true`,
-`scripts/Sign-GG-Official-APK.ps1`, `BUILD-METADATA.txt` and `SHA256SUMS.txt`.
+`scripts/Sign-GG-Official-APK.ps1`,
+`scripts/Install-GG-Android-BuildTools.ps1`, `BUILD-METADATA.txt` and
+`SHA256SUMS.txt`.
 This does not change the existing `GG-EdgeOne-CPP-internal-N` debug-signed
 emulator test artifact. Do **not** take the latter and simply re-sign it:
 its official signer gate is intentionally disabled.
 
-On the owner's Windows computer, install the Android SDK **Build-Tools**
-(which contains `apksigner.bat`; JDK `keytool` alone is insufficient) and
-extract the complete `official-local` artifact to one directory. Run the
+On the owner's Windows computer, extract the complete `official-local`
+artifact to one directory. If Android SDK **Build-Tools** is missing, run
+the bundled `Install-GG-Android-BuildTools.ps1` first. It downloads Google's
+official Windows command-line tools ZIP, validates the published SHA-256,
+and installs just `build-tools;35.0.0` using `sdkmanager` into the current
+user's SDK directory. It needs Java JDK and network access and may request
+acceptance of the Android SDK license. If Google is blocked, install the
+same package manually from the official Android SDK tools. Then run the
 bundled PowerShell signer, e.g. from that directory:
 
 ```powershell
