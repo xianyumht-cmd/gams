@@ -95,6 +95,8 @@ jobs:
             v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeZipReader.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeCiphertextReader.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/EdgeOneHtmlCompatibility.java \
+            v2/android/client/src/main/java/com/jinli/ggsecure/DeviceProofCodec.java \
+            v2/android/clientNative/test/DeviceProofInteropSmoke.java \
             v2/android/clientNative/test/NativeRuntimeInteropSmoke.java \
             v2/android/clientNative/test/NativeCryptoBuildConfig.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/RuntimeDeliveryCrypto.java \
@@ -104,6 +106,7 @@ jobs:
             /tmp/gg-cpp-test/bundle.zip \
             remote-script/release/noname-1.1.4.js \
             game-engine/release/game-1.0.5.js
+          node edgeone-license/test/device-proof-interop.mjs
           node edgeone-license/test/runtime-crypto-fixture.mjs | \
             java -Djava.library.path=/tmp/gg-cpp-jni -cp /tmp/gg-cpp-java-classes \
               com.jinli.ggsecure.RuntimeDeliveryCryptoSmoke

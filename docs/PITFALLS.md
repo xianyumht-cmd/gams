@@ -1,5 +1,15 @@
 # EdgeOne candidate pitfalls
 
+- EdgeOne `invalid_device` / `设备签名无效` is raised by Node when a
+  P-256 ECDSA proof fails. `/api/activate` verifies proof *before* license
+  lookup or checking existing device binding, so an admin unbind cannot
+  repair it. Android `SHA256withECDSA` returns DER while Node expects a
+  64-byte P1363 `r||s`: export the matching public key in the same Keystore
+  snapshot, strictly convert DER, and verify the converted bytes locally.
+  Host Java→C++→Node cryptographic interop is a useful regression but does
+  not reproduce emulator-specific AndroidKeyStore providers; confirm on the
+  actual device before declaring the report fixed. The APK's disposable
+  debug signing certificate is unrelated to this device-proof key pair.
 - The C++ project is **not** a pure-native Android WebView: `WebView`, activity
   lifecycle, platform permission prompts and Keystore calls remain Java API
   boundaries. The first native build currently migrates only ZIP/JS memory

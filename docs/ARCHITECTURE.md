@@ -23,6 +23,15 @@ Java's platform AES-GCM verifies ciphertext before C++ handles the ZIP.
 Neither device private keys nor a static runtime-decryption key are included
 in the APK. The native/Java wire contract is cross-tested against Node.
 
+For the EdgeOne-only device proof, `DeviceIdentity.signEdgeOneProof()` obtains
+the Keystore certificate and private key together and returns one immutable
+public-key/proof pair. `DeviceProofCodec` validates Android's DER ECDSA
+encoding, converts it to 64-byte P1363 for Node, and verifies the transmitted
+format locally before `EdgeOneCandidateClient` supplies the pair to either
+Java or C++ request assembly. The original production signing method remains
+unchanged. CI tests actual host-JCA ECDSA through JNI and the unmodified Node
+`handle('activate')`; Android Keystore device behavior still needs a device.
+
 The next native boundary owns the **full outbound authorization JSON** for
 `activate`, `check`, `unbind` and `runtime-v2`, including action-specific
 license/token/delivery-key fields. Android invokes the Keystore signature on

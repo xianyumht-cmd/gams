@@ -1,5 +1,20 @@
 # Technical decisions
 
+## 2026-11-11: EdgeOne device proof uses an atomic Keystore pair and wire self-check
+
+The internal C++/Java EdgeOne candidates preserve the Node service's existing
+SHA256withECDSA/P-256 contract: Android emits ASN.1 DER but Node verifies
+64-byte IEEE P1363 `r||s`, signed over exactly the existing canonical text.
+Acquire the private key and certificate together from one AndroidKeyStore
+snapshot, convert DER strictly to P1363, verify the *converted* signature
+locally with the matching public key, then submit both together to C++ JSON
+serialization. Keep legacy `DeviceIdentity.signRawBase64()` unchanged so
+production licensing is not moved as part of an internal test repair. Gate
+the change with a real Java ECDSA→C++ JNI→Node handler fixture, and do not
+require an EdgeOne Makers redeploy for a client-only codec change. The owner
+must still confirm the Android emulator activation; host JCA is not the
+device's AndroidKeyStore provider.
+
 ## 2026-11-11: Plan A staged native GG client, with functional parity as gate
 
 Use a separately installable Android `clientNative` module with a C++17 native

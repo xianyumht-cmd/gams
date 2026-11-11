@@ -143,11 +143,12 @@ final class EdgeOneCandidateClient {
         String deviceId = device.deviceId();
         String canonical = action + "\n" + now + "\n" + deviceId + "\n" +
                 DeviceIdentity.sha256Hex(material);
+        DeviceIdentity.SignedProof signed = device.signEdgeOneProof(canonical);
         return new JSONObject()
                 .put("deviceId", deviceId)
-                .put("devicePublicKey", device.publicKeyBase64())
+                .put("devicePublicKey", signed.publicKey)
                 .put("requestTime", now)
-                .put("proof", device.signRawBase64(canonical));
+                .put("proof", signed.signature);
     }
 
     /** Native GG: C++ owns the entire EdgeOne request wire shape and policy. */
@@ -158,9 +159,9 @@ final class EdgeOneCandidateClient {
         String material = "runtime-v2".equals(action)
                 ? credential + "|" + deliveryPublicKey : credential;
         String canonical = NativeRuntimeBridge.proofCanonical(action, now, deviceId, material);
-        String signature = device.signRawBase64(canonical);
+        DeviceIdentity.SignedProof signed = device.signEdgeOneProof(canonical);
         return new JSONObject(NativeRuntimeBridge.signedRequestJson(
-                action, deviceId, device.publicKeyBase64(), now, signature,
+                action, deviceId, signed.publicKey, now, signed.signature,
                 credential, deliveryPublicKey));
     }
 

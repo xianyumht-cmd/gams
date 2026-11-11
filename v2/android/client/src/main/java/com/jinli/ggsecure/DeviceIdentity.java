@@ -78,6 +78,46 @@ final class DeviceIdentity {
         return Base64.encodeToString(derToRaw(signer.sign(), 32), Base64.NO_WRAP);
     }
 
+    /**
+     * EdgeOne signs and exports its identity from one Keystore snapshot, then
+     * verifies the exact P1363 bytes to be transmitted. The legacy license
+     * protocol keeps using signRawBase64() unchanged.
+     */
+    synchronized SignedProof signEdgeOneProof(String canonical) throws Exception {
+        KeyStore activeStore = keyStore();
+        PrivateKey privateKey = (PrivateKey) activeStore.getKey(SIGNING_ALIAS, null);
+        java.security.cert.Certificate certificate = activeStore.getCertificate(SIGNING_ALIAS);
+        if (privateKey == null || certificate == null) {
+            ensureKeyPair();
+            activeStore = keyStore();
+            privateKey = (PrivateKey) activeStore.getKey(SIGNING_ALIAS, null);
+            certificate = activeStore.getCertificate(SIGNING_ALIAS);
+        }
+        if (privateKey == null || certificate == null) {
+            throw new SignatureException("无法读取设备签名密钥");
+        }
+        PublicKey publicKey = KeyFactory.getInstance("EC").generatePublic(
+                new java.security.spec.X509EncodedKeySpec(
+                        certificate.getPublicKey().getEncoded()));
+        byte[] signature = DeviceProofCodec.sign(privateKey, publicKey, canonical);
+        try {
+            return new SignedProof(Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP),
+                    Base64.encodeToString(signature, Base64.NO_WRAP));
+        } finally {
+            java.util.Arrays.fill(signature, (byte) 0);
+        }
+    }
+
+    static final class SignedProof {
+        final String publicKey;
+        final String signature;
+
+        SignedProof(String publicKey, String signature) {
+            this.publicKey = publicKey;
+            this.signature = signature;
+        }
+    }
+
     String certificateDigest() throws Exception {
         PackageManager manager = context.getPackageManager();
         PackageInfo info;

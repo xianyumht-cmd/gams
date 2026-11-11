@@ -2,6 +2,22 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Sixteenth increment: device-proof compatibility repair (pending full CI
+  and on-device acceptance):** The owner reported `设备签名无效` on the C++
+  internal emulator APK after unbinding the license through the EdgeOne
+  administrator. On `/api/activate`, the server validates the device ECDSA
+  proof *before* it reads the license record; unbinding does not change a
+  malformed proof. The EdgeOne candidate now signs and exports its Keystore
+  key pair together, strictly converts Android DER ECDSA to Node's 64-byte
+  P1363 wire form, and locally verifies the exact outgoing signature against
+  its exported public key. The existing production signing protocol is
+  unchanged. A new host regression follows actual Java P-256 signatures
+  through C++ JNI request construction into the unmodified Node handler,
+  including a deliberately corrupted proof. The current deployed EdgeOne
+  contract has not changed, so no server redeploy is required for this client
+  repair. A green host CI cannot prove the emulator's AndroidKeystore works:
+  install the new artifact and retry activation before calling this resolved.
+
 - **Fifteenth increment verified by CI:** Bind the C++ runtime ZIP registry
   entries to the *same* native authorization coordinator and generation
   ticket that own the corresponding encrypted delivery. Every subsequent
