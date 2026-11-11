@@ -1,5 +1,31 @@
 # EdgeOne GG internal deployment and verification
 
+## Repair `设备签名无效` after successful card binding
+
+If a newly issued card shows `已绑定` immediately after the GG internal client
+reports `设备签名无效`, activation succeeded and the startup flow probably failed
+on its next `/api/runtime` request. The v2 APK sends proof action
+`runtime-v2` over `token|deliveryPublicKey`; server code before `31ae7ad`
+expects action `runtime` over `token` and returns that exact error. This was
+reproduced locally with a synthetic signed request against both code versions.
+
+1. In EdgeOne Makers/Pages, select **the GG license API project**, not the
+   unrelated production website. Ensure the connected GitHub repository is
+   `xianyumht-cmd/gams`, source branch
+   `feat/gg-edgeone-license-remote-js-20261111`, and **project root** is
+   `edgeone-license`; inspect the build source before clicking redeploy.
+2. Redeploy the latest branch without changing `GG_TOKEN_SECRET`,
+   `GG_ADMIN_PASSWORD`, existing private Blob/card records, or the
+   `GG_REQUIRE_RUNTIME_V2` flag. The current server keeps backward
+   compatibility unless the existing strict flag is already enabled.
+3. Visit `https://gg-api.xn--8pv109c.top/api/health` after production
+   deployment. It must return both `"runtimeProofAction":"runtime-v2"`
+   and `"deliveryVersion":2` alongside `ok:true`. If either is missing,
+   the custom domain still serves a different or older deployment.
+4. Reopen the already installed `GG-EdgeOne-CPP-internal-17` and activate
+   the existing bound card on the same emulator. This verification does not
+   require generating a new card, unbinding, reinstalling, or another APK.
+
 ## Build and test the C++ client side by side
 
 The independent `GG EdgeOne C++ Internal APK` GitHub Actions workflow builds

@@ -276,7 +276,10 @@ Failed initial activation returns to the form with the entered key intact.
 
 Functions: `edgeone-license/cloud-functions/api/[[default]].js` exposes
 `POST /api/activate`, `/api/check`, `/api/unbind`, `/api/runtime` and
-`GET /api/health`. Shared, framework-independent validation is in `core.mjs`.
+`GET /api/health`. The unauthenticated health result includes the active
+server's `runtimeProofAction` (`runtime-v2`) and `deliveryVersion` (`2`),
+allowing a deployed-branch compatibility check without revealing keys or
+license records. Shared, framework-independent validation is in `core.mjs`.
 
 ## Private browser administrator (internal candidate)
 

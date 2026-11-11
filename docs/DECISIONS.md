@@ -1,5 +1,18 @@
 # Technical decisions
 
+## 2026-11-11: Expose EdgeOne runtime proof compatibility at `/api/health`
+
+The internal Android startup flow can successfully bind a card and then fail
+on `/api/runtime`, displaying the last error on the activation screen. Old
+Makers code verifies `runtime` against a token; the new native APK signs
+`runtime-v2` over the token and one-use delivery key. A local fixture proved
+that old code rejects an otherwise correct v2 proof with `设备签名无效`. Expose
+the shared `RUNTIME_PROOF_ACTION` and device delivery version in the health
+response so operations can distinguish source checkout from actual EdgeOne
+deployment without accessing credentials or card records. Do not silently
+downgrade the client to plaintext legacy runtime to work around an old cloud
+deployment.
+
 ## 2026-11-11: EdgeOne device proof uses an atomic Keystore pair and wire self-check
 
 The internal C++/Java EdgeOne candidates preserve the Node service's existing

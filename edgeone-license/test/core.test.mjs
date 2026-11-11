@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDecipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync, sign } from 'node:crypto';
-import { handle, hash } from '../core.mjs';
+import { handle, hash, RUNTIME_PROOF_ACTION } from '../core.mjs';
 
 const env = { GG_TOKEN_SECRET: 'test-only-secret-not-for-deployment-0123456789' };
 const NOW = 1_800_000_000;
 const key = 'A1B2C3D4E5F60987A1B2C3D4E5F60987';
+
+test('published runtime proof action remains runtime-v2', () => {
+  assert.equal(RUNTIME_PROOF_ACTION, 'runtime-v2');
+});
 
 function store() {
   const data = new Map();

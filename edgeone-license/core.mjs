@@ -6,6 +6,7 @@ const DEVICE_RE = /^[a-f0-9]{64}$/;
 const MAX_BUNDLE = 5_500_000; // EdgeOne Cloud Functions responses are capped at 6 MB.
 const TIME_SKEW = 180;
 const MAX_RECENT_REQUESTS = 64;
+export const RUNTIME_PROOF_ACTION = 'runtime-v2';
 
 export const hash = (value) => createHash('sha256').update(value).digest('hex');
 
@@ -175,7 +176,7 @@ export async function handle(action, body, { store, env, now = Math.floor(Date.n
   const session = verifyToken(body.token, env, now);
   const v2Delivery = action === 'runtime' && body.deliveryPublicKey !== undefined;
   const recipientKey = v2Delivery ? runtimeDeliveryKey(body.deliveryPublicKey) : null;
-  verifyDeviceProof(body, v2Delivery ? 'runtime-v2' : action,
+  verifyDeviceProof(body, v2Delivery ? RUNTIME_PROOF_ACTION : action,
     v2Delivery ? `${body.token}|${body.deliveryPublicKey}` : body.token, now);
   if (session.dev !== body.deviceId || session.pub !== hash(body.devicePublicKey)) {
     fail(401, 'bad_session', '授权设备不匹配');

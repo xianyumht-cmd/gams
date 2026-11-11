@@ -2,6 +2,26 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Runtime-v2 deployment mismatch is the leading cause of the owner's
+  reported device-signature rejection (awaiting live deployment check):**
+  A brand-new card appeared **bound** in the EdgeOne administrator even though
+  the internal APK returned `设备签名无效` from the combined startup operation.
+  Thus `/api/activate` succeeded; the visible error can originate in the
+  immediately following `/api/runtime` call. An executable comparison against
+  original server commit `6893b40` reproduced the exact sequence: successful
+  activation then `invalid_device / 设备签名无效` for the Android candidate's
+  `runtime-v2` signature; current server code (`31ae7ad` and later) accepted
+  the *same* signed v2 request and produced encrypted delivery. The old server
+  signs/verifies `runtime + token`, whereas the candidate uses
+  `runtime-v2 + token|deliveryPublicKey`. This is a **supported hypothesis**
+  about the deployed EdgeOne version, not yet proof of its live source.
+  The EdgeOne health endpoint now advertises `runtimeProofAction=runtime-v2`
+  and `deliveryVersion=2` after redeployment. Next action is deploying the
+  current `edgeone-license` project on the correct Makers branch/root and
+  verifying those exact fields on the owner's custom domain. Do not reissue
+  cards, reset Blob records, rotate secrets or rebuild the unchanged APK
+  to fix this protocol mismatch.
+
 - **Owner's follow-up after build #17:** The emulator still displays
   `设备签名无效`, but its visible version is `2.0.3-native-internal`—the fixed
   value shared by APK #16 and #17. Inspection of the two actual release APKs

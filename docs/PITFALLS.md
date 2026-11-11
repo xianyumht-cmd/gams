@@ -1,5 +1,18 @@
 # EdgeOne candidate pitfalls
 
+- The UI's activation flow also requests the private runtime ZIP before it
+  reports startup success. A visible `设备签名无效` does **not** imply
+  `/api/activate` failed. If a freshly issued card already shows `已绑定` in
+  the admin UI, activation actually succeeded; inspect `/api/runtime` proof
+  compatibility. Original EdgeOne server commit `6893b40` expects
+  `runtime\nTIME\nDEVICE\nsha256(token)` and rejects a new APK's
+  `runtime-v2\nTIME\nDEVICE\nsha256(token|deliveryPublicKey)` with **the exact
+  same** `invalid_device / 设备签名无效`. A live server can be old even when a
+  local Java→JNI→Node test against current `core.mjs` passes. Deploy the
+  `edgeone-license` Makers project from the correct branch/root before
+  changing the APK again; verify `GET /api/health` announces
+  `runtimeProofAction=runtime-v2` and `deliveryVersion=2`. An old health
+  response without these fields does not establish deployment freshness.
 - **An unchanged version label does not prove that an updated internal APK is
   installed.** `clientNative` hardcodes `2.0.3-native-internal` and `versionCode=16`
   for the separate C++ builds. Each GitHub-hosted Actions runner creates a

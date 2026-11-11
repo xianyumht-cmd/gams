@@ -1,5 +1,5 @@
 import { getStore } from '@edgeone/pages-blob';
-import { handle, toHttpError } from '../../core.mjs';
+import { handle, RUNTIME_PROOF_ACTION, toHttpError } from '../../core.mjs';
 import { handleAdminRequest } from '../../admin-core.mjs';
 
 const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
@@ -10,7 +10,8 @@ export async function onRequest({ request, env }) {
       storeFactory: () => getStore({ name: 'gg-private', consistency: 'strong' }) });
   }
   if (request.method === 'GET' && url.pathname === '/api/health') {
-    return new Response(JSON.stringify({ ok: true, service: 'gg-edgeone-internal' }),
+    return new Response(JSON.stringify({ ok: true, service: 'gg-edgeone-internal',
+      runtimeProofAction: RUNTIME_PROOF_ACTION, deliveryVersion: 2 }),
       { headers: { ...HEADERS, 'Content-Type': 'application/json' } });
   }
   if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
