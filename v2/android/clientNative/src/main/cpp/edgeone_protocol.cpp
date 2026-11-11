@@ -83,8 +83,12 @@ DeliveryMaterial::DeliveryMaterial(DeliveryMaterial&& other) noexcept
 
 std::string proofCanonical(const std::string& action, std::int64_t epochSeconds,
                            const std::string& deviceId, const std::string& material) {
-    if (action.empty() || action.size() > 64 || deviceId.size() != 64 ||
-        material.size() > 8192 || epochSeconds <= 0) {
+    // Never sign an arbitrary caller-controlled action or malformed device ID.
+    // This must match the explicit action set accepted by signedRequestJson().
+    if ((action != "activate" && action != "check" && action != "unbind" &&
+         action != "runtime-v2") ||
+        !validAscii(deviceId, kHexLower, 64, 64) ||
+        material.empty() || material.size() > 8192 || epochSeconds <= 0) {
         throw std::runtime_error("Invalid license proof material");
     }
     const auto bytes = reinterpret_cast<const std::uint8_t*>(material.data());

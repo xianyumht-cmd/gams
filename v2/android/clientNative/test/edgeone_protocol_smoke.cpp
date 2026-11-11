@@ -144,6 +144,13 @@ int main() {
         throw std::runtime_error("C++ HKDF/AAD mismatches the Node reference");
     rejects([&] { gg::proofCanonical("activate", 0, device, "material"); });
     rejects([&] { gg::proofCanonical("activate", 1794344400, "bad-device", "material"); });
+    rejects([&] { gg::proofCanonical("runtime", 1794344400, device, "material"); });
+    rejects([&] { gg::proofCanonical("check", 1794344400, std::string(64, 'G'), "material"); });
+    rejects([&] { gg::proofCanonical("unbind", 1794344400, device, ""); });
+    rejects([&] { gg::proofCanonical("runtime-v2", 1794344400, device,
+                                     std::string(8193, 'A')); });
+    if (gg::proofCanonical("runtime-v2", 1794344400, device, "token|key").empty())
+        throw std::runtime_error("Valid runtime-v2 action was rejected");
     rejects([&] { gg::deriveDeliveryMaterial(shared.data(), shared.size() - 1,
                                                device, "token"); });
     rejects([&] { gg::deriveDeliveryMaterial(shared.data(), shared.size(),

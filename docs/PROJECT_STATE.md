@@ -36,6 +36,12 @@
   `LegacyLicenseProtocol` and `LegacyRuntimeLoader` while preserving the
   native EdgeOne candidate path. It requires its own fresh CI verification;
   device acceptance of all refactor changes is still pending.
+- The next native hardening increment restricts proof canonicalization to the
+  EdgeOne action allowlist and valid device-ID/proof inputs and verifies the
+  non-executable GNU_STACK, RELRO, BIND_NOW and JNI exports in each ABI.
+  Local host C++ protocol parity passed with ASan/UBSan and leak detection
+  disabled because this container disallows LeakSanitizer ptrace; GitHub CI
+  performs the unrestricted sanitizer run. Do not claim device acceptance.
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 

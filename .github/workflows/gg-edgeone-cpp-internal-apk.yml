@@ -191,10 +191,14 @@ jobs:
           unzip -Z1 "$cpp" | grep -F 'lib/arm64-v8a/libggnative.so'
           unzip -Z1 "$cpp" | grep -F 'lib/armeabi-v7a/libggnative.so'
           unzip -Z1 "$cpp" | grep -F 'lib/x86_64/libggnative.so'
-          unzip -p "$cpp" lib/arm64-v8a/libggnative.so > "$RUNNER_TEMP/libggnative-arm64.so"
-          readelf -W --program-headers "$RUNNER_TEMP/libggnative-arm64.so" | grep -F GNU_RELRO
-          readelf -W --dynamic "$RUNNER_TEMP/libggnative-arm64.so" | grep -F BIND_NOW
-          readelf -W --dyn-syms "$RUNNER_TEMP/libggnative-arm64.so" | grep -F Java_com_jinli_ggsecure_NativeRuntimeBridge_
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            library="$RUNNER_TEMP/libggnative-$abi.so"
+            unzip -p "$cpp" "lib/$abi/libggnative.so" > "$library"
+            readelf -W --program-headers "$library" | grep -F GNU_RELRO
+            readelf -W --program-headers "$library" | grep -E 'GNU_STACK.*RW '
+            readelf -W --dynamic "$library" | grep -F BIND_NOW
+            readelf -W --dyn-syms "$library" | grep -F Java_com_jinli_ggsecure_NativeRuntimeBridge_
+          done
           sdk_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$sdk_tools/aapt" dump badging "$cpp" | grep -F "package: name='com.jinli.quickweb.edgeonecpp'"
           "$sdk_tools/aapt" dump badging "$cpp" | grep -F "versionCode='${GG_NATIVE_VERSION_CODE}' versionName='${GG_NATIVE_VERSION_NAME}'"

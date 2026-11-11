@@ -6,5 +6,6 @@ target_compile_features(ggnative PRIVATE cxx_std_17)
 target_compile_options(ggnative PRIVATE -Wall -Wextra -Werror
     -fvisibility=hidden -ffunction-sections -fdata-sections -fstack-protector-strong)
 target_link_options(ggnative PRIVATE
-    -Wl,-z,relro -Wl,-z,now -Wl,--gc-sections -Wl,--exclude-libs,ALL)
+    -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack
+    -Wl,--gc-sections -Wl,--exclude-libs,ALL)
 target_link_libraries(ggnative PRIVATE z)

@@ -43,8 +43,12 @@ optionally a dedicated persistent internal signing keystore provided only by
 GitHub secrets. APK publishing identity, AndroidKeyStore device proofs, and
 EdgeOne server token keys remain independent trust boundaries. Native CMake
 retains hidden symbol visibility and stack protection, and now explicitly
-requests RELRO/BIND_NOW and unused-section elimination. ABI and JNI tests must
-pass before accepting these build/link flags.
+requests RELRO/BIND_NOW, non-executable stack, and unused-section elimination.
+CI inspects all three ABI ELF images and JNI exports for these protections.
+The native proof canonicalizer rejects unknown action names, malformed
+lowercase device fingerprints and empty/oversized proof material before a
+Java Keystore signature is requested. ABI and JNI tests must pass before
+accepting these build/link flags or signed-request guards.
 
 ## Isolated C++ candidate (`:clientNative`)
 

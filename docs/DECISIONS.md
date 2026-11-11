@@ -10,6 +10,18 @@ shared `V2LicenseManager` continues to serialize and cancel authorization
 operations; only `EdgeOneCandidateClient` drives the native candidate. This
 refactor is not permission to change deployed EdgeOne Makers endpoints.
 
+## 2026-11-11: Tighten native proof inputs and verify ELF protections per ABI
+
+Allow native authorization proof generation only for the four live EdgeOne
+actions (`activate`, `check`, `unbind`, `runtime-v2`), a canonical lowercase
+SHA-256 device identifier, and nonempty bounded proof material. Ensure the
+request JSON's accepted action set and proof canonicalizer agree, so invalid
+action names cannot obtain a signature. Request NX stack in CMake and inspect
+GNU_STACK/RELRO/BIND_NOW and JNI exports in each packaged ABI rather than
+assuming ARM64 inspection covers the full APK. This is defense in depth;
+runtime attackers can still inspect strings, and these flags do not replace
+server-side authorization.
+
 ## 2026-11-11: Separate UI from platform WebView and auth session persistence
 
 Keep lightweight Java Android Views and one WebView while moving view
