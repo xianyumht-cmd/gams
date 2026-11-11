@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Fourteenth increment, awaiting GitHub Android CI:** Replaced the native
+- **Fourteenth increment verified by CI:** Replaced the native
   runtime ZIP's raw-pointer JNI handle with a C++ registry of monotonically
   increasing IDs backed by `shared_ptr` ownership. Every control script,
   HTML-rewrite and game-engine read now retains a reference for the duration
@@ -11,8 +11,14 @@
   instead of dereferencing a freed pointer. Wiping the old ZIP runs outside
   the registry lock to avoid blocking a fresh login's open. Host JNI tests
   cover invalid/closed ID reads, duplicate close, no ID reuse and concurrent
-  game-range reads during teardown. Real Android/CI verification is pending;
-  no device parity has been tested.
+  game-range reads during teardown. GitHub Actions
+  [`42933209840`](https://github.com/xianyumht-cmd/gams/actions/runs/42933209840)
+  passed real JNI teardown-race tests, host C++ parity, both Android builds,
+  lint, three native ABIs, signing and the no-private-JS packaging check.
+  The 14-day artifact `GG-EdgeOne-CPP-internal-14` (ID `13817726566`)
+  contains APK SHA-256
+  `f2c6e8527389594bf547ed18aad7f3051139a8fe5fe0557768fba015081a3df5`.
+  Device parity remains unverified at the owner's request.
 
 - **Thirteenth increment verified by CI:** A canceled C++
   startup-generation ticket now propagates into the EdgeOne HTTPS runtime
