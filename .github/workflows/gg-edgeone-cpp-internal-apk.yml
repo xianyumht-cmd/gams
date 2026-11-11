@@ -117,12 +117,39 @@ jobs:
       - name: Build isolated C++ APK and unchanged Java reference
         env:
           GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || vars.GG_EDGEONE_BASE_URL || 'https://gg-api.xn--8pv109c.top' }}
+          GG_INTERNAL_KEYSTORE_B64: ${{ secrets.GG_INTERNAL_KEYSTORE_B64 }}
+          GG_INTERNAL_STORE_PASSWORD: ${{ secrets.GG_INTERNAL_STORE_PASSWORD }}
+          GG_INTERNAL_KEY_ALIAS: ${{ secrets.GG_INTERNAL_KEY_ALIAS }}
+          GG_INTERNAL_KEY_PASSWORD: ${{ secrets.GG_INTERNAL_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
+          signing_mode=ephemeral-debug
+          if [[ -n "$GG_INTERNAL_KEYSTORE_B64" || -n "$GG_INTERNAL_STORE_PASSWORD" ||
+                -n "$GG_INTERNAL_KEY_ALIAS" || -n "$GG_INTERNAL_KEY_PASSWORD" ]]; then
+            if [[ -z "$GG_INTERNAL_KEYSTORE_B64" || -z "$GG_INTERNAL_STORE_PASSWORD" ||
+                  -z "$GG_INTERNAL_KEY_ALIAS" || -z "$GG_INTERNAL_KEY_PASSWORD" ]]; then
+              echo 'Incomplete GG internal signing secrets' >&2
+              exit 1
+            fi
+            export GG_INTERNAL_KEYSTORE_FILE="$RUNNER_TEMP/gg-internal-signing.jks"
+            printf '%s' "$GG_INTERNAL_KEYSTORE_B64" | base64 --decode > "$GG_INTERNAL_KEYSTORE_FILE"
+            chmod 600 "$GG_INTERNAL_KEYSTORE_FILE"
+            signing_mode=persistent-internal
+          else
+            echo '::warning::No persistent internal signing secrets: this APK cannot reliably upgrade an earlier CI run'
+          fi
+          echo "GG_SIGNING_MODE=$signing_mode" >> "$GITHUB_ENV"
+          native_version_code=$((10000 + GITHUB_RUN_NUMBER))
+          native_version_name="2.0.4-native-internal.${GITHUB_RUN_NUMBER}"
+          echo "GG_NATIVE_VERSION_CODE=$native_version_code" >> "$GITHUB_ENV"
+          echo "GG_NATIVE_VERSION_NAME=$native_version_name" >> "$GITHUB_ENV"
           cd v2/android
           gradle --no-daemon \
             :clientNative:lintRelease :clientNative:assembleRelease \
             :client:assembleEdgeOneTest \
-            "-PggEdgeOneBaseUrl=${GH_EDGEONE_BASE}"
+            "-PggEdgeOneBaseUrl=${GH_EDGEONE_BASE}" \
+            "-PggNativeVersionCode=${native_version_code}" \
+            "-PggNativeVersionName=${native_version_name}"
       - name: Verify isolated APKs, ABI libraries and no private JavaScript
         run: |
           set -euo pipefail
@@ -139,11 +166,19 @@ jobs:
           unzip -Z1 "$cpp" | grep -F 'lib/x86_64/libggnative.so'
           sdk_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$sdk_tools/aapt" dump badging "$cpp" | grep -F "package: name='com.jinli.quickweb.edgeonecpp'"
+          "$sdk_tools/aapt" dump badging "$cpp" | grep -F "versionCode='${GG_NATIVE_VERSION_CODE}' versionName='${GG_NATIVE_VERSION_NAME}'"
           "$sdk_tools/aapt" dump badging "$java" | grep -F "package: name='com.jinli.quickweb.edgeonetest'"
-          "$sdk_tools/apksigner" verify --verbose "$cpp"
+          "$sdk_tools/apksigner" verify --verbose --print-certs "$cpp"
           mkdir -p artifact
           cp "$cpp" artifact/GG-EdgeOne-CPP-internal.apk
           (cd artifact && sha256sum GG-EdgeOne-CPP-internal.apk > SHA256SUMS.txt)
+          {
+            printf 'source_commit=%s\n' "$GITHUB_SHA"
+            printf 'version_code=%s\n' "$GG_NATIVE_VERSION_CODE"
+            printf 'version_name=%s\n' "$GG_NATIVE_VERSION_NAME"
+            printf 'signing_mode=%s\n' "$GG_SIGNING_MODE"
+            "$sdk_tools/apksigner" verify --print-certs "$cpp" | grep -F 'Signer #1 certificate SHA-256 digest:'
+          } > artifact/BUILD-METADATA.txt
       - name: Upload internal test APK only
         uses: actions/upload-artifact@v4
         with:

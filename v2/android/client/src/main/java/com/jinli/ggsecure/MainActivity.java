@@ -1,47 +1,26 @@
 package com.jinli.ggsecure;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DownloadManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
-import android.content.res.ColorStateList;
-import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
-import android.webkit.JsResult;
-import android.webkit.DownloadListener;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
-import android.webkit.WebSettings;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.webkit.ScriptHandler;
-import androidx.webkit.WebViewCompat;
-import androidx.webkit.WebViewFeature;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -61,20 +40,18 @@ public final class MainActivity extends Activity {
             RuntimeNames.originA(),
             RuntimeNames.originB()
     ));
-    private static final int FILE_CHOOSER_REQUEST = 2817;
     private static final long BACKGROUND_RELOAD_MS = 5L * 60L * 1000L;
 
     private WebView webView;
     private ProgressBar progressBar;
     private ProgressBar startupProgressBar;
     private TextView statusText;
-    private ValueCallback<Uri[]> fileChooserCallback;
     private V2LicenseManager licenseManager;
+    private ClientScreens screens;
+    private BrowserWebViewController browserController;
     private volatile RuntimePayload runtimePayload;
     private String wrappedControlScript;
     private volatile String edgeOneUserAgent;
-    private ScriptHandler scriptHandler;
-    private boolean nativeDocumentStartEnabled;
     private boolean browserVisible;
     private long backgroundAtMs;
 
@@ -83,6 +60,7 @@ public final class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         WebView.setWebContentsDebuggingEnabled(false);
+        screens = new ClientScreens(this);
         licenseManager = new V2LicenseManager(this);
         if (!licenseManager.hasSavedKey()) {
             showLicenseScreen("");
@@ -127,49 +105,9 @@ public final class MainActivity extends Activity {
 
     private void showLoading(String message, boolean initializing) {
         destroyWebView();
-        startupProgressBar = null;
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER);
-        root.setPadding(dp(28), dp(48), dp(28), dp(48));
-        root.setBackgroundColor(Color.rgb(7, 10, 35));
-
-        if (!initializing) {
-            ProgressBar loading = new ProgressBar(this);
-            root.addView(loading, new LinearLayout.LayoutParams(dp(56), dp(56)));
-        }
-
-        TextView title = new TextView(this);
-        title.setText("GG");
-        title.setTextSize(29);
-        title.setTextColor(Color.WHITE);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(20), 0, 0);
-        root.addView(title, matchWrap(0));
-
-        TextView text = new TextView(this);
-        text.setText(message);
-        text.setTextSize(15);
-        text.setTextColor(initializing ? Color.rgb(173, 225, 241) : Color.rgb(196, 181, 253));
-        text.setGravity(Gravity.CENTER);
-        text.setPadding(0, dp(12), 0, 0);
-        root.addView(text, matchWrap(0));
-
-        if (initializing) {
-            ProgressBar downloadBar = new ProgressBar(this, null,
-                    android.R.attr.progressBarStyleHorizontal);
-            downloadBar.setIndeterminate(true);
-            downloadBar.setMax(100);
-            ColorStateList cyan = ColorStateList.valueOf(Color.rgb(22, 190, 222));
-            downloadBar.setProgressTintList(cyan);
-            downloadBar.setIndeterminateTintList(cyan);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(250), dp(5));
-            params.topMargin = dp(24);
-            root.addView(downloadBar, params);
-            startupProgressBar = downloadBar;
-        }
-        setContentView(root);
+        ClientScreens.Loading loading = screens.loading(message, initializing);
+        startupProgressBar = loading.downloadProgress;
+        setContentView(loading.root);
     }
 
     private void updateInitializationProgress(ProgressBar current, int received, int expected) {
@@ -200,63 +138,11 @@ public final class MainActivity extends Activity {
         releaseRuntime();
         destroyWebView();
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(Color.rgb(245, 247, 251));
-
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(dp(28), dp(44), dp(28), dp(34));
-        scroll.addView(root, new ScrollView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        TextView title = new TextView(this);
-        title.setText("GG");
-        title.setTextSize(27);
-        title.setTextColor(Color.rgb(17, 24, 39));
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setGravity(Gravity.CENTER);
-        root.addView(title, matchWrap(dp(10)));
-
-        TextView subtitle = new TextView(this);
-        subtitle.setText("请输入激活码后启动");
-        subtitle.setTextSize(14);
-        subtitle.setTextColor(Color.rgb(75, 85, 99));
-        subtitle.setGravity(Gravity.CENTER);
-        subtitle.setLineSpacing(0, 1.25f);
-        root.addView(subtitle, matchWrap(dp(24)));
-
-        EditText input = new EditText(this);
-        input.setHint("请输入32位激活码");
-        input.setSingleLine(true);
-        input.setTextSize(17);
-        input.setTypeface(Typeface.MONOSPACE);
-        input.setPadding(dp(14), dp(14), dp(14), dp(14));
-        if (rememberedKey != null && !rememberedKey.isEmpty()) {
-            input.setText(rememberedKey);
-            input.setSelection(input.length());
-        }
-        root.addView(input, matchWrap(dp(14)));
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-
-        Button paste = actionButton("粘贴", false);
-        Button activate = actionButton("启动", true);
-        actions.addView(paste, new LinearLayout.LayoutParams(0, dp(52), 1));
-        LinearLayout.LayoutParams activateParams = new LinearLayout.LayoutParams(0, dp(52), 2);
-        activateParams.setMargins(dp(10), 0, 0, 0);
-        actions.addView(activate, activateParams);
-        root.addView(actions, matchWrap(dp(16)));
-
-        TextView status = new TextView(this);
-        status.setText(initialMessage == null ? "" : initialMessage);
-        status.setTextSize(14);
-        status.setTextColor(Color.rgb(185, 28, 28));
-        status.setGravity(Gravity.CENTER);
-        root.addView(status, matchWrap(0));
+        ClientScreens.License screen = screens.license(initialMessage, rememberedKey);
+        EditText input = screen.input;
+        TextView status = screen.status;
+        Button paste = screen.paste;
+        Button activate = screen.activate;
 
         paste.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
@@ -307,7 +193,7 @@ public final class MainActivity extends Activity {
             }, (received, expected) -> updateInitializationProgress(initialization, received, expected));
         });
 
-        setContentView(scroll);
+        setContentView(screen.root);
     }
 
     private void showBrowser(@Nullable Bundle savedInstanceState, RuntimePayload payload) {
@@ -325,215 +211,74 @@ public final class MainActivity extends Activity {
     }
 
     private void createBrowserUi() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.WHITE);
+        ClientScreens.Browser browser = screens.browser();
+        webView = browser.webView;
+        progressBar = browser.progress;
+        statusText = browser.status;
+        setContentView(browser.root);
 
-        LinearLayout toolbar = new LinearLayout(this);
-        toolbar.setOrientation(LinearLayout.HORIZONTAL);
-        toolbar.setGravity(Gravity.CENTER_VERTICAL);
-        toolbar.setPadding(dp(3), dp(3), dp(3), dp(3));
-        toolbar.setBackgroundColor(Color.rgb(17, 24, 39));
-
-        Button back = toolbarButton("返回");
-        Button home = toolbarButton("首页");
-        Button refresh = toolbarButton("刷新");
-        Button reset = toolbarButton("重置");
-        Button service = toolbarButton("服务");
-
-        statusText = new TextView(this);
-        statusText.setText("加载中…");
-        statusText.setTextColor(Color.WHITE);
-        statusText.setTextSize(11);
-        statusText.setSingleLine(true);
-        statusText.setGravity(Gravity.CENTER_VERTICAL);
-        statusText.setPadding(dp(5), 0, dp(2), 0);
-
-        toolbar.addView(back);
-        toolbar.addView(home);
-        toolbar.addView(refresh);
-        toolbar.addView(reset);
-        toolbar.addView(service);
-        toolbar.addView(statusText, new LinearLayout.LayoutParams(0, dp(40), 1));
-
-        progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        progressBar.setMax(100);
-
-        webView = new WebView(this);
-        webView.setBackgroundColor(Color.WHITE);
-
-        root.addView(toolbar, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)));
-        root.addView(progressBar, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(3)));
-        root.addView(webView, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
-        setContentView(root);
-
-        back.setOnClickListener(v -> {
+        browser.back.setOnClickListener(v -> {
             if (webView != null && webView.canGoBack()) webView.goBack();
             else finish();
         });
-        home.setOnClickListener(v -> webView.loadUrl(startUrl()));
-        refresh.setOnClickListener(v -> webView.reload());
-        reset.setOnClickListener(v -> resetWebData());
-        service.setOnClickListener(v -> showServiceDialog());
+        browser.home.setOnClickListener(v -> webView.loadUrl(startUrl()));
+        browser.refresh.setOnClickListener(v -> webView.reload());
+        browser.reset.setOnClickListener(v -> resetWebData());
+        browser.service.setOnClickListener(v -> showServiceDialog());
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
     private void configureWebView() {
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setLoadsImagesAutomatically(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(false);
-        settings.setBuiltInZoomControls(false);
-        settings.setDisplayZoomControls(false);
-        settings.setSupportZoom(!isEdgeOneDirectEngine());
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        settings.setSupportMultipleWindows(false);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-
-        webView.clearCache(true);
-        CookieManager cookies = CookieManager.getInstance();
-        cookies.setAcceptCookie(true);
-        cookies.setAcceptThirdPartyCookies(webView, true);
-        edgeOneUserAgent = settings.getUserAgentString();
-
-        installDocumentStartScript();
-
-        webView.setWebViewClient(new WebViewClient() {
+        browserController = new BrowserWebViewController(this,
+                new BrowserWebViewController.ResourceHost() {
             @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                statusText.setText("加载中…");
-                progressBar.setVisibility(View.VISIBLE);
-                if (!nativeDocumentStartEnabled && isTargetPage(url)) {
-                    view.evaluateJavascript(wrappedControlScript, null);
-                }
+            public boolean directEngine() {
+                return isEdgeOneDirectEngine();
             }
-
             @Override
-            public void onPageFinished(WebView view, String url) {
-                statusText.setText("已就绪");
-                CookieManager.getInstance().flush();
-                if (!nativeDocumentStartEnabled && isTargetPage(url)) {
-                    view.evaluateJavascript(wrappedControlScript, null);
-                }
+            public boolean targetPage(String url) {
+                return isTargetPage(url);
             }
-
             @Override
-            public WebResourceResponse shouldInterceptRequest(
-                    WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
-                    boolean direct = isEdgeOneDirectEngine();
-                    String accept = direct && request.isForMainFrame()
-                            ? headerIgnoreCase(request, "Accept") : null;
-                    int route = NativeRuntimeBridge.resourceRoute(direct,
-                            url, RuntimeNames.virtualGameUrl(), request.isForMainFrame(),
-                            request.getMethod(), request.getUrl().getScheme(),
-                            request.getUrl().getHost(), accept);
-                    switch (route) {
-                        case 1: return memoryGameResponse();
-                        case 2: return emptyOfficialEngineResponse();
-                        case 3: return forbiddenCoreResponse();
-                        case 4: return rewriteEdgeOnePage(request);
-                        default: return direct ? null : super.shouldInterceptRequest(view, request);
-                    }
-                }
-                if (isEdgeOneDirectEngine()) {
-                    if (isOfficialEngineRequest(url)) return memoryGameResponse();
-                    if (shouldRewriteEdgeOnePage(request)) return rewriteEdgeOnePage(request);
-                    return null;
-                }
-                if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
-                if (isEngineRequest(url)) return memoryGameResponse();
-                if (isForbiddenCoreRequest(url)) {
-                    return forbiddenCoreResponse();
-                }
-                return super.shouldInterceptRequest(view, request);
+            public WebResourceResponse intercept(WebResourceRequest request) {
+                return interceptResource(request);
             }
-
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String scheme = uri.getScheme();
-                boolean external = BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
-                        ? NativeRuntimeBridge.openExternalScheme(scheme)
-                        : !("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme));
-                if (!external) return false;
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                } catch (Exception ignored) {
-                    Toast.makeText(MainActivity.this, "无法打开此链接", Toast.LENGTH_SHORT).show();
-                }
-                return true;
-            }
-
-            @Override
-            public void onReceivedError(
-                    WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) statusText.setText("页面加载失败");
+            public boolean suppressedReadyAlert(String message) {
+                return isSuppressedEngineReadyAlert(message);
             }
         });
-
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
-                if (isSuppressedEngineReadyAlert(message)) {
-                    try {
-                        view.evaluateJavascript(
-                                "try{Object.defineProperty(window,'__gg_last_suppressed_alert__',{value:Object.freeze({message:'脚本加载完成~',at:Date.now(),source:'native-2.0.2'}),enumerable:false,configurable:true,writable:false});}catch(e){}",
-                                null);
-                    } catch (Throwable ignored) { }
-                    result.confirm();
-                    return true;
-                }
-                return super.onJsAlert(view, url, message, result);
-            }
-
-            @Override
-            public void onProgressChanged(WebView view, int newProgress) {
-                progressBar.setProgress(newProgress);
-                progressBar.setVisibility(newProgress >= 100 ? View.GONE : View.VISIBLE);
-            }
-
-            @Override
-            public boolean onShowFileChooser(
-                    WebView currentWebView,
-                    ValueCallback<Uri[]> filePathCallback,
-                    FileChooserParams fileChooserParams
-            ) {
-                if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
-                fileChooserCallback = filePathCallback;
-                try {
-                    startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST);
-                    return true;
-                } catch (Exception error) {
-                    fileChooserCallback = null;
-                    return false;
-                }
-            }
-        });
-        webView.setDownloadListener(createDownloadListener());
+        browserController.configure(webView, statusText, progressBar,
+                wrappedControlScript, SCRIPT_ORIGINS);
+        edgeOneUserAgent = webView.getSettings().getUserAgentString();
     }
 
-    private void installDocumentStartScript() {
-        nativeDocumentStartEnabled =
-                WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
-        if (!nativeDocumentStartEnabled) return;
-        try {
-            scriptHandler = WebViewCompat.addDocumentStartJavaScript(
-                    webView, wrappedControlScript, SCRIPT_ORIGINS);
-        } catch (Throwable error) {
-            nativeDocumentStartEnabled = false;
+    private WebResourceResponse interceptResource(WebResourceRequest request) {
+        String url = request.getUrl().toString();
+        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
+            boolean direct = isEdgeOneDirectEngine();
+            String accept = direct && request.isForMainFrame()
+                    ? headerIgnoreCase(request, "Accept") : null;
+            int route = NativeRuntimeBridge.resourceRoute(direct,
+                    url, RuntimeNames.virtualGameUrl(), request.isForMainFrame(),
+                    request.getMethod(), request.getUrl().getScheme(),
+                    request.getUrl().getHost(), accept);
+            switch (route) {
+                case 1: return memoryGameResponse();
+                case 2: return emptyOfficialEngineResponse();
+                case 3: return forbiddenCoreResponse();
+                case 4: return rewriteEdgeOnePage(request);
+                default: return null;
+            }
         }
+        if (isEdgeOneDirectEngine()) {
+            if (isOfficialEngineRequest(url)) return memoryGameResponse();
+            if (shouldRewriteEdgeOnePage(request)) return rewriteEdgeOnePage(request);
+            return null;
+        }
+        if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
+        if (isEngineRequest(url)) return memoryGameResponse();
+        if (isForbiddenCoreRequest(url)) return forbiddenCoreResponse();
+        return null;
     }
 
     private WebResourceResponse memoryGameResponse() {
@@ -725,28 +470,6 @@ public final class MainActivity extends Activity {
         return "脚本加载完成~".equals(normalized);
     }
 
-    private DownloadListener createDownloadListener() {
-        return (url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            try {
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-                request.setMimeType(mimeType);
-                request.addRequestHeader("User-Agent", userAgent);
-                String cookie = CookieManager.getInstance().getCookie(url);
-                if (cookie != null) request.addRequestHeader("Cookie", cookie);
-                request.setNotificationVisibility(
-                        DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalFilesDir(
-                        this,
-                        Environment.DIRECTORY_DOWNLOADS,
-                        "download_" + System.currentTimeMillis());
-                ((DownloadManager) getSystemService(DOWNLOAD_SERVICE)).enqueue(request);
-                Toast.makeText(this, "已开始下载", Toast.LENGTH_SHORT).show();
-            } catch (Exception error) {
-                Toast.makeText(this, "下载失败", Toast.LENGTH_SHORT).show();
-            }
-        };
-    }
-
     private void resetWebData() {
         new AlertDialog.Builder(this)
                 .setTitle("重置网页数据")
@@ -816,48 +539,11 @@ public final class MainActivity extends Activity {
         builder.show();
     }
 
-    private Button actionButton(String text, boolean primary) {
-        Button button = new Button(this);
-        button.setText(text);
-        button.setTextSize(15);
-        button.setAllCaps(false);
-        button.setTextColor(primary ? Color.WHITE : Color.rgb(31, 41, 55));
-        button.setBackgroundColor(primary ? Color.rgb(79, 70, 229) : Color.rgb(229, 231, 235));
-        return button;
-    }
-
-    private Button toolbarButton(String text) {
-        Button button = new Button(this);
-        button.setText(text);
-        button.setTextSize(11);
-        button.setTextColor(Color.WHITE);
-        button.setAllCaps(false);
-        button.setMinWidth(0);
-        button.setMinimumWidth(0);
-        button.setPadding(dp(8), 0, dp(8), 0);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        return button;
-    }
-
-    private LinearLayout.LayoutParams matchWrap(int bottomMargin) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.setMargins(0, 0, 0, bottomMargin);
-        return params;
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == FILE_CHOOSER_REQUEST && fileChooserCallback != null) {
-            Uri[] result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-            fileChooserCallback.onReceiveValue(result);
-            fileChooserCallback = null;
+        if (browserController != null) {
+            browserController.onActivityResult(requestCode, resultCode, data);
         }
     }
 
@@ -896,21 +582,11 @@ public final class MainActivity extends Activity {
     }
 
     private void destroyWebView() {
-        if (scriptHandler != null) {
-            try {
-                scriptHandler.remove();
-            } catch (Throwable ignored) { }
-            scriptHandler = null;
+        if (browserController != null) {
+            browserController.destroy();
+            browserController = null;
         }
-        if (webView != null) {
-            webView.stopLoading();
-            webView.clearCache(true);
-            webView.setWebChromeClient(null);
-            webView.setWebViewClient(null);
-            webView.removeAllViews();
-            webView.destroy();
-            webView = null;
-        }
+        webView = null;
     }
 
     private void releaseRuntime() {

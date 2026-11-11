@@ -13,11 +13,8 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Locale;
-import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,7 +29,7 @@ final class V2LicenseManager {
     private static final String RELEASE_PUBLIC_KEY_DER_BASE64 =
             "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfe3MtnU9YdnqKeTRhWUR8/krK8G52hi0hueAFVzCQLyTlC12pirRXlVSKskUsZWtN4IpHmsdNmc9BhfdGsZIww==";
 
-    private final SecureStore secureStore;
+    private final LicenseSessionStore sessionStore;
     private final DeviceIdentity identity;
     private final RuntimeKeyManager runtimeKeyManager;
     private final EdgeOneCandidateClient edgeOneCandidateClient;
@@ -43,7 +40,8 @@ final class V2LicenseManager {
 
     V2LicenseManager(Context context) {
         Context app = context.getApplicationContext();
-        secureStore = new SecureStore(app);
+        SecureStore secureStore = new SecureStore(app);
+        sessionStore = new LicenseSessionStore(secureStore);
         identity = new DeviceIdentity(app, secureStore);
         runtimeKeyManager = new RuntimeKeyManager();
         edgeOneCandidateClient = BuildConfig.EDGEONE_CANDIDATE
@@ -51,7 +49,7 @@ final class V2LicenseManager {
     }
 
     boolean hasSavedKey() {
-        return normalizedClientKey(secureStore.loadState().optString("licenseKey", "")).length() == 32;
+        return normalizedClientKey(sessionStore.load().optString("licenseKey", "")).length() == 32;
     }
 
     void initializeSavedAsync(RuntimeCallback callback) {
@@ -63,7 +61,7 @@ final class V2LicenseManager {
         executor.execute(() -> {
             if (!startupGate.isCurrent(ticket)) return;
             try {
-                JSONObject state = secureStore.loadState();
+                JSONObject state = sessionStore.load();
                 String key = normalizedClientKey(state.optString("licenseKey", ""));
                 String token = state.optString("token", "");
                 int savedPlan = BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
@@ -150,7 +148,7 @@ final class V2LicenseManager {
         executor.execute(() -> {
             if (!startupGate.isCurrent(ticket)) return;
             try {
-                JSONObject state = secureStore.loadState();
+                JSONObject state = sessionStore.load();
                 String token = state.optString("token", "");
                 if (token.isEmpty()) throw new ApiException(401, "bad_session", "服务状态已失效");
                 if (BuildConfig.EDGEONE_CANDIDATE) {
@@ -179,18 +177,14 @@ final class V2LicenseManager {
     }
 
     String getStatusSummary() {
-        JSONObject state = secureStore.loadState();
-        boolean permanent = state.optBoolean("permanent", false);
-        long expiresAt = state.optLong("licenseExpiresAt", 0L);
-        String validity = permanent ? "永久有效" : expiresAt > 0 ? formatSeconds(expiresAt) : "等待验证";
-        return "有效期：" + validity + "\n版本：2.0.2";
+        return sessionStore.summary(BuildConfig.VERSION_NAME);
     }
 
     void clear() {
         synchronized (authStateLock) {
             startupGate.invalidate();
             if (edgeOneCandidateClient != null) edgeOneCandidateClient.cancelRuntime();
-            secureStore.clearAuthorization();
+            sessionStore.clear();
         }
     }
 
@@ -212,7 +206,7 @@ final class V2LicenseManager {
 
     private void clearAfterUnbind(long ticket) {
         synchronized (authStateLock) {
-            if (startupGate.isCurrent(ticket)) secureStore.clearAuthorization();
+            if (startupGate.isCurrent(ticket)) sessionStore.clear();
         }
     }
 
@@ -425,17 +419,9 @@ final class V2LicenseManager {
     }
 
     private void saveAuth(String key, AuthResult auth) throws Exception {
-        JSONObject state = secureStore.loadState();
-        state.put("licenseKey", normalizedClientKey(key));
-        state.put("token", auth.token);
-        state.put("licenseExpiresAt", auth.licenseExpiresAt);
-        state.put("permanent", auth.permanent);
-        state.put("latestAppVersion", auth.latestAppVersion);
-        state.put("forceUpdate", auth.forceUpdate);
-        state.put("updateUrl", auth.updateUrl);
-        state.put("updateMessage", auth.updateMessage);
-        state.put("lastSuccessAt", System.currentTimeMillis() / 1000L);
-        secureStore.saveState(state);
+        sessionStore.save(normalizedClientKey(key), auth.token, auth.licenseExpiresAt,
+                auth.permanent, auth.latestAppVersion, auth.forceUpdate,
+                auth.updateUrl, auth.updateMessage);
     }
 
     private void verifyReleaseManifest(JSONObject manifest) throws Exception {
@@ -544,13 +530,6 @@ final class V2LicenseManager {
     static String normalizeKey(String input) {
         return input == null ? "" :
                 input.replaceAll("[^0-9A-Fa-f]", "").toUpperCase(Locale.ROOT);
-    }
-
-    private static String formatSeconds(long seconds) {
-        if (seconds <= 0) return "未知";
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
-        format.setTimeZone(TimeZone.getDefault());
-        return format.format(new Date(seconds * 1000L));
     }
 
     interface RuntimeCallback {

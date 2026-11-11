@@ -2,6 +2,25 @@ plugins { id("com.android.application") }
 
 val edgeOneBaseUrl = providers.gradleProperty("ggEdgeOneBaseUrl")
     .orElse("https://gg-api.xn--8pv109c.top").get().trim().trimEnd('/')
+val nativeVersionCode = providers.gradleProperty("ggNativeVersionCode")
+    .orElse("17").get().toInt()
+val nativeVersionName = providers.gradleProperty("ggNativeVersionName")
+    .orElse("2.0.4-native-internal").get()
+require(nativeVersionCode > 16) { "ggNativeVersionCode must advance beyond the previous APK" }
+require(nativeVersionName.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,80}"))) {
+    "ggNativeVersionName contains unsupported characters"
+}
+val internalStoreFile = System.getenv("GG_INTERNAL_KEYSTORE_FILE").orEmpty()
+val internalStorePassword = System.getenv("GG_INTERNAL_STORE_PASSWORD").orEmpty()
+val internalKeyAlias = System.getenv("GG_INTERNAL_KEY_ALIAS").orEmpty()
+val internalKeyPassword = System.getenv("GG_INTERNAL_KEY_PASSWORD").orEmpty()
+val internalSigningValues = listOf(internalStoreFile, internalStorePassword,
+    internalKeyAlias, internalKeyPassword)
+require(internalSigningValues.all { it.isNotBlank() } ||
+    internalSigningValues.all { it.isBlank() }) {
+    "Internal APK signing requires all four GG_INTERNAL_* environment variables"
+}
+val hasInternalSigning = internalSigningValues.all { it.isNotBlank() }
 require(edgeOneBaseUrl.startsWith("https://") &&
     !edgeOneBaseUrl.contains('"') && !edgeOneBaseUrl.contains('\\') &&
     !edgeOneBaseUrl.contains('?') && !edgeOneBaseUrl.contains('#') &&
@@ -14,8 +33,8 @@ android {
         applicationId = "com.jinli.quickweb.edgeonecpp"
         minSdk = 24
         targetSdk = 35
-        versionCode = 16
-        versionName = "2.0.3-native-internal"
+        versionCode = nativeVersionCode
+        versionName = nativeVersionName
         buildConfigField("boolean", "EDGEONE_CANDIDATE", "true")
         buildConfigField("boolean", "GG_NATIVE_CORE", "true")
         buildConfigField("String", "EDGEONE_BASE_URL", "\"${edgeOneBaseUrl}\"")
@@ -26,12 +45,25 @@ android {
             cmake { cppFlags += "-std=c++17" }
         }
     }
+    if (hasInternalSigning) {
+        signingConfigs {
+            create("ggInternal") {
+                storeFile = file(internalStoreFile)
+                storePassword = internalStorePassword
+                keyAlias = internalKeyAlias
+                keyPassword = internalKeyPassword
+            }
+        }
+    }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            // Local builds can use the Android debug key. CI can supply a
+            // persistent, dedicated internal key to preserve upgrade identity.
+            signingConfig = signingConfigs.getByName(
+                if (hasInternalSigning) "ggInternal" else "debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
                 "../client/proguard-rules.pro", "proguard-rules.pro")
         }
