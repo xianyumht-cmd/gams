@@ -58,7 +58,12 @@
   control/HTML/engine reads after invalidation. Check the ticket on both
   sides of ZIP parsing; release the Java lifecycle monitor during parsing
   to let logout proceed. Reads already underway may complete, so the Java
-  UI callback gate and `wipe()` remain necessary.
+  UI callback gate and `wipe()` remain necessary. JNI error compatibility
+  differs by operation: `rewriteHtml` maps native failures to Java
+  `IllegalArgumentException`, while source/engine/handle reads map them to
+  `SecurityException`. A stage-15 CI fixture initially asserted the wrong
+  exception class and blocked APK packaging despite correct revocation;
+  preserve each API's historical exception category in regression tests.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

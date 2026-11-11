@@ -2,17 +2,27 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Fifteenth increment in progress:** Bind the C++ runtime ZIP registry
+- **Fifteenth increment verified by CI:** Bind the C++ runtime ZIP registry
   entries to the *same* native authorization coordinator and generation
   ticket that own the corresponding encrypted delivery. Every subsequent
   native control/HTML/engine read rejects a revoked ticket even when a
   surviving WebView still knows the opaque handle. The candidate calls
   `openAuthorized` and checks ownership again after ZIP validation;
   plain `open` remains solely for legacy/reference interoperability. JNI
-  parity now exercises logout, new login, closed gates, stale reads and
+  parity exercised logout, new login, closed gates, stale reads and
   authorized reloads. Java WebView, Android platform cryptography and
-  the unmodified Java-only APK remain the compatibility baseline. CI APK
-  and device parity are not yet verified.
+  the unmodified Java-only APK remain the compatibility baseline. GitHub
+  Actions [`42935225884`](https://github.com/xianyumht-cmd/gams/actions/runs/42935225884)
+  passed host C++ tests, real Java→JNI parity, both Android builds, lint,
+  three native ABIs, signing and no-private-JS checks. The 14-day artifact
+  `GG-EdgeOne-CPP-internal-16` (workflow run number 16; ID `13818550677`)
+  contains a 2,624,019-byte APK with SHA-256
+  `f95d441eb87523daca6251b2e7cb2859a2a0c1dd28765a3a3f7ba89eb1d4bb8d`.
+  Workflow run 15 exposed an exception-type mismatch in the new test:
+  HTML rewrite deliberately throws `IllegalArgumentException`, unlike
+  other JNI runtime reads' `SecurityException`. The fixture was corrected
+  without changing the application API. Device parity remains unverified
+  at the owner's request.
 
 - **Fourteenth increment verified by CI:** Replaced the native
   runtime ZIP's raw-pointer JNI handle with a C++ registry of monotonically
