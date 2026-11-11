@@ -229,3 +229,57 @@ jobs:
           path: artifact/
           retention-days: 14
           if-no-files-found: error
+      - name: Build unsigned APK for offline official signing
+        env:
+          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || vars.GG_EDGEONE_BASE_URL || 'https://gg-api.xn--8pv109c.top' }}
+        run: |
+          set -euo pipefail
+          cd v2/android
+          gradle --no-daemon :clientNative:assembleRelease \
+            -PggLocalOfficialUnsigned=true \
+            "-PggEdgeOneBaseUrl=${GH_EDGEONE_BASE}" \
+            "-PggNativeVersionCode=${GG_NATIVE_VERSION_CODE}" \
+            "-PggNativeVersionName=${GG_NATIVE_VERSION_NAME}"
+      - name: Verify unsigned APK and stage offline signing kit
+        run: |
+          set -euo pipefail
+          unsigned=v2/android/clientNative/build/outputs/apk/release/clientNative-release-unsigned.apk
+          test -s "$unsigned"
+          unzip -t "$unsigned" >/dev/null
+          sdk_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$sdk_tools/aapt" dump badging "$unsigned" | \
+            grep -F "package: name='com.jinli.quickweb.edgeonecpp'"
+          "$sdk_tools/aapt" dump badging "$unsigned" | \
+            grep -F "versionCode='${GG_NATIVE_VERSION_CODE}' versionName='${GG_NATIVE_VERSION_NAME}'"
+          grep -R -F 'GG_REQUIRE_OFFICIAL_APK_SIGNER = true' \
+            v2/android/clientNative/build/generated/source/buildConfig/
+          "$sdk_tools/zipalign" -c -p 4 "$unsigned"
+          if "$sdk_tools/apksigner" verify "$unsigned" >/dev/null 2>&1; then
+            echo '::error::Offline signing artifact must be unsigned' >&2
+            exit 1
+          fi
+          mkdir -p official-signing-kit
+          cp "$unsigned" official-signing-kit/GG-EdgeOne-CPP-official-unsigned.apk
+          cp scripts/Sign-GG-Official-APK.ps1 official-signing-kit/
+          (cd official-signing-kit && sha256sum GG-EdgeOne-CPP-official-unsigned.apk > SHA256SUMS.txt)
+          {
+            printf 'source_commit=%s\n' "$GITHUB_SHA"
+            printf 'version_code=%s\n' "$GG_NATIVE_VERSION_CODE"
+            printf 'version_name=%s\n' "$GG_NATIVE_VERSION_NAME"
+            printf 'signing_mode=official-local-unsigned\n'
+            printf 'expected_signer_sha256=70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34\n'
+          } > official-signing-kit/BUILD-METADATA.txt
+      - name: Check offline PowerShell signing helper syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile('scripts/Sign-GG-Official-APK.ps1', [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors) { $parseErrors | Out-String | Write-Error; exit 1 }
+      - name: Upload unsigned official-local signing kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-EdgeOne-CPP-official-local-${{ github.run_number }}
+          path: official-signing-kit/
+          retention-days: 14
+          if-no-files-found: error

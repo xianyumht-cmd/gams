@@ -2,6 +2,44 @@
 
 ## Official GG signing identity (2026-11-11)
 
+### Offline official-signing kit (no key material in CI)
+
+The C++ internal workflow publishes a second artifact named
+`GG-EdgeOne-CPP-official-local-N`. It contains an **unsigned** release APK
+compiled with `GG_REQUIRE_OFFICIAL_APK_SIGNER=true`,
+`scripts/Sign-GG-Official-APK.ps1`, `BUILD-METADATA.txt` and `SHA256SUMS.txt`.
+This does not change the existing `GG-EdgeOne-CPP-internal-N` debug-signed
+emulator test artifact. Do **not** take the latter and simply re-sign it:
+its official signer gate is intentionally disabled.
+
+On the owner's Windows computer, install the Android SDK **Build-Tools**
+(which contains `apksigner.bat`; JDK `keytool` alone is insufficient) and
+extract the complete `official-local` artifact to one directory. Run the
+bundled PowerShell signer, e.g. from that directory:
+
+```powershell
+powershell.exe -NoProfile -File .\Sign-GG-Official-APK.ps1
+```
+
+The script checks SHA-256 and explicit `official-local-unsigned` metadata,
+checks the public certificate, locates `apksigner.bat` under `ANDROID_HOME`,
+`ANDROID_SDK_ROOT`, or the normal per-user Android SDK directory, then asks
+for the private JKS credentials **only on the local machine**. It refuses
+to overwrite an existing signed output. After signing, it runs `apksigner
+verify --verbose --print-certs` and compares the actual APK signing digest
+against the official SHA-256. Output is
+`GG-EdgeOne-CPP-official-signed.apk`. This step does **not** update EdgeOne.
+
+If the owner installed Build-Tools in a custom location, set the current
+process's `GG_APKSIGNER_FILE` environment variable to the full
+`apksigner.bat` path before invoking the helper. Do not put the JKS password
+in arguments, process environment variables, GitHub secrets or chat. The
+first switch from the disposable debug signer to official signing for the
+same test application ID requires deliberately uninstalling only
+`com.jinli.quickweb.edgeonecpp` (which wipes its local session). Check the
+card binding before uninstalling; admin unbind may be required. Keep the
+officially signed APK for future upgrade continuity.
+
 Owner's offline signing directory (Windows only):
 `D:\project2\gams\gams-signing-key-official`. It contains a JKS, a public
 certificate, a fingerprint report and Windows DPAPI-protected credentials.

@@ -2,6 +2,15 @@
 
 ## 2026-11-11: Pin owner-designated official signer locally, leave server attestation separate
 
+For the owner's immediately usable Windows path, choose **offline local
+signing** instead of uploading the release JKS to feature-branch Actions
+secrets. CI creates an explicitly unsigned release APK with
+`GG_REQUIRE_OFFICIAL_APK_SIGNER=true` and a separate signed emulator-test
+APK. The offline signing script checks metadata, SHA-256, and the public
+certificate, prompts for the local JKS password through Android `apksigner`,
+then verifies the resulting APK certificate. Never sign the debug test APK
+and describe it as a protected official build.
+
 The owner explicitly chose the existing `gams-signing-key-official` JKS
 instead of issuing another internal signing lineage. This supersedes the
 earlier preference below *not* to reuse the production signer for this

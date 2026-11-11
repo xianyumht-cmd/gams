@@ -1,5 +1,14 @@
 # EdgeOne candidate pitfalls
 
+- **A JDK does not supply Android `apksigner`.** The owner successfully
+  verified the release `.cer` and JKS alias with JDK `keytool` but found no
+  `apksigner.bat` in the usual Windows SDK directories. Android SDK
+  Build-Tools must be installed separately before offline signing. `keytool`
+  warns that legacy JKS can be migrated to PKCS12; do not migrate the actual
+  GG release JKS merely because of that warning. The owner's local DPAPI
+  recovery helper needed the `System.Security` assembly loaded in Windows
+  PowerShell 5.1; do not publish the resulting password or credentials.
+
 - **Do not mistake APK signature pinning for server identity attestation.**
   `PackageManager` exposes the installed APK signing certificate to local
   checks, but a modified app can bypass such a check or forge a claimed

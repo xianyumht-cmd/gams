@@ -2,11 +2,23 @@
 
 ## 2026-11-11: Official certificate guard verified in internal CI
 
+- The owner now independently checked that the public `.cer` DER SHA-256 and
+  `keytool -list -v -storetype JKS -alias gg-release` on the offline JKS both
+  match `70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34`.
+  The JKS entry is `PrivateKeyEntry` (4096-bit RSA, SHA256withRSA); its
+  validity extends to 2053-12-19. The Windows machine has JDK, but the
+  owner's search did **not** locate Android SDK `apksigner.bat`.
+- An unsigned, official-signer-gated artifact and offline Windows signing
+  helper have been added to the existing C++ CI workflow. This is pending a
+  new GitHub Actions build and local owner signing/installation. No signing
+  password, JKS, or DPAPI file has been uploaded.
+
 - The owner supplied an existing Windows official JKS path and fingerprint
   list. New release cert SHA-256 is
   `70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34`;
   previous cert is recorded for historical migration only. These are owner
-  supplied and **not yet independently verified** against the JKS or `.cer`.
+  supplied and subsequently cross-checked by the owner's Windows tools
+  against both the `.cer` and the JKS `gg-release` entry.
 - Commit `3b4814f` on PR #48 adds native signer comparison and release-artifact
   signer verification for builds configured with a persistent JKS. GitHub
   Actions run [#23](https://github.com/xianyumht-cmd/gams/actions/runs/43034434768)

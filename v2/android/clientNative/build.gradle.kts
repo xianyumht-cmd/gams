@@ -21,6 +21,13 @@ require(internalSigningValues.all { it.isNotBlank() } ||
     "Internal APK signing requires all four GG_INTERNAL_* environment variables"
 }
 val hasInternalSigning = internalSigningValues.all { it.isNotBlank() }
+// Build an unsigned APK with the official signer policy already enabled.
+// The owner's release JKS is applied later with apksigner on Windows.
+val localOfficialUnsigned = providers.gradleProperty("ggLocalOfficialUnsigned")
+    .orElse("false").get().toBooleanStrict()
+require(!localOfficialUnsigned || !hasInternalSigning) {
+    "Local official unsigned builds must not receive any CI signing credentials"
+}
 require(edgeOneBaseUrl.startsWith("https://") &&
     !edgeOneBaseUrl.contains('"') && !edgeOneBaseUrl.contains('\\') &&
     !edgeOneBaseUrl.contains('?') && !edgeOneBaseUrl.contains('#') &&
@@ -40,7 +47,8 @@ android {
         // A debug-signed internal artifact remains usable for emulator tests.
         // Once official signing is configured, the APK enforces its pinned
         // certificate before issuing any license/runtime request.
-        buildConfigField("boolean", "GG_REQUIRE_OFFICIAL_APK_SIGNER", hasInternalSigning.toString())
+        buildConfigField("boolean", "GG_REQUIRE_OFFICIAL_APK_SIGNER",
+            (hasInternalSigning || localOfficialUnsigned).toString())
         buildConfigField("String", "EDGEONE_BASE_URL", "\"${edgeOneBaseUrl}\"")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
@@ -66,8 +74,10 @@ android {
             isShrinkResources = true
             // Local builds can use the Android debug key. CI can supply a
             // persistent, dedicated internal key to preserve upgrade identity.
-            signingConfig = signingConfigs.getByName(
-                if (hasInternalSigning) "ggInternal" else "debug")
+            if (!localOfficialUnsigned) {
+                signingConfig = signingConfigs.getByName(
+                    if (hasInternalSigning) "ggInternal" else "debug")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
                 "../client/proguard-rules.pro", "proguard-rules.pro")
         }

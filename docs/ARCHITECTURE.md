@@ -2,6 +2,15 @@
 
 ## 2026-11-11: Official APK signing identity boundary
 
+The existing native APK CI produces two independent deliverables: the
+disposable-debug-signed emulator test APK and an **unsigned** official-local
+candidate, compiled with the official signer check already enabled. A
+Windows-only `scripts/Sign-GG-Official-APK.ps1` signs the latter with the
+owner's offline JKS after verifying downloaded artifact checksums and the
+public certificate. GitHub never needs to receive the JKS or DPAPI material.
+Signing an ordinary debug candidate afterward is **not equivalent**, because
+its `BuildConfig` has the official signer check disabled.
+
 The owner-selected official GG release certificate has SHA-256
 `70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34`
 (fingerprint supplied by the owner; independently validate the JKS before
