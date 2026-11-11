@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.io.InterruptedIOException;
 
 /** Host JVM exercises the real JNI exported functions before Android packaging. */
@@ -373,6 +374,56 @@ public final class NativeRuntimeInteropSmoke {
             } catch (SecurityException expected) { /* No out-of-bounds JNI write. */ }
         } finally {
             NativeRuntimeBridge.close(handle);
+        }
+        // A closed native handle is a permanent ID tombstone. Duplicate close
+        // and late WebView range requests must not dereference freed memory.
+        NativeRuntimeBridge.close(handle);
+        NativeRuntimeBridge.close(0L);
+        try {
+            NativeRuntimeBridge.gameSize(handle);
+            throw new AssertionError("Closed bundle retained a readable engine");
+        } catch (SecurityException expected) { /* Closed IDs cannot be resolved. */ }
+        try {
+            NativeRuntimeBridge.nonameSource(handle);
+            throw new AssertionError("Closed bundle retained its control script");
+        } catch (SecurityException expected) { /* No stale control source. */ }
+        try {
+            NativeRuntimeBridge.copyGameRange(handle, 0, new byte[8], 0, 8);
+            throw new AssertionError("Closed bundle allowed stale range read");
+        } catch (SecurityException expected) { /* No use-after-free. */ }
+        long reopened = NativeRuntimeBridge.open(zip, bundleHash, control.length, nonameHash,
+                engine.length, gameHash);
+        if (reopened == handle) throw new AssertionError("Native ZIP handle ID was reused");
+        NativeRuntimeBridge.close(reopened);
+
+        long racing = NativeRuntimeBridge.open(zip, bundleHash, control.length, nonameHash,
+                engine.length, gameHash);
+        AtomicBoolean readerStarted = new AtomicBoolean(false);
+        AtomicReference<Throwable> readerFailure = new AtomicReference<>();
+        Thread readerThread = new Thread(() -> {
+            byte[] target = new byte[4096];
+            readerStarted.set(true);
+            try {
+                for (int i = 0; i < 2000; ++i) {
+                    int count = NativeRuntimeBridge.copyGameRange(racing,
+                            (i * 4096) % engine.length, target, 0, target.length);
+                    if (count < 0 || count > target.length) {
+                        throw new AssertionError("Native range returned an invalid count");
+                    }
+                }
+            } catch (SecurityException expected) {
+                // Teardown may win the race: safe rejection is the contract.
+            } catch (Throwable error) {
+                readerFailure.set(error);
+            }
+        }, "gg-jni-teardown-race");
+        readerThread.start();
+        while (!readerStarted.get()) Thread.yield();
+        NativeRuntimeBridge.close(racing);
+        readerThread.join(10_000L);
+        if (readerThread.isAlive() || readerFailure.get() != null) {
+            throw new AssertionError("Native bundle teardown raced with range reader",
+                    readerFailure.get());
         }
         try {
             NativeRuntimeBridge.open(zip, bundleHash, control.length, "0".repeat(64),

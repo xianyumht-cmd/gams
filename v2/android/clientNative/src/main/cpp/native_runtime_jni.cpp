@@ -25,6 +25,10 @@ std::mutex startupRegistryMutex;
 std::int64_t nextStartupHandle = 1;
 std::unordered_map<std::int64_t, std::shared_ptr<gg::StartupCoordinator>> startupRegistry;
 
+std::mutex bundleRegistryMutex;
+std::int64_t nextBundleHandle = 1;
+std::unordered_map<std::int64_t, std::shared_ptr<gg::RuntimeBundle>> bundleRegistry;
+
 std::shared_ptr<gg::StartupCoordinator> lookupStartup(jlong handle) {
     std::lock_guard<std::mutex> lock(startupRegistryMutex);
     auto found = startupRegistry.find(static_cast<std::int64_t>(handle));
@@ -54,9 +58,15 @@ std::string optionalText(JNIEnv* env, jstring value) {
     return result;
 }
 
-gg::RuntimeBundle* resolve(jlong value) {
-    if (value == 0) throw std::runtime_error("Runtime already disposed");
-    return reinterpret_cast<gg::RuntimeBundle*>(static_cast<std::uintptr_t>(value));
+std::shared_ptr<const gg::RuntimeBundle> resolve(jlong value) {
+    std::lock_guard<std::mutex> lock(bundleRegistryMutex);
+    auto found = bundleRegistry.find(static_cast<std::int64_t>(value));
+    if (value <= 0 || found == bundleRegistry.end()) {
+        throw std::runtime_error("Runtime already disposed");
+    }
+    // Retaining a shared reference protects each JNI read from concurrent
+    // close(). Registry IDs are never reused for another ZIP.
+    return found->second;
 }
 
 template <class F>
@@ -165,14 +175,21 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_open(JNIEnv* env, jclass, jbyteArray
             throw;
         }
         gg::secureClear(zip);
-        return static_cast<jlong>(reinterpret_cast<std::uintptr_t>(bundle.release()));
+        std::lock_guard<std::mutex> lock(bundleRegistryMutex);
+        if (nextBundleHandle == std::numeric_limits<std::int64_t>::max()) {
+            throw std::overflow_error("Runtime handle registry exhausted");
+        }
+        const std::int64_t id = nextBundleHandle++;
+        bundleRegistry.emplace(id, std::shared_ptr<gg::RuntimeBundle>(std::move(bundle)));
+        return static_cast<jlong>(id);
     });
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_nonameSource(JNIEnv* env, jclass, jlong handle) {
     return translate(env, [&]() -> jstring {
-        const auto& source = resolve(handle)->noname;
+        const auto bundle = resolve(handle);
+        const auto& source = bundle->noname;
         // JS is UTF-8. Construct a Java String from explicit bytes to preserve
         // embedded NULs and non-ASCII text (NewStringUTF is unsuitable).
         jbyteArray array = env->NewByteArray(static_cast<jsize>(source.size()));
@@ -201,7 +218,8 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_wrappedControlBytes(JNIEnv* env, jcl
             std::vector<std::uint8_t> bytes;
             ~WipedControl() { gg::secureClear(bytes); }
         } wrapped;
-        wrapped.bytes = gg::wrapControlScript(resolve(handle)->noname);
+        const auto bundle = resolve(handle);
+        wrapped.bytes = gg::wrapControlScript(bundle->noname);
         jbyteArray result = env->NewByteArray(static_cast<jsize>(wrapped.bytes.size()));
         if (result) env->SetByteArrayRegion(result, 0,
             static_cast<jsize>(wrapped.bytes.size()),
@@ -298,8 +316,9 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_rewriteHtml(JNIEnv* env, jclass,
         env->GetByteArrayRegion(htmlBytes, 0, length,
                                 reinterpret_cast<jbyte*>(input.data.data()));
         if (env->ExceptionCheck()) return nullptr;
+        const auto bundle = resolve(handle);
         rewritten.data = gg::rewriteEdgeOneHtml(input.data.data(), input.data.size(),
-                                                 resolve(handle)->noname);
+                                                 bundle->noname);
         auto result = env->NewByteArray(static_cast<jsize>(rewritten.data.size()));
         if (result) env->SetByteArrayRegion(result, 0,
             static_cast<jsize>(rewritten.data.size()),
@@ -325,7 +344,8 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_copyGameRange(JNIEnv* env, jclass,
         if (outputOffset > length || count > length - outputOffset) {
             throw std::runtime_error("Native engine output slice out of bounds");
         }
-        const auto& game = resolve(handle)->game;
+        const auto bundle = resolve(handle);
+        const auto& game = bundle->game;
         if (static_cast<std::size_t>(position) >= game.size()) return 0;
         const auto remaining = game.size() - static_cast<std::size_t>(position);
         const auto copied = static_cast<jsize>(std::min<std::size_t>(remaining,
@@ -339,13 +359,23 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_copyGameRange(JNIEnv* env, jclass,
 extern "C" JNIEXPORT jint JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_gameSize(JNIEnv* env, jclass, jlong handle) {
     return translate(env, [&]() -> jint {
-        return static_cast<jint>(resolve(handle)->game.size());
+        const auto bundle = resolve(handle);
+        return static_cast<jint>(bundle->game.size());
     });
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_close(JNIEnv*, jclass, jlong handle) {
-    delete reinterpret_cast<gg::RuntimeBundle*>(static_cast<std::uintptr_t>(handle));
+    std::shared_ptr<gg::RuntimeBundle> removed;
+    {
+        std::lock_guard<std::mutex> lock(bundleRegistryMutex);
+        auto found = bundleRegistry.find(static_cast<std::int64_t>(handle));
+        if (found == bundleRegistry.end()) return;
+        removed = std::move(found->second);
+        bundleRegistry.erase(found);
+    }
+    // Wipe outside the registry lock; another WebView can open a new runtime
+    // without waiting for the old ZIP's large buffers to be zeroed.
 }
 
 extern "C" JNIEXPORT jlong JNICALL

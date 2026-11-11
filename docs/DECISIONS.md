@@ -123,6 +123,15 @@ it interrupts every blocked `getResponseCode` or `InputStream.read` call.
 Keep the complete server wire format, private runtime validation, progress
 UI and unbinding semantics intact for the Java baseline.
 
+The fourteenth increment makes native ZIP handles opaque, monotonic IDs in
+a `shared_ptr` registry rather than memory addresses. The previous raw-pointer
+bridge depended entirely on Java monitors to prevent stale asynchronous
+readers from dereferencing a freed bundle; C++ must now own that safety
+invariant. Resolve a strong reference once per JNI call and keep it through
+all vector access; `close` removes an ID before wiping outside the registry
+lock, and duplicate close is idempotent. Do not change WebView stream APIs,
+HTML transform output, JS bytes, or the existing authorization wire format.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

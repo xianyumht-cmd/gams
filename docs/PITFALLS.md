@@ -44,6 +44,13 @@
   network stacks may not interrupt every blocked call. Ensure the input stream,
   native ciphertext collector and decrypted ZIP memory are released on all
   canceled paths and do not alter authorization wire formats.
+- JNI `jlong` values previously held raw `RuntimeBundle*` addresses. Java
+  `RuntimePayload` monitors protect its known callers but cannot guarantee
+  safety for every future or direct native caller: duplicate close could
+  double-free and a read racing close could dereference freed JS vectors.
+  Use monotonic opaque IDs and a C++ `shared_ptr` registry, retain the
+  reference for the *entire* JNI read (never a temporary expression beside
+  a vector reference), and wipe removed bundles after releasing the mutex.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

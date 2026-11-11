@@ -2,6 +2,18 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Fourteenth increment, awaiting GitHub Android CI:** Replaced the native
+  runtime ZIP's raw-pointer JNI handle with a C++ registry of monotonically
+  increasing IDs backed by `shared_ptr` ownership. Every control script,
+  HTML-rewrite and game-engine read now retains a reference for the duration
+  of its JNI call. Duplicate close is safe; closing while a reader is active
+  cannot invalidate that reader's memory, and late calls on closed IDs fail
+  instead of dereferencing a freed pointer. Wiping the old ZIP runs outside
+  the registry lock to avoid blocking a fresh login's open. Host JNI tests
+  cover invalid/closed ID reads, duplicate close, no ID reuse and concurrent
+  game-range reads during teardown. Real Android/CI verification is pending;
+  no device parity has been tested.
+
 - **Thirteenth increment verified by CI:** A canceled C++
   startup-generation ticket now propagates into the EdgeOne HTTPS runtime
   adapter. When an operation is replaced, the client makes a best-effort

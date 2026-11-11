@@ -76,6 +76,12 @@ network adapter also tracks its runtime connection and requests disconnect
 on logout, reactivation or Activity destruction. Verify on a device that a
 new activation is not delayed by an old runtime transfer, including while
 waiting for response headers; Android may not interrupt every socket read.
+The fourteenth increment adds a real JNI regression for closing a parsed
+runtime ZIP twice, reading each data type after closure, rejecting a reused
+handle ID, and racing repeated bounded engine reads with teardown. All stale
+native handle reads must fail with a managed Java exception, not a native
+crash. A successful host concurrency fixture does not replace the owner's
+future live WebView refresh/logout test.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

@@ -160,6 +160,17 @@ if cancellation wins after parsing. The HTTP transport may still be unable
 to interrupt certain blocked system reads immediately; authorization state
 and UI publication remain protected by the twelfth-stage generation gate.
 
+The fourteenth native boundary replaces the raw `RuntimeBundle*` returned
+as a `jlong` with a monotonically numbered handle registry. Each JNI read
+resolves a `shared_ptr<const RuntimeBundle>` before touching JS bytes and
+holds it through the Java-copy or HTML rewrite. Closing removes the ID
+atomically, then releases/wipes the bundle outside the registry mutex; any
+in-flight read keeps its own copy alive until it finishes. A closed ID is
+never reused or accepted again, including on duplicate `close`. Android
+`RuntimePayload` continues synchronizing WebView streams and `wipe` as its
+platform-facing resource owner, while C++ now enforces native memory safety
+independently if an unexpected concurrent JNI caller appears.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.
