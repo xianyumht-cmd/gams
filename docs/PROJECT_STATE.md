@@ -8,10 +8,17 @@
   The JKS entry is `PrivateKeyEntry` (4096-bit RSA, SHA256withRSA); its
   validity extends to 2053-12-19. The Windows machine has JDK, but the
   owner's search did **not** locate Android SDK `apksigner.bat`.
-- An unsigned, official-signer-gated artifact and offline Windows signing
-  helper have been added to the existing C++ CI workflow. This is pending a
-  new GitHub Actions build and local owner signing/installation. No signing
-  password, JKS, or DPAPI file has been uploaded.
+- Commit `83ca2cd` added an unsigned, official-signer-gated artifact and
+  offline Windows signing helper to the existing C++ CI workflow. GitHub
+  Actions [run #24](https://github.com/xianyumht-cmd/gams/actions/runs/43044469342)
+  completed successfully with normal native/JNI/Android tests and the new
+  unsigned ZIP integrity, version, official `BuildConfig` gate, alignment,
+  PowerShell syntax, and unsigned-signature checks. It uploaded two separate
+  artifacts: `GG-EdgeOne-CPP-internal-24` (ID `13865559205`) and
+  `GG-EdgeOne-CPP-official-local-24` (ID `13866328190`). A *locally
+  signed and device-tested* official APK is still pending because the owner
+  does not yet have Android SDK Build-Tools `apksigner.bat` on Windows. No
+  signing password, JKS, or DPAPI file has been uploaded.
 
 - The owner supplied an existing Windows official JKS path and fingerprint
   list. New release cert SHA-256 is
