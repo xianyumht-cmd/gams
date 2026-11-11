@@ -11,12 +11,17 @@ regression gate. The app now separates the following responsibilities:
 - `ClientScreens` builds the login, initialization, and WebView toolbar Views,
   exposing only widgets needed for user-event wiring. It performs no network
   I/O, authorization, runtime processing, or resource routing.
+- `ClientDialogs` owns presentation of reset, service and update prompts; it
+  receives action callbacks rather than a license manager or direct runtime
+  privileges. `MainActivity` still performs the confirmed actions.
 - `BrowserWebViewController` owns Android WebView settings, document-start
   injection/fallback, navigation, chooser/download callbacks, and teardown.
   It delegates request interception and target-page decisions via a small
-  `ResourceHost` contract; `MainActivity` still owns the resource router and
-  orchestrates the current session. Subsequent work can extract the router
-  without changing the WebView platform boundary.
+  `ResourceHost` contract to `BrowserResourceRouter`. The router owns native
+  and reference routing decisions, bounded native game streaming, HTML
+  fetch/rewrite, target site recognition and script wrapper compatibility.
+  It obtains the current payload and user agent through suppliers rather than
+  calling Activity UI APIs; the Activity still owns session lifetime.
 - `LicenseSessionStore` owns saved authorization JSON and service-info text;
   `V2LicenseManager` still owns asynchronous startup, the native generation
   ticket, and the lock protecting token persistence and cancellation. Never

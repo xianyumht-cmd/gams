@@ -1,17 +1,13 @@
 package com.jinli.ggsecure;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.widget.Button;
@@ -22,20 +18,11 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 public final class MainActivity extends Activity {
-    private static final String START_URL = RuntimeNames.startUrl();
     private static final Set<String> SCRIPT_ORIGINS = new HashSet<>(Arrays.asList(
             RuntimeNames.originA(),
             RuntimeNames.originB()
@@ -48,7 +35,9 @@ public final class MainActivity extends Activity {
     private TextView statusText;
     private V2LicenseManager licenseManager;
     private ClientScreens screens;
+    private ClientDialogs dialogs;
     private BrowserWebViewController browserController;
+    private BrowserResourceRouter resourceRouter;
     private volatile RuntimePayload runtimePayload;
     private String wrappedControlScript;
     private volatile String edgeOneUserAgent;
@@ -61,6 +50,7 @@ public final class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         WebView.setWebContentsDebuggingEnabled(false);
         screens = new ClientScreens(this);
+        dialogs = new ClientDialogs(this);
         licenseManager = new V2LicenseManager(this);
         if (!licenseManager.hasSavedKey()) {
             showLicenseScreen("");
@@ -202,7 +192,7 @@ public final class MainActivity extends Activity {
         runtimePayload = payload;
         wrappedControlScript = BuildConfig.GG_NATIVE_CORE
                 ? payload.nativeWrappedControlScript()
-                : wrapControlScript(payload.nonameSource());
+                : BrowserResourceRouter.wrapControlScript(payload.nonameSource());
         browserVisible = true;
         createBrowserUi();
         configureWebView();
@@ -228,316 +218,57 @@ public final class MainActivity extends Activity {
     }
 
     private void configureWebView() {
-        browserController = new BrowserWebViewController(this,
-                new BrowserWebViewController.ResourceHost() {
-            @Override
-            public boolean directEngine() {
-                return isEdgeOneDirectEngine();
-            }
-            @Override
-            public boolean targetPage(String url) {
-                return isTargetPage(url);
-            }
-            @Override
-            public WebResourceResponse intercept(WebResourceRequest request) {
-                return interceptResource(request);
-            }
-            @Override
-            public boolean suppressedReadyAlert(String message) {
-                return isSuppressedEngineReadyAlert(message);
-            }
-        });
+        resourceRouter = new BrowserResourceRouter(() -> runtimePayload, () -> edgeOneUserAgent);
+        browserController = new BrowserWebViewController(this, resourceRouter);
         browserController.configure(webView, statusText, progressBar,
                 wrappedControlScript, SCRIPT_ORIGINS);
         edgeOneUserAgent = webView.getSettings().getUserAgentString();
     }
 
-    private WebResourceResponse interceptResource(WebResourceRequest request) {
-        String url = request.getUrl().toString();
-        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
-            boolean direct = isEdgeOneDirectEngine();
-            String accept = direct && request.isForMainFrame()
-                    ? headerIgnoreCase(request, "Accept") : null;
-            int route = NativeRuntimeBridge.resourceRoute(direct,
-                    url, RuntimeNames.virtualGameUrl(), request.isForMainFrame(),
-                    request.getMethod(), request.getUrl().getScheme(),
-                    request.getUrl().getHost(), accept);
-            switch (route) {
-                case 1: return memoryGameResponse();
-                case 2: return emptyOfficialEngineResponse();
-                case 3: return forbiddenCoreResponse();
-                case 4: return rewriteEdgeOnePage(request);
-                default: return null;
-            }
-        }
-        if (isEdgeOneDirectEngine()) {
-            if (isOfficialEngineRequest(url)) return memoryGameResponse();
-            if (shouldRewriteEdgeOnePage(request)) return rewriteEdgeOnePage(request);
-            return null;
-        }
-        if (isOfficialEngineRequest(url)) return emptyOfficialEngineResponse();
-        if (isEngineRequest(url)) return memoryGameResponse();
-        if (isForbiddenCoreRequest(url)) return forbiddenCoreResponse();
-        return null;
-    }
-
-    private WebResourceResponse memoryGameResponse() {
-        RuntimePayload payload = runtimePayload;
-        if (payload == null) {
-            return unavailableGameResponse();
-        }
-        final int size;
-        final InputStream script;
-        try {
-            // WebView resource interception is asynchronous. Avoid a release
-            // between reading Content-Length and opening the native stream.
-            synchronized (payload) {
-                size = payload.gameSize();
-                script = payload.openGameStream();
-            }
-        } catch (IllegalStateException error) {
-            return unavailableGameResponse();
-        }
-        Map<String, String> headers = new java.util.HashMap<>();
-        headers.put("Cache-Control", "no-store, no-cache, max-age=0");
-        headers.put("Pragma", "no-cache");
-        headers.put("X-Content-Type-Options", "nosniff");
-        headers.put("Access-Control-Allow-Origin", "*");
-        headers.put("Content-Length", String.valueOf(size));
-        return new WebResourceResponse(
-                "application/javascript", "UTF-8", 200, "OK",
-                headers, script);
-    }
-
-    private static WebResourceResponse unavailableGameResponse() {
-        return new WebResourceResponse(
-                "text/plain", "UTF-8", 503, "Runtime unavailable",
-                java.util.Collections.singletonMap("Cache-Control", "no-store"),
-                new ByteArrayInputStream(new byte[0]));
-    }
-
-    private static WebResourceResponse forbiddenCoreResponse() {
-        return new WebResourceResponse(
-                "text/plain", "UTF-8", 403, "Blocked",
-                java.util.Collections.singletonMap("Cache-Control", "no-store"),
-                new ByteArrayInputStream(new byte[0]));
-    }
-
-    private WebResourceResponse emptyOfficialEngineResponse() {
-        byte[] body = "window.__gg_official_engine_blocked__=true;".getBytes(
-                java.nio.charset.StandardCharsets.UTF_8);
-        Map<String, String> headers = new java.util.HashMap<>();
-        headers.put("Cache-Control", "no-store, no-cache, max-age=0");
-        headers.put("Pragma", "no-cache");
-        headers.put("X-Content-Type-Options", "nosniff");
-        headers.put("Content-Length", String.valueOf(body.length));
-        return new WebResourceResponse(
-                "application/javascript", "UTF-8", 200, "OK",
-                headers, new ByteArrayInputStream(body));
-    }
-
-    private boolean isEdgeOneDirectEngine() {
-        RuntimePayload current = runtimePayload;
-        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
-            return NativeRuntimeBridge.directEngine(true,
-                    current == null ? "" : current.versionName());
-        }
-        return BuildConfig.EDGEONE_CANDIDATE && current != null
-                && current.versionName().startsWith("1.4.1");
-    }
-
     private String startUrl() {
-        return isEdgeOneDirectEngine() ? "https://m.66rpg.com/" : START_URL;
-    }
-
-    private boolean shouldRewriteEdgeOnePage(WebResourceRequest request) {
-        if (!request.isForMainFrame() || !"GET".equalsIgnoreCase(request.getMethod())) return false;
-        if (!"https".equalsIgnoreCase(request.getUrl().getScheme()) ||
-                !isTargetPage(request.getUrl().toString())) return false;
-        String accept = headerIgnoreCase(request, "Accept");
-        return accept != null && accept.toLowerCase(Locale.ROOT).contains("text/html");
-    }
-
-    private static String headerIgnoreCase(WebResourceRequest request, String key) {
-        Map<String, String> headers = request.getRequestHeaders();
-        if (headers == null) return null;
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
-            if (key.equalsIgnoreCase(entry.getKey())) return entry.getValue();
-        }
-        return null;
-    }
-
-    private WebResourceResponse rewriteEdgeOnePage(WebResourceRequest request) {
-        String address = request.getUrl().toString();
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) new URL(address).openConnection();
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(15000);
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("Accept-Encoding", "identity");
-            if (edgeOneUserAgent != null) connection.setRequestProperty("User-Agent", edgeOneUserAgent);
-            for (String name : new String[]{"Accept", "Accept-Language", "Referer"}) {
-                String value = headerIgnoreCase(request, name);
-                if (value != null && !value.isEmpty()) connection.setRequestProperty(name, value);
-            }
-            String cookies = CookieManager.getInstance().getCookie(address);
-            if (cookies != null && !cookies.isEmpty()) connection.setRequestProperty("Cookie", cookies);
-            int status = connection.getResponseCode();
-            if (status >= 300 && status < 400) return null; // Let WebView follow site redirects.
-            String contentType = connection.getContentType();
-            if (status != 200 || contentType == null ||
-                    !contentType.toLowerCase(Locale.ROOT).startsWith("text/html") ||
-                    (contentType.toLowerCase(Locale.ROOT).contains("charset=") &&
-                            !contentType.toLowerCase(Locale.ROOT).contains("utf-8"))) {
-                throw new IOException("页面不是可处理的 UTF-8 HTML");
-            }
-            String html;
-            try (InputStream source = connection.getInputStream()) {
-                html = new String(EdgeOneHtmlCompatibility.readHtml(source, 2 * 1024 * 1024),
-                        StandardCharsets.UTF_8);
-            }
-            RuntimePayload current = runtimePayload;
-            if (current == null) throw new IOException("运行时已经退出");
-            byte[] rewritten = current.rewriteHtml(html);
-            Map<String, String> headers = new java.util.HashMap<>();
-            headers.put("Cache-Control", "no-store");
-            String csp = connection.getHeaderField("Content-Security-Policy");
-            if (csp != null) headers.put("Content-Security-Policy", csp);
-            return new WebResourceResponse("text/html", "UTF-8", 200, "OK", headers,
-                    new ByteArrayInputStream(rewritten));
-        } catch (Exception error) {
-            byte[] html = ("<!doctype html><meta charset='utf-8'><p>" +
-                    UiText.get(UiText.HTML_FAILED) + "</p>")
-                    .getBytes(StandardCharsets.UTF_8);
-            return new WebResourceResponse("text/html", "UTF-8", 503, "Unavailable",
-                    java.util.Collections.singletonMap("Cache-Control", "no-store"),
-                    new ByteArrayInputStream(html));
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-    }
-
-    private boolean isOfficialEngineRequest(String url) {
-        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
-        return lower.contains("c2.cgyouxi.com/website/hfplayer/")
-                && lower.contains("/bin/official/game.js");
-    }
-
-    private boolean isEngineRequest(String url) {
-        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
-        return lower.equals(RuntimeNames.virtualGameUrl().toLowerCase(Locale.ROOT))
-                || lower.contains("gams-script-edge.2320006072.workers.dev/engine/stable.js")
-                || lower.contains("space-z.ai/game.js");
-    }
-
-    private boolean isForbiddenCoreRequest(String url) {
-        String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
-        return lower.contains("raw.githubusercontent.com/xianyumht-cmd/gams")
-                && (lower.contains("/remote-script/") || lower.contains("/game-engine/"));
-    }
-
-    private boolean isTargetPage(String url) {
-        if (url == null) return false;
-        try {
-            String host = Uri.parse(url).getHost();
-            if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
-                return NativeRuntimeBridge.targetSiteHost(host);
-            }
-            return "m.66rpg.com".equalsIgnoreCase(host)
-                    || "www.66rpg.com".equalsIgnoreCase(host);
-        } catch (Exception error) {
-            return false;
-        }
-    }
-
-    private String wrapControlScript(String source) {
-        return "(function(){" +
-                "if(window.__GG_V2_CONTROL_LOADED__)return;" +
-                "window.__GG_V2_CONTROL_LOADED__=true;" +
-                "try{\n" + source + "\n}catch(e){" +
-                "window.__GG_V2_CONTROL_LOADED__=false;" +
-                "console.error('[GG]',e);}" +
-                "})();";
-    }
-
-    private boolean isSuppressedEngineReadyAlert(String message) {
-        if (message == null) return false;
-        if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE) {
-            return NativeRuntimeBridge.suppressedReadyAlert(message);
-        }
-        String normalized = message.trim().replace('～', '~');
-        return "脚本加载完成~".equals(normalized);
+        return resourceRouter.startUrl();
     }
 
     private void resetWebData() {
-        new AlertDialog.Builder(this)
-                .setTitle(UiText.get(UiText.RESET_TITLE))
-                .setMessage(UiText.get(UiText.RESET_BODY))
-                .setNegativeButton(UiText.get(UiText.CANCEL), null)
-                .setPositiveButton(UiText.get(UiText.CONFIRM), (dialog, which) -> {
-                    CookieManager.getInstance().removeAllCookies(value -> {
-                        CookieManager.getInstance().flush();
-                        if (webView == null) return;
-                        webView.clearCache(true);
-                        webView.clearHistory();
-                        webView.clearFormData();
-                        WebStorage.getInstance().deleteAllData();
-                        webView.evaluateJavascript(
-                                "try{localStorage.clear();sessionStorage.clear();}catch(e){}",
-                                ignored -> webView.loadUrl(startUrl()));
-                    });
-                })
-                .show();
+        dialogs.confirmReset(() -> {
+            final WebView current = webView;
+            final BrowserResourceRouter router = resourceRouter;
+            CookieManager.getInstance().removeAllCookies(value -> {
+                CookieManager.getInstance().flush();
+                if (current == null || router == null || webView != current) return;
+                current.clearCache(true);
+                current.clearHistory();
+                current.clearFormData();
+                WebStorage.getInstance().deleteAllData();
+                current.evaluateJavascript(
+                        "try{localStorage.clear();sessionStorage.clear();}catch(e){}",
+                        ignored -> {
+                            if (webView == current && resourceRouter == router) {
+                                current.loadUrl(router.startUrl());
+                            }
+                        });
+            });
+        });
     }
 
     private void showServiceDialog() {
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(UiText.get(UiText.SERVICE_TITLE))
-                .setMessage(licenseManager.getStatusSummary())
-                .setNegativeButton(UiText.get(UiText.CLOSE), null)
-                .setNeutralButton(UiText.get(UiText.DEVICE_CHANGE), null)
-                .setPositiveButton(UiText.get(UiText.LOGOUT), (d, which) -> {
+        dialogs.serviceInfo(licenseManager.getStatusSummary(),
+                () -> {
                     licenseManager.clear();
                     showLicenseScreen("");
-                })
-                .create();
-        dialog.setOnShowListener(ignored ->
-                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
-                        new AlertDialog.Builder(this)
-                                .setTitle(UiText.get(UiText.CONFIRM_DEVICE_CHANGE))
-                                .setMessage(UiText.get(UiText.CONFIRM_DEVICE_CHANGE_BODY))
-                                .setNegativeButton(UiText.get(UiText.CANCEL), null)
-                                .setPositiveButton(UiText.get(UiText.CONFIRM), (confirm, which) -> {
-                                    dialog.dismiss();
-                                    showLoading(UiText.get(UiText.UNBINDING));
-                                    licenseManager.selfUnbindAsync(result -> {
-                                        Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
-                                        if (result.success) showLicenseScreen("");
-                                        else initializeV2(null);
-                                    });
-                                })
-                                .show()));
-        dialog.show();
+                },
+                () -> {
+                    showLoading(UiText.get(UiText.UNBINDING));
+                    licenseManager.selfUnbindAsync(result -> {
+                        Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
+                        if (result.success) showLicenseScreen("");
+                        else initializeV2(null);
+                    });
+                });
     }
 
     private void showUpdateDialog(String message, String url, boolean required) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle(UiText.get(required ? UiText.UPDATE_REQUIRED : UiText.UPDATE_AVAILABLE))
-                .setMessage(message == null || message.trim().isEmpty()
-                        ? UiText.get(UiText.UPDATE_FOUND) : message)
-                .setNegativeButton(UiText.get(required ? UiText.CLOSE : UiText.LATER), null);
-        if (url != null && !url.trim().isEmpty()) {
-            builder.setPositiveButton(UiText.get(UiText.DOWNLOAD_UPDATE), (dialog, which) -> {
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                } catch (Exception error) {
-                    Toast.makeText(this, UiText.get(UiText.OPEN_UPDATE_FAILED), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-        builder.show();
+        dialogs.update(message, url, required);
     }
 
     @Override
@@ -587,6 +318,7 @@ public final class MainActivity extends Activity {
             browserController.destroy();
             browserController = null;
         }
+        resourceRouter = null;
         webView = null;
     }
 

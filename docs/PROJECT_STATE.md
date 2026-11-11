@@ -23,6 +23,13 @@
   RELRO/BIND_NOW checks. Do not claim the follow-up APK is verified until its
   fresh CI finishes. Owner device acceptance of these new changes remains
   pending; the earlier successful device test applies to the prior candidate.
+- Workflow run 19 (`42950972076`) subsequently passed the host native/JNI,
+  Android lint, both APK builds, UI text parity and final APK/static/ELF
+  inspection, and uploaded an internal artifact. The next local increment
+  extracts all WebView resource-response/HTML rewrite functions into
+  `BrowserResourceRouter` and GG-owned prompts into `ClientDialogs`; it has
+  not yet passed a fresh build at the time of this entry. The now-isolated
+  `MainActivity` chiefly coordinates UI events, startup and lifecycle.
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
