@@ -26,6 +26,12 @@ regression gate. The app now separates the following responsibilities:
   `V2LicenseManager` still owns asynchronous startup, the native generation
   ticket, and the lock protecting token persistence and cancellation. Never
   remove those checks when further decomposing licensing.
+- `LegacyLicenseProtocol` owns the original reference/legacy service calls,
+  challenge signing and signed runtime-access body; `LegacyRuntimeLoader` owns
+  its AES-GCM decryption, ECDSA manifest verification and SHA-256 archive
+  checks. `EdgeOneCandidateClient` and `NativeRuntimeBridge` remain the
+  candidate-specific transport/native authorization boundary. These two
+  legacy classes do not add a fallback that bypasses native authorization.
 - `UiText` stores selected fixed GG-owned interface copy in an encoded table
   decoded on demand, with a separate host-JVM byte-for-byte parity test. This
   is defense against *trivial APK string search*, not runtime confidentiality.

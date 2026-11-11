@@ -30,6 +30,12 @@
   `BrowserResourceRouter` and GG-owned prompts into `ClientDialogs`; it has
   not yet passed a fresh build at the time of this entry. The now-isolated
   `MainActivity` chiefly coordinates UI events, startup and lifecycle.
+- Workflow run 20 (`42951818037`) then passed with the resource router and
+  dialog extraction. The subsequent legacy authorization extraction moves
+  original license challenge/signing and encrypted runtime download into
+  `LegacyLicenseProtocol` and `LegacyRuntimeLoader` while preserving the
+  native EdgeOne candidate path. It requires its own fresh CI verification;
+  device acceptance of all refactor changes is still pending.
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 

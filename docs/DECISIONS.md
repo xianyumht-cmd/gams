@@ -1,5 +1,15 @@
 # Technical decisions
 
+## 2026-11-11: Isolate legacy authorization protocol without changing wire semantics
+
+Extract the old challenge/sign/activate/check/unbind and encrypted-runtime
+download into `LegacyLicenseProtocol` and `LegacyRuntimeLoader`. Keep the
+exact protocol `appVersion=12`, signed canonical field order, endpoint paths,
+ECDSA public key, AES-GCM AAD and runtime size/sha256 verification. The
+shared `V2LicenseManager` continues to serialize and cancel authorization
+operations; only `EdgeOneCandidateClient` drives the native candidate. This
+refactor is not permission to change deployed EdgeOne Makers endpoints.
+
 ## 2026-11-11: Separate UI from platform WebView and auth session persistence
 
 Keep lightweight Java Android Views and one WebView while moving view
