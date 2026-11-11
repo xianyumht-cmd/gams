@@ -33,9 +33,16 @@
 - The owner's first local installer run from
   `D:\download\GG-EdgeOne-CPP-official-local-25` failed at `curl.exe` with
   `schannel: failed to receive handshake, SSL/TLS connection failed` before
-  any Android SDK download or JKS signing. The bootstrap is being updated
-  to accept the official ZIP downloaded separately in a browser, verify its
-  published SHA-256 and continue without a TLS bypass or third-party mirror.
+  any Android SDK download or JKS signing. Commits `18252ac` and `b3e2146`
+  add offline `-ToolsZip` support (also detecting the ZIP beside the script
+  or in the parent download directory) and rebuild the kit when either helper
+  changes. GitHub Actions
+  [run #26](https://github.com/xianyumht-cmd/gams/actions/runs/43049568416)
+  passed all 18 workflow steps, including PowerShell syntax checks. New
+  `GG-EdgeOne-CPP-official-local-26` (artifact ID `13867989009`) includes
+  the revised installer; emulator artifact is `GG-EdgeOne-CPP-internal-26`
+  (ID `13868103797`). The owner's browser download and local execution are
+  still pending; no TLS bypass or unverified third-party mirror was used.
 
 - The owner supplied an existing Windows official JKS path and fingerprint
   list. New release cert SHA-256 is
