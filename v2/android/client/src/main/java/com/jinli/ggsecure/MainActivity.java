@@ -74,7 +74,7 @@ public final class MainActivity extends Activity {
         releaseRuntime();
         final ProgressBar initialization = BuildConfig.EDGEONE_CANDIDATE
                 ? showInitialization() : null;
-        if (initialization == null) showLoading("正在启动…");
+        if (initialization == null) showLoading(UiText.get(UiText.STARTING));
         licenseManager.initializeSavedAsync(result -> {
             if (isFinishing() || isDestroyed()) {
                 if (result.payload != null) result.payload.wipe();
@@ -99,7 +99,7 @@ public final class MainActivity extends Activity {
     }
 
     private ProgressBar showInitialization() {
-        showLoading("正在初始化中…", true);
+        showLoading(UiText.get(UiText.INITIALIZING), true);
         return startupProgressBar;
     }
 
@@ -157,7 +157,7 @@ public final class MainActivity extends Activity {
         activate.setOnClickListener(v -> {
             String key = V2LicenseManager.normalizeKey(input.getText().toString());
             if (key.length() != 32) {
-                status.setText("激活码格式错误");
+                status.setText(UiText.get(UiText.BAD_KEY));
                 return;
             }
             activate.setEnabled(false);
@@ -166,7 +166,7 @@ public final class MainActivity extends Activity {
                     ? showInitialization() : null;
             if (initialization == null) {
                 status.setTextColor(Color.rgb(55, 65, 81));
-                status.setText("正在验证，请稍候…");
+                status.setText(UiText.get(UiText.VERIFYING));
             }
             licenseManager.activateAsync(key, result -> {
                 if (isFinishing() || isDestroyed()) {
@@ -408,7 +408,8 @@ public final class MainActivity extends Activity {
             return new WebResourceResponse("text/html", "UTF-8", 200, "OK", headers,
                     new ByteArrayInputStream(rewritten));
         } catch (Exception error) {
-            byte[] html = "<!doctype html><meta charset='utf-8'><p>GG 页面兼容处理失败，请重试或更新客户端。</p>"
+            byte[] html = ("<!doctype html><meta charset='utf-8'><p>" +
+                    UiText.get(UiText.HTML_FAILED) + "</p>")
                     .getBytes(StandardCharsets.UTF_8);
             return new WebResourceResponse("text/html", "UTF-8", 503, "Unavailable",
                     java.util.Collections.singletonMap("Cache-Control", "no-store"),
@@ -472,10 +473,10 @@ public final class MainActivity extends Activity {
 
     private void resetWebData() {
         new AlertDialog.Builder(this)
-                .setTitle("重置网页数据")
-                .setMessage("清除网页缓存、Cookie和本地网页设置，不会影响账号授权。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("确认", (dialog, which) -> {
+                .setTitle(UiText.get(UiText.RESET_TITLE))
+                .setMessage(UiText.get(UiText.RESET_BODY))
+                .setNegativeButton(UiText.get(UiText.CANCEL), null)
+                .setPositiveButton(UiText.get(UiText.CONFIRM), (dialog, which) -> {
                     CookieManager.getInstance().removeAllCookies(value -> {
                         CookieManager.getInstance().flush();
                         if (webView == null) return;
@@ -493,11 +494,11 @@ public final class MainActivity extends Activity {
 
     private void showServiceDialog() {
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("服务信息")
+                .setTitle(UiText.get(UiText.SERVICE_TITLE))
                 .setMessage(licenseManager.getStatusSummary())
-                .setNegativeButton("关闭", null)
-                .setNeutralButton("更换设备", null)
-                .setPositiveButton("退出账号", (d, which) -> {
+                .setNegativeButton(UiText.get(UiText.CLOSE), null)
+                .setNeutralButton(UiText.get(UiText.DEVICE_CHANGE), null)
+                .setPositiveButton(UiText.get(UiText.LOGOUT), (d, which) -> {
                     licenseManager.clear();
                     showLicenseScreen("");
                 })
@@ -505,12 +506,12 @@ public final class MainActivity extends Activity {
         dialog.setOnShowListener(ignored ->
                 dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
                         new AlertDialog.Builder(this)
-                                .setTitle("确认更换设备")
-                                .setMessage("当前设备会立即退出账号，是否继续？")
-                                .setNegativeButton("取消", null)
-                                .setPositiveButton("确认", (confirm, which) -> {
+                                .setTitle(UiText.get(UiText.CONFIRM_DEVICE_CHANGE))
+                                .setMessage(UiText.get(UiText.CONFIRM_DEVICE_CHANGE_BODY))
+                                .setNegativeButton(UiText.get(UiText.CANCEL), null)
+                                .setPositiveButton(UiText.get(UiText.CONFIRM), (confirm, which) -> {
                                     dialog.dismiss();
-                                    showLoading("正在解除设备绑定…");
+                                    showLoading(UiText.get(UiText.UNBINDING));
                                     licenseManager.selfUnbindAsync(result -> {
                                         Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
                                         if (result.success) showLicenseScreen("");
@@ -523,16 +524,16 @@ public final class MainActivity extends Activity {
 
     private void showUpdateDialog(String message, String url, boolean required) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle(required ? "需要更新" : "发现更新")
+                .setTitle(UiText.get(required ? UiText.UPDATE_REQUIRED : UiText.UPDATE_AVAILABLE))
                 .setMessage(message == null || message.trim().isEmpty()
-                        ? "发现新版本" : message)
-                .setNegativeButton(required ? "关闭" : "稍后", null);
+                        ? UiText.get(UiText.UPDATE_FOUND) : message)
+                .setNegativeButton(UiText.get(required ? UiText.CLOSE : UiText.LATER), null);
         if (url != null && !url.trim().isEmpty()) {
-            builder.setPositiveButton("下载更新", (dialog, which) -> {
+            builder.setPositiveButton(UiText.get(UiText.DOWNLOAD_UPDATE), (dialog, which) -> {
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                 } catch (Exception error) {
-                    Toast.makeText(this, "无法打开更新地址", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, UiText.get(UiText.OPEN_UPDATE_FAILED), Toast.LENGTH_SHORT).show();
                 }
             });
         }

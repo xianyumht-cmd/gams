@@ -1,5 +1,26 @@
 # Technical decisions
 
+## 2026-11-11: Separate UI from platform WebView and auth session persistence
+
+Keep lightweight Java Android Views and one WebView while moving view
+construction into `ClientScreens`, WebView callbacks/chooser/download lifecycle
+into `BrowserWebViewController`, and saved auth records into
+`LicenseSessionStore`. Continue routing resource and license outcomes through
+the existing native-backed coordinator during this migration; do not replace
+the working `about:blank`, HTML rewrite or document-start paths in a single
+rewrite. A single native library already owns high-value policy and memory
+boundaries. `UiText` encodes only fixed GG UI copy to raise simple static
+search costs; dynamic instrumentation can still see rendered text. Retain
+Android Keystore device keys and server-only EdgeOne secrets; compiling
+everything into C++ would not improve their security.
+
+The dedicated internal candidate should ultimately use a persistent signing
+certificate managed outside source control. Its signing key must not be
+confused with the device-specific Keystore P-256 private key, nor silently
+reused from the production APK. Until secrets are configured, CI explicitly
+marks its output as `ephemeral-debug` and does **not** promise upgrade-safe
+installation across Actions runs.
+
 ## 2026-11-11: Expose EdgeOne runtime proof compatibility at `/api/health`
 
 The internal Android startup flow can successfully bind a card and then fail

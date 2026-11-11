@@ -95,7 +95,7 @@ final class BrowserWebViewController {
         view.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView current, String url, Bitmap favicon) {
-                status.setText("加载中…");
+                status.setText(UiText.get(UiText.LOADING));
                 progress.setVisibility(View.VISIBLE);
                 if (!nativeDocumentStartEnabled && resources.targetPage(url)) {
                     current.evaluateJavascript(wrappedControlScript, null);
@@ -104,7 +104,7 @@ final class BrowserWebViewController {
 
             @Override
             public void onPageFinished(WebView current, String url) {
-                status.setText("已就绪");
+                status.setText(UiText.get(UiText.READY));
                 CookieManager.getInstance().flush();
                 if (!nativeDocumentStartEnabled && resources.targetPage(url)) {
                     current.evaluateJavascript(wrappedControlScript, null);
@@ -128,7 +128,7 @@ final class BrowserWebViewController {
                 try {
                     activity.startActivity(new Intent(Intent.ACTION_VIEW, uri));
                 } catch (Exception ignored) {
-                    Toast.makeText(activity, "无法打开此链接", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, UiText.get(UiText.OPEN_LINK_FAILED), Toast.LENGTH_SHORT).show();
                 }
                 return true;
             }
@@ -136,7 +136,7 @@ final class BrowserWebViewController {
             @Override
             public void onReceivedError(
                     WebView current, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) status.setText("页面加载失败");
+                if (request.isForMainFrame()) status.setText(UiText.get(UiText.PAGE_FAILED));
             }
         });
 
@@ -222,9 +222,9 @@ final class BrowserWebViewController {
                 request.setDestinationInExternalFilesDir(activity,
                         Environment.DIRECTORY_DOWNLOADS, "download_" + System.currentTimeMillis());
                 ((DownloadManager) activity.getSystemService(Activity.DOWNLOAD_SERVICE)).enqueue(request);
-                Toast.makeText(activity, "已开始下载", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, UiText.get(UiText.DOWNLOAD_STARTED), Toast.LENGTH_SHORT).show();
             } catch (Exception error) {
-                Toast.makeText(activity, "下载失败", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, UiText.get(UiText.DOWNLOAD_FAILED), Toast.LENGTH_SHORT).show();
             }
         };
     }

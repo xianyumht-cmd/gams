@@ -1,5 +1,29 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-11: Owner device success and modular hardening continuation
+
+- The owner has now explicitly confirmed a successful Android candidate login
+  and visible browser/service-info UI after deploying the compatible EdgeOne
+  Makers source. This supersedes the older *awaiting deployment/device check*
+  notes below. Earlier failure was consistent with deployed runtime-v2 proof
+  incompatibility; do not reissue cards or rotate EdgeOne secrets to fix it.
+- The owner authorized a lightweight modularity and APK static-protection
+  pass on the same ongoing native EdgeOne PR #48. `ClientScreens`,
+  `BrowserWebViewController`, and `LicenseSessionStore` split view creation,
+  Android WebView platform callbacks, and persisted authorization state from
+  `MainActivity`/`V2LicenseManager`, preserving Java reference source parity.
+  CI now accepts persistent internal signing secrets, creates per-run version
+  identifiers, and records certificate provenance; without secrets the
+  internal APK remains disposable-debug-signed and **not** upgrade-safe.
+- Workflow run 18 (`42950178645`) passed C++ sanitizers, Java/JNI/Node proof,
+  Android lint, native ARM64/ARMv7/x86_64 builds and the Java reference APK.
+  Its artifact check failed only because the certificate digest grep looked
+  for `Signer #1` while `apksigner` printed `V2 Signer`. The matcher has been
+  corrected in the next change, alongside UI-copy encoding/parity and native
+  RELRO/BIND_NOW checks. Do not claim the follow-up APK is verified until its
+  fresh CI finishes. Owner device acceptance of these new changes remains
+  pending; the earlier successful device test applies to the prior candidate.
+
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
 - **Runtime-v2 deployment mismatch is the leading cause of the owner's

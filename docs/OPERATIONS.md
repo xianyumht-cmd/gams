@@ -1,5 +1,38 @@
 # EdgeOne GG internal deployment and verification
 
+## Native candidate build signing and artifact provenance (2026-11-11)
+
+The `.github/workflows/gg-edgeone-cpp-internal-apk.yml` job increments the
+internal candidate `versionCode` to `10000 + GITHUB_RUN_NUMBER` and uses
+`2.0.4-native-internal.N` as its visible version. Each published Actions
+artifact includes the APK, `SHA256SUMS.txt`, and `BUILD-METADATA.txt` with
+source SHA, version, signing mode, and certificate digest. The UI service
+dialog reads the actual `BuildConfig.VERSION_NAME`; a screenshot alone still
+does not prove the installed package bytes match an artifact.
+
+To enable **persistent internal signing**, provision these GitHub Actions
+secrets without storing their values or the JKS file in the repository:
+
+- `GG_INTERNAL_KEYSTORE_B64`: base64 of a dedicated internal JKS file.
+- `GG_INTERNAL_STORE_PASSWORD`: keystore password.
+- `GG_INTERNAL_KEY_ALIAS`: internal key alias.
+- `GG_INTERNAL_KEY_PASSWORD`: key password.
+
+If all four are present, Actions decodes the JKS in its temporary runner
+directory and records `persistent-internal`. Partial configuration fails the
+build; if all are missing, a disposable debug key is used and explicitly
+reported as `ephemeral-debug`. That fallback still requires uninstalling an
+older differently signed **internal** package. Installing the first
+persistently signed APK over a debug-signed internal APK also requires one
+deliberate migration/uninstall; after that, use the same certificate for
+upgrades. Never remove the production client or expose signing passwords
+in issue comments, logs, scripts, or chat.
+
+The host JNI test now includes `UiTextSmoke`; release APK inspection checks
+selected GG-owned screen text is not available as direct DEX UTF-8 string
+anchors, and validates native ARM64 RELRO/BIND_NOW. These are bounded
+hardening checks, not proof against dynamic analysis.
+
 ## Repair `设备签名无效` after successful card binding
 
 If a newly issued card shows `已绑定` immediately after the GG internal client
@@ -33,10 +66,11 @@ The independent `GG EdgeOne C++ Internal APK` GitHub Actions workflow builds
 original `:client:assembleEdgeOneTest` as a regression check. Its artifact is
 named `GG-EdgeOne-CPP-internal-N` and contains `GG-EdgeOne-CPP-internal.apk`
 plus `SHA256SUMS.txt`. **This is an internal test artifact, not a Release**.
-Because each Actions job uses a fresh disposable debug certificate while the
-displayed version remains `2.0.3-native-internal` for multiple builds, do not
-rely on an app screenshot to prove an updated APK was installed. The #16 and
-#17 APK certificates were measured to be different. Verify the device's
+Historically, #16 and #17 used fresh disposable debug certificates while the
+displayed version remained `2.0.3-native-internal`. Their certificates were
+measured to be different. A version label is now generated per CI run, but
+**until persistent signing secrets exist**, an in-place upgrade can still
+fail. Verify the device's
 installed `base.apk` SHA-256 against `SHA256SUMS.txt`, or uninstall only the
 independent `com.jinli.quickweb.edgeonecpp` test package before installing a
 new artifact. Uninstalling wipes that test package's local preferences and

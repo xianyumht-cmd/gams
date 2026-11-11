@@ -1,5 +1,40 @@
 # GG Android / EdgeOne internal candidate
 
+## 2026-11-11: Lightweight UI, browser, session boundaries
+
+The current migration retains one Android `Activity`, the original Views,
+one WebView instance, and one C++ `libggnative.so`; it does not introduce a
+second process or a UI framework. Shared Java source is deliberately compiled
+into both `:client` and `:clientNative` so Java reference behavior remains a
+regression gate. The app now separates the following responsibilities:
+
+- `ClientScreens` builds the login, initialization, and WebView toolbar Views,
+  exposing only widgets needed for user-event wiring. It performs no network
+  I/O, authorization, runtime processing, or resource routing.
+- `BrowserWebViewController` owns Android WebView settings, document-start
+  injection/fallback, navigation, chooser/download callbacks, and teardown.
+  It delegates request interception and target-page decisions via a small
+  `ResourceHost` contract; `MainActivity` still owns the resource router and
+  orchestrates the current session. Subsequent work can extract the router
+  without changing the WebView platform boundary.
+- `LicenseSessionStore` owns saved authorization JSON and service-info text;
+  `V2LicenseManager` still owns asynchronous startup, the native generation
+  ticket, and the lock protecting token persistence and cancellation. Never
+  remove those checks when further decomposing licensing.
+- `UiText` stores selected fixed GG-owned interface copy in an encoded table
+  decoded on demand, with a separate host-JVM byte-for-byte parity test. This
+  is defense against *trivial APK string search*, not runtime confidentiality.
+  Dynamic error messages and platform-required identifiers remain subject to
+  a future string audit; do not suggest all APK strings are gone.
+
+Internal APK builds accept monotonically increasing CI version codes and
+optionally a dedicated persistent internal signing keystore provided only by
+GitHub secrets. APK publishing identity, AndroidKeyStore device proofs, and
+EdgeOne server token keys remain independent trust boundaries. Native CMake
+retains hidden symbol visibility and stack protection, and now explicitly
+requests RELRO/BIND_NOW and unused-section elimination. ABI and JNI tests must
+pass before accepting these build/link flags.
+
 ## Isolated C++ candidate (`:clientNative`)
 
 The `v2/android/clientNative` Gradle app builds its own NDK shared library

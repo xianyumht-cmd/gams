@@ -87,7 +87,7 @@ final class ClientScreens {
         }
 
         TextView title = new TextView(activity);
-        title.setText("GG");
+        title.setText(UiText.get(UiText.GG));
         title.setTextSize(29);
         title.setTextColor(Color.WHITE);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -131,7 +131,7 @@ final class ClientScreens {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView title = new TextView(activity);
-        title.setText("GG");
+        title.setText(UiText.get(UiText.GG));
         title.setTextSize(27);
         title.setTextColor(Color.rgb(17, 24, 39));
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -139,7 +139,7 @@ final class ClientScreens {
         root.addView(title, matchWrap(dp(10)));
 
         TextView subtitle = new TextView(activity);
-        subtitle.setText("请输入激活码后启动");
+        subtitle.setText(UiText.get(UiText.LICENSE_SUBTITLE));
         subtitle.setTextSize(14);
         subtitle.setTextColor(Color.rgb(75, 85, 99));
         subtitle.setGravity(Gravity.CENTER);
@@ -147,7 +147,7 @@ final class ClientScreens {
         root.addView(subtitle, matchWrap(dp(24)));
 
         EditText input = new EditText(activity);
-        input.setHint("请输入32位激活码");
+        input.setHint(UiText.get(UiText.LICENSE_HINT));
         input.setSingleLine(true);
         input.setTextSize(17);
         input.setTypeface(Typeface.MONOSPACE);
@@ -160,8 +160,8 @@ final class ClientScreens {
 
         LinearLayout actions = new LinearLayout(activity);
         actions.setOrientation(LinearLayout.HORIZONTAL);
-        Button paste = actionButton("粘贴", false);
-        Button activate = actionButton("启动", true);
+        Button paste = actionButton(UiText.get(UiText.PASTE), false);
+        Button activate = actionButton(UiText.get(UiText.START), true);
         actions.addView(paste, new LinearLayout.LayoutParams(0, dp(52), 1));
         LinearLayout.LayoutParams activateParams = new LinearLayout.LayoutParams(0, dp(52), 2);
         activateParams.setMargins(dp(10), 0, 0, 0);
@@ -188,14 +188,14 @@ final class ClientScreens {
         toolbar.setPadding(dp(3), dp(3), dp(3), dp(3));
         toolbar.setBackgroundColor(Color.rgb(17, 24, 39));
 
-        Button back = toolbarButton("返回");
-        Button home = toolbarButton("首页");
-        Button refresh = toolbarButton("刷新");
-        Button reset = toolbarButton("重置");
-        Button service = toolbarButton("服务");
+        Button back = toolbarButton(UiText.get(UiText.BACK));
+        Button home = toolbarButton(UiText.get(UiText.HOME));
+        Button refresh = toolbarButton(UiText.get(UiText.REFRESH));
+        Button reset = toolbarButton(UiText.get(UiText.RESET));
+        Button service = toolbarButton(UiText.get(UiText.SERVICE));
 
         TextView status = new TextView(activity);
-        status.setText("加载中…");
+        status.setText(UiText.get(UiText.LOADING));
         status.setTextColor(Color.WHITE);
         status.setTextSize(11);
         status.setSingleLine(true);

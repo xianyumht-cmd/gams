@@ -1,5 +1,20 @@
 # EdgeOne candidate pitfalls
 
+- **APK-signature metadata has tool-specific wording.** The Android SDK
+  `apksigner verify --print-certs` currently prints
+  `V2 Signer: certificate SHA-256 digest:` for a v2-only internal APK, not
+  `Signer #1 certificate SHA-256 digest:`. A release CI grep for the latter
+  incorrectly failed after both Android builds and all JNI tests succeeded.
+  Match the stable `Signer: certificate SHA-256 digest:` suffix and preserve
+  the real certificate fingerprint in artifact metadata. Do not describe a
+  post-build metadata check failure as an APK compilation error.
+- **View copy can leak search anchors even with native C++ auth.** `MainActivity`
+  formerly embedded the login, loading, service and browser text as plain
+  Java literals. `UiText` encodes selected owned UI phrases and the host JVM
+  parity test protects exact rendering; artifact inspection checks a small
+  set is absent from compiled DEX. This makes simple `strings` searching less
+  helpful, not dynamic hooks or screenshot extraction impossible.
+
 - The UI's activation flow also requests the private runtime ZIP before it
   reports startup success. A visible `设备签名无效` does **not** imply
   `/api/activate` failed. If a freshly issued card already shows `已绑定` in
@@ -14,8 +29,9 @@
   `runtimeProofAction=runtime-v2` and `deliveryVersion=2`. An old health
   response without these fields does not establish deployment freshness.
 - **An unchanged version label does not prove that an updated internal APK is
-  installed.** `clientNative` hardcodes `2.0.3-native-internal` and `versionCode=16`
-  for the separate C++ builds. Each GitHub-hosted Actions runner creates a
+  installed.** Previous builds hardcoded `2.0.3-native-internal` and
+  `versionCode=16`. Without persistent internal signing secrets,
+  each GitHub-hosted Actions runner creates a
   new disposable Android debug keystore: APK #16 and APK #17 were confirmed
   to have *different* APK signing certificates (SHA-256 fingerprints beginning
   `4c07ad69` and `eea01a4e`). Android rejects an in-place installation over

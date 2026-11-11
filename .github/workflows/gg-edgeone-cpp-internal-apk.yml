@@ -89,6 +89,8 @@ jobs:
             v2/android/clientNative/src/main/cpp/native_runtime_jni.cpp \
             -lz -o /tmp/gg-cpp-jni/libggnative.so
           javac -d /tmp/gg-cpp-java-classes \
+            v2/android/client/src/main/java/com/jinli/ggsecure/UiText.java \
+            v2/android/clientNative/test/UiTextSmoke.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeRuntimeBridge.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/StartupGate.java \
             v2/android/client/src/main/java/com/jinli/ggsecure/NativeGameInputStream.java \
@@ -106,6 +108,7 @@ jobs:
             /tmp/gg-cpp-test/bundle.zip \
             remote-script/release/noname-1.1.4.js \
             game-engine/release/game-1.0.5.js
+          java -cp /tmp/gg-cpp-java-classes com.jinli.ggsecure.UiTextSmoke
           node edgeone-license/test/device-proof-interop.mjs
           node edgeone-license/test/runtime-crypto-fixture.mjs | \
             java -Djava.library.path=/tmp/gg-cpp-jni -cp /tmp/gg-cpp-java-classes \
@@ -161,9 +164,37 @@ jobs:
             echo 'Private runtime found in native APK' >&2
             exit 1
           fi
+          # The native APK should not expose its own login/loading/UI phrases
+          # as trivial plaintext DEX search anchors. This is not a runtime
+          # secrecy guarantee, and test-only expected strings are not packaged.
+          python3 - "$cpp" <<'PY'
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          markers = [
+              '请输入激活码后启动', '请输入32位激活码',
+              '正在初始化中…', '正在解除设备绑定…',
+              '重置网页数据', '确认更换设备',
+          ]
+          with zipfile.ZipFile(Path(sys.argv[1])) as apk:
+              dex_names = [n for n in apk.namelist()
+                           if n.startswith('classes') and n.endswith('.dex')]
+              if not dex_names:
+                  raise SystemExit('No DEX found in native APK')
+              for name in dex_names:
+                  contents = apk.read(name)
+                  for marker in markers:
+                      if marker.encode('utf-8') in contents:
+                          raise SystemExit(f'Unprotected UI text in {name}: {marker}')
+          PY
           unzip -Z1 "$cpp" | grep -F 'lib/arm64-v8a/libggnative.so'
           unzip -Z1 "$cpp" | grep -F 'lib/armeabi-v7a/libggnative.so'
           unzip -Z1 "$cpp" | grep -F 'lib/x86_64/libggnative.so'
+          unzip -p "$cpp" lib/arm64-v8a/libggnative.so > "$RUNNER_TEMP/libggnative-arm64.so"
+          readelf -W --program-headers "$RUNNER_TEMP/libggnative-arm64.so" | grep -F GNU_RELRO
+          readelf -W --dynamic "$RUNNER_TEMP/libggnative-arm64.so" | grep -F BIND_NOW
+          readelf -W --dyn-syms "$RUNNER_TEMP/libggnative-arm64.so" | grep -F Java_com_jinli_ggsecure_NativeRuntimeBridge_
           sdk_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$sdk_tools/aapt" dump badging "$cpp" | grep -F "package: name='com.jinli.quickweb.edgeonecpp'"
           "$sdk_tools/aapt" dump badging "$cpp" | grep -F "versionCode='${GG_NATIVE_VERSION_CODE}' versionName='${GG_NATIVE_VERSION_NAME}'"
@@ -177,7 +208,7 @@ jobs:
             printf 'version_code=%s\n' "$GG_NATIVE_VERSION_CODE"
             printf 'version_name=%s\n' "$GG_NATIVE_VERSION_NAME"
             printf 'signing_mode=%s\n' "$GG_SIGNING_MODE"
-            "$sdk_tools/apksigner" verify --print-certs "$cpp" | grep -F 'Signer #1 certificate SHA-256 digest:'
+            "$sdk_tools/apksigner" verify --print-certs "$cpp" | grep -E 'Signer: certificate SHA-256 digest:'
           } > artifact/BUILD-METADATA.txt
       - name: Upload internal test APK only
         uses: actions/upload-artifact@v4
