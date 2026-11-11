@@ -21,7 +21,12 @@ official Windows command-line tools ZIP, validates the published SHA-256,
 and installs just `build-tools;35.0.0` using `sdkmanager` into the current
 user's SDK directory. It needs Java JDK and network access and may request
 acceptance of the Android SDK license. If Google is blocked, install the
-same package manually from the official Android SDK tools. Then run the
+same package manually from the official Android SDK tools. The installer
+also accepts an official browser-downloaded
+`commandlinetools-win-15859902_latest.zip` beside the script or in its
+parent folder, or a path explicitly supplied via `-ToolsZip`; the SHA-256
+is checked before extraction. This avoids Windows `curl.exe` Schannel TLS
+handshake failures without using an unverified mirror. Then run the
 bundled PowerShell signer, e.g. from that directory:
 
 ```powershell

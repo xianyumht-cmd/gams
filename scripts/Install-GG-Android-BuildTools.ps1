@@ -1,5 +1,7 @@
 # Install the minimum official Android SDK tools needed to sign an offline GG
 # APK. No project signing key or password is read or transmitted by this file.
+param([string]$ToolsZip = '')
+
 $ErrorActionPreference = 'Stop'
 $sdkRoot = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
 $buildTools = Join-Path $sdkRoot 'build-tools\35.0.0'
@@ -30,15 +32,37 @@ $sdkmanager = Join-Path $sdkRoot 'cmdline-tools\latest\bin\sdkmanager.bat'
 if (-not (Test-Path -LiteralPath $sdkmanager -PathType Leaf)) {
     $commandlineUrl = 'https://dl.google.com/android/repository/commandlinetools-win-15859902_latest.zip'
     $expectedZipSha256 = '90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a'
+    $zipName = 'commandlinetools-win-15859902_latest.zip'
+    if (-not $ToolsZip) {
+        $candidates = @(
+            (Join-Path $PSScriptRoot $zipName),
+            (Join-Path (Split-Path -Parent $PSScriptRoot) $zipName),
+            (Join-Path (Join-Path $env:USERPROFILE 'Downloads') $zipName)
+        )
+        foreach ($candidate in $candidates) {
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                $ToolsZip = $candidate
+                break
+            }
+        }
+    }
+    if ($ToolsZip -and -not (Test-Path -LiteralPath $ToolsZip -PathType Leaf)) {
+        throw "Specified Android SDK ZIP was not found: $ToolsZip"
+    }
     $tempDir = Join-Path $env:TEMP ('gg-android-commandline-' + [guid]::NewGuid().ToString('N'))
     $zip = Join-Path $tempDir 'commandlinetools.zip'
     $unpack = Join-Path $tempDir 'unpacked'
     New-Item -ItemType Directory -Path $tempDir | Out-Null
     try {
-        Write-Host 'Downloading official Android SDK command-line tools (approximately 156 MB)...'
-        & "$env:WINDIR\System32\curl.exe" --fail --location --retry 3 --connect-timeout 30 --output $zip $commandlineUrl
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Official Google download failed. Check connectivity and use https://developer.android.com/studio#command-tools.'
+        if ($ToolsZip) {
+            Write-Host "Checking the previously downloaded Android SDK ZIP: $ToolsZip"
+            Copy-Item -LiteralPath $ToolsZip -Destination $zip
+        } else {
+            Write-Host 'Downloading official Android SDK command-line tools (approximately 156 MB)...'
+            & "$env:WINDIR\System32\curl.exe" --fail --location --retry 3 --connect-timeout 30 --output $zip $commandlineUrl
+            if ($LASTEXITCODE -ne 0) {
+                throw "Google TLS download failed. Download $zipName using a browser from https://developer.android.com/studio#command-tools, place it beside this script (or in its parent folder), and run the script again. The SHA-256 will be checked."
+            }
         }
         $actualSha256 = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($actualSha256 -ne $expectedZipSha256) { throw 'Android SDK tools checksum mismatch. Installation cancelled.' }

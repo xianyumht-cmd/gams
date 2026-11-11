@@ -1,5 +1,14 @@
 # EdgeOne candidate pitfalls
 
+- **Windows curl can fail Google's TLS handshake while other downloads work.**
+  The owner's offline Build-Tools bootstrap returned Schannel `curl: (35)`
+  before downloading the official Google command-line tools ZIP. This is a
+  network/Schannel path failure, not evidence the JKS or APK is corrupted.
+  The bootstrap can now consume a browser-downloaded official ZIP supplied
+  locally and verifies its SHA-256 against the Android Developers published
+  checksum. Do not disable TLS certificate verification or silently switch
+  to an unverified mirror to work around this error.
+
 - **A JDK does not supply Android `apksigner`.** The owner successfully
   verified the release `.cer` and JKS alias with JDK `keytool` but found no
   `apksigner.bat` in the usual Windows SDK directories. Android SDK

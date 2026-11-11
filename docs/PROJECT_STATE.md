@@ -30,6 +30,12 @@
   candidate is separately `GG-EdgeOne-CPP-internal-25`
   (`13867212265`). **Local Windows tool installation, official signing and
   device login are still pending owner execution**, not claimed as passed.
+- The owner's first local installer run from
+  `D:\download\GG-EdgeOne-CPP-official-local-25` failed at `curl.exe` with
+  `schannel: failed to receive handshake, SSL/TLS connection failed` before
+  any Android SDK download or JKS signing. The bootstrap is being updated
+  to accept the official ZIP downloaded separately in a browser, verify its
+  published SHA-256 and continue without a TLS bypass or third-party mirror.
 
 - The owner supplied an existing Windows official JKS path and fingerprint
   list. New release cert SHA-256 is
