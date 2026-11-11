@@ -1,21 +1,28 @@
 # Verified task state — EdgeOne candidate
 
-## 2026-11-11: Official certificate guard implementation awaiting CI
+## 2026-11-11: Official certificate guard verified in internal CI
 
 - The owner supplied an existing Windows official JKS path and fingerprint
   list. New release cert SHA-256 is
   `70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34`;
   previous cert is recorded for historical migration only. These are owner
   supplied and **not yet independently verified** against the JKS or `.cer`.
-- The current task adds native signer comparison and release-artifact signer
-  verification for builds configured with a persistent JKS; debug-signing
-  fallback still works for emulator tests. It does not configure/upload the
-  actual Windows key or introduce EdgeOne server-side APK attestation.
+- Commit `3b4814f` on PR #48 adds native signer comparison and release-artifact
+  signer verification for builds configured with a persistent JKS. GitHub
+  Actions run [#23](https://github.com/xianyumht-cmd/gams/actions/runs/43034434768)
+  passed host C++ sanitizers, host JNI + UI string parity, Android lint, both
+  Android builds, ELF checks and APK inspection. Its artifact is
+  `GG-EdgeOne-CPP-internal-23` (ID `13861928091`). The run explicitly reported
+  `GG_SIGNING_MODE: ephemeral-debug` with SHA-256 APK signer
+  `df6d67b9cb523b3e3fec57d2f6da7246b439dcfb7f2ed62e7bf1a78d73f8a5c4`:
+  **the owner's official JKS was not available/used in CI.** Native matching
+  against an actual official-signed Android build is still unverified; no
+  EdgeOne server-side APK attestation was added.
 - The currently deployed EdgeOne validates a separate Android Keystore device
   signature. Locally matching the APK cert does not make a client-reported
   digest a trustworthy server-side claim. The owner has confirmed successful
-  login on an earlier candidate; the new signer gate still needs CI and
-  signed-APK device acceptance before calling this increment complete.
+  login on an earlier candidate; the new signer gate still needs an
+  official-signed device run before its production behavior can be accepted.
 
 ## 2026-11-11: Owner device success and modular hardening continuation
 
