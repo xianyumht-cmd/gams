@@ -132,6 +132,16 @@ all vector access; `close` removes an ID before wiping outside the registry
 lock, and duplicate close is idempotent. Do not change WebView stream APIs,
 HTML transform output, JS bytes, or the existing authorization wire format.
 
+The fifteenth increment makes the native startup ticket a **runtime access
+capability** as well as a download-cancellation token. New C++ candidate
+bundles must be opened through `openAuthorized` with the coordinator and
+ticket; each JNI read rechecks its ownership. A plain JNI ZIP open remains
+for compatibility with legacy and host reference fixtures, not for the
+EdgeOne candidate's authorized download. Check tickets before and after ZIP
+parsing without holding the Java session monitor so a concurrent logout can
+invalidate promptly. Do not report previously started native reads as
+retroactively interrupted, and do not change the original Java APK path.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

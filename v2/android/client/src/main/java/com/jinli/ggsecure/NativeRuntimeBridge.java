@@ -17,6 +17,11 @@ final class NativeRuntimeBridge {
     static native long open(byte[] zip, String bundleSha, int nonameSize, String nonameSha,
                             int gameSize, String gameSha);
 
+    /** Keeps private JS inaccessible after its owning C++ authorization ticket expires. */
+    static native long openAuthorized(byte[] zip, String bundleSha, int nonameSize,
+                                      String nonameSha, int gameSize, String gameSha,
+                                      long startupHandle, long ticket);
+
     static native String nonameSource(long handle);
 
     /** Pure compatibility rewrite using C++-resident control JS. */

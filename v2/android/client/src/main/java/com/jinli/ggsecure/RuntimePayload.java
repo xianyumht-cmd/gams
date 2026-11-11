@@ -29,10 +29,22 @@ final class RuntimePayload {
     }
 
     static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest) throws Exception {
+        return fromZip(zipBytes, manifest, null, 0L);
+    }
+
+    static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest,
+                                  StartupGate startupGate, long ticket) throws Exception {
         if (BuildConfig.GG_NATIVE_CORE) {
-            long handle = NativeRuntimeBridge.open(zipBytes, manifest.getString("sha256"),
-                    manifest.getInt("nonameSize"), manifest.getString("nonameSha256"),
-                    manifest.getInt("gameSize"), manifest.getString("gameSha256"));
+            String bundleSha = manifest.getString("sha256");
+            int nonameSize = manifest.getInt("nonameSize");
+            String nonameSha = manifest.getString("nonameSha256");
+            int gameSize = manifest.getInt("gameSize");
+            String gameSha = manifest.getString("gameSha256");
+            long handle = startupGate != null && BuildConfig.EDGEONE_CANDIDATE
+                    ? startupGate.openRuntime(zipBytes, bundleSha,
+                            nonameSize, nonameSha, gameSize, gameSha, ticket)
+                    : NativeRuntimeBridge.open(zipBytes, bundleSha,
+                            nonameSize, nonameSha, gameSize, gameSha);
             if (handle == 0) throw new SecurityException("运行数据验证失败");
             return new RuntimePayload(handle, manifest.optString("versionName", ""));
         }

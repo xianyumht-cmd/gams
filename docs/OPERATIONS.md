@@ -82,6 +82,15 @@ handle ID, and racing repeated bounded engine reads with teardown. All stale
 native handle reads must fail with a managed Java exception, not a native
 crash. A successful host concurrency fixture does not replace the owner's
 future live WebView refresh/logout test.
+The fifteenth increment extends the real JNI fixture with a server-valid
+historical public ZIP opened using a native startup ticket. It compares
+resident control, wrapped injection, HTML rewrite, engine length and bounded
+range access; then invalidates that ticket and requires every subsequent
+read or reopen to fail with `SecurityException`. A later ticket must accept
+a fresh ZIP without reviving the earlier one; closing the coordinator must
+revoke the fresh runtime too. The Java-only/reference ZIP open and both APK
+builds remain in CI. On-device owner acceptance is still required for a
+logout while the page holds a response stream and immediate reauthorization.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

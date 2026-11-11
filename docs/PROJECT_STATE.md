@@ -2,6 +2,18 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Fifteenth increment in progress:** Bind the C++ runtime ZIP registry
+  entries to the *same* native authorization coordinator and generation
+  ticket that own the corresponding encrypted delivery. Every subsequent
+  native control/HTML/engine read rejects a revoked ticket even when a
+  surviving WebView still knows the opaque handle. The candidate calls
+  `openAuthorized` and checks ownership again after ZIP validation;
+  plain `open` remains solely for legacy/reference interoperability. JNI
+  parity now exercises logout, new login, closed gates, stale reads and
+  authorized reloads. Java WebView, Android platform cryptography and
+  the unmodified Java-only APK remain the compatibility baseline. CI APK
+  and device parity are not yet verified.
+
 - **Fourteenth increment verified by CI:** Replaced the native
   runtime ZIP's raw-pointer JNI handle with a C++ registry of monotonically
   increasing IDs backed by `shared_ptr` ownership. Every control script,

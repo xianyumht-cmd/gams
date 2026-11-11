@@ -396,6 +396,57 @@ public final class NativeRuntimeInteropSmoke {
         if (reopened == handle) throw new AssertionError("Native ZIP handle ID was reused");
         NativeRuntimeBridge.close(reopened);
 
+        // An authorization-bound runtime must never outlive the startup ticket
+        // that verified and delivered it. This covers late WebView reads even
+        // when the Java owner has not yet called wipe()/close().
+        long runtimeGate = NativeRuntimeBridge.createStartupGate();
+        long runtimeTicket = NativeRuntimeBridge.beginStartupOperation(runtimeGate);
+        long authorized = 0;
+        long renewed = 0;
+        try {
+            authorized = NativeRuntimeBridge.openAuthorized(zip, bundleHash,
+                    control.length, nonameHash, engine.length, gameHash,
+                    runtimeGate, runtimeTicket);
+            assertEqual(new String(control, StandardCharsets.UTF_8),
+                    NativeRuntimeBridge.nonameSource(authorized));
+            if (NativeRuntimeBridge.gameSize(authorized) != engine.length ||
+                    NativeRuntimeBridge.copyGameRange(authorized, 0, new byte[8], 0, 8) != 8) {
+                throw new AssertionError("Authorized runtime cannot stream its engine");
+            }
+            NativeRuntimeBridge.wrappedControlBytes(authorized);
+            NativeRuntimeBridge.rewriteHtml(authorized,
+                    "<html><head></head><body></body></html>".getBytes(StandardCharsets.UTF_8));
+
+            NativeRuntimeBridge.invalidateStartupGate(runtimeGate);
+            final long obsoleteHandle = authorized;
+            expectStaleRuntime(() -> NativeRuntimeBridge.gameSize(obsoleteHandle));
+            expectStaleRuntime(() -> NativeRuntimeBridge.nonameSource(obsoleteHandle));
+            expectStaleRuntime(() -> NativeRuntimeBridge.wrappedControlBytes(obsoleteHandle));
+            expectStaleRuntime(() -> NativeRuntimeBridge.copyGameRange(
+                    obsoleteHandle, 0, new byte[8], 0, 8));
+            expectStaleRuntime(() -> NativeRuntimeBridge.rewriteHtml(obsoleteHandle,
+                    "<html><head></head></html>".getBytes(StandardCharsets.UTF_8)));
+            expectStaleRuntime(() -> NativeRuntimeBridge.openAuthorized(zip, bundleHash,
+                    control.length, nonameHash, engine.length, gameHash,
+                    runtimeGate, runtimeTicket));
+
+            long nextTicket = NativeRuntimeBridge.beginStartupOperation(runtimeGate);
+            expectStaleRuntime(() -> NativeRuntimeBridge.gameSize(obsoleteHandle));
+            renewed = NativeRuntimeBridge.openAuthorized(zip, bundleHash,
+                    control.length, nonameHash, engine.length, gameHash,
+                    runtimeGate, nextTicket);
+            if (renewed == authorized || NativeRuntimeBridge.gameSize(renewed) != engine.length) {
+                throw new AssertionError("Renewed authorization reused an obsolete ZIP handle");
+            }
+            NativeRuntimeBridge.closeStartupGate(runtimeGate);
+            final long closedGateHandle = renewed;
+            expectStaleRuntime(() -> NativeRuntimeBridge.gameSize(closedGateHandle));
+        } finally {
+            NativeRuntimeBridge.close(authorized);
+            NativeRuntimeBridge.close(renewed);
+            NativeRuntimeBridge.closeStartupGate(runtimeGate);
+        }
+
         long racing = NativeRuntimeBridge.open(zip, bundleHash, control.length, nonameHash,
                 engine.length, gameHash);
         AtomicBoolean readerStarted = new AtomicBoolean(false);
@@ -439,5 +490,14 @@ public final class NativeRuntimeInteropSmoke {
         Arrays.fill(derived[0], (byte) 0);
         Arrays.fill(derived[1], (byte) 0);
         System.out.println("Host Java→JNI→C++ WebView lifecycle, navigation, HTML rewrite, encrypted transfer, engine stream, HKDF and ZIP parity OK");
+    }
+
+    private static void expectStaleRuntime(Runnable operation) {
+        try {
+            operation.run();
+            throw new AssertionError("Obsolete authorization allowed a C++ runtime operation");
+        } catch (SecurityException expected) {
+            // A revoked ticket rejects even if its numeric ZIP handle remains registered.
+        }
     }
 }

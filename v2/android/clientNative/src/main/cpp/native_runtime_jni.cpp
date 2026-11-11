@@ -27,7 +27,12 @@ std::unordered_map<std::int64_t, std::shared_ptr<gg::StartupCoordinator>> startu
 
 std::mutex bundleRegistryMutex;
 std::int64_t nextBundleHandle = 1;
-std::unordered_map<std::int64_t, std::shared_ptr<gg::RuntimeBundle>> bundleRegistry;
+struct RegisteredBundle {
+    std::shared_ptr<gg::RuntimeBundle> bundle;
+    std::shared_ptr<gg::StartupCoordinator> session;
+    std::int64_t ticket = 0;
+};
+std::unordered_map<std::int64_t, RegisteredBundle> bundleRegistry;
 
 std::shared_ptr<gg::StartupCoordinator> lookupStartup(jlong handle) {
     std::lock_guard<std::mutex> lock(startupRegistryMutex);
@@ -59,14 +64,63 @@ std::string optionalText(JNIEnv* env, jstring value) {
 }
 
 std::shared_ptr<const gg::RuntimeBundle> resolve(jlong value) {
-    std::lock_guard<std::mutex> lock(bundleRegistryMutex);
-    auto found = bundleRegistry.find(static_cast<std::int64_t>(value));
-    if (value <= 0 || found == bundleRegistry.end()) {
-        throw std::runtime_error("Runtime already disposed");
+    RegisteredBundle entry;
+    {
+        std::lock_guard<std::mutex> lock(bundleRegistryMutex);
+        auto found = bundleRegistry.find(static_cast<std::int64_t>(value));
+        if (value <= 0 || found == bundleRegistry.end()) {
+            throw std::runtime_error("Runtime already disposed");
+        }
+        entry = found->second;
     }
     // Retaining a shared reference protects each JNI read from concurrent
     // close(). Registry IDs are never reused for another ZIP.
-    return found->second;
+    if (entry.session && !entry.session->isCurrent(entry.ticket)) {
+        throw std::runtime_error("Runtime authorization is obsolete");
+    }
+    return entry.bundle;
+}
+
+jlong openBundle(JNIEnv* env, jbyteArray input, jstring bundleSha,
+        jint nonameSize, jstring nonameSha, jint gameSize, jstring gameSha,
+        std::shared_ptr<gg::StartupCoordinator> session = {}, std::int64_t ticket = 0) {
+    if (session && !session->isCurrent(ticket)) {
+        throw std::runtime_error("Runtime authorization is obsolete");
+    }
+    if (!input || nonameSize <= 0 || gameSize <= 0) {
+        throw std::runtime_error("Missing or invalid runtime ZIP");
+    }
+    const jsize count = env->GetArrayLength(input);
+    if (count < 22 || count > 5'500'000) throw std::runtime_error("Runtime ZIP length invalid");
+    std::vector<std::uint8_t> zip(static_cast<std::size_t>(count));
+    env->GetByteArrayRegion(input, 0, count, reinterpret_cast<jbyte*>(zip.data()));
+    if (env->ExceptionCheck()) {
+        gg::secureClear(zip);
+        return 0;
+    }
+    std::unique_ptr<gg::RuntimeBundle> bundle;
+    try {
+        bundle = gg::parseRuntimeZip(zip.data(), zip.size(),
+            {static_cast<std::size_t>(nonameSize), text(env, nonameSha)},
+            {static_cast<std::size_t>(gameSize), text(env, gameSha)},
+            text(env, bundleSha));
+    } catch (...) {
+        gg::secureClear(zip);
+        throw;
+    }
+    gg::secureClear(zip);
+    if (session && !session->isCurrent(ticket)) {
+        throw std::runtime_error("Runtime authorization expired during ZIP validation");
+    }
+    std::lock_guard<std::mutex> lock(bundleRegistryMutex);
+    if (nextBundleHandle == std::numeric_limits<std::int64_t>::max()) {
+        throw std::overflow_error("Runtime handle registry exhausted");
+    }
+    const std::int64_t id = nextBundleHandle++;
+    bundleRegistry.emplace(id, RegisteredBundle{
+            std::shared_ptr<gg::RuntimeBundle>(std::move(bundle)),
+            std::move(session), ticket});
+    return static_cast<jlong>(id);
 }
 
 template <class F>
@@ -156,32 +210,19 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_open(JNIEnv* env, jclass, jbyteArray
         jstring bundleSha, jint nonameSize, jstring nonameSha,
         jint gameSize, jstring gameSha) {
     return translate(env, [&]() -> jlong {
-        if (!input || nonameSize <= 0 || gameSize <= 0) {
-            throw std::runtime_error("Missing or invalid runtime ZIP");
-        }
-        const jsize count = env->GetArrayLength(input);
-        if (count < 22 || count > 5'500'000) throw std::runtime_error("Runtime ZIP length invalid");
-        std::vector<std::uint8_t> zip(static_cast<std::size_t>(count));
-        env->GetByteArrayRegion(input, 0, count, reinterpret_cast<jbyte*>(zip.data()));
-        if (env->ExceptionCheck()) return 0;
-        std::unique_ptr<gg::RuntimeBundle> bundle;
-        try {
-            bundle = gg::parseRuntimeZip(zip.data(), zip.size(),
-                {static_cast<std::size_t>(nonameSize), text(env, nonameSha)},
-                {static_cast<std::size_t>(gameSize), text(env, gameSha)},
-                text(env, bundleSha));
-        } catch (...) {
-            gg::secureClear(zip);
-            throw;
-        }
-        gg::secureClear(zip);
-        std::lock_guard<std::mutex> lock(bundleRegistryMutex);
-        if (nextBundleHandle == std::numeric_limits<std::int64_t>::max()) {
-            throw std::overflow_error("Runtime handle registry exhausted");
-        }
-        const std::int64_t id = nextBundleHandle++;
-        bundleRegistry.emplace(id, std::shared_ptr<gg::RuntimeBundle>(std::move(bundle)));
-        return static_cast<jlong>(id);
+        return openBundle(env, input, bundleSha, nonameSize, nonameSha, gameSize, gameSha);
+    });
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_openAuthorized(JNIEnv* env, jclass,
+        jbyteArray input, jstring bundleSha, jint nonameSize, jstring nonameSha,
+        jint gameSize, jstring gameSha, jlong startupHandle, jlong ticket) {
+    return translate(env, [&]() -> jlong {
+        auto session = lookupStartup(startupHandle);
+        if (!session) throw std::runtime_error("Runtime authorization coordinator is closed");
+        return openBundle(env, input, bundleSha, nonameSize, nonameSha,
+                gameSize, gameSha, std::move(session), ticket);
     });
 }
 
@@ -366,7 +407,7 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_gameSize(JNIEnv* env, jclass, jlong 
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_close(JNIEnv*, jclass, jlong handle) {
-    std::shared_ptr<gg::RuntimeBundle> removed;
+    RegisteredBundle removed;
     {
         std::lock_guard<std::mutex> lock(bundleRegistryMutex);
         auto found = bundleRegistry.find(static_cast<std::int64_t>(handle));

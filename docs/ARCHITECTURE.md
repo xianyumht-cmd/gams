@@ -171,6 +171,21 @@ never reused or accepted again, including on duplicate `close`. Android
 platform-facing resource owner, while C++ now enforces native memory safety
 independently if an unexpected concurrent JNI caller appears.
 
+The fifteenth boundary binds each candidate `RuntimeBundle` registry entry
+to the native `StartupCoordinator` and its active generation ticket.
+`EdgeOneCandidateClient` passes the ticket through `RuntimePayload.fromZip`
+and `StartupGate.openRuntime()` to the JNI `openAuthorized()` parser. C++
+verifies that generation both before and after ZIP parsing; each later
+`resolve()` checks it again before returning JS bytes for control injection,
+HTML rewrite or bounded game streaming. The shared coordinator can safely
+outlive a closed registry ID until the last bundle reference is released.
+The registry mutex is not held while checking the coordinator lock, and
+Java's `StartupGate` monitor is not held during ZIP parsing, so logout
+can invalidate the session immediately. A native read already underway
+may finish after invalidation, but new reads and stale runtime publication
+are denied. The legacy/reference `open()` path stays unbound; only the
+isolated C++ EdgeOne candidate uses the authorized runtime entry point.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

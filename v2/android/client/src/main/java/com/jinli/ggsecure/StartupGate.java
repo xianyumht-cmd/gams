@@ -49,6 +49,20 @@ final class StartupGate {
                 : NativeRuntimeBridge.beginEncryptedTransfer(expectedBytes, maximumBytes);
     }
 
+    long openRuntime(byte[] zip, String bundleSha, int nonameSize, String nonameSha,
+                     int gameSize, String gameSha, long ticket) throws InterruptedIOException {
+        final long coordinator;
+        synchronized (this) {
+            if (!isCurrent(ticket)) throw new InterruptedIOException("运行包加载已取消");
+            if (!nativeCore) throw new IllegalStateException("Native authorization is unavailable");
+            coordinator = nativeHandle;
+        }
+        // ZIP verification may take time. Do not hold the Java lifecycle monitor:
+        // logout must be able to revoke the C++ ticket immediately.
+        return NativeRuntimeBridge.openAuthorized(zip, bundleSha, nonameSize, nonameSha,
+                gameSize, gameSha, coordinator, ticket);
+    }
+
     synchronized void close() {
         if (closed) return;
         closed = true;

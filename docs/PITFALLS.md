@@ -51,6 +51,14 @@
   Use monotonic opaque IDs and a C++ `shared_ptr` registry, retain the
   reference for the *entire* JNI read (never a temporary expression beside
   a vector reference), and wipe removed bundles after releasing the mutex.
+- Even a memory-safe opaque native ZIP ID is not automatically tied to the
+  license session: a stale WebView could keep reading old authorized JS after
+  logout if Java has not yet closed its `RuntimePayload`. Bind every C++
+  candidate runtime registry entry to its startup ticket and refuse native
+  control/HTML/engine reads after invalidation. Check the ticket on both
+  sides of ZIP parsing; release the Java lifecycle monitor during parsing
+  to let logout proceed. Reads already underway may complete, so the Java
+  UI callback gate and `wipe()` remain necessary.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

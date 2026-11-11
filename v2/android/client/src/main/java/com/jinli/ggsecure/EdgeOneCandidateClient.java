@@ -124,7 +124,7 @@ final class EdgeOneCandidateClient {
                     !expectedHash.equals(DeviceIdentity.hex(MessageDigest.getInstance("SHA-256").digest(zip))))) {
                 throw new SecurityException("运行包完整性校验失败");
             }
-            RuntimePayload payload = RuntimePayload.fromZip(zip, manifest);
+            RuntimePayload payload = RuntimePayload.fromZip(zip, manifest, startupGate, ticket);
             if (!current.getAsBoolean()) {
                 payload.wipe();
                 throw new InterruptedIOException("运行包下载已取消");
