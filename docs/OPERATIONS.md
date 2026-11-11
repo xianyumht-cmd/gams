@@ -86,7 +86,8 @@ The fifteenth increment extends the real JNI fixture with a server-valid
 historical public ZIP opened using a native startup ticket. It compares
 resident control, wrapped injection, HTML rewrite, engine length and bounded
 range access; then invalidates that ticket and requires every subsequent
-read or reopen to fail with `SecurityException`. A later ticket must accept
+read or reopen to fail with `SecurityException` (the HTML-rewrite JNI
+boundary deliberately retains `IllegalArgumentException`). A later ticket must accept
 a fresh ZIP without reviving the earlier one; closing the coordinator must
 revoke the fresh runtime too. The Java-only/reference ZIP open and both APK
 builds remain in CI. On-device owner acceptance is still required for a

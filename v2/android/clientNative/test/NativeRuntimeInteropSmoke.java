@@ -424,8 +424,13 @@ public final class NativeRuntimeInteropSmoke {
             expectStaleRuntime(() -> NativeRuntimeBridge.wrappedControlBytes(obsoleteHandle));
             expectStaleRuntime(() -> NativeRuntimeBridge.copyGameRange(
                     obsoleteHandle, 0, new byte[8], 0, 8));
-            expectStaleRuntime(() -> NativeRuntimeBridge.rewriteHtml(obsoleteHandle,
-                    "<html><head></head></html>".getBytes(StandardCharsets.UTF_8)));
+            try {
+                NativeRuntimeBridge.rewriteHtml(obsoleteHandle,
+                        "<html><head></head></html>".getBytes(StandardCharsets.UTF_8));
+                throw new AssertionError("Obsolete runtime rewrote HTML after logout");
+            } catch (IllegalArgumentException expected) {
+                // HTML rewriting deliberately uses the Java compatibility error type.
+            }
             expectStaleRuntime(() -> NativeRuntimeBridge.openAuthorized(zip, bundleHash,
                     control.length, nonameHash, engine.length, gameHash,
                     runtimeGate, runtimeTicket));
