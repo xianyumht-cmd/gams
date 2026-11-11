@@ -23,6 +23,52 @@ public final class NativeRuntimeInteropSmoke {
 
     public static void main(String[] paths) throws Exception {
         if (paths.length != 3) throw new IllegalArgumentException("ZIP/noname/game fixture paths required");
+        long gate = NativeRuntimeBridge.createStartupGate();
+        long independentGate = NativeRuntimeBridge.createStartupGate();
+        try {
+            long oldTicket = NativeRuntimeBridge.beginStartupOperation(gate);
+            if (!NativeRuntimeBridge.isCurrentStartupOperation(gate, oldTicket)) {
+                throw new AssertionError("Native startup ticket not current");
+            }
+            long newerTicket = NativeRuntimeBridge.beginStartupOperation(gate);
+            if (NativeRuntimeBridge.isCurrentStartupOperation(gate, oldTicket) ||
+                    !NativeRuntimeBridge.isCurrentStartupOperation(gate, newerTicket)) {
+                throw new AssertionError("Old startup operation accepted after replacement");
+            }
+            NativeRuntimeBridge.invalidateStartupGate(gate);
+            if (NativeRuntimeBridge.isCurrentStartupOperation(gate, newerTicket) ||
+                    NativeRuntimeBridge.isCurrentStartupOperation(gate, 0L)) {
+                throw new AssertionError("Canceled request retained authorization");
+            }
+            long otherTicket = NativeRuntimeBridge.beginStartupOperation(independentGate);
+            NativeRuntimeBridge.closeStartupGate(gate);
+            if (NativeRuntimeBridge.isCurrentStartupOperation(gate, newerTicket) ||
+                    !NativeRuntimeBridge.isCurrentStartupOperation(independentGate, otherTicket)) {
+                throw new AssertionError("Closed startup gate disturbed another Activity");
+            }
+            try {
+                NativeRuntimeBridge.beginStartupOperation(gate);
+                throw new AssertionError("Native startup gate was reopened after close");
+            } catch (SecurityException expected) { /* Closed gates cannot start new work. */ }
+        } finally {
+            NativeRuntimeBridge.closeStartupGate(gate);
+            NativeRuntimeBridge.closeStartupGate(independentGate);
+        }
+        StartupGate managedGate = new StartupGate();
+        long firstManaged = managedGate.begin();
+        long secondManaged = managedGate.begin();
+        if (managedGate.isCurrent(firstManaged) || !managedGate.isCurrent(secondManaged)) {
+            throw new AssertionError("Android startup gate JNI wrapper lost cancellation");
+        }
+        managedGate.invalidate();
+        if (managedGate.isCurrent(secondManaged)) {
+            throw new AssertionError("Android logout left an old startup active");
+        }
+        managedGate.close();
+        managedGate.close();
+        if (managedGate.isCurrent(secondManaged)) {
+            throw new AssertionError("Android destroyed Activity retained a startup");
+        }
         String deviceId = "ab".repeat(32);
         assertEqual("activate\n1794344400\n" + deviceId +
                 "\n1c1181e7f8dece465e066361d49886efa49b372e3e029fcdf21b9621e4021366",

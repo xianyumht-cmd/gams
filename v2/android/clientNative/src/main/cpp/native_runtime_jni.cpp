@@ -3,6 +3,7 @@
 #include "encrypted_transfer.hpp"
 #include "html_compatibility.hpp"
 #include "browser_policy.hpp"
+#include "startup_coordinator.hpp"
 
 #include <jni.h>
 
@@ -11,11 +12,24 @@
 #include <cstdint>
 #include <exception>
 #include <memory>
+#include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace {
+
+std::mutex startupRegistryMutex;
+std::int64_t nextStartupHandle = 1;
+std::unordered_map<std::int64_t, std::shared_ptr<gg::StartupCoordinator>> startupRegistry;
+
+std::shared_ptr<gg::StartupCoordinator> lookupStartup(jlong handle) {
+    std::lock_guard<std::mutex> lock(startupRegistryMutex);
+    auto found = startupRegistry.find(static_cast<std::int64_t>(handle));
+    return found == startupRegistry.end() ? nullptr : found->second;
+}
 
 void throwJava(JNIEnv* env, const char* className, const char* message) {
     jclass type = env->FindClass(className);
@@ -72,6 +86,60 @@ auto translateTransfer(JNIEnv* env, F&& work) -> decltype(work()) {
 }
 
 }  // namespace
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_createStartupGate(JNIEnv* env, jclass) {
+    return translate(env, [&]() -> jlong {
+        auto gate = std::make_shared<gg::StartupCoordinator>();
+        std::lock_guard<std::mutex> lock(startupRegistryMutex);
+        if (nextStartupHandle == std::numeric_limits<std::int64_t>::max()) {
+            throw std::overflow_error("Startup registry handles exhausted");
+        }
+        const std::int64_t id = nextStartupHandle++;
+        startupRegistry.emplace(id, std::move(gate));
+        return static_cast<jlong>(id);
+    });
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_beginStartupOperation(JNIEnv* env, jclass,
+        jlong handle) {
+    return translate(env, [&]() -> jlong {
+        auto gate = lookupStartup(handle);
+        if (!gate) throw std::logic_error("Startup coordinator is closed");
+        return static_cast<jlong>(gate->begin());
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_isCurrentStartupOperation(JNIEnv*, jclass,
+        jlong handle, jlong ticket) {
+    auto gate = lookupStartup(handle);
+    return gate && gate->isCurrent(ticket) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_invalidateStartupGate(JNIEnv*, jclass,
+        jlong handle) {
+    auto gate = lookupStartup(handle);
+    if (gate) gate->invalidate();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_closeStartupGate(JNIEnv*, jclass,
+        jlong handle) {
+    std::shared_ptr<gg::StartupCoordinator> gate;
+    {
+        std::lock_guard<std::mutex> lock(startupRegistryMutex);
+        auto found = startupRegistry.find(static_cast<std::int64_t>(handle));
+        if (found == startupRegistry.end()) return;
+        gate = found->second;
+        // Closing before removing prevents lookups already in flight from
+        // creating tickets that could outlive the owning Activity.
+        gate->close();
+        startupRegistry.erase(found);
+    }
+}
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_open(JNIEnv* env, jclass, jbyteArray input,

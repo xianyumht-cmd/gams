@@ -99,6 +99,17 @@ and fullwidth-tilde rules stay byte-for-byte equivalent. Both native and Java
 paths remain available for parity validation; no network or authorization
 contract changes are allowed in this increment.
 
+The twelfth increment moves authorization **operation ownership** into a
+per-instance native generation gate, but retains Android `ExecutorService`,
+`Handler`, secure preferences and networking. Starting a new operation cancels
+publication by older operations; logout holds a lock across invalidation and
+credential removal, and saving a newly authorized token holds the same lock
+while validating its generation. A removed native gate must reject late JNI
+checks without a use-after-free. Both main-thread callbacks and progress
+events are guarded at dispatch time; discard any decrypted JS payload from a
+superseded operation. Keep a synchronized Java fallback for baseline builds,
+and do not change EdgeOne requests or response fields during this transition.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

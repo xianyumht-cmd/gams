@@ -2,6 +2,20 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Twelfth increment, awaiting GitHub Android CI:** An isolated C++
+  `StartupCoordinator` now owns per-manager monotonic authorization operation
+  tickets. Saved-key startup, manual activation and self-unbind all replace
+  earlier work. Logout invalidates the ticket before clearing credentials;
+  Activity destruction closes the native coordinator; the server-response
+  worker checks current ownership while saving tokens and delivering runtime.
+  Main-thread callbacks and progress updates ignore obsolete operations, and
+  a private JS payload obtained after cancellation is wiped rather than shown
+  in the new session. A synchronized Java fallback mirrors the gate for the
+  unchanged reference APK. Standalone C++ ASan/UBSan (leak reporting disabled
+  only in this ptrace-restricted container), ten EdgeOne Node API cases and
+  `git diff --check` passed locally. JNI host tests and both APKs are queued
+  for GitHub Actions verification; no device behavior has been tested.
+
 - **Eleventh increment verified by CI:** The native Android candidate now
   performs additional pure WebView/lifecycle decisions in C++: five-minute
   background return reinitialization, HTTP(S)-versus-system external URL

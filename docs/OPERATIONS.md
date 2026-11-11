@@ -59,6 +59,13 @@ document-start target hosts, and Java-equivalent engine-ready alert text.
 The host JNI fixture compares the native choices with Java expressions;
 on-device return-from-background and Intent/WebView behaviors are independent
 acceptance gates and must not be inferred from a green APK build.
+The twelfth increment adds C++ sanitizer and real JNI cases for per-manager
+generation tickets, new-request invalidation, logout cancellation, idempotent
+close and independence between two Activity instances. The Android manager
+also rechecks the ticket under the credential-persistence lock and on the
+UI thread. After build, device acceptance must exercise logout during an
+in-flight runtime download, an immediate new login, resume reinitialization,
+and Activity teardown; no automated host test reproduces those WebView events.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

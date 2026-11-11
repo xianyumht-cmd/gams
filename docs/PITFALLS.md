@@ -27,6 +27,15 @@
   unexpected runtime payload. Keep the initialization bar capped at 90%
   until validation and WebView setup complete; use widened integer math to
   avoid overflow for large transfer counts.
+- License checks and runtime ZIP downloads can outlive the Activity state
+  they started under. A single-thread executor does not protect against a
+  synchronous logout calling `clearAuthorization()` while an older request
+  later calls `saveAuth()`. Every request needs a generation ticket checked
+  under the same lock as saved-token writes; UI/progress callbacks must
+  recheck after main-thread dispatch. Close the native generation registry
+  entry during Activity destruction, and wipe stale native payloads even if
+  the callback is never rendered. A request already sent to the server cannot
+  be unsent by this cancellation gate; only its local effects are suppressed.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

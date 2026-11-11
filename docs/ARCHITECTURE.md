@@ -134,6 +134,18 @@ arithmetic even at overflow boundaries. Android still captures wall-clock
 time, parses `Uri`, launches external `Intent`s, injects scripts, and manages
 `Activity`/`WebView` lifetimes; the Java-only APK stays on the old code paths.
 
+The twelfth boundary adds a per-`V2LicenseManager` C++ `StartupCoordinator`.
+Each saved-card login, manual activation, or self-unbind receives a fresh,
+monotonic generation. `clear()` invalidates all earlier tickets atomically
+with clearing saved authorization, and `shutdown()` closes the registry-backed
+native gate. The JNI registry uses shared ownership instead of raw pointers,
+so a racing network callback can safely observe a closed gate without
+dereferencing a freed coordinator. Worker results may only save tokens under
+the Android authorization lock while their ticket remains current; posted
+callbacks and download progress check the ticket again on the main thread.
+Stale decrypted bundles are wiped. The Java-only build uses a synchronized
+generation fallback and keeps the same network, persistence and UI adapters.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

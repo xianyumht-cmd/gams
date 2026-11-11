@@ -8,6 +8,12 @@ final class NativeRuntimeBridge {
 
     private NativeRuntimeBridge() { }
 
+    static native long createStartupGate();
+    static native long beginStartupOperation(long handle);
+    static native boolean isCurrentStartupOperation(long handle, long ticket);
+    static native void invalidateStartupGate(long handle);
+    static native void closeStartupGate(long handle);
+
     static native long open(byte[] zip, String bundleSha, int nonameSize, String nonameSha,
                             int gameSize, String gameSha);
 

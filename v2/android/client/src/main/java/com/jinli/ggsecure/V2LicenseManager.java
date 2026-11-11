@@ -38,6 +38,8 @@ final class V2LicenseManager {
     private final EdgeOneCandidateClient edgeOneCandidateClient;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Object authStateLock = new Object();
+    private final StartupGate startupGate = new StartupGate();
 
     V2LicenseManager(Context context) {
         Context app = context.getApplicationContext();
@@ -57,7 +59,9 @@ final class V2LicenseManager {
     }
 
     void initializeSavedAsync(RuntimeCallback callback, TransferProgressCallback progress) {
+        final long ticket = beginOperation();
         executor.execute(() -> {
+            if (!startupGate.isCurrent(ticket)) return;
             try {
                 JSONObject state = secureStore.loadState();
                 String key = normalizedClientKey(state.optString("licenseKey", ""));
@@ -66,7 +70,7 @@ final class V2LicenseManager {
                         ? NativeRuntimeBridge.authorizationStart(key, token, false)
                         : key.length() != 32 ? 0 : token.isEmpty() ? 1 : 2;
                 if (savedPlan == 0) {
-                    deliver(callback, RuntimeResult.invalid("请输入激活码"));
+                    deliver(callback, RuntimeResult.invalid("请输入激活码"), ticket);
                     return;
                 }
                 AuthResult auth;
@@ -93,18 +97,18 @@ final class V2LicenseManager {
                         }
                     }
                 }
-                deliver(callback, finishAuthorizedStartup(key, auth, progress));
+                deliver(callback, finishAuthorizedStartup(key, auth, progress, ticket), ticket);
             } catch (java.io.IOException error) {
-                deliver(callback, RuntimeResult.invalid("需要联网启动，请检查网络后重试"));
+                deliver(callback, RuntimeResult.invalid("需要联网启动，请检查网络后重试"), ticket);
             } catch (ApiException error) {
-                deliver(callback, RuntimeResult.invalid(userMessage(error)));
+                deliver(callback, RuntimeResult.invalid(userMessage(error)), ticket);
             } catch (EdgeOneCandidateClient.ApiError error) {
-                deliver(callback, RuntimeResult.invalid(error.getMessage()));
+                deliver(callback, RuntimeResult.invalid(error.getMessage()), ticket);
             } catch (Exception error) {
                 if (BuildConfig.EDGEONE_CANDIDATE) {
                     android.util.Log.e("GG-EdgeOne", "Saved startup failed", error);
                 }
-                deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
+                deliver(callback, RuntimeResult.invalid("启动失败，请重试"), ticket);
             }
         });
     }
@@ -114,41 +118,45 @@ final class V2LicenseManager {
     }
 
     void activateAsync(String rawKey, RuntimeCallback callback, TransferProgressCallback progress) {
+        final long ticket = beginOperation();
         String key = normalizedClientKey(rawKey);
         if ((BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
                 ? NativeRuntimeBridge.authorizationStart(key, "", true) == 0 : key.length() != 32)) {
-            deliver(callback, RuntimeResult.invalid("激活码格式错误"));
+            deliver(callback, RuntimeResult.invalid("激活码格式错误"), ticket);
             return;
         }
         executor.execute(() -> {
+            if (!startupGate.isCurrent(ticket)) return;
             try {
                 AuthResult auth = activate(key);
-                deliver(callback, finishAuthorizedStartup(key, auth, progress));
+                deliver(callback, finishAuthorizedStartup(key, auth, progress, ticket), ticket);
             } catch (java.io.IOException error) {
-                deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"));
+                deliver(callback, RuntimeResult.invalid("服务连接失败，请检查网络后重试"), ticket);
             } catch (ApiException error) {
-                deliver(callback, RuntimeResult.invalid(userMessage(error)));
+                deliver(callback, RuntimeResult.invalid(userMessage(error)), ticket);
             } catch (EdgeOneCandidateClient.ApiError error) {
-                deliver(callback, RuntimeResult.invalid(error.getMessage()));
+                deliver(callback, RuntimeResult.invalid(error.getMessage()), ticket);
             } catch (Exception error) {
                 if (BuildConfig.EDGEONE_CANDIDATE) {
                     android.util.Log.e("GG-EdgeOne", "Activation/startup failed", error);
                 }
-                deliver(callback, RuntimeResult.invalid("启动失败，请重试"));
+                deliver(callback, RuntimeResult.invalid("启动失败，请重试"), ticket);
             }
         });
     }
 
     void selfUnbindAsync(SimpleCallback callback) {
+        final long ticket = beginOperation();
         executor.execute(() -> {
+            if (!startupGate.isCurrent(ticket)) return;
             try {
                 JSONObject state = secureStore.loadState();
                 String token = state.optString("token", "");
                 if (token.isEmpty()) throw new ApiException(401, "bad_session", "服务状态已失效");
                 if (BuildConfig.EDGEONE_CANDIDATE) {
                     edgeOneCandidateClient.unbind(token);
-                    secureStore.clearAuthorization();
-                    deliver(callback, SimpleResult.success("当前设备已解除绑定"));
+                    clearAfterUnbind(ticket);
+                    deliver(callback, SimpleResult.success("当前设备已解除绑定"), ticket);
                     return;
                 }
                 String deviceId = identity.deviceId();
@@ -156,15 +164,15 @@ final class V2LicenseManager {
                         "unbind", DeviceIdentity.sha256Hex(token + "|unbind"), deviceId);
                 body.put("token", token);
                 postLicense("/v1/device/unbind", body);
-                secureStore.clearAuthorization();
-                deliver(callback, SimpleResult.success("当前设备已解除绑定"));
+                clearAfterUnbind(ticket);
+                deliver(callback, SimpleResult.success("当前设备已解除绑定"), ticket);
             } catch (Exception error) {
                 if (error instanceof ApiException) {
-                    deliver(callback, SimpleResult.failure(userMessage((ApiException) error)));
+                    deliver(callback, SimpleResult.failure(userMessage((ApiException) error)), ticket);
                 } else if (error instanceof EdgeOneCandidateClient.ApiError) {
-                    deliver(callback, SimpleResult.failure(error.getMessage()));
+                    deliver(callback, SimpleResult.failure(error.getMessage()), ticket);
                 } else {
-                    deliver(callback, SimpleResult.failure("更换设备失败，请重试"));
+                    deliver(callback, SimpleResult.failure("更换设备失败，请重试"), ticket);
                 }
             }
         });
@@ -179,11 +187,29 @@ final class V2LicenseManager {
     }
 
     void clear() {
-        secureStore.clearAuthorization();
+        synchronized (authStateLock) {
+            startupGate.invalidate();
+            secureStore.clearAuthorization();
+        }
     }
 
     void shutdown() {
+        synchronized (authStateLock) {
+            startupGate.close();
+        }
         executor.shutdownNow();
+    }
+
+    private long beginOperation() {
+        synchronized (authStateLock) {
+            return startupGate.begin();
+        }
+    }
+
+    private void clearAfterUnbind(long ticket) {
+        synchronized (authStateLock) {
+            if (startupGate.isCurrent(ticket)) secureStore.clearAuthorization();
+        }
     }
 
     private AuthResult activate(String key) throws Exception {
@@ -210,8 +236,12 @@ final class V2LicenseManager {
 
     /** Keep state persistence and Android callbacks identical for both startup paths. */
     private RuntimeResult finishAuthorizedStartup(String key, AuthResult auth,
-                                                   TransferProgressCallback progress) throws Exception {
-        saveAuth(key, auth);
+                                                   TransferProgressCallback progress,
+                                                   long ticket) throws Exception {
+        synchronized (authStateLock) {
+            if (!startupGate.isCurrent(ticket)) return null;
+            saveAuth(key, auth);
+        }
         // C++ owns the candidate's post-authorization update gate. Do not fetch
         // or decrypt private scripts when the server requires an app upgrade.
         if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE &&
@@ -219,13 +249,22 @@ final class V2LicenseManager {
                         auth.latestAppVersion, PROTOCOL_APP_VERSION)) {
             return RuntimeResult.valid(null, auth, "启动成功");
         }
-        return RuntimeResult.valid(loadRuntime(auth.token, progress), auth, "启动成功");
+        if (!startupGate.isCurrent(ticket)) return null;
+        RuntimePayload payload = loadRuntime(auth.token, progress, ticket);
+        if (!startupGate.isCurrent(ticket)) {
+            if (payload != null) payload.wipe();
+            return null;
+        }
+        return RuntimeResult.valid(payload, auth, "启动成功");
     }
 
-    private RuntimePayload loadRuntime(String token, TransferProgressCallback progress) throws Exception {
+    private RuntimePayload loadRuntime(String token, TransferProgressCallback progress,
+                                       long ticket) throws Exception {
         if (BuildConfig.EDGEONE_CANDIDATE) {
             RuntimeZipReader.Listener listener = progress == null ? null : (received, expected) ->
-                    mainHandler.post(() -> progress.onProgress(received, expected));
+                    mainHandler.post(() -> {
+                        if (startupGate.isCurrent(ticket)) progress.onProgress(received, expected);
+                    });
             return edgeOneCandidateClient.loadRuntime(token, listener);
         }
         String deviceId = identity.deviceId();
@@ -471,12 +510,26 @@ final class V2LicenseManager {
         return message.length() > 120 ? message.substring(0, 120) : message;
     }
 
-    private void deliver(RuntimeCallback callback, RuntimeResult result) {
-        if (callback != null) mainHandler.post(() -> callback.onResult(result));
+    private void deliver(RuntimeCallback callback, RuntimeResult result, long ticket) {
+        // A canceled worker may still have completed native ZIP decryption.
+        // Release that payload instead of posting it into the next login.
+        if (result == null) return;
+        if (callback == null || !startupGate.isCurrent(ticket)) {
+            if (result.payload != null) result.payload.wipe();
+            return;
+        }
+        mainHandler.post(() -> {
+            if (startupGate.isCurrent(ticket)) callback.onResult(result);
+            else if (result.payload != null) result.payload.wipe();
+        });
     }
 
-    private void deliver(SimpleCallback callback, SimpleResult result) {
-        if (callback != null) mainHandler.post(() -> callback.onResult(result));
+    private void deliver(SimpleCallback callback, SimpleResult result, long ticket) {
+        if (callback != null && startupGate.isCurrent(ticket)) {
+            mainHandler.post(() -> {
+                if (startupGate.isCurrent(ticket)) callback.onResult(result);
+            });
+        }
     }
 
     private static String normalizedClientKey(String input) {
