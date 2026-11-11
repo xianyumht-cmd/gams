@@ -19,6 +19,17 @@
   signed and device-tested* official APK is still pending because the owner
   does not yet have Android SDK Build-Tools `apksigner.bat` on Windows. No
   signing password, JKS, or DPAPI file has been uploaded.
+- Commit `b30a52a` adds `Install-GG-Android-BuildTools.ps1` to the offline
+  signing kit. It fetches the official Google command-line tools ZIP with a
+  pinned SHA-256 and installs `build-tools;35.0.0` locally without touching
+  any JKS. GitHub Actions
+  [run #25](https://github.com/xianyumht-cmd/gams/actions/runs/43045738824)
+  passed all tests, both APK builds, unsigned artifact verification, and
+  PowerShell syntax parsing of both Windows scripts. The complete kit is
+  `GG-EdgeOne-CPP-official-local-25` (artifact ID `13867640975`); emulator
+  candidate is separately `GG-EdgeOne-CPP-internal-25`
+  (`13867212265`). **Local Windows tool installation, official signing and
+  device login are still pending owner execution**, not claimed as passed.
 
 - The owner supplied an existing Windows official JKS path and fingerprint
   list. New release cert SHA-256 is
