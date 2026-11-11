@@ -357,6 +357,20 @@ Java_com_jinli_ggsecure_NativeRuntimeBridge_beginEncryptedTransfer(JNIEnv* env, 
     });
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_jinli_ggsecure_NativeRuntimeBridge_beginAuthorizedEncryptedTransfer(JNIEnv* env,
+        jclass, jint expectedBytes, jint maximumBytes, jlong startupHandle, jlong ticket) {
+    return translateTransfer(env, [&]() -> jlong {
+        auto gate = lookupStartup(startupHandle);
+        if (!gate || !gate->isCurrent(ticket)) {
+            throw std::runtime_error("Encrypted transfer authorization is obsolete");
+        }
+        auto transfer = std::make_unique<gg::EncryptedTransfer>(
+            expectedBytes, maximumBytes, std::move(gate), ticket);
+        return static_cast<jlong>(reinterpret_cast<std::uintptr_t>(transfer.release()));
+    });
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_jinli_ggsecure_NativeRuntimeBridge_appendEncryptedTransfer(JNIEnv* env, jclass,
         jlong handle, jbyteArray source, jint offset, jint count) {

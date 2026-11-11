@@ -66,6 +66,16 @@ also rechecks the ticket under the credential-persistence lock and on the
 UI thread. After build, device acceptance must exercise logout during an
 in-flight runtime download, an immediate new login, resume reinitialization,
 and Activity teardown; no automated host test reproduces those WebView events.
+The thirteenth increment adds actual Java→JNI cancellation checks for an
+in-flight native ciphertext stream and its unchanged Java reference:
+cancellation after the first progress event must throw `InterruptedIOException`
+and close the source instead of returning partial ciphertext. The C++ host
+suite also checks bound transfers reject append and finish after the ticket
+is invalidated. The EdgeOne
+network adapter also tracks its runtime connection and requests disconnect
+on logout, reactivation or Activity destruction. Verify on a device that a
+new activation is not delayed by an old runtime transfer, including while
+waiting for response headers; Android may not interrupt every socket read.
 It is signed only with a disposable debug certificate. Install alongside the
 original APK; it uses the same EdgeOne server and existing license records
 but an independent Android package/app data directory. An existing

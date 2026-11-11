@@ -189,6 +189,7 @@ final class V2LicenseManager {
     void clear() {
         synchronized (authStateLock) {
             startupGate.invalidate();
+            if (edgeOneCandidateClient != null) edgeOneCandidateClient.cancelRuntime();
             secureStore.clearAuthorization();
         }
     }
@@ -196,13 +197,16 @@ final class V2LicenseManager {
     void shutdown() {
         synchronized (authStateLock) {
             startupGate.close();
+            if (edgeOneCandidateClient != null) edgeOneCandidateClient.cancelRuntime();
         }
         executor.shutdownNow();
     }
 
     private long beginOperation() {
         synchronized (authStateLock) {
-            return startupGate.begin();
+            long ticket = startupGate.begin();
+            if (edgeOneCandidateClient != null) edgeOneCandidateClient.cancelRuntime();
+            return ticket;
         }
     }
 
@@ -265,7 +269,7 @@ final class V2LicenseManager {
                     mainHandler.post(() -> {
                         if (startupGate.isCurrent(ticket)) progress.onProgress(received, expected);
                     });
-            return edgeOneCandidateClient.loadRuntime(token, listener);
+            return edgeOneCandidateClient.loadRuntime(token, listener, startupGate, ticket);
         }
         String deviceId = identity.deviceId();
         String runtimePublicKey = runtimeKeyManager.publicKeyBase64();

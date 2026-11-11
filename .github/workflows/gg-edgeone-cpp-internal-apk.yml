@@ -48,6 +48,7 @@ jobs:
             v2/android/clientNative/src/main/cpp/runtime_bundle.cpp \
             v2/android/clientNative/src/main/cpp/edgeone_protocol.cpp \
             v2/android/clientNative/src/main/cpp/encrypted_transfer.cpp \
+            v2/android/clientNative/src/main/cpp/startup_coordinator.cpp \
             v2/android/clientNative/test/edgeone_protocol_smoke.cpp \
             -lz -o /tmp/gg-cpp-protocol-smoke
           /tmp/gg-cpp-protocol-smoke

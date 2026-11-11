@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.io.InterruptedIOException;
 
 /** Host JVM exercises the real JNI exported functions before Android packaging. */
 public final class NativeRuntimeInteropSmoke {
@@ -174,6 +176,53 @@ public final class NativeRuntimeInteropSmoke {
         if (!Arrays.equals(zip, receivedZip) || finalProgress[0] != zip.length ||
                 finalProgress[1] != zip.length) {
             throw new AssertionError("Native encrypted stream lost bytes or progress");
+        }
+        AtomicBoolean activeDownload = new AtomicBoolean(true);
+        AtomicBoolean inputClosed = new AtomicBoolean(false);
+        ByteArrayInputStream canceledInput = new ByteArrayInputStream(zip) {
+            @Override public void close() throws IOException {
+                inputClosed.set(true);
+                super.close();
+            }
+        };
+        try {
+            NativeCiphertextReader.read(canceledInput, 5_500_016, zip.length,
+                    (received, expected) -> activeDownload.set(false), activeDownload::get);
+            throw new AssertionError("Obsolete transfer returned native ciphertext");
+        } catch (InterruptedIOException expected) { /* Canceled before decryption. */ }
+        if (!inputClosed.get()) {
+            throw new AssertionError("Canceled transfer leaked the HTTP input stream");
+        }
+        AtomicBoolean baselineActive = new AtomicBoolean(true);
+        try {
+            RuntimeZipReader.read(new ByteArrayInputStream(zip),
+                    5_500_016, zip.length,
+                    (received, expected) -> baselineActive.set(false), baselineActive::get);
+            throw new AssertionError("Java baseline ignored an obsolete download");
+        } catch (InterruptedIOException expected) { /* Both readers cancel. */ }
+        try {
+            NativeCiphertextReader.read(new ByteArrayInputStream(zip),
+                    5_500_016, zip.length, null, () -> false);
+            throw new AssertionError("Canceled transfer began reading ciphertext");
+        } catch (InterruptedIOException expected) { /* Preflight cancellation. */ }
+        long boundGate = NativeRuntimeBridge.createStartupGate();
+        long boundTicket = NativeRuntimeBridge.beginStartupOperation(boundGate);
+        long boundTransfer = NativeRuntimeBridge.beginAuthorizedEncryptedTransfer(
+                4, 4, boundGate, boundTicket);
+        try {
+            NativeRuntimeBridge.appendEncryptedTransfer(boundTransfer, new byte[2], 0, 2);
+            NativeRuntimeBridge.invalidateStartupGate(boundGate);
+            try {
+                NativeRuntimeBridge.appendEncryptedTransfer(boundTransfer, new byte[2], 0, 2);
+                throw new AssertionError("C++ collector accepted stale ciphertext");
+            } catch (IOException expected) { /* Native ownership gate enforced. */ }
+            try {
+                NativeRuntimeBridge.finishEncryptedTransfer(boundTransfer);
+                throw new AssertionError("C++ collector returned stale ciphertext");
+            } catch (IOException expected) { /* Stale finish also rejected. */ }
+        } finally {
+            NativeRuntimeBridge.releaseEncryptedTransfer(boundTransfer);
+            NativeRuntimeBridge.closeStartupGate(boundGate);
         }
         try {
             NativeCiphertextReader.read(new ByteArrayInputStream(

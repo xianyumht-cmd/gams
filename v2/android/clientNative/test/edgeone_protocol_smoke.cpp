@@ -1,10 +1,12 @@
 #include "../src/main/cpp/edgeone_protocol.hpp"
 #include "../src/main/cpp/encrypted_transfer.hpp"
+#include "../src/main/cpp/startup_coordinator.hpp"
 
 #include <array>
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -170,5 +172,13 @@ int main() {
     rejects([&] { gg::EncryptedTransfer bad(5'500'017, 5'500'017); });
     rejects([&] { gg::EncryptedTransfer bad(100, 99); });
     rejects([&] { gg::EncryptedTransfer bad(0, 500); });
+    auto coordinator = std::make_shared<gg::StartupCoordinator>();
+    auto ticket = coordinator->begin();
+    gg::EncryptedTransfer authorized(2, 2, coordinator, ticket);
+    authorized.append(ciphertext.data(), 1);
+    coordinator->invalidate();
+    rejects([&] { authorized.append(ciphertext.data(), 1); });
+    rejects([&] { authorized.finish(); });
+    rejects([&] { gg::EncryptedTransfer obsolete(2, 2, coordinator, ticket); });
     std::cout << "C++ EdgeOne auth policy, HKDF and bounded ciphertext transfer parity OK\n";
 }

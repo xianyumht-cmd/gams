@@ -52,6 +52,11 @@ final class NativeRuntimeBridge {
     static native long beginEncryptedTransfer(int expectedBytes, int maximumBytes)
             throws java.io.IOException;
 
+    /** Binds every ciphertext append/finalize to an active C++ startup ticket. */
+    static native long beginAuthorizedEncryptedTransfer(int expectedBytes, int maximumBytes,
+                                                        long startupHandle, long ticket)
+            throws java.io.IOException;
+
     static native int appendEncryptedTransfer(long handle, byte[] bytes, int offset, int count)
             throws java.io.IOException;
 

@@ -6,6 +6,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -16,12 +17,15 @@ import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 
 /** Dedicated internal-build API. Normal GG releases retain their Cloudflare protocol unchanged. */
 final class EdgeOneCandidateClient {
     private static final int MAX_JSON = 64 * 1024;
     private static final int MAX_ZIP = 5_500_000;
     private final DeviceIdentity device;
+    private final AtomicReference<HttpURLConnection> activeRuntime = new AtomicReference<>();
 
     EdgeOneCandidateClient(DeviceIdentity device) { this.device = device; }
 
@@ -43,7 +47,16 @@ final class EdgeOneCandidateClient {
                 : proofBody("unbind", token).put("token", token));
     }
 
-    RuntimePayload loadRuntime(String token, RuntimeZipReader.Listener listener) throws Exception {
+    /** Best-effort interruption of an obsolete runtime transfer, including a blocked read. */
+    void cancelRuntime() {
+        HttpURLConnection old = activeRuntime.getAndSet(null);
+        if (old != null) old.disconnect();
+    }
+
+    RuntimePayload loadRuntime(String token, RuntimeZipReader.Listener listener,
+                               StartupGate startupGate, long ticket) throws Exception {
+        BooleanSupplier current = () -> startupGate.isCurrent(ticket);
+        requireCurrent(current);
         // This ephemeral key exists only for one download and is never stored in the APK or state.
         KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
         generator.initialize(new ECGenParameterSpec("secp256r1"));
@@ -53,11 +66,13 @@ final class EdgeOneCandidateClient {
         HttpURLConnection connection = connect("runtime", BuildConfig.GG_NATIVE_CORE
                 ? nativeRequestBody("runtime-v2", token, deliveryPublicKey)
                 : proofBody("runtime-v2", token + "|" + deliveryPublicKey)
-                        .put("token", token).put("deliveryPublicKey", deliveryPublicKey));
+                        .put("token", token).put("deliveryPublicKey", deliveryPublicKey), current);
         byte[] zip = null;
         byte[] encrypted = null;
         try {
+            requireCurrent(current);
             int status = connection.getResponseCode();
+            requireCurrent(current);
             if (status != 200) throwApiError(connection, status);
             String deliveryVersion = connection.getHeaderField("X-GG-Delivery-Version");
             String serverPublicKey = connection.getHeaderField("X-GG-Delivery-Server-Key");
@@ -91,24 +106,34 @@ final class EdgeOneCandidateClient {
             } else if (expectedSize < 1 || expectedSize > MAX_ZIP) {
                 throw new SecurityException("运行包长度无效");
             }
+            requireCurrent(current);
             encrypted = BuildConfig.GG_NATIVE_CORE
                     ? NativeCiphertextReader.read(connection.getInputStream(),
-                            MAX_ZIP + 16, expectedSize + 16, listener)
+                            MAX_ZIP + 16, expectedSize + 16, listener, current,
+                            startupGate, ticket)
                     : RuntimeZipReader.read(connection.getInputStream(),
-                            MAX_ZIP + 16, expectedSize + 16, listener);
+                            MAX_ZIP + 16, expectedSize + 16, listener, current);
+            requireCurrent(current);
             zip = RuntimeDeliveryCrypto.decrypt(encrypted, deliveryKey.getPrivate(),
                     Base64.decode(serverPublicKey, Base64.DEFAULT),
                     Base64.decode(deliveryIv, Base64.DEFAULT), device.deviceId(), token);
+            requireCurrent(current);
             if (zip.length != expectedSize) throw new SecurityException("运行包大小校验失败");
             if (!expectedHash.equals(manifest.getString("sha256")) ||
                     (!BuildConfig.GG_NATIVE_CORE &&
                     !expectedHash.equals(DeviceIdentity.hex(MessageDigest.getInstance("SHA-256").digest(zip))))) {
                 throw new SecurityException("运行包完整性校验失败");
             }
-            return RuntimePayload.fromZip(zip, manifest);
+            RuntimePayload payload = RuntimePayload.fromZip(zip, manifest);
+            if (!current.getAsBoolean()) {
+                payload.wipe();
+                throw new InterruptedIOException("运行包下载已取消");
+            }
+            return payload;
         } finally {
             if (zip != null) Arrays.fill(zip, (byte) 0);
             if (encrypted != null) Arrays.fill(encrypted, (byte) 0);
+            activeRuntime.compareAndSet(connection, null);
             connection.disconnect();
         }
     }
@@ -159,6 +184,11 @@ final class EdgeOneCandidateClient {
     }
 
     private HttpURLConnection connect(String action, JSONObject body) throws Exception {
+        return connect(action, body, null);
+    }
+
+    private HttpURLConnection connect(String action, JSONObject body,
+                                      BooleanSupplier current) throws Exception {
         String base = BuildConfig.EDGEONE_BASE_URL;
         if (base == null || !base.startsWith("https://") || base.length() < 12) {
             throw new ApiError("内部测试包尚未配置 EdgeOne 地址");
@@ -168,23 +198,40 @@ final class EdgeOneCandidateClient {
             throw new SecurityException("授权服务地址无效");
         }
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setConnectTimeout(7000);
-        // The private runtime ZIP is ~5 MB and Makers Functions can take up to 120 s.
-        // Keep interactive license requests responsive; only the runtime download waits longer.
-        connection.setReadTimeout("runtime".equals(action) ? 135000 : 25000);
-        connection.setInstanceFollowRedirects(false);
-        connection.setUseCaches(false);
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-        connection.setRequestProperty("Accept", action.equals("runtime")
-                ? "application/octet-stream" : "application/json");
-        connection.setRequestProperty("Cache-Control", "no-store");
-        byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);
-        if (data.length > 8192) throw new IOException("授权请求过大");
-        connection.setFixedLengthStreamingMode(data.length);
-        try (OutputStream output = connection.getOutputStream()) { output.write(data); }
-        return connection;
+        try {
+            if (current != null) {
+                activeRuntime.set(connection);
+                requireCurrent(current);
+            }
+            connection.setConnectTimeout(7000);
+            // The private runtime ZIP is ~5 MB; the server may take 120 s.
+            // Only runtime downloads use the long read timeout.
+            connection.setReadTimeout("runtime".equals(action) ? 135000 : 25000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setUseCaches(false);
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            connection.setRequestProperty("Accept", action.equals("runtime")
+                    ? "application/octet-stream" : "application/json");
+            connection.setRequestProperty("Cache-Control", "no-store");
+            byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);
+            if (data.length > 8192) throw new IOException("授权请求过大");
+            connection.setFixedLengthStreamingMode(data.length);
+            try (OutputStream output = connection.getOutputStream()) { output.write(data); }
+            if (current != null) requireCurrent(current);
+            return connection;
+        } catch (Exception error) {
+            activeRuntime.compareAndSet(connection, null);
+            connection.disconnect();
+            throw error;
+        }
+    }
+
+    private static void requireCurrent(BooleanSupplier current) throws InterruptedIOException {
+        if (current != null && !current.getAsBoolean()) {
+            throw new InterruptedIOException("运行包下载已取消");
+        }
     }
 
     private void throwApiError(HttpURLConnection connection, int status) throws Exception {

@@ -146,6 +146,20 @@ callbacks and download progress check the ticket again on the main thread.
 Stale decrypted bundles are wiped. The Java-only build uses a synchronized
 generation fallback and keeps the same network, persistence and UI adapters.
 
+The thirteenth boundary extends this ticket into the asynchronous runtime
+delivery path. A new authentication operation or logout invalidates the C++
+ticket and best-effort disconnects the currently tracked EdgeOne runtime
+HTTP connection. The Java HTTPS adapter owns `HttpURLConnection`, but
+`NativeCiphertextReader` calls the native ticket check between input chunks;
+the C++ `EncryptedTransfer` also holds a reference to its coordinator and
+rejects every obsolete append/finalize. The collector is released by
+`finally` on any canceled read.
+The Java-only reference uses the equivalent cancellable reader. Both paths
+reject stale work before decryption and wipe newly materialized ZIP payloads
+if cancellation wins after parsing. The HTTP transport may still be unable
+to interrupt certain blocked system reads immediately; authorization state
+and UI publication remain protected by the twelfth-stage generation gate.
+
 This remains a staged C++ migration, not an assertion that the
 remaining Java license/WebView logic has been translated. The app must still
 pass the complete acceptance matrix below before replacing the baseline.

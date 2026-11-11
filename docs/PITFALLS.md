@@ -36,6 +36,14 @@
   entry during Activity destruction, and wipe stale native payloads even if
   the callback is never rendered. A request already sent to the server cannot
   be unsent by this cancellation gate; only its local effects are suppressed.
+- In the candidate's single-thread executor, dropping stale callbacks alone
+  does **not** cancel a 135-second runtime HTTP wait: a new login can remain
+  queued behind it. Track the active runtime `HttpURLConnection`, disconnect
+  it when a newer native startup ticket replaces the old one, and check the
+  ticket before/after each blocking read. Treat disconnect as best effort;
+  network stacks may not interrupt every blocked call. Ensure the input stream,
+  native ciphertext collector and decrypted ZIP memory are released on all
+  canceled paths and do not alter authorization wire formats.
 - The EdgeOne v2 HKDF `info` is also the AES-GCM authenticated data; changing
   its timestamp/device/token-hash serialization breaks decryption even when
   the key length is correct. Preserve Java/Node/C++ byte-for-byte fixtures

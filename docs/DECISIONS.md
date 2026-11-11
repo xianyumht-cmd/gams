@@ -110,6 +110,19 @@ events are guarded at dispatch time; discard any decrypted JS payload from a
 superseded operation. Keep a synchronized Java fallback for baseline builds,
 and do not change EdgeOne requests or response fields during this transition.
 
+The thirteenth increment uses the native startup-generation ticket to stop
+obsolete runtime deliveries promptly. Android still owns HTTP connections
+and Android platform crypto; a canceled ticket asks the Android network
+adapter to disconnect its active runtime connection and requires both
+stream readers to check cancellation before/after chunk reads. Native
+ciphertext transfers retain a shared C++ coordinator ticket, rejecting
+stale append/finalize attempts independently of Java checks. The transfer
+is released on all failures and cancellation paths.
+Disconnect is **best effort** on Android system networking; do not claim that
+it interrupts every blocked `getResponseCode` or `InputStream.read` call.
+Keep the complete server wire format, private runtime validation, progress
+UI and unbinding semantics intact for the Java baseline.
+
 ## 2026-11-11: Replay-resistant, device-bound EdgeOne runtime transport
 
 The candidate now uses per-download ephemeral P-256 ECDH and HKDF-SHA256 /

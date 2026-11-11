@@ -1,5 +1,7 @@
 package com.jinli.ggsecure;
 
+import java.io.InterruptedIOException;
+
 /**
  * Tracks the one authorization request allowed to publish state and UI.
  * Android remains the lifecycle owner; the C++ candidate owns the generation.
@@ -36,6 +38,15 @@ final class StartupGate {
         if (nativeCore) NativeRuntimeBridge.invalidateStartupGate(nativeHandle);
         else if (javaGeneration == Long.MAX_VALUE) closed = true;
         else ++javaGeneration;
+    }
+
+    synchronized long beginEncryptedTransfer(int expectedBytes, int maximumBytes, long ticket)
+            throws java.io.IOException {
+        if (!isCurrent(ticket)) throw new InterruptedIOException("运行包下载已取消");
+        return nativeCore
+                ? NativeRuntimeBridge.beginAuthorizedEncryptedTransfer(
+                        expectedBytes, maximumBytes, nativeHandle, ticket)
+                : NativeRuntimeBridge.beginEncryptedTransfer(expectedBytes, maximumBytes);
     }
 
     synchronized void close() {

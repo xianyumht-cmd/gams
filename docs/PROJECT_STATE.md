@@ -2,6 +2,21 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
+- **Thirteenth increment, awaiting GitHub Android CI:** A canceled C++
+  startup-generation ticket now propagates into the EdgeOne HTTPS runtime
+  adapter. When an operation is replaced, the client makes a best-effort
+  `HttpURLConnection.disconnect()` on the prior runtime request, including
+  while waiting for the long-running server response. Both native and Java
+  stream readers check their current ticket before and after each blocking
+  read; each native ciphertext collector is also bound to the C++ ticket and
+  rejects obsolete append/finalize calls. It releases its allocation and
+  closes the input stream when canceled. The manager checks the gate
+  again before ECDH decryption/ZIP delivery, and wipes any payload produced
+  after invalidation. Host C++ sanitizer and ten EdgeOne Node tests passed;
+  real Java→JNI cancellation tests and Android dual-APK builds are pending.
+  A Java network-stack disconnect is best effort and
+  does not promise instant interruption of every blocked socket read.
+
 - **Twelfth increment verified by CI:** An isolated C++
   `StartupCoordinator` now owns per-manager monotonic authorization operation
   tickets. Saved-key startup, manual activation and self-unbind all replace
