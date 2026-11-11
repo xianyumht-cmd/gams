@@ -2,7 +2,7 @@
 
 ## 2026-11-11: Isolated Android C++ core migration (in progress)
 
-- **Twelfth increment, awaiting GitHub Android CI:** An isolated C++
+- **Twelfth increment verified by CI:** An isolated C++
   `StartupCoordinator` now owns per-manager monotonic authorization operation
   tickets. Saved-key startup, manual activation and self-unbind all replace
   earlier work. Logout invalidates the ticket before clearing credentials;
@@ -13,8 +13,14 @@
   in the new session. A synchronized Java fallback mirrors the gate for the
   unchanged reference APK. Standalone C++ ASan/UBSan (leak reporting disabled
   only in this ptrace-restricted container), ten EdgeOne Node API cases and
-  `git diff --check` passed locally. JNI host tests and both APKs are queued
-  for GitHub Actions verification; no device behavior has been tested.
+  `git diff --check` passed locally. GitHub Actions
+  [`42929581071`](https://github.com/xianyumht-cmd/gams/actions/runs/42929581071)
+  passed real Java→JNI startup-ticket invalidation, both Android builds,
+  lint, three native ABIs, signing and the no-private-JS package gate.
+  The 14-day artifact `GG-EdgeOne-CPP-internal-12` (ID `13815607340`)
+  contains APK SHA-256
+  `503fe051adb35bd7af4d92f57e3e016145561500fe172ed89b115268460beed8`.
+  Device behavior remains unverified at the owner's request.
 
 - **Eleventh increment verified by CI:** The native Android candidate now
   performs additional pure WebView/lifecycle decisions in C++: five-minute
