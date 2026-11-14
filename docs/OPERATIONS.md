@@ -1,5 +1,14 @@
 # EdgeOne GG internal deployment and verification
 
+
+## 2026-11-15: Enable or disable Yuyu-issued GG cards
+
+1. Deploy PR #48's edgeone-license root to the GG Makers EdgeOne project only after the code review/test gates pass. Preserve all existing GG environment variables and private Blob data.
+2. Add a new random secret GG_PARTNER_ISSUE_TOKEN (32–256 chars; not GG_TOKEN_SECRET) and optionally GG_PARTNER_ALLOWED_DAYS (default 0,7,30,365). Deploy again. Protect POST /api/partner/issue with entrance WAF throttling.
+3. On Windows Yuyu set the API-card request to POST https://gg-api.dijiav.top/api/partner/issue, JSON body with order_id, idempotency_key and integer days, Authorization: Bearer <independent token>, response path data.card.code and idempotent retries. Never commit the token.
+4. The built-in Yuyu API tester gets GG-TEST-ONLY without issuing a usable card. Then verify a small real paid order, multi-unit units, repeated event, cancellation and refund on the actual Windows target before broadly enabling fulfillment.
+5. To suspend new API issuance, remove GG_PARTNER_ISSUE_TOKEN and redeploy. Do not rotate GG_TOKEN_SECRET or delete Blob records. Full instructions: edgeone-license/YUYU-INTEGRATION.md.
+
 ## 2026-11-15: Batch card issuance runbook
 
 - After separately deploying the PR #48 `edgeone-license` root to EdgeOne, log in to `https://gg-api.dijiav.top/api/admin`, choose days/permanent and count 1–50, then **生成卡密**. Copy or export the entire batch promptly; plaintext is not retrievable from Blob. Keep TXT/clipboard private.
