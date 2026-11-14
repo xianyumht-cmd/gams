@@ -1,5 +1,8 @@
 # EdgeOne candidate pitfalls
 
+- **Runtime manifest version must select the correct C++ WebView loading mode.** `browser_policy.cpp` initially gated direct-engine HTML rewrite / official `game.js` injection only for `1.4.1-`. When the owner uploaded `1.4.6-1.0.43`, the same C++ client silently selected fallback loading instead, which can manifest as a blank WebView despite `POST /api/runtime` returning 200. Keep explicit tested version-family allowlisting and C++ version-policy smoke cases. HTTP 200 alone cannot establish the private runtime was decoded or JS executed; inspect Android WebView logs on device if the issue persists.
+
+
 - **Never pass GG administrator TOTP secrets to third-party QR websites.** A QR code contains an `otpauth://` URI including the raw TOTP seed. Use the vendored offline QR generator inside the authenticated administrator session; render as a `data:` image allowed by the page's narrow CSP. Do not store the secret or recovery codes in page source, logs, or Git. Confirm enrollment with the user's phone before enabling the requirement; save recovery codes offline immediately. Privately stored MFA secrets are AES-GCM protected with the existing `GG_TOKEN_SECRET`; rotating that secret without an explicit migration makes enrolled MFA unusable. The EdgeOne private Blob store has strong reads but no atomic CAS; recovery-code exhaustion is safe for sequential reuse checks but cannot guarantee exactly-once consumption under hostile concurrency. Keep edge login rate limiting.
 
 

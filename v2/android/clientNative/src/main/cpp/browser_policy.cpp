@@ -27,7 +27,14 @@ void append(std::vector<std::uint8_t>& out, std::string_view data) {
 }  // namespace
 
 bool isEdgeOneDirectEngine(bool candidate, std::string_view runtimeVersion) {
-    return candidate && runtimeVersion.substr(0, 5) == "1.4.1";
+    // The cloud manifest supplies the noname/game pair as "noname-game".
+    // The 1.4.6 control script needs the same official-engine substitution
+    // and HTML compatibility route as the known 1.4.1 direct-engine build.
+    // Opt in per verified compatibility family rather than treating every
+    // unknown JS release as direct-engine compatible.
+    if (!candidate) return false;
+    return runtimeVersion.substr(0, 6) == "1.4.1-" ||
+           runtimeVersion.substr(0, 6) == "1.4.6-";
 }
 
 bool shouldReloadBrowser(bool browserVisible, std::int64_t backgroundAtMs,

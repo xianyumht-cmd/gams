@@ -1,5 +1,13 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-15: Diagnose black screen after cloud JS upgrade
+
+- Owner reports that previously working protected GG C++ APK entered the game normally, while the new custom-domain build black-screens. EdgeOne Makers log screenshot shows `/api/check` and `/api/runtime` returning HTTP 200 via `gg-api.dijiav.top` (runtime responses ~36s), and `/api/` returning an expected 404 (not a defined route). Server 200 confirms its response, **not** successful client decryption, WebView interception, or JS execution.
+- Found a concrete version policy gap: `isEdgeOneDirectEngine` only accepted `1.4.1`, whereas owner uploaded `1.4.6-1.0.43`. Thus the existing C++ #26 and #28 would select the compatibility fallback for that newer manifest rather than the direct-engine HTML/game.js route. Narrow fix recognizes `1.4.6-` while retaining `1.4.1-`; host smoke tests protect version routing. Not yet proven as the unique root cause until device tests.
+- The previous #26 to #28 C++ comparison shows no change in client WebView / C++ resource routing; backend origin changed. Admin login rate rule only applies to `/api/admin/login`, not `/api/runtime` or `/api/check`. Do not disable the login rate rule to troubleshoot browser black screen.
+- Next: verify C++ Actions, sign new unsigned APK locally with owner JKS, test *unprotected* build first, then separately check protected APK and on-device WebView errors. No private runtime ZIP, admin secrets, or EdgeOne deployment changed.
+
+
 ## 2026-11-15: Browser-based QR enrollment for administrator two-factor authentication
 
 - Added authenticated EdgeOne administrator QR enrollment supporting Microsoft Authenticator on iOS and standard 6-digit TOTP. The page and QR generator are fully self-contained; vendored MIT-licensed `qrcode-generator` v2.0.4 is shipped locally, no external QR API or image request. Pending setup lasts 10 minutes, requires the same authenticated session, and must be confirmed with a live code before becoming active.

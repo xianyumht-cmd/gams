@@ -1,5 +1,12 @@
 # EdgeOne GG internal deployment and verification
 
+## 2026-11-15: C++ black-screen triage for cloud noname 1.4.6
+
+- Owner logs from EdgeOne Makers show `/api/check` and `/api/runtime` status 200 for the new custom domain; `GET /api/` 404 is an undefined route and is not evidence of a runtime download failure. Runtime Cloud Functions take ~36 s in the screenshot. Check HTTP client completion and WebView errors separately.
+- `v2/android/clientNative/src/main/cpp/browser_policy.cpp` now opts the `1.4.6-` runtime manifest family into the same direct-engine route as the existing `1.4.1-` family, fixing a version dispatch gap in both earlier C++ builds. Keep other versions on the current fallback until compatibility is verified. Host C++ smoke asserts `1.4.6-1.0.43` routes direct and rejects malformed / unapproved versions.
+- Build on the existing `feat/gg-edgeone-license-remote-js-20261111` PR using GG EdgeOne C++ Internal APK Actions, then have the owner sign the new `official-local` artifact with the original offline official JKS. Do not reuse signed #28 APK for this code patch; cloud JS-only redeploy cannot modify embedded C++ route policy. First install/test unprotected officially signed APK, then protect and re-sign it; compare issues with live Android WebView and network logs.
+
+
 ## 2026-11-15: Scan-to-enable MFA in GG web administrator
 
 1. Confirm the EdgeOne `gg-license-api` deployment uses the latest PR #48 source and `gg-api.dijiav.top` can log in with the existing `GG_ADMIN_PASSWORD`. Keep `GG_TOKEN_SECRET` unchanged: it derives the encryption key for the stored administrator MFA secret and signs sessions.
