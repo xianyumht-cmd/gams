@@ -1,5 +1,13 @@
 # Verified task state — EdgeOne candidate
 
+
+## 2026-11-15: Yuyu payment-triggered GG license API (source implemented, pending deployment)
+
+- Existing PR #48 now contains edgeone-license/partner-issue.mjs and the Cloud Function route POST /api/partner/issue; separate GG_PARTNER_ISSUE_TOKEN is required. Existing admin login and device licensing routes are unchanged.
+- The Yuyu fork xianyumht-cmd/yuyu already has a generic POST API-card delivery adapter with stable per-unit idempotency keys and JSON response extraction; use data.card.code. Settings are in edgeone-license/YUYU-INTEGRATION.md.
+- Node local isolated handler tests: 6/6 passed (token, idempotency, binding preservation, different units, dry-run tester, invalid bodies, storage errors). These do not prove the full EdgeOne test suite or live service works; PR branch still requires CI checks and deliberate EdgeOne redeploy.
+- Live GG partner issuance remains **disabled until** GG_PARTNER_ISSUE_TOKEN is configured and the updated EdgeOne source is deployed. Windows/Yuyu paid-order verification is outstanding.
+
 ## 2026-11-15: EdgeOne admin batch issuance (source ready, not yet deployed)
 
 - Admin previously minted only one card at a time. On PR #48, `/api/admin/issue` now supports bounded 1–50 card batches with a browser count field, copy-all and one-time TXT export. Legacy `{days}` single-card API remains compatible. First-activation expiry, permanent cards and device binding are unchanged.
