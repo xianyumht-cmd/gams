@@ -6,8 +6,8 @@ android {
         applicationId = "com.jinli.quickweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 16
-        versionName = "2.0.3-stable"
+        versionCode = 104
+        versionName = "2.0.24-compact-panel-temp"
     }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
@@ -23,4 +23,23 @@ android {
     }
     lint { abortOnError = true; lintConfig = file("lint.xml") }
 }
+
+val patchProtocolAppVersion by tasks.registering {
+    doLast {
+        val manager = file("src/main/java/com/jinli/ggsecure/V2LicenseManager.java")
+        val source = manager.readText()
+        val baseline = "PROTOCOL_APP_VERSION = 12"
+        val target = "PROTOCOL_APP_VERSION = 24"
+        when {
+            source.contains(baseline) -> manager.writeText(source.replace(baseline, target))
+            source.contains(target) -> Unit
+            else -> throw GradleException("Unexpected protocol app version baseline")
+        }
+    }
+}
+
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+    dependsOn(patchProtocolAppVersion)
+}
+
 dependencies { implementation("androidx.webkit:webkit:1.16.0") }

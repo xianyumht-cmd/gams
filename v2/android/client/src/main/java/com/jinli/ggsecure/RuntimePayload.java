@@ -34,7 +34,15 @@ final class RuntimePayload {
         if (noname == null || game == null) throw new SecurityException("运行包内容不完整");
         verify(noname, manifest.getInt("nonameSize"), manifest.getString("nonameSha256"), "控制层");
         verify(game, manifest.getInt("gameSize"), manifest.getString("gameSha256"), "引擎层");
-        return new RuntimePayload(noname, game);
+        verifyRootSource(noname);
+
+        // noname.js is fixed and laid out in its source/release pipeline. The APK must not
+        // append UI code, rebuild DOM nodes, install observers, or rewrite request hooks.
+        byte[] sourceNoname = noname.clone();
+        byte[] stableGame = RuntimeStabilityPatch.patchGame(game);
+        Arrays.fill(noname, (byte) 0);
+        Arrays.fill(game, (byte) 0);
+        return new RuntimePayload(sourceNoname, stableGame);
     }
 
     synchronized String nonameSource() {
@@ -74,6 +82,34 @@ final class RuntimePayload {
             output.write(buffer, 0, read);
         }
         return output.toByteArray();
+    }
+
+    private static void verifyRootSource(byte[] bytes) {
+        String source = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        String[] required = {
+                "gg.source.ui-mobile.v5",
+                "gg.source.compact-panel.v6",
+                "touch-action: pan-y !important",
+                "grid-template-columns: repeat(2, minmax(0, 1fr)) !important",
+                "gg.source.xhr.v5",
+                "gg.source.jsonp.v5",
+                "gg.runtime.storage-hook.v2"
+        };
+        for (String marker : required) {
+            if (!source.contains(marker)) {
+                throw new SecurityException("控制层源文件版本过旧: " + marker);
+            }
+        }
+        String[] forbidden = {
+                "gg.runtime.experience.v4",
+                "gg-v4-sheet",
+                "new MutationObserver(scheduleInterfaceSync)"
+        };
+        for (String marker : forbidden) {
+            if (source.contains(marker)) {
+                throw new SecurityException("控制层仍包含运行时重构代码: " + marker);
+            }
+        }
     }
 
     private static void verify(byte[] bytes, int expectedSize, String expectedHash, String label)

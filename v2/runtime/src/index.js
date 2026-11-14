@@ -22,6 +22,10 @@ const FULL_HISTORICAL_AB_APP_VERSION = 22;
 const FULL_HISTORICAL_AB_RUNTIME_VERSION = "2.0.8-full-historical-ab-c1";
 const FULL_HISTORICAL_AB_RELEASE_BASE =
   "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-full-historical-ab-20260804/candidate-runtime-full-historical/release/";
+const PAGE5_BRIDGE_APP_VERSION = 24;
+const PAGE5_BRIDGE_RUNTIME_VERSION = "2.0.11-compact-panel-v6";
+const PAGE5_BRIDGE_RELEASE_BASE =
+  "https://raw.githubusercontent.com/xianyumht-cmd/gams/candidate-page5-bridge-20260806/candidate-runtime-page5-bridge/release/";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -40,6 +44,7 @@ export default {
         let remoteEngineAbRuntimeVersion = null;
         let historicalGameAbRuntimeVersion = null;
         let fullHistoricalAbRuntimeVersion = null;
+        let page5BridgeRuntimeVersion = null;
         const candidateQuery = url.searchParams.get("candidate");
         if (candidateQuery === "1") {
           const candidateManifest = await loadReleaseManifest(CANDIDATE_RELEASE_BASE);
@@ -56,6 +61,10 @@ export default {
         if (candidateQuery === "22") {
           const fullHistoricalAbManifest = await loadReleaseManifest(FULL_HISTORICAL_AB_RELEASE_BASE);
           fullHistoricalAbRuntimeVersion = fullHistoricalAbManifest.versionName;
+        }
+        if (candidateQuery === "24") {
+          const page5BridgeManifest = await loadReleaseManifest(PAGE5_BRIDGE_RELEASE_BASE);
+          page5BridgeRuntimeVersion = page5BridgeManifest.versionName;
         }
         return json({
           ok: true,
@@ -75,6 +84,8 @@ export default {
           historicalGameAbRuntimeVersion,
           fullHistoricalAbAppVersion: FULL_HISTORICAL_AB_APP_VERSION,
           fullHistoricalAbRuntimeVersion,
+          page5BridgeAppVersion: PAGE5_BRIDGE_APP_VERSION,
+          page5BridgeRuntimeVersion,
         });
       }
       if (request.method === "POST" && url.pathname === "/v2/runtime/challenge") {
@@ -393,6 +404,7 @@ async function verifySignedRequest(
 }
 
 function releaseBaseForAppVersion(appVersion) {
+  if (appVersion === PAGE5_BRIDGE_APP_VERSION) return PAGE5_BRIDGE_RELEASE_BASE;
   if (appVersion === FULL_HISTORICAL_AB_APP_VERSION) return FULL_HISTORICAL_AB_RELEASE_BASE;
   if (appVersion === HISTORICAL_GAME_AB_APP_VERSION) return HISTORICAL_GAME_AB_RELEASE_BASE;
   if (appVersion === REMOTE_ENGINE_AB_APP_VERSION) return REMOTE_ENGINE_AB_RELEASE_BASE;
@@ -427,6 +439,12 @@ async function releaseForRequestedVersion(requestedVersion) {
     const fullHistoricalAbManifest = await loadReleaseManifest(FULL_HISTORICAL_AB_RELEASE_BASE);
     if (fullHistoricalAbManifest.versionName === requestedVersion) {
       return { manifest: fullHistoricalAbManifest, releaseBase: FULL_HISTORICAL_AB_RELEASE_BASE };
+    }
+  }
+  if (requestedVersion === PAGE5_BRIDGE_RUNTIME_VERSION) {
+    const page5BridgeManifest = await loadReleaseManifest(PAGE5_BRIDGE_RELEASE_BASE);
+    if (page5BridgeManifest.versionName === requestedVersion) {
+      return { manifest: page5BridgeManifest, releaseBase: PAGE5_BRIDGE_RELEASE_BASE };
     }
   }
   throw new HttpError(409, "runtime_version_changed", "服务已更新，请重新启动");
