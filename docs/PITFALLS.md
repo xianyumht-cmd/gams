@@ -1,5 +1,8 @@
 # EdgeOne candidate pitfalls
 
+- **Host JVM crypto smoke needs a Java-only build flag and JNI bridge type.** The standalone Java source `RuntimeDeliveryCrypto.java` now references `BuildConfig.GG_NATIVE_CORE` and `NativeRuntimeBridge`. Compiling only that class and its smoke test fails at `cannot find symbol`, even though Node admin tests pass. The EdgeOne internal workflow must include its test-only `JavaCryptoBuildConfig.java` (`GG_NATIVE_CORE=false`) and the bridge source. Do not incorrectly describe the host-fixture compiler failure as an admin-auth regression or change shipping APK logic to satisfy it.
+
+
 - **EdgeOne Makers may rewrite the request URL host.** With a newly bound domain, `/api/admin/login` can respond `请求来源校验失败` even though `/api/health` works: the admin Origin allowlist has to be updated to include the new exact public hostname. Keep old hostname compatibility while installed APKs still use it. Avoid accepting arbitrary `request.url`-matching Origin or trusting client-controlled forwarding headers. Protect the admin login by provider-enforced rate limits, not unbounded in-memory counters or non-atomic Blob pseudo-locks.
 
 

@@ -1,5 +1,11 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-15: Correct unrelated host JVM test inputs
+
+- Node admin/security regression tests passed in GitHub Actions run [#43621589568](https://github.com/xianyumht-cmd/gams/actions/runs/43621589568), but that workflow subsequently failed at `Node to Java encrypted runtime transport smoke`: the standalone `javac` command omitted the `BuildConfig` stub and `NativeRuntimeBridge` type now referenced by the shared class.
+- Fix only the test harness: compile `JavaCryptoBuildConfig.java` with `GG_NATIVE_CORE=false` and `NativeRuntimeBridge.java` alongside `RuntimeDeliveryCrypto.java`, then re-run CI. C++ runtime and shipping APK source remain unchanged.
+
+
 ## 2026-11-15: Admin origin hotfix and optional TOTP hardening
 
 - New hostname `https://gg-api.dijiav.top` was absent from the admin POST Origin allowlist, which matches the user's `请求来源校验失败` error while `/api/health` remained healthy. Added exact new hostname while retaining the old hostname and Makers deployment domain; removed the permissive `Origin == request.url origin` fallback.
