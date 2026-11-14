@@ -144,6 +144,7 @@ jobs:
             echo '::warning::No persistent internal signing secrets: this APK cannot reliably upgrade an earlier CI run'
           fi
           echo "GG_SIGNING_MODE=$signing_mode" >> "$GITHUB_ENV"
+          echo "GG_BACKEND_URL=$GH_EDGEONE_BASE" >> "$GITHUB_ENV"
           native_version_code=$((10000 + GITHUB_RUN_NUMBER))
           native_version_name="2.0.4-native-internal.${GITHUB_RUN_NUMBER}"
           echo "GG_NATIVE_VERSION_CODE=$native_version_code" >> "$GITHUB_ENV"
@@ -222,7 +223,7 @@ jobs:
             printf 'version_code=%s\n' "$GG_NATIVE_VERSION_CODE"
             printf 'version_name=%s\n' "$GG_NATIVE_VERSION_NAME"
             printf 'signing_mode=%s\n' "$GG_SIGNING_MODE"
-            printf 'backend_url=%s\n' "$GH_EDGEONE_BASE"
+            printf 'backend_url=%s\n' "$GG_BACKEND_URL"
             "$sdk_tools/apksigner" verify --print-certs "$cpp" | grep -E 'Signer: certificate SHA-256 digest:'
           } > artifact/BUILD-METADATA.txt
       - name: Upload internal test APK only
@@ -271,7 +272,7 @@ jobs:
             printf 'version_code=%s\n' "$GG_NATIVE_VERSION_CODE"
             printf 'version_name=%s\n' "$GG_NATIVE_VERSION_NAME"
             printf 'signing_mode=official-local-unsigned\n'
-            printf 'backend_url=%s\n' "$GH_EDGEONE_BASE"
+            printf 'backend_url=%s\n' "$GG_BACKEND_URL"
             printf 'expected_signer_sha256=70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34\n'
           } > official-signing-kit/BUILD-METADATA.txt
       - name: Check offline PowerShell signing helper syntax
