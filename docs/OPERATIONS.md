@@ -1,5 +1,11 @@
 # EdgeOne GG internal deployment and verification
 
+## 2026-11-15: Batch card issuance runbook
+
+- After separately deploying the PR #48 `edgeone-license` root to EdgeOne, log in to `https://gg-api.dijiav.top/api/admin`, choose days/permanent and count 1–50, then **生成卡密**. Copy or export the entire batch promptly; plaintext is not retrievable from Blob. Keep TXT/clipboard private.
+- On a partial save, keep the browser tab and unchanged days/count; retry the same batch request ID. Previously saved records are not rewritten or expiry-reset. Browser tab loss after a timed-out request can still lose unexported keys. `/api/admin/issue` retains legacy `{days}` support; new clients send `{days,count,requestId}` with normal cookie/CSRF/Origin security.
+- Respect the 50-card bound and 100-card list-display limit. This source change requires a deliberate EdgeOne redeploy but **no APK rebuild or remote JS change**. Verify with unit tests before issuing real cards; do not issue unnecessary production cards during acceptance.
+
 ## 2026-11-15: Owner-approved distribution of the already working APK
 
 The owner reports that the installed GG APK now enters the game using the latest remote JS without the earlier black screen. [Actions #29](https://github.com/xianyumht-cmd/gams/actions/runs/43627613464) passed at `a0159f1`, but its `GG-EdgeOne-CPP-official-local-29` is an **unsigned kit**, not automatically the accepted final, locally signed/protected APK. Sharing the accepted binary is the owner's choice; this documentation update does not publish, merge, redeploy or re-sign anything.

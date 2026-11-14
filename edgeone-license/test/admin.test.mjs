@@ -282,3 +282,78 @@ test('QR enrollment is short-lived, tied to the current cookie, and disallowed i
     'X-GG-Admin-CSRF': manualSession.result.csrf };
   assert.equal((await f.send('/api/admin/mfa/setup', {}, { env: manual, headers })).response.status, 409);
 });
+
+
+test('batch issue creates unique keys, retries safely and does not store plaintext', async () => {
+  const f = fixture(), session = await login(f), headers = authHeaders(session);
+  const requestId = 'a'.repeat(32);
+  const first = await f.send('/api/admin/issue', { days: 30, count: 5, requestId }, { headers });
+  assert.equal(first.response.status, 200);
+  assert.equal(first.result.issued, 5);
+  assert.equal(first.result.failed, 0);
+  assert.equal(new Set(first.result.keys).size, 5);
+  assert.ok(first.result.keys.every(key => /^[A-F0-9]{32}$/.test(key)));
+  first.result.keys.forEach((key, i) => {
+    const record = f.store.data.get('licenses/' + hash(key) + '.json');
+    assert.equal(record.durationSeconds, 30 * 86400);
+    assert.equal(record.expiresAt, 0);
+    assert.equal(record.deviceId, null);
+    assert.equal(record.issueBatchId, requestId);
+    assert.equal(record.issueIndex, i);
+    assert.ok(!JSON.stringify(record).includes(key));
+  });
+  const path = 'licenses/' + hash(first.result.keys[2]) + '.json';
+  f.store.data.set(path, { ...f.store.data.get(path),
+    expiresAt: NOW + 777, deviceId: 'existing-device', devicePublicKey: 'key' });
+  const again = await f.send('/api/admin/issue', { days: 30, count: 5, requestId }, { headers });
+  assert.deepEqual(again.result.keys, first.result.keys);
+  assert.equal(f.store.data.get(path).expiresAt, NOW + 777);
+  assert.equal(f.store.data.get(path).deviceId, 'existing-device');
+  const permanent = await f.send('/api/admin/issue', { days: 0, count: 2, requestId: 'b'.repeat(32) }, { headers });
+  assert.ok(permanent.result.cards.every(card => card.permanent));
+  assert.equal((await f.send('/api/admin/list', {}, { headers })).result.cards.length, 7);
+});
+test('batch rejects unauthenticated, invalid size, duration and request ID', async () => {
+  const f = fixture(), requestId = 'c'.repeat(32);
+  assert.equal((await f.send('/api/admin/issue', { days: 30, count: 2, requestId })).response.status, 401);
+  const session = await login(f), headers = authHeaders(session);
+  for (const count of [0, -1, 51, 1.5, '10', null]) {
+    const result = await f.send('/api/admin/issue', { days: 30, count, requestId }, { headers });
+    assert.equal(result.response.status, 400);
+    assert.equal(result.result.code, 'bad_count');
+  }
+  for (const days of [-1, 3651, 1.5, '30']) {
+    assert.equal((await f.send('/api/admin/issue', { days, count: 2, requestId }, { headers })).response.status, 400);
+  }
+  for (const requestId of ['bad', 'Z'.repeat(32), null]) {
+    const result = await f.send('/api/admin/issue', { days: 30, count: 2, requestId }, { headers });
+    assert.equal(result.response.status, 400);
+    assert.equal(result.result.code, 'bad_request_id');
+  }
+  assert.equal(f.store.data.size, 0);
+});
+test('batch partially failed Blob writes return keys, then resume on same request ID', async () => {
+  const f = fixture(), session = await login(f), headers = authHeaders(session);
+  const original = f.store.setJSON;
+  let count = 0;
+  f.store.setJSON = async (key, value) => {
+    if (key.startsWith('licenses/') && ++count === 2) throw new Error('injected storage error');
+    return original(key, value);
+  };
+  const params = { days: 7, count: 3, requestId: 'd'.repeat(32) };
+  const partial = await f.send('/api/admin/issue', params, { headers });
+  assert.equal(partial.response.status, 207);
+  assert.equal(partial.result.issued, 2);
+  assert.deepEqual(partial.result.failedIndexes, [2]);
+  const retry = await f.send('/api/admin/issue', params, { headers });
+  assert.equal(retry.response.status, 200);
+  assert.equal(retry.result.issued, 3);
+  assert.deepEqual(retry.result.keys.filter(key => partial.result.keys.includes(key)), partial.result.keys);
+  assert.equal([...f.store.data.keys()].filter(k => k.startsWith('licenses/')).length, 3);
+});
+test('batch controls exist in nonce-bound admin UI', async () => {
+  const page = await fixture().send('/api/admin');
+  assert.match(page.result, /id="issue-count"/);
+  assert.match(page.result, /id="export"/);
+  assert.match(page.result, /crypto.randomUUID/);
+});

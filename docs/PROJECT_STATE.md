@@ -1,5 +1,11 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-15: EdgeOne admin batch issuance (source ready, not yet deployed)
+
+- Admin previously minted only one card at a time. On PR #48, `/api/admin/issue` now supports bounded 1–50 card batches with a browser count field, copy-all and one-time TXT export. Legacy `{days}` single-card API remains compatible. First-activation expiry, permanent cards and device binding are unchanged.
+- Batch requests send `{days,count,requestId}`; a 128-bit request ID and server-only HMAC derive stable card keys for retry. Strong-read Blob stores only hash-indexed card records and nonsecret batch metadata; plaintext keys return only to the authenticated admin. Five concurrent writes maximum, HTTP 207 for partial success. Browser tab retains the request ID for retry; closing it after an ambiguous response can still cause lost plaintext.
+- Existing card list still shows at most 100 entries: batches provide immediate copy/export but not unlimited list pagination. GitHub commit/CI must not be confused with an EdgeOne deployment or live browser verification. No active APK, card or JS was changed by this code update.
+
 ## 2026-11-15: Owner-accepted runtime, release handoff and security-review roadmap
 
 - **Owner report, not an inferred CI result:** the GG APK already in use now enters the game successfully with the latest remote JS; the previously reported black screen is resolved for that installed APK/runtime combination. Earlier private Blob upload was reported as `1.4.6-1.0.43`; inspect the current private manifest before asserting an exact live version.

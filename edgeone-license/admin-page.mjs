@@ -24,7 +24,8 @@ button:hover{background:#36557d}button:disabled{opacity:.48;cursor:wait}.primary
 .card-info{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.hash{font-size:13px;color:#d4e9fc;font-family:ui-monospace,Consolas,monospace}
 .chip{font-size:11px;padding:5px 8px;border-radius:8px;background:#253953;color:#c3d8ef}.chip.green{background:#123e3b;color:#77edd7}.chip.red{background:#4b2c36;color:#ffb6ba}
 .card-meta{margin-top:7px;font-size:12px;color:#839ab5}.card-actions{display:flex;gap:7px;flex-wrap:wrap}
-.key-box{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.key{font:600 15px ui-monospace,Consolas,monospace;letter-spacing:.5px;color:#84eddb;overflow-wrap:anywhere}
+.key-box{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}.key{font:600 15px ui-monospace,Consolas,monospace;letter-spacing:.5px;color:#84eddb;overflow-wrap:anywhere}
+.key-output{width:100%;min-height:150px;background:#0c1729;border:1px solid #344b69;border-radius:10px;padding:12px;color:#84eddb;font:600 13px/1.6 ui-monospace,Consolas,monospace;resize:vertical}.count-field{flex:0 0 106px;min-width:100px}
 .empty{text-align:center;color:#8ca2bf;padding:24px 0;font-size:13px}
 .mfa-qr{display:block;background:#fff;border-radius:12px;padding:12px;width:fit-content;max-width:100%;margin:15px 0}
 .mfa-qr img{width:min(260px,100%);height:auto;display:block}
@@ -40,8 +41,8 @@ button:hover{background:#36557d}button:disabled{opacity:.48;cursor:wait}.primary
 <form id="login-form" class="form"><div class="field"><label for="password">管理密码</label><input id="password" type="password" autocomplete="current-password" required autofocus></div><div class="field"><label for="totp">动态验证码（未启用可留空）</label><input id="totp" type="text" autocomplete="one-time-code" maxlength="23" placeholder="6 位验证码或 20 位恢复码"></div><button class="primary" type="submit">进入后台</button></form></section>
 <section id="dashboard" hidden><div class="top"><p class="muted dashboard-caption">管理卡密、设备绑定和有效期</p><div class="tools"><button id="reload">刷新列表</button><button id="logout">退出登录</button></div></div>
 <div class="grid"><section class="panel"><h2>生成新卡密</h2><p class="hint">有效期从首次成功激活时开始计算。生成后请立即复制并妥善保存，后台不保存明文。</p>
-<div class="form"><div class="field"><label for="days">使用期限</label><select id="days"><option value="7">7 天</option><option value="30" selected>30 天</option><option value="90">90 天</option><option value="365">365 天</option><option value="0">永久</option></select></div><button id="issue" class="primary">生成卡密</button></div>
-<div id="new-key" class="notice" hidden><p class="key-caption">新卡密（只显示本次）：</p><div class="key-box"><span id="key-text" class="key"></span><button id="copy">复制卡密</button></div></div></section>
+<div class="form"><div class="field"><label for="days">使用期限</label><select id="days"><option value="7">7 天</option><option value="30" selected>30 天</option><option value="90">90 天</option><option value="365">365 天</option><option value="0">永久</option></select></div><div class="field count-field"><label for="issue-count">生成数量</label><input id="issue-count" type="number" min="1" max="50" step="1" value="1" required></div><button id="issue" class="primary">生成卡密</button></div>
+<div id="new-key" class="notice" hidden><p id="issue-summary" class="key-caption">新卡密（只显示本次）：</p><textarea id="key-text" class="key-output" readonly spellcheck="false" aria-label="本批次卡密"></textarea><div class="tools"><button id="copy">复制全部</button><button id="export">导出 TXT</button></div></div></section>
 <section class="panel"><h2>管理说明</h2><p class="hint">解绑设备：允许将同一张卡密换到另一台设备，已开始的有效期不会重置。<br>停用卡密：立即阻止授权验证和脚本下载。<br>恢复卡密：取消停用，但不会延长到期时间。</p>
 <span class="chip green">数据存储：EdgeOne 私有 Blob</span></section></div>
 <section class="panel" id="mfa-panel">
@@ -78,6 +79,7 @@ button:hover{background:#36557d}button:disabled{opacity:.48;cursor:wait}.primary
 'use strict';
 const byId = id => document.getElementById(id);
 let csrf = '';
+let issueAttempt = null;
 const message = (value, bad = false) => { const el = byId('message'); el.hidden = !value; el.textContent = value; el.classList.toggle('error', bad); };
 const clearMfaSecrets = () => {
   byId('mfa-qr').removeAttribute('src');
@@ -87,7 +89,7 @@ const clearMfaSecrets = () => {
   byId('mfa-setup').hidden = true;
   byId('mfa-recovery').hidden = true;
 };
-const showLogin = () => { csrf = ''; clearMfaSecrets(); byId('key-text').textContent = ''; byId('new-key').hidden = true; byId('login').hidden = false; byId('dashboard').hidden = true; };
+const showLogin = () => { csrf = ''; issueAttempt = null; clearMfaSecrets(); byId('key-text').value = ''; byId('new-key').hidden = true; byId('login').hidden = false; byId('dashboard').hidden = true; };
 const showDashboard = () => { byId('login').hidden = true; byId('dashboard').hidden = false; };
 async function request(action, data) {
   const headers = { 'Content-Type': 'application/json' };
@@ -208,16 +210,50 @@ byId('mfa-disable').onclick = async () => {
   } catch (e) { message(e.message, true); }
   finally { button.disabled = false; }
 };
-byId('issue').onclick = async () => { const button = byId('issue'); button.disabled = true;
-  try { const result = await request('issue', { days: Number(byId('days').value) }); byId('key-text').textContent = result.key;
-    byId('new-key').hidden = false; message('新卡密创建成功，请复制保存'); await loadCards(); }
-  catch(e) { message(e.message, true); } finally { button.disabled = false; }
+byId('issue').onclick = async () => {
+  const button = byId('issue');
+  const days = Number(byId('days').value);
+  const count = Number(byId('issue-count').value);
+  if (!Number.isInteger(count) || count < 1 || count > 50) {
+    message('每批只能生成 1–50 张卡密', true); return;
+  }
+  if (!byId('new-key').hidden && !confirm('新的结果会覆盖当前页面的明文卡密。请确认已复制或导出，是否继续？')) return;
+  const previous = issueAttempt;
+  const matching = previous && previous.days === days && previous.count === count;
+  issueAttempt = matching ? previous : { days, count, requestId: crypto.randomUUID().replace(/-/g, '') };
+  button.disabled = true;
+  try {
+    const result = await request('issue', issueAttempt);
+    const keys = result.keys || (result.key ? [result.key] : []);
+    byId('key-text').value = keys.join('\\n');
+    byId('issue-summary').textContent = '本批次已保存 ' + result.issued + ' / ' + result.requested + ' 张（仅本次显示明文）';
+    byId('new-key').hidden = false;
+    if (result.failed) {
+      message('部分保存成功：请先复制已生成卡密，再点击生成卡密重试同一批次（不会重置已激活的卡）。', true);
+    } else {
+      issueAttempt = null;
+      message('成功生成 ' + keys.length + ' 张卡密，请复制全部或导出 TXT 妥善保存');
+    }
+    try { await loadCards(); } catch(e) { message('卡密已生成，但列表刷新失败：' + e.message, true); }
+  } catch(e) { message(e.message + '；再次点击将沿用相同批次重试', true); }
+  finally { button.disabled = false; }
 };
-byId('copy').onclick = async () => { try { await navigator.clipboard.writeText(byId('key-text').textContent); message('卡密已复制到剪贴板'); }
+byId('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(byId('key-text').value); message('本批次卡密已复制到剪贴板'); }
   catch(e) { message('复制失败，请手动选中卡密复制：' + e.message, true); }
 };
+byId('export').onclick = () => {
+  const content = byId('key-text').value;
+  if (!content) return;
+  const blob = new Blob([content + '\\n'], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = 'GG-卡密-' + new Date().toISOString().slice(0, 10) + '.txt';
+  document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+  message('已导出 TXT，文件包含明文卡密，请妥善保管');
+};
 byId('reload').onclick = async () => { try { await loadCards(); message('列表已刷新'); } catch(e) { message(e.message, true); } };
-byId('logout').onclick = async () => { try { await request('logout'); showLogin(); byId('new-key').hidden = true; byId('key-text').textContent = ''; message('已退出登录'); }
+byId('logout').onclick = async () => { try { await request('logout'); showLogin(); message('已退出登录'); }
   catch(e) { message(e.message, true); } };
 initialize();
 </script></body></html>`;

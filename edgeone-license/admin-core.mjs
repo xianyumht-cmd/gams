@@ -6,6 +6,8 @@ import { getMfaState, mfaEpoch, verifyManagedSecondFactor,
 const COOKIE_NAME = 'gg_admin_session';
 const CARD_PATH_RE = /^licenses\/([a-f0-9]{64})\.json$/;
 const SESSION_SECONDS = 2 * 3600;
+const MAX_ISSUE_BATCH = 50;
+const ISSUE_WRITE_CONCURRENCY = 5;
 // Makers may internally rewrite request.url to its deployment host even when
 // the browser is visiting the custom domain. Accept only known project origins;
 // never trust arbitrary X-Forwarded-Host headers for this CSRF boundary.
@@ -202,6 +204,67 @@ async function issueCard(store, days, now) {
     durationSeconds: days * 86400, expiresAt: 0, deviceId: null, createdAt: now }) };
 }
 
+/**
+ * Derive each key from a server secret and a 128-bit one-time request ID.
+ * Retrying a partially completed batch returns identical keys and preserves
+ * already activated license records; plaintext keys are never stored.
+ */
+async function issueBatch(store, days, count, requestId, now, env) {
+  if (!Number.isInteger(days) || (days !== 0 && (days < 1 || days > 3650))) {
+    error(400, 'bad_days', '有效期需为 1–3650 天，或选择永久');
+  }
+  if (!Number.isInteger(count) || count < 1 || count > MAX_ISSUE_BATCH) {
+    error(400, 'bad_count', '每批只能生成 1–50 张卡密');
+  }
+  if (typeof requestId !== 'string' || !/^[a-f0-9]{32}$/.test(requestId)) {
+    error(400, 'bad_request_id', '批次标识格式无效，请刷新后重试');
+  }
+  const issueOne = async index => {
+    const key = createHmac('sha256', envValue(env, 'GG_TOKEN_SECRET'))
+      .update('gg-admin-issue-v1\n')
+      .update(requestId + '|' + days + '|' + count + '|' + index)
+      .digest('hex').slice(0, 32).toUpperCase();
+    const id = createHash('sha256').update(key).digest('hex');
+    const path = keyPath(id);
+    const current = await store.get(path, { type: 'json', consistency: 'strong' });
+    if (current) {
+      if (current.issueBatchId !== requestId || current.issueIndex !== index ||
+          current.issueDays !== days || current.issueCount !== count) {
+        error(409, 'card_collision', '卡密索引冲突，请重新创建批次');
+      }
+      return { key, card: visibleCard(id, current) };
+    }
+    const record = { disabled: false, permanent: days === 0,
+      durationSeconds: days * 86400, expiresAt: 0, deviceId: null,
+      devicePublicKey: null, createdAt: now,
+      issueBatchId: requestId, issueIndex: index, issueDays: days, issueCount: count };
+    await store.setJSON(path, record);
+    return { key, card: visibleCard(id, record) };
+  };
+  const succeeded = [];
+  const failedIndexes = [];
+  // Limit Blob fan-out; settle every write before reporting partial success.
+  for (let start = 0; start < count; start += ISSUE_WRITE_CONCURRENCY) {
+    const work = Array.from({ length: Math.min(ISSUE_WRITE_CONCURRENCY, count - start) },
+      (_, offset) => start + offset);
+    const results = await Promise.allSettled(work.map(issueOne));
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].status === 'fulfilled') {
+        succeeded.push({ index: work[i], ...results[i].value });
+      } else {
+        failedIndexes.push(work[i] + 1);
+      }
+    }
+  }
+  if (!succeeded.length) {
+    error(503, 'issue_unavailable', '卡密保存失败，请用相同设置重试');
+  }
+  succeeded.sort((a, b) => a.index - b.index);
+  return { requested: count, issued: succeeded.length,
+    failed: failedIndexes.length, failedIndexes, requestId,
+    keys: succeeded.map(item => item.key), cards: succeeded.map(item => item.card) };
+}
+
 async function updateCard(store, action, id) {
   const path = keyPath(id);
   const record = await store.get(path, { type: 'json', consistency: 'strong' });
@@ -292,7 +355,16 @@ export async function handleAdminRequest(request, { env, storeFactory, now = Mat
         COOKIE_NAME + '=' + renewed.value + '; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=' + SESSION_SECONDS });
     }
     if (path === '/api/admin/list') return json({ ok: true, ...await listCards(store) });
-    if (path === '/api/admin/issue') return json({ ok: true, ...await issueCard(store, body.days, now) });
+    if (path === '/api/admin/issue') {
+      // Preserve the legacy response for existing single-card callers.
+      if (body.count === undefined && body.requestId === undefined) {
+        return json({ ok: true, ...await issueCard(store, body.days, now) });
+      }
+      const result = await issueBatch(store, body.days, body.count, body.requestId, now, env);
+      return json({ ok: true, ...result,
+        ...(result.issued === 1 ? { key: result.keys[0], card: result.cards[0] } : {}) },
+      result.failed ? 207 : 200);
+    }
     const action = path.match(/^\/api\/admin\/(unbind|revoke|restore)$/)?.[1];
     if (action) return json({ ok: true, ...await updateCard(store, action, body.id) });
     error(404, 'not_found', '管理接口不存在');

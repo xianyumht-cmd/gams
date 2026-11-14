@@ -1,5 +1,9 @@
 # Technical decisions
 
+## 2026-11-15: Limit bulk licensing to 50 and make retries stable
+
+Retain the existing administrator session and same card-record schema for single issuance. For bulk issuance, use a 128-bit browser request ID, server-only HMAC-derived per-item 128-bit keys, and Blob records with nonsecret issue metadata. Repeated identical requests return the same keys without resetting bound devices or expirations; failed items can be retried in-tab. Cap concurrency at five and batches at fifty to protect free-tier latency/resources. A partial result reports successful keys rather than hiding committed writes, but no cross-instance transactional guarantee or recovery after lost browser state is promised. Never persist plaintext keys in Blob or durable browser storage.
+
 ## 2026-11-15: Preserve the working EdgeOne GG release; harden through reversible, evidence-gated changes
 
 Decision: keep the current C++17/Java WebView client, EdgeOne Makers Cloud Functions + private Blob authorization, server-validated card/device records, device-bound ECDH/AES-GCM remote JS delivery and offline owner-controlled official APK signing. The owner reports the deployed JS now works with the installed GG APK and the in-game black screen is resolved. Their already-tested final APK may be distributed after recording its bytes, certificate, version and minimum acceptance result; do not assume the unsigned Actions artifact or another newly protected copy is equivalent. No formal PR merge, GitHub Release or cloud deployment is implied.
