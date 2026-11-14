@@ -1,5 +1,10 @@
 # GG Android / EdgeOne internal candidate
 
+
+## GG × Yuyu external card fulfillment
+
+The EdgeOne Cloud Function routes POST /api/partner/issue to partner-issue.mjs, backed by the existing strong-read private gg-private Blob. The partner bearer token is separate from GG admin sessions/TOTP and from the GG license HMAC secret. For each Yuyu per-order-unit idempotency key, the handler deterministically derives one key, stores only the hashed license index and hashed order/idempotency references, and returns data.card.code. Identical replays do not overwrite an already activated license; duration/order changes conflict. Yuyu's generic API-card adapter creates one request per purchased unit and extracts data.card.code, then its original automation coordinator handles chat delivery and confirmation. This does not provide transactional Blob compare-and-swap semantics. See edgeone-license/YUYU-INTEGRATION.md.
+
 ## 2026-11-11: Official APK signing identity boundary
 
 The existing native APK CI produces two independent deliverables: the
