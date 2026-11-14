@@ -1,5 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { adminHtml } from './admin-page.mjs';
+import { getMfaState, mfaEpoch, verifyManagedSecondFactor,
+  beginMfaSetup, confirmMfaSetup, disableManagedMfa } from './admin-mfa.mjs';
 
 const COOKIE_NAME = 'gg_admin_session';
 const CARD_PATH_RE = /^licenses\/([a-f0-9]{64})\.json$/;
@@ -103,9 +105,9 @@ function sessionSignature(payload, env) {
   return createHmac('sha256', signingKey(env)).update(payload).digest('base64url');
 }
 
-function newSession(env, now) {
+function newSession(env, now, epoch = 'off') {
   const csrf = randomBytes(24).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({ exp: now + SESSION_SECONDS, csrf })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ exp: now + SESSION_SECONDS, csrf, epoch })).toString('base64url');
   return { value: `${payload}.${sessionSignature(payload, env)}`, csrf };
 }
 
@@ -126,7 +128,8 @@ function requireSession(request, env, now) {
   try { parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); }
   catch { error(401, 'login_required', '管理登录已失效'); }
   if (!Number.isSafeInteger(parsed.exp) || parsed.exp <= now || parsed.exp > now + SESSION_SECONDS ||
-      typeof parsed.csrf !== 'string' || !/^[A-Za-z0-9_-]{32}$/.test(parsed.csrf)) {
+      typeof parsed.csrf !== 'string' || !/^[A-Za-z0-9_-]{32}$/.test(parsed.csrf) ||
+      typeof parsed.epoch !== 'string') {
     error(401, 'login_required', '管理登录已过期');
   }
   return parsed;
@@ -217,37 +220,77 @@ export async function handleAdminRequest(request, { env, storeFactory, now = Mat
     const nonce = randomBytes(16).toString('base64');
     return new Response(adminHtml(nonce), { headers: { ...NO_CACHE,
       'Content-Type': 'text/html; charset=utf-8', 'X-Frame-Options': 'DENY',
-      'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'` } });
+      'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'` } });
   }
   try {
     if (!configured(env)) error(503, 'admin_not_configured', '请先在 EdgeOne 项目环境变量中设置至少 20 位的 GG_ADMIN_PASSWORD，并确认 GG_TOKEN_SECRET 已配置，然后重新部署');
     if (path === '/api/admin/session' && request.method === 'GET') {
-      return json({ ok: true, csrf: requireSession(request, env, now).csrf });
+      const session = requireSession(request, env, now);
+      const manual = totpSecret(env);
+      const state = await getMfaState(storeFactory());
+      if (session.epoch !== mfaEpoch(state, Boolean(manual))) {
+        error(401, 'login_required', '管理登录已失效，请重新登录');
+      }
+      return json({ ok: true, csrf: session.csrf,
+        mfaMode: manual ? 'manual' : state?.enabled ? 'managed' : 'off' });
     }
     if (request.method !== 'POST') error(405, 'method_not_allowed', '请求方法不支持');
     checkOrigin(request);
     const body = await readBody(request);
     if (path === '/api/admin/login') {
       const entered = typeof body.password === 'string' && body.password.length <= 512 ? body.password : '';
-      const mfaKey = totpSecret(env); // Invalid secret must fail closed.
+      const manual = totpSecret(env);
       const validPassword = safeEqual(sha256(entered), sha256(envValue(env, 'GG_ADMIN_PASSWORD')));
-      const validTotp = !mfaKey || verifyTotp(body.totp, mfaKey, now);
-      if (!validPassword || !validTotp) {
-        error(401, 'bad_credentials', '管理员凭据错误');
-      }
-      const session = newSession(env, now);
-      return json({ ok: true, csrf: session.csrf }, 200, { 'Set-Cookie':
-        `${COOKIE_NAME}=${session.value}; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}` });
+      if (!validPassword) error(401, 'bad_credentials', '管理员凭据错误');
+      const store = storeFactory();
+      const state = await getMfaState(store);
+      const factor = manual ? { valid: verifyTotp(body.totp, manual, now) } :
+        state?.enabled ? await verifyManagedSecondFactor(store, state, body.totp, env, now) : { valid: true };
+      if (!factor.valid) error(401, 'bad_credentials', '管理员凭据错误');
+      const session = newSession(env, now, mfaEpoch(state, Boolean(manual)));
+      return json({ ok: true, csrf: session.csrf,
+        usedRecovery: Boolean(factor.usedRecovery) }, 200, { 'Set-Cookie':
+        COOKIE_NAME + '=' + session.value + '; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=' + SESSION_SECONDS });
     }
     const session = requireSession(request, env, now);
+    const manual = totpSecret(env);
+    const store = storeFactory();
+    const state = await getMfaState(store);
+    if (session.epoch !== mfaEpoch(state, Boolean(manual))) {
+      error(401, 'login_required', '管理登录已失效，请重新登录');
+    }
     if (!safeEqual(Buffer.from(request.headers.get('x-gg-admin-csrf') || ''), Buffer.from(session.csrf))) {
       error(403, 'bad_csrf', '操作校验失败，请刷新页面重试');
     }
     if (path === '/api/admin/logout') {
       return json({ ok: true }, 200, { 'Set-Cookie':
-        `${COOKIE_NAME}=; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=0` });
+        COOKIE_NAME + '=; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
     }
-    const store = storeFactory();
+    if (path === '/api/admin/mfa/status') {
+      return json({ ok: true, mode: manual ? 'manual' : state?.enabled ? 'managed' : 'off',
+        recoveryRemaining: state?.enabled ? state.recovery.length : 0 });
+    }
+    if (path === '/api/admin/mfa/setup') {
+      if (manual) error(409, 'manual_mfa', '环境变量已配置动态验证，请先在控制台停用手动模式');
+      if (state?.enabled) error(409, 'mfa_enabled', '双重验证已经启用');
+      return json({ ok: true, ...await beginMfaSetup(store, env, now, cookieValue(request)) });
+    }
+    if (path === '/api/admin/mfa/confirm') {
+      if (manual || state?.enabled) error(409, 'mfa_enabled', '双重验证已经启用');
+      const result = await confirmMfaSetup(store, env, now, cookieValue(request), body.totp);
+      const renewed = newSession(env, now, mfaEpoch(result.state, false));
+      return json({ ok: true, csrf: renewed.csrf, codes: result.codes }, 200, { 'Set-Cookie':
+        COOKIE_NAME + '=' + renewed.value + '; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=' + SESSION_SECONDS });
+    }
+    if (path === '/api/admin/mfa/disable') {
+      if (manual) error(409, 'manual_mfa', '请在 EdgeOne 环境变量中管理手动模式');
+      const passwordValid = typeof body.password === 'string' &&
+        safeEqual(sha256(body.password), sha256(envValue(env, 'GG_ADMIN_PASSWORD')));
+      const disabled = await disableManagedMfa(store, state, env, now, passwordValid, body.totp);
+      const renewed = newSession(env, now, disabled.version);
+      return json({ ok: true, csrf: renewed.csrf }, 200, { 'Set-Cookie':
+        COOKIE_NAME + '=' + renewed.value + '; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=' + SESSION_SECONDS });
+    }
     if (path === '/api/admin/list') return json({ ok: true, ...await listCards(store) });
     if (path === '/api/admin/issue') return json({ ok: true, ...await issueCard(store, body.days, now) });
     const action = path.match(/^\/api\/admin\/(unbind|revoke|restore)$/)?.[1];

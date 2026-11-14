@@ -1,5 +1,8 @@
 # EdgeOne candidate pitfalls
 
+- **Never pass GG administrator TOTP secrets to third-party QR websites.** A QR code contains an `otpauth://` URI including the raw TOTP seed. Use the vendored offline QR generator inside the authenticated administrator session; render as a `data:` image allowed by the page's narrow CSP. Do not store the secret or recovery codes in page source, logs, or Git. Confirm enrollment with the user's phone before enabling the requirement; save recovery codes offline immediately. Privately stored MFA secrets are AES-GCM protected with the existing `GG_TOKEN_SECRET`; rotating that secret without an explicit migration makes enrolled MFA unusable. The EdgeOne private Blob store has strong reads but no atomic CAS; recovery-code exhaustion is safe for sequential reuse checks but cannot guarantee exactly-once consumption under hostile concurrency. Keep edge login rate limiting.
+
+
 - **Host JVM crypto smoke needs a Java-only build flag and JNI bridge type.** The standalone Java source `RuntimeDeliveryCrypto.java` now references `BuildConfig.GG_NATIVE_CORE` and `NativeRuntimeBridge`. Compiling only that class and its smoke test fails at `cannot find symbol`, even though Node admin tests pass. The EdgeOne internal workflow must include its test-only `JavaCryptoBuildConfig.java` (`GG_NATIVE_CORE=false`) and the bridge source. Do not incorrectly describe the host-fixture compiler failure as an admin-auth regression or change shipping APK logic to satisfy it.
 
 

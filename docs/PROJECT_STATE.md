@@ -1,5 +1,13 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-15: Browser-based QR enrollment for administrator two-factor authentication
+
+- Added authenticated EdgeOne administrator QR enrollment supporting Microsoft Authenticator on iOS and standard 6-digit TOTP. The page and QR generator are fully self-contained; vendored MIT-licensed `qrcode-generator` v2.0.4 is shipped locally, no external QR API or image request. Pending setup lasts 10 minutes, requires the same authenticated session, and must be confirmed with a live code before becoming active.
+- New MFA secret is encrypted using AES-256-GCM with a key derived from the existing `GG_TOKEN_SECRET`, and stored in the existing private Blob `admin/mfa-state.json` (never in GitHub or public HTML). A set of eight randomly generated recovery codes is displayed once after confirmation, only HMAC digests are stored, and consumed codes are removed for sequential use. Pre-MFA session cookies are invalidated when MFA is enabled or disabled.
+- Existing manually configured `GG_ADMIN_TOTP_SECRET` remains supported and takes precedence over web management; unset the variable and redeploy **only if intentionally switching from manual enrollment**. No environment-variable action is required for normal web QR setup; existing card/license/JS data and signed Android APK remain unchanged.
+- GitHub PR #48 implementation and automated test coverage are present; production EdgeOne Pages redeploy plus owner iPhone QR/device login confirmation still pending until explicitly reported. The single admin Path-based rate rule `GG-Admin-Login` was shown enabled by the owner; applicability to all custom/edgeone.dev hosts must be independently verified. Blob writes are not atomic CAS, so recovery-code concurrency and login attack defense still rely on trusted edge rate limiting.
+
+
 ## 2026-11-15: Correct unrelated host JVM test inputs
 
 - Node admin/security regression tests passed in GitHub Actions run [#43621589568](https://github.com/xianyumht-cmd/gams/actions/runs/43621589568), but that workflow subsequently failed at `Node to Java encrypted runtime transport smoke`: the standalone `javac` command omitted the `BuildConfig` stub and `NativeRuntimeBridge` type now referenced by the shared class.

@@ -1,5 +1,16 @@
 # EdgeOne GG internal deployment and verification
 
+## 2026-11-15: Scan-to-enable MFA in GG web administrator
+
+1. Confirm the EdgeOne `gg-license-api` deployment uses the latest PR #48 source and `gg-api.dijiav.top` can log in with the existing `GG_ADMIN_PASSWORD`. Keep `GG_TOKEN_SECRET` unchanged: it derives the encryption key for the stored administrator MFA secret and signs sessions.
+2. If `GG_ADMIN_TOTP_SECRET` is **unset**, open `https://gg-api.dijiav.top/api/admin`, log in, find **登录保护 → 使用手机扫码绑定**. Open Microsoft Authenticator for iOS → **+ → 其他账户 → 扫描二维码**, scan the page's QR, enter the current six-digit code back in GG and click **确认启用**.
+3. After code confirmation GG creates eight **single-use** recovery codes. Copy and save offline in a password manager immediately. Plaintext codes are shown only in that response; the stored values are HMAC digests. Avoid screenshots or pasting the codes into GitHub/chat. Re-open admin in a private window: password-only login must fail, password + iPhone code must work. All pre-enrollment sessions should be invalid.
+4. If a manual `GG_ADMIN_TOTP_SECRET` is configured, that mode remains authoritative; the web page shows the enabled state but does not offer a second enrollment. To migrate, explicitly remove the manual environment variable and redeploy (after planning credential continuity). Do **not** print the manual secret or any recovery code to troubleshoot.
+5. MFA state is stored as encrypted `admin/mfa-state.json` and transient encrypted `admin/mfa-pending.json` in the existing private `gg-private` EdgeOne Blob namespace. An authenticated administrator can disable managed MFA only by re-entering the admin password plus TOTP or an unused recovery code. Do not delete these objects or rotate `GG_TOKEN_SECRET` casually: that would make sealed secrets undecryptable. Recovery from cloud/key loss requires manual owner access to the EdgeOne deployment and Blob storage.
+6. `GET /api/admin` remains discoverable. The owner reported that free-plan EdgeOne allows only one Path-only `GG-Admin-Login` rate rule. Leave the existing protection active; verify it is enforced for `POST /api/admin/login` on the actual Pages custom domain (and any alternate hostnames). Neither a QR code nor an on-page TOTP input protects against denial-of-service or credential stuffing without trusted edge-level request limiting. Rates and emergency access policy must be tested without triggering lockout.
+7. This is an admin web-service change; **no Android APK rebuild, private JS re-upload, card regeneration, or DNS change is required**. The GitHub branch update is not a deployed site until the correct Makers/Pages deployment is triggered and verified.
+
+
 ## 2026-11-15: Admin login migration and first-stage hardening
 
 1. Deploy the existing `feat/gg-edgeone-license-remote-js-20261111` branch with the project root `edgeone-license`, **keeping** `GG_ADMIN_PASSWORD`, `GG_TOKEN_SECRET`, private Blob records, and both old/new EdgeOne custom domains unchanged. Confirm `https://gg-api.dijiav.top/api/admin` can log in with the existing admin password.

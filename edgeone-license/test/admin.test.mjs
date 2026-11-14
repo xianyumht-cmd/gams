@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { createHmac } from 'node:crypto';
 import { handleAdminRequest } from '../admin-core.mjs';
 import { hash } from '../core.mjs';
 
@@ -183,4 +184,101 @@ test('enabling MFA and changing the admin password invalidates existing sessions
     env: { ...ENV, GG_ADMIN_TOTP_SECRET: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' }, headers,
   });
   assert.equal(mfaEnabled.response.status, 401);
+});
+
+
+function otpFromProvisionedSecret(secret, now = NOW) {
+  const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let acc = 0, bits = 0;
+  const bytes = [];
+  for (const c of secret) {
+    acc = (acc << 5) | abc.indexOf(c);
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((acc >>> bits) & 255);
+      acc &= (1 << bits) - 1;
+    }
+  }
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30)));
+  const digest = createHmac('sha1', Buffer.from(bytes)).update(counter).digest();
+  const pos = digest.at(-1) & 15;
+  return String((digest.readUInt32BE(pos) & 0x7fffffff) % 1000000).padStart(6, '0');
+}
+
+test('web QR setup requires an authenticated session, confirmation, and enforced second factor', async () => {
+  const f = fixture();
+  assert.equal((await f.send('/api/admin/mfa/setup', {})).response.status, 401);
+  const old = await login(f);
+  const head = authHeaders(old);
+  assert.equal((await f.send('/api/admin/mfa/setup', {}, { headers: { Cookie: old.cookie } })).response.status, 403);
+  const start = await f.send('/api/admin/mfa/setup', {}, { headers: head });
+  assert.equal(start.response.status, 200);
+  assert.match(start.result.qr, /^data:image\/svg\+xml;base64,/);
+  assert.match(Buffer.from(start.result.qr.split(',')[1], 'base64').toString(), /<svg/);
+  assert.match(start.result.secret, /^[A-Z2-7]{32}$/);
+  const pending = f.store.data.get('admin/mfa-pending.json');
+  assert.ok(pending.secret.iv && pending.secret.tag);
+  assert.ok(!JSON.stringify(pending).includes(start.result.secret), 'secret at rest must be sealed');
+  assert.equal((await f.send('/api/admin/mfa/confirm', { totp: '000000' }, { headers: head })).response.status, 401);
+  assert.equal((await f.send('/api/admin/login', { password: PASSWORD })).response.status, 200,
+    'password still works before confirmation');
+
+  const code = otpFromProvisionedSecret(start.result.secret);
+  const ok = await f.send('/api/admin/mfa/confirm', { totp: code }, { headers: head });
+  assert.equal(ok.response.status, 200);
+  assert.equal(ok.result.codes.length, 8);
+  assert.ok(ok.result.codes.every(x => /^[A-F0-9]{20}$/.test(x)));
+  const enabled = f.store.data.get('admin/mfa-state.json');
+  assert.equal(enabled.enabled, true);
+  assert.equal(enabled.recovery.length, 8);
+  assert.ok(!JSON.stringify(enabled).includes(start.result.secret));
+  assert.ok(!JSON.stringify(enabled).includes(ok.result.codes[0]));
+  assert.equal((await f.send('/api/admin/session', undefined, { headers: { Cookie: old.cookie } })).response.status, 401,
+    'old password-only sessions must be invalidated');
+  assert.equal((await f.send('/api/admin/login', { password: PASSWORD })).response.status, 401,
+    'password alone cannot bypass enabled MFA');
+  assert.equal((await f.send('/api/admin/login', { password: PASSWORD, totp: '123456' })).response.status, 401);
+  const loggedIn = await f.send('/api/admin/login', { password: PASSWORD, totp: code });
+  assert.equal(loggedIn.response.status, 200);
+  const loggedSession = { cookie: loggedIn.response.headers.get('set-cookie').split(';')[0],
+    csrf: loggedIn.result.csrf };
+  const status = await f.send('/api/admin/mfa/status', {}, { headers: authHeaders(loggedSession) });
+  assert.equal(status.result.mode, 'managed');
+  assert.equal(status.result.recoveryRemaining, 8);
+  assert.equal((await f.send('/api/admin/mfa/setup', {}, { headers: authHeaders(loggedSession) })).response.status, 409);
+
+  const backup = ok.result.codes[0];
+  const recoveryLogin = await f.send('/api/admin/login', { password: PASSWORD, totp: backup });
+  assert.equal(recoveryLogin.response.status, 200);
+  assert.equal(recoveryLogin.result.usedRecovery, true);
+  assert.equal((await f.send('/api/admin/login', { password: PASSWORD, totp: backup })).response.status, 401,
+    'used recovery code must be rejected');
+
+  const disable = await f.send('/api/admin/mfa/disable',
+    { password: PASSWORD, totp: code }, { headers: authHeaders(loggedSession) });
+  assert.equal(disable.response.status, 200);
+  assert.equal((await f.send('/api/admin/login', { password: PASSWORD })).response.status, 200);
+  assert.equal((await f.send('/api/admin/session', undefined, { headers: { Cookie: loggedSession.cookie } })).response.status, 401);
+});
+
+test('QR enrollment is short-lived, tied to the current cookie, and disallowed in manual mode', async () => {
+  const f = fixture();
+  const first = await login(f);
+  const second = await login(f);
+  const start = await f.send('/api/admin/mfa/setup', {}, { headers: authHeaders(first) });
+  const code = otpFromProvisionedSecret(start.result.secret);
+  assert.equal((await f.send('/api/admin/mfa/confirm', { totp: code },
+    { headers: authHeaders(second) })).response.status, 410);
+  assert.equal((await f.send('/api/admin/mfa/confirm', { totp: code },
+    { headers: authHeaders(first), now: NOW + 11 * 60 })).response.status, 410);
+  const manual = { ...ENV, GG_ADMIN_TOTP_SECRET: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' };
+  const manualSession = await f.send('/api/admin/login',
+    { password: PASSWORD, totp: otpFromProvisionedSecret(manual.GG_ADMIN_TOTP_SECRET) },
+    { env: manual });
+  assert.equal(manualSession.response.status, 200);
+  const headers = { Cookie: manualSession.response.headers.get('set-cookie').split(';')[0],
+    'X-GG-Admin-CSRF': manualSession.result.csrf };
+  assert.equal((await f.send('/api/admin/mfa/setup', {}, { env: manual, headers })).response.status, 409);
 });
