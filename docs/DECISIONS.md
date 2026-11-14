@@ -1,5 +1,10 @@
 # Technical decisions
 
+## 2026-11-15: Move the GG API to a dedicated domain without breaking existing clients
+
+Use `https://gg-api.dijiav.top` as the canonical HTTPS origin for newly built EdgeOne C++ and Java candidate APKs. Prefer the new domain for unattended CI even if the previous `GG_EDGEONE_BASE_URL` repository variable has not been changed; preserve an explicit workflow-dispatch override for troubleshooting. Require `backend_url=https://gg-api.dijiav.top` in the unsigned official-local kit's metadata and signing helper to avoid signing a stale package. Continue using the same EdgeOne Makers project, private Blob runtime, licenses, signing identity and client protocols. Retain `https://gg-api.xn--8pv109c.top` as a compatibility/rollback origin until older installed clients are migrated; never remove that binding just because a DNS/HTTPS health check succeeds.
+
+
 ## 2026-11-11: Pin owner-designated official signer locally, leave server attestation separate
 
 For the owner's immediately usable Windows path, choose **offline local

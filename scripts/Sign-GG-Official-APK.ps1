@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $officialSha = '70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34'
+$expectedBackend = 'https://gg-api.dijiav.top'
 $signingDirectory = 'D:\project2\gams\gams-signing-key-official'
 $jks = Join-Path $signingDirectory 'GG-release.jks'
 $cer = Join-Path $signingDirectory 'GG-release-certificate.cer'
@@ -28,7 +29,8 @@ if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf) -or
 }
 $metadata = @(Get-Content -LiteralPath $metadataPath)
 if ($metadata -notcontains 'signing_mode=official-local-unsigned' -or
-    $metadata -notcontains "expected_signer_sha256=$officialSha") {
+    $metadata -notcontains "expected_signer_sha256=$officialSha" -or
+    $metadata -notcontains "backend_url=$expectedBackend") {
     throw 'The Actions artifact was not built for offline official signing.'
 }
 $shaLine = (Get-Content -LiteralPath $checksumPath -TotalCount 1).Trim()

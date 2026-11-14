@@ -1,5 +1,15 @@
 # EdgeOne GG internal deployment and verification
 
+## 2026-11-15: Migrate GG API hostname (leave old domain as rollback)
+
+- New EdgeOne Makers custom hostname: `https://gg-api.dijiav.top`; owner confirmed the domain and HTTPS are deployed, and supplied the health response `{"ok":true,"runtimeProofAction":"runtime-v2","deliveryVersion":2}`.
+- The C++ APK default and automatic GitHub Actions builds now target the new HTTPS origin. The explicit manual `edgeone_base_url` workflow-dispatch input is still available for controlled diagnostics; the potentially stale `GG_EDGEONE_BASE_URL` repository variable no longer overrides the new automatic-build default.
+- The `official-local` unsigned artifact includes `backend_url=https://gg-api.dijiav.top` in `BUILD-METADATA.txt`; the bundled Windows signer rejects artifacts without this exact value. Download the full new Actions kit before local signing; never sign an older cached kit assuming its backend changed.
+- Keep the old hostname `https://gg-api.xn--8pv109c.top` active with valid HTTPS and its DNS CNAME until all older APKs have moved to the new backend. Do not delete the old EdgeOne custom-domain binding, DNS record, or the common EdgeOne project during this migration. Existing runtime upload and license records remain in the same private Blob namespace; no re-upload or reissue is required solely for hostname migration.
+- Acceptance order: wait for the new GitHub workflow and verify build metadata; sign on the owner's Windows machine; verify certificate and APK package; launch and check existing card/saved authorization, remote runtime download `1.4.6-1.0.43`, JS injection and in-game actions; test restarting and rollback. Only after all active clients have migrated may the old hostname be disabled/removed.
+- Current scope is a candidate PR build, not a silent update to already installed APKs. The cloud health endpoint alone does not prove authenticated runtime delivery. No changes to production Blob objects, credentials, or cards are made by this commit.
+
+
 ## Official GG signing identity (2026-11-11)
 
 ### Offline official-signing kit (no key material in CI)

@@ -121,7 +121,7 @@ jobs:
           gradle-version: '8.11.1'
       - name: Build isolated C++ APK and unchanged Java reference
         env:
-          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || vars.GG_EDGEONE_BASE_URL || 'https://gg-api.xn--8pv109c.top' }}
+          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || 'https://gg-api.dijiav.top' }}
           GG_INTERNAL_KEYSTORE_B64: ${{ secrets.GG_INTERNAL_KEYSTORE_B64 }}
           GG_INTERNAL_STORE_PASSWORD: ${{ secrets.GG_INTERNAL_STORE_PASSWORD }}
           GG_INTERNAL_KEY_ALIAS: ${{ secrets.GG_INTERNAL_KEY_ALIAS }}
@@ -222,6 +222,7 @@ jobs:
             printf 'version_code=%s\n' "$GG_NATIVE_VERSION_CODE"
             printf 'version_name=%s\n' "$GG_NATIVE_VERSION_NAME"
             printf 'signing_mode=%s\n' "$GG_SIGNING_MODE"
+            printf 'backend_url=%s\n' "$GH_EDGEONE_BASE"
             "$sdk_tools/apksigner" verify --print-certs "$cpp" | grep -E 'Signer: certificate SHA-256 digest:'
           } > artifact/BUILD-METADATA.txt
       - name: Upload internal test APK only
@@ -233,7 +234,7 @@ jobs:
           if-no-files-found: error
       - name: Build unsigned APK for offline official signing
         env:
-          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || vars.GG_EDGEONE_BASE_URL || 'https://gg-api.xn--8pv109c.top' }}
+          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || 'https://gg-api.dijiav.top' }}
         run: |
           set -euo pipefail
           cd v2/android
@@ -270,6 +271,7 @@ jobs:
             printf 'version_code=%s\n' "$GG_NATIVE_VERSION_CODE"
             printf 'version_name=%s\n' "$GG_NATIVE_VERSION_NAME"
             printf 'signing_mode=official-local-unsigned\n'
+            printf 'backend_url=%s\n' "$GH_EDGEONE_BASE"
             printf 'expected_signer_sha256=70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34\n'
           } > official-signing-kit/BUILD-METADATA.txt
       - name: Check offline PowerShell signing helper syntax

@@ -1,7 +1,7 @@
 plugins { id("com.android.application") }
 
 val edgeOneBaseUrl = providers.gradleProperty("ggEdgeOneBaseUrl")
-    .orElse("https://gg-api.xn--8pv109c.top").get().trim().trimEnd('/')
+    .orElse("https://gg-api.dijiav.top").get().trim().trimEnd('/')
 val nativeVersionCode = providers.gradleProperty("ggNativeVersionCode")
     .orElse("17").get().toInt()
 val nativeVersionName = providers.gradleProperty("ggNativeVersionName")

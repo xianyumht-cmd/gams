@@ -90,7 +90,7 @@ jobs:
       - name: Build isolated EdgeOne candidate
         env:
           # Public HTTPS hostname is the candidate default; manual input/repo variable can override.
-          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || vars.GG_EDGEONE_BASE_URL || 'https://gg-api.xn--8pv109c.top' }}
+          GH_EDGEONE_BASE: ${{ inputs.edgeone_base_url || 'https://gg-api.dijiav.top' }}
         run: |
           if [[ -z "$GH_EDGEONE_BASE" ]]; then
             echo '::warning::GG_EDGEONE_BASE_URL is not set. APK will show a setup error until rebuilt with an EdgeOne URL.'

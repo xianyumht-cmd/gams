@@ -1,5 +1,13 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-15: Custom GG API hostname migration in the existing EdgeOne PR
+
+- Owner screenshot: both `https://gg-api.xn--8pv109c.top` and `https://gg-api.dijiav.top` are deployed with HTTPS, and supplied the new domain health JSON reporting `ok:true`, `runtimeProofAction:runtime-v2`, `deliveryVersion:2`. Actual signed-APK activation and remote-JS download through the new hostname remain pending.
+- Change the C++ default and both candidate Actions workflow default URLs to `https://gg-api.dijiav.top`; remove stale repository-variable precedence for automatic builds. Keep manual workflow URL override for diagnostics. The new offline-signing kit records and verifies `backend_url=https://gg-api.dijiav.top`.
+- Release signature remains local; the new GitHub Actions unsigned artifact must pass CI before signing. Do not claim APK built, signed or deployed until confirmed by run metadata. The latest JS `1.4.6-1.0.43` was reported uploaded to the same private EdgeOne Blob. Do not reissue cards or modify the server.
+- Keep old custom domain and DNS alive until new APK device acceptance and old client migration; this change does not remove old domain or touch production deployments.
+
+
 ## 2026-11-11: Official certificate guard verified in internal CI
 
 - The owner now independently checked that the public `.cer` DER SHA-256 and
