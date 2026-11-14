@@ -1,5 +1,24 @@
 # EdgeOne GG internal deployment and verification
 
+## 2026-11-15: Owner-approved distribution of the already working APK
+
+The owner reports that the installed GG APK now enters the game using the latest remote JS without the earlier black screen. [Actions #29](https://github.com/xianyumht-cmd/gams/actions/runs/43627613464) passed at `a0159f1`, but its `GG-EdgeOne-CPP-official-local-29` is an **unsigned kit**, not automatically the accepted final, locally signed/protected APK. Sharing the accepted binary is the owner's choice; this documentation update does not publish, merge, redeploy or re-sign anything.
+
+**Minimum nondestructive pre-distribution handoff:**
+
+1. Freeze the exact APK that worked on the owner's device. Record the final APK's SHA-256, `applicationId`, `versionCode`, `versionName`, source/Actions build, protection status, intended EdgeOne origin and associated remote JS manifest. Keep that same binary for rollback; never substitute a different post-protection output without retesting.
+2. Run Android SDK `apksigner verify --verbose --print-certs` against the **final APK after any shelling and re-signing**. Confirm supported signature schemes and the owner's official certificate SHA-256 `70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34`. Do not distribute the unsigned kit, debug-signed internal candidate, JKS/passwords, or private runtime ZIP. Validate APK package identity and declared backend (`https://gg-api.dijiav.top` for new builds; document any tested older-host APK).
+3. Confirm on the same distributable bytes: install/update compatibility, saved-card startup or activation, cold restart, game entry, G-button/JS execution, and re-entry. If protection, signing, ABI or remote JS changed since the successful test, rerun the smoke. Record Android version and outcome. Keep the old EdgeOne custom domain available until older clients are migrated.
+4. Distribute only the verified bytes with a checksum and concise installation/update guidance. Do not claim that owner-level success means every OS/device has passed, or that CI proves the exact cloud deployment revision.
+
+**Roadmap acceptance gates (not immediate edits to the working production system):**
+
+- **P1A / Observability:** expose nonsecret stage codes covering check/authorize, HTTP stream, ECDH/AES-GCM decrypt, ZIP/manifest validation, WebView route and JS startup; errors must be actionable rather than silent black screens. Never log license keys, tokens, plaintext JS or MFA material.
+- **P1B / Release gate:** mandatory `apksigner`, `aapt2`, `zipalign` and known expected package, signer, version and authenticated runtime identity where applicable; missing tools/expected data **block** rather than warn. Add counterexamples for non-APK ZIPs, wrong signer, absent input, stale manifest and broken ABI. Failures must exit nonzero.
+- **P1C / Server concurrency:** execute simultaneous first-bind, replay-receipt and MFA recovery-code tests. Strong Blob reads cannot provide atomic claims. Strict one-device exclusivity requires a proven transactional or serialized server authority, not a claimId/reread workaround. Keep the current card validation and rollback story intact until the alternative is verified.
+- **P2 / Optional security work:** evaluate `RegisterNatives` symbol cleanup, authenticated release manifest and rollback grants, certificate pinning with preplanned rotation/recovery, and reliable edge-admin rate limits. First benchmark memory/startup and protected/unprotected compatibility; never mix experimental ptrace signals into decrypt keys by default.
+- **Review policy:** independent AI critique is useful for finding untested assumptions. Convert objections into source-linked executable acceptance tests, then ship changes in small reversible batches instead of debating abstract security scores indefinitely.
+
 ## 2026-11-15: C++ black-screen triage for cloud noname 1.4.6
 
 - Owner logs from EdgeOne Makers show `/api/check` and `/api/runtime` status 200 for the new custom domain; `GET /api/` 404 is an undefined route and is not evidence of a runtime download failure. Runtime Cloud Functions take ~36 s in the screenshot. Check HTTP client completion and WebView errors separately.
