@@ -1,4 +1,9 @@
 plugins { id("com.android.application") }
+val edgeOneBaseUrl = providers.gradleProperty("ggEdgeOneBaseUrl").orElse("").get().trim()
+require(edgeOneBaseUrl.isEmpty() || (edgeOneBaseUrl.startsWith("https://") &&
+    !edgeOneBaseUrl.contains('"') && !edgeOneBaseUrl.contains('\\') &&
+    !edgeOneBaseUrl.contains('?') && !edgeOneBaseUrl.contains('#') &&
+    !edgeOneBaseUrl.contains(' '))) { "ggEdgeOneBaseUrl must be a HTTPS origin" }
 android {
     namespace = "com.jinli.ggsecure"
     compileSdk = 35
@@ -8,6 +13,10 @@ android {
         targetSdk = 35
         versionCode = 16
         versionName = "2.0.3-stable"
+        buildConfigField("boolean", "EDGEONE_CANDIDATE", "false")
+        buildConfigField("boolean", "GG_NATIVE_CORE", "false")
+        buildConfigField("boolean", "GG_REQUIRE_OFFICIAL_APK_SIGNER", "false")
+        buildConfigField("String", "EDGEONE_BASE_URL", "\"\"")
     }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
@@ -16,7 +25,16 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        create("edgeOneTest") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".edgeonetest"
+            versionNameSuffix = "-edgeone-internal"
+            signingConfig = signingConfigs.getByName("debug")
+            buildConfigField("boolean", "EDGEONE_CANDIDATE", "true")
+            buildConfigField("String", "EDGEONE_BASE_URL", "\"${edgeOneBaseUrl.trimEnd('/')}\"")
+        }
     }
+    buildFeatures { buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

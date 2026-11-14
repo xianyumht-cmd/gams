@@ -1,0 +1,46 @@
+import { getStore } from '@edgeone/pages-blob';
+import { handle, RUNTIME_PROOF_ACTION, toHttpError } from '../../core.mjs';
+import { handleAdminRequest } from '../../admin-core.mjs';
+
+const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
+export async function onRequest({ request, env }) {
+  const url = new URL(request.url);
+  if (url.pathname === '/api/admin' || url.pathname.startsWith('/api/admin/')) {
+    return handleAdminRequest(request, { env,
+      storeFactory: () => getStore({ name: 'gg-private', consistency: 'strong' }) });
+  }
+  if (request.method === 'GET' && url.pathname === '/api/health') {
+    return new Response(JSON.stringify({ ok: true, service: 'gg-edgeone-internal',
+      runtimeProofAction: RUNTIME_PROOF_ACTION, deliveryVersion: 2 }),
+      { headers: { ...HEADERS, 'Content-Type': 'application/json' } });
+  }
+  if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+  const action = url.pathname.match(/^\/api\/(activate|check|unbind|runtime)$/)?.[1];
+  if (!action) return new Response('Not found', { status: 404 });
+  if (Number(request.headers.get('content-length') || 0) > 8192) {
+    return new Response('Request too large', { status: 413 });
+  }
+  try {
+    const text = await request.text();
+    if (Buffer.byteLength(text, 'utf8') > 8192) return new Response('Request too large', { status: 413 });
+    const store = getStore({ name: 'gg-private', consistency: 'strong' });
+    const result = await handle(action, JSON.parse(text), { store, env });
+    if (action === 'runtime') {
+      const { bytes, manifest, delivery } = result;
+      return new Response(bytes, { headers: {
+        ...HEADERS, 'Content-Type': delivery ? 'application/octet-stream' : 'application/zip',
+        'X-GG-Bundle-Sha256': manifest.sha256,
+        'X-GG-Manifest': Buffer.from(JSON.stringify(manifest)).toString('base64'),
+        ...(delivery ? {
+          'X-GG-Delivery-Version': String(delivery.version),
+          'X-GG-Delivery-Server-Key': delivery.serverPublicKey,
+          'X-GG-Delivery-Iv': delivery.iv,
+        } : {}),
+      } });
+    }
+    return new Response(JSON.stringify(result),
+      { headers: { ...HEADERS, 'Content-Type': 'application/json; charset=utf-8' } });
+  } catch (error) {
+    return toHttpError(error);
+  }
+}
