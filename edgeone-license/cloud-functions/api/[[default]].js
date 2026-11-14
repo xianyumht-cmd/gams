@@ -1,12 +1,17 @@
 import { getStore } from '@edgeone/pages-blob';
 import { handle, RUNTIME_PROOF_ACTION, toHttpError } from '../../core.mjs';
 import { handleAdminRequest } from '../../admin-core.mjs';
+import { handlePartnerIssue } from '../../partner-issue.mjs';
 
 const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
 export async function onRequest({ request, env }) {
   const url = new URL(request.url);
   if (url.pathname === '/api/admin' || url.pathname.startsWith('/api/admin/')) {
     return handleAdminRequest(request, { env,
+      storeFactory: () => getStore({ name: 'gg-private', consistency: 'strong' }) });
+  }
+  if (url.pathname === '/api/partner/issue') {
+    return handlePartnerIssue(request, { env,
       storeFactory: () => getStore({ name: 'gg-private', consistency: 'strong' }) });
   }
   if (request.method === 'GET' && url.pathname === '/api/health') {
