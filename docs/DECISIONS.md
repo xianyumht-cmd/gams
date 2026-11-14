@@ -1,5 +1,10 @@
 # Technical decisions
 
+
+## 2026-11-15: Separate token-authenticated GG card issuance for Yuyu
+
+Use a dedicated POST /api/partner/issue server-to-server endpoint rather than expose the cookie/CSRF-protected /api/admin/issue to the Yuyu helper. A separately rotated GG_PARTNER_ISSUE_TOKEN (at least 32 characters) authenticates partner issuance; GG_TOKEN_SECRET remains server-only and derives a reproducible 32-hex license per unit's stable idempotency key. A later request with a different duration/order but same key returns 409 instead of generating a new license. Existing license records, binding state and admin protocols remain compatible. Yuyu retains ownership of order payment/refund checks and message delivery. Do not store a partner token or admin credentials in GitHub. Details: edgeone-license/YUYU-INTEGRATION.md.
+
 ## 2026-11-15: Limit bulk licensing to 50 and make retries stable
 
 Retain the existing administrator session and same card-record schema for single issuance. For bulk issuance, use a 128-bit browser request ID, server-only HMAC-derived per-item 128-bit keys, and Blob records with nonsecret issue metadata. Repeated identical requests return the same keys without resetting bound devices or expirations; failed items can be retried in-tab. Cap concurrency at five and batches at fifty to protect free-tier latency/resources. A partial result reports successful keys rather than hiding committed writes, but no cross-instance transactional guarantee or recovery after lost browser state is promised. Never persist plaintext keys in Blob or durable browser storage.
