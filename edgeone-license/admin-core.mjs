@@ -3,11 +3,12 @@ import { adminHtml } from './admin-page.mjs';
 
 const COOKIE_NAME = 'gg_admin_session';
 const CARD_PATH_RE = /^licenses\/([a-f0-9]{64})\.json$/;
-const SESSION_SECONDS = 8 * 3600;
+const SESSION_SECONDS = 2 * 3600;
 // Makers may internally rewrite request.url to its deployment host even when
 // the browser is visiting the custom domain. Accept only known project origins;
 // never trust arbitrary X-Forwarded-Host headers for this CSRF boundary.
 const ADMIN_ORIGINS = new Set([
+  'https://gg-api.dijiav.top',
   'https://gg-api.xn--8pv109c.top',
   'https://gg-license-api-dxk0o7j9.edgeone.dev',
 ]);
@@ -47,7 +48,55 @@ function safeEqual(a, b) {
 }
 
 function signingKey(env) {
-  return createHmac('sha256', envValue(env, 'GG_TOKEN_SECRET')).update('gg-admin-session-v1').digest();
+  // Invalidates pre-MFA/password-change sessions when the admin policy changes.
+  return createHmac('sha256', envValue(env, 'GG_TOKEN_SECRET'))
+    .update('gg-admin-session-v2\n')
+    .update(sha256(envValue(env, 'GG_ADMIN_PASSWORD')))
+    .update(sha256(envValue(env, 'GG_ADMIN_TOTP_SECRET')))
+    .digest();
+}
+
+
+function totpSecret(env) {
+  const raw = envValue(env, 'GG_ADMIN_TOTP_SECRET');
+  if (!raw) return null;
+  const clean = raw.replace(/\s/g, '').toUpperCase();
+  // At least 160 bits of secret material (32 base32 characters).
+  if (!/^[A-Z2-7]{32,128}$/.test(clean)) {
+    error(503, 'admin_mfa_config', '管理员动态验证码配置无效');
+  }
+  let bits = 0;
+  let buffer = 0;
+  const bytes = [];
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  for (const char of clean) {
+    buffer = (buffer << 5) | alphabet.indexOf(char);
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((buffer >>> bits) & 255);
+    }
+  }
+  if (bits > 0 && (buffer & ((1 << bits) - 1)) !== 0) {
+    error(503, 'admin_mfa_config', '管理员动态验证码配置无效');
+  }
+  return Buffer.from(bytes);
+}
+
+function verifyTotp(code, key, now) {
+  if (typeof code !== 'string' || !/^[0-9]{6}$/.test(code)) return false;
+  const provided = Buffer.from(code, 'ascii');
+  const counter = Math.floor(now / 30);
+  for (let offset = -1; offset <= 1; offset++) {
+    const challenge = Buffer.alloc(8);
+    challenge.writeBigUInt64BE(BigInt(counter + offset));
+    const digest = createHmac('sha1', key).update(challenge).digest();
+    const index = digest[digest.length - 1] & 0x0f;
+    const truncated = (digest.readUInt32BE(index) & 0x7fffffff) % 1000000;
+    const actual = Buffer.from(String(truncated).padStart(6, '0'), 'ascii');
+    if (timingSafeEqual(provided, actual)) return true;
+  }
+  return false;
 }
 
 function sessionSignature(payload, env) {
@@ -84,9 +133,11 @@ function requireSession(request, env, now) {
 }
 
 function checkOrigin(request) {
-  const requestOrigin = new URL(request.url).origin;
+  // The request URL may be EdgeOne's internal origin, so match the browser
+  // supplied Origin against explicit public hostnames rather than request.url.
+  // Never accept arbitrary subdomains or X-Forwarded-Host.
   const suppliedOrigin = request.headers.get('origin');
-  if (!suppliedOrigin || (suppliedOrigin !== requestOrigin && !ADMIN_ORIGINS.has(suppliedOrigin))) {
+  if (!suppliedOrigin || !ADMIN_ORIGINS.has(suppliedOrigin)) {
     error(403, 'bad_origin', '请求来源校验失败');
   }
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) {
@@ -178,8 +229,11 @@ export async function handleAdminRequest(request, { env, storeFactory, now = Mat
     const body = await readBody(request);
     if (path === '/api/admin/login') {
       const entered = typeof body.password === 'string' && body.password.length <= 512 ? body.password : '';
-      if (!safeEqual(sha256(entered), sha256(envValue(env, 'GG_ADMIN_PASSWORD')))) {
-        error(401, 'bad_password', '管理密码错误');
+      const mfaKey = totpSecret(env); // Invalid secret must fail closed.
+      const validPassword = safeEqual(sha256(entered), sha256(envValue(env, 'GG_ADMIN_PASSWORD')));
+      const validTotp = !mfaKey || verifyTotp(body.totp, mfaKey, now);
+      if (!validPassword || !validTotp) {
+        error(401, 'bad_credentials', '管理员凭据错误');
       }
       const session = newSession(env, now);
       return json({ ok: true, csrf: session.csrf }, 200, { 'Set-Cookie':

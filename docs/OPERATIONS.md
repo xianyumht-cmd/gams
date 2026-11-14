@@ -1,5 +1,16 @@
 # EdgeOne GG internal deployment and verification
 
+## 2026-11-15: Admin login migration and first-stage hardening
+
+1. Deploy the existing `feat/gg-edgeone-license-remote-js-20261111` branch with the project root `edgeone-license`, **keeping** `GG_ADMIN_PASSWORD`, `GG_TOKEN_SECRET`, private Blob records, and both old/new EdgeOne custom domains unchanged. Confirm `https://gg-api.dijiav.top/api/admin` can log in with the existing admin password.
+2. The source now accepts admin POST origins **only** from `https://gg-api.dijiav.top`, the previous `https://gg-api.xn--8pv109c.top`, or `https://gg-license-api-dxk0o7j9.edgeone.dev`. Browser-origin errors were caused by the new domain missing from this fixed list; never disable the Origin/CSRF checks or trust `X-Forwarded-Host`.
+3. Optional second factor: generate a random **160-bit or greater base32 TOTP secret** locally in a trusted authenticator, keep it privately in EdgeOne Makers project environment variable `GG_ADMIN_TOTP_SECRET`, then redeploy. Login requires the admin password and the authenticator's six-digit code, allowing ±30s clock drift. The login form's code field is optional only when the variable is not set. If the variable is malformed, login fails closed; revert/configure it in EdgeOne to recover. Never include this secret in GitHub, screenshots, logs or chat.
+4. Sessions now expire after 2 hours and are invalidated when the admin password or TOTP secret changes. Existing sessions from before this update will need to log in again.
+5. Rate limiting **requires separate edge configuration**. If the GG Pages/Makers custom domain is enrolled in an EdgeOne site supporting Web Protection, create a precise rate-limiting rule for `POST /api/admin/login` (suggested 5 requests/minute/client IP, block 10 minutes) across **all** reachable hostnames, and an optional admin-path IP allowlist under Custom Rules. Confirm the chosen product/package supports these policies; Makers Pages may not expose equivalent WAF controls. Do not block `/api/activate`, `/api/check`, `/api/runtime` or `/api/health`. If no edge WAF is available, use a trusted access gateway in front of admin APIs; never claim source-only fixes enforce edge limits. Avoid relying on arbitrary client-forwarded IP headers or non-atomic Blob counters.
+6. Post-deployment checks: new hostname password login, old hostname login, wrong Origin=403, bad password=401, unauthenticated list/issue=401, successful existing card list, proper new-card creation only after explicit operator action. Test with MFA off first, then enable separately, without changing any real cards or their expiry during rollout.
+
+
+
 ## 2026-11-15: Migrate GG API hostname (leave old domain as rollback)
 
 - New EdgeOne Makers custom hostname: `https://gg-api.dijiav.top`; owner confirmed the domain and HTTPS are deployed, and supplied the health response `{"ok":true,"runtimeProofAction":"runtime-v2","deliveryVersion":2}`.

@@ -1,5 +1,8 @@
 # EdgeOne candidate pitfalls
 
+- **EdgeOne Makers may rewrite the request URL host.** With a newly bound domain, `/api/admin/login` can respond `请求来源校验失败` even though `/api/health` works: the admin Origin allowlist has to be updated to include the new exact public hostname. Keep old hostname compatibility while installed APKs still use it. Avoid accepting arbitrary `request.url`-matching Origin or trusting client-controlled forwarding headers. Protect the admin login by provider-enforced rate limits, not unbounded in-memory counters or non-atomic Blob pseudo-locks.
+
+
 - **Windows curl can fail Google's TLS handshake while other downloads work.**
   The owner's offline Build-Tools bootstrap returned Schannel `curl: (35)`
   before downloading the official Google command-line tools ZIP. This is a

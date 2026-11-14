@@ -1,5 +1,11 @@
 # Technical decisions
 
+## 2026-11-15: Admin auth allowlist and opt-in second factor
+
+Use strict exact Origin host allowlisting for admin POST APIs, including the new `gg-api.dijiav.top` hostname plus the previous and assigned Makers deployment domains. EdgeOne may rewrite the upstream request URL: do not trust `request.url` equality with any arbitrary browser Origin, or user-supplied forwarding headers. Keep existing CSP, secure HttpOnly SameSite cookies and CSRF checks. Add opt-in TOTP only when `GG_ADMIN_TOTP_SECRET` is securely configured on Makers; accept 160-bit-or-longer base32 secret, six-digit codes with one step skew; fail closed for invalid configured secrets. Make session signatures dependent on the admin password and MFA policy, and shorten session validity to 2 hours. Do not add insecure Blob counter-based "brute force protection" and call it reliable: apply real rate limiting/access controls at a trusted EdgeOne gateway on admin paths (all hostnames), separately from client license/runtime APIs.
+
+
+
 ## 2026-11-15: Move the GG API to a dedicated domain without breaking existing clients
 
 Use `https://gg-api.dijiav.top` as the canonical HTTPS origin for newly built EdgeOne C++ and Java candidate APKs. Prefer the new domain for unattended CI even if the previous `GG_EDGEONE_BASE_URL` repository variable has not been changed; preserve an explicit workflow-dispatch override for troubleshooting. Require `backend_url=https://gg-api.dijiav.top` in the unsigned official-local kit's metadata and signing helper to avoid signing a stale package. Continue using the same EdgeOne Makers project, private Blob runtime, licenses, signing identity and client protocols. Retain `https://gg-api.xn--8pv109c.top` as a compatibility/rollback origin until older installed clients are migrated; never remove that binding just because a DNS/HTTPS health check succeeds.

@@ -31,7 +31,7 @@ button:hover{background:#36557d}button:disabled{opacity:.48;cursor:wait}.primary
 <main class="shell">
 <header class="top"><div class="brand"><div class="logo">G</div><div><h1>GG · 授权管理</h1><p class="sub">EdgeOne 私有授权中心 · 内部测试</p></div></div><span class="badge">仅限管理员</span></header>
 <section id="login" class="panel login" hidden><h2>管理员登录</h2><p class="hint">使用 EdgeOne 项目环境变量 GG_ADMIN_PASSWORD 设置的密码登录。<br>无需 API Token，也无需 PowerShell。</p>
-<form id="login-form" class="form"><div class="field"><label for="password">管理密码</label><input id="password" type="password" autocomplete="current-password" required autofocus></div><button class="primary" type="submit">进入后台</button></form></section>
+<form id="login-form" class="form"><div class="field"><label for="password">管理密码</label><input id="password" type="password" autocomplete="current-password" required autofocus></div><div class="field"><label for="totp">动态验证码（未启用可留空）</label><input id="totp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="6 位数字"></div><button class="primary" type="submit">进入后台</button></form></section>
 <section id="dashboard" hidden><div class="top"><p class="muted dashboard-caption">管理卡密、设备绑定和有效期</p><div class="tools"><button id="reload">刷新列表</button><button id="logout">退出登录</button></div></div>
 <div class="grid"><section class="panel"><h2>生成新卡密</h2><p class="hint">有效期从首次成功激活时开始计算。生成后请立即复制并妥善保存，后台不保存明文。</p>
 <div class="form"><div class="field"><label for="days">使用期限</label><select id="days"><option value="7">7 天</option><option value="30" selected>30 天</option><option value="90">90 天</option><option value="365">365 天</option><option value="0">永久</option></select></div><button id="issue" class="primary">生成卡密</button></div>
@@ -40,7 +40,7 @@ button:hover{background:#36557d}button:disabled{opacity:.48;cursor:wait}.primary
 <span class="chip green">数据存储：EdgeOne 私有 Blob</span></section></div>
 <section class="panel"><div class="top list-top"><h2 class="list-heading">卡密列表</h2><span class="muted small" id="count"></span></div>
 <div id="cards" class="card-list"><p class="empty">正在加载…</p></div><p id="more" class="hint more-hint" hidden>列表仅展示前 100 条，请清理旧数据或通过本地工具管理其余记录。</p></section></section>
-<p id="message" class="notice" role="status" hidden></p><p class="footer">GG EdgeOne 内部候选版 · 管理会话有效期 8 小时 · 所有写入操作需管理员验证</p>
+<p id="message" class="notice" role="status" hidden></p><p class="footer">GG EdgeOne 内部候选版 · 管理会话有效期 2 小时 · 所有写入操作需管理员验证</p>
 </main>
 <script nonce="${nonce}">
 'use strict';
@@ -103,7 +103,7 @@ async function initialize() {
   } catch(e) { showLogin(); message(e.message, true); }
 }
 byId('login-form').onsubmit = async e => { e.preventDefault(); const button = e.target.querySelector('button'); button.disabled = true;
-  try { const result = await request('login', { password: byId('password').value }); byId('password').value = ''; csrf = result.csrf; showDashboard(); message('登录成功'); await loadCards(); }
+  try { const result = await request('login', { password: byId('password').value, totp: byId('totp').value }); byId('password').value = ''; byId('totp').value = ''; csrf = result.csrf; showDashboard(); message('登录成功'); await loadCards(); }
   catch(e) { message(e.message, true); } finally { button.disabled = false; }
 };
 byId('issue').onclick = async () => { const button = byId('issue'); button.disabled = true;

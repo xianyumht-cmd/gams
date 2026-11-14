@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { handleAdminRequest } from '../admin-core.mjs';
 import { hash } from '../core.mjs';
 
-const BASE = 'https://gg-api.example.test';
+const BASE = 'https://gg-api.dijiav.top';
 const NOW = 1_800_000_000;
 const PASSWORD = 'admin-local-test-password-not-production';
 const ENV = { GG_ADMIN_PASSWORD: PASSWORD, GG_TOKEN_SECRET: 'signed-runtime-token-secret-at-least-32-bytes' };
@@ -65,6 +65,10 @@ test('login requires a configured password, valid origin, and correct credential
   assert.equal((await f.send('/api/admin/login', { password: 'wrong' })).response.status, 401);
   assert.equal((await f.send('/api/admin/login', { password: PASSWORD }, { noOrigin: true })).response.status, 403);
   assert.equal((await f.send('/api/admin/login', { password: PASSWORD }, { headers: { Origin: 'https://evil.example' } })).response.status, 403);
+  assert.equal((await f.send('/api/admin/login', { password: PASSWORD },
+    { headers: { Origin: 'https://fake-gg-api.dijiav.top' } })).response.status, 403);
+  assert.equal((await f.send('/api/admin/login', { password: PASSWORD },
+    { headers: { Origin: 'https://gg-api.dijiav.top.evil.example' } })).response.status, 403);
   const missing = await f.send('/api/admin/login', { password: PASSWORD }, { env: { GG_TOKEN_SECRET: ENV.GG_TOKEN_SECRET } });
   assert.equal(missing.response.status, 503);
   assert.equal(missing.result.code, 'admin_not_configured');
@@ -72,13 +76,21 @@ test('login requires a configured password, valid origin, and correct credential
 
 test('same-site custom domain login survives an EdgeOne internal request URL', async () => {
   const f = fixture();
-  // Makers can normalize request.url to the internal deployment host while
-  // the browser sends the public custom domain in its Origin header.
-  const result = await f.send('/api/admin/login', { password: PASSWORD }, {
+  // Makers can normalize request.url to an internal deployment host while
+  // the browser sends the canonical new domain in its Origin header.
+  const canonical = await f.send('/api/admin/login', { password: PASSWORD }, {
+    headers: { Origin: 'https://gg-api.dijiav.top' },
+  });
+  assert.equal(canonical.response.status, 200);
+  const legacy = await f.send('/api/admin/login', { password: PASSWORD }, {
     headers: { Origin: 'https://gg-api.xn--8pv109c.top' },
   });
-  assert.equal(result.response.status, 200);
-  assert.ok(result.result.csrf);
+  assert.equal(legacy.response.status, 200);
+  const project = await f.send('/api/admin/login', { password: PASSWORD }, {
+    headers: { Origin: 'https://gg-license-api-dxk0o7j9.edgeone.dev' },
+  });
+  assert.equal(project.response.status, 200);
+  assert.ok(project.result.csrf);
 });
 
 test('issue, list, unbind, revoke and restore operate on existing Blob schema', async () => {
@@ -123,8 +135,52 @@ test('reject forgery, CSRF-free writes, expired cookies and logout correctly', a
   assert.equal((await f.send('/api/admin/list', {}, { headers: {
     ...authHeaders(session), Cookie: session.cookie.slice(0, -1) + 'X' } })).response.status, 401);
   assert.equal((await f.send('/api/admin/session', undefined, { headers: { Cookie: session.cookie } })).result.csrf, session.csrf);
-  const expired = await f.send('/api/admin/session', undefined, { headers: { Cookie: session.cookie }, now: NOW + 8 * 3600 + 1 });
+  const expired = await f.send('/api/admin/session', undefined, { headers: { Cookie: session.cookie }, now: NOW + 2 * 3600 + 1 });
   assert.equal(expired.response.status, 401);
   const logout = await f.send('/api/admin/logout', {}, { headers: authHeaders(session) });
   assert.match(logout.response.headers.get('set-cookie'), /Max-Age=0/);
+});
+
+
+test('optional TOTP second factor rejects bad codes and supports clock skew', async () => {
+  const { createHmac } = await import('node:crypto');
+  const f = fixture();
+  // 32 RFC4648 base32 chars = 160 bits; test-only secret never deployed.
+  const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+  const key = Buffer.from('12345678901234567890');
+  function otp(when) {
+    const bytes = Buffer.alloc(8);
+    bytes.writeBigUInt64BE(BigInt(Math.floor(when / 30)));
+    const digest = createHmac('sha1', key).update(bytes).digest();
+    const offset = digest[19] & 15;
+    return String((digest.readUInt32BE(offset) & 0x7fffffff) % 1000000).padStart(6, '0');
+  }
+  const env = { ...ENV, GG_ADMIN_TOTP_SECRET: secret };
+  const send = (body, options = {}) => f.send('/api/admin/login', body, { ...options, env });
+  assert.equal((await send({ password: PASSWORD })).response.status, 401);
+  assert.equal((await send({ password: PASSWORD, totp: '12345x' })).response.status, 401);
+  assert.equal((await send({ password: 'wrong', totp: otp(NOW) })).response.status, 401);
+  assert.equal((await send({ password: PASSWORD, totp: otp(NOW) })).response.status, 200);
+  assert.equal((await send({ password: PASSWORD, totp: otp(NOW - 30) })).response.status, 200);
+  assert.equal((await send({ password: PASSWORD, totp: otp(NOW + 30) })).response.status, 200);
+  assert.equal((await send({ password: PASSWORD, totp: otp(NOW + 90) })).response.status, 401);
+  const broken = await f.send('/api/admin/login', { password: PASSWORD }, {
+    env: { ...ENV, GG_ADMIN_TOTP_SECRET: 'wrongly-formatted' },
+  });
+  assert.equal(broken.response.status, 503);
+  assert.equal(broken.result.code, 'admin_mfa_config');
+});
+
+test('enabling MFA and changing the admin password invalidates existing sessions', async () => {
+  const f = fixture();
+  const session = await login(f);
+  const headers = { Cookie: session.cookie };
+  const changed = await f.send('/api/admin/session', undefined, {
+    env: { ...ENV, GG_ADMIN_PASSWORD: PASSWORD + '-rotated' }, headers,
+  });
+  assert.equal(changed.response.status, 401);
+  const mfaEnabled = await f.send('/api/admin/session', undefined, {
+    env: { ...ENV, GG_ADMIN_TOTP_SECRET: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' }, headers,
+  });
+  assert.equal(mfaEnabled.response.status, 401);
 });

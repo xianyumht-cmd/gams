@@ -1,5 +1,13 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-15: Admin origin hotfix and optional TOTP hardening
+
+- New hostname `https://gg-api.dijiav.top` was absent from the admin POST Origin allowlist, which matches the user's `请求来源校验失败` error while `/api/health` remained healthy. Added exact new hostname while retaining the old hostname and Makers deployment domain; removed the permissive `Origin == request.url origin` fallback.
+- Optional `GG_ADMIN_TOTP_SECRET` enables six-digit time-based codes (RFC 6238, SHA-1 / 30-second interval, ±1 step). When unset, existing password-only login is preserved; invalid configured secret fails closed. Admin session is 2 hours and signed against current admin policy to invalidate cookies on password/MFA rotation.
+- Node tests cover hostname allowlist, incorrect/missing TOTP, time skew, and credential rotation. Code commit and tests do **not** prove the Makers deployment was updated; a project redeploy and live login test remain required. No cloud secrets, cards, runtime Blob, API endpoint or APK changed.
+- Abuse prevention still requires EdgeOne entrance-layer WAF rate-limit and/or trusted client access controls. Blob get/set without atomic counters and untrusted X-Forwarded-For are not a reliable brute-force barrier. `/api/admin` remains publicly discoverable until network access rules are configured; do not promise otherwise.
+
+
 ## 2026-11-15: Custom GG API hostname migration in the existing EdgeOne PR
 
 - Owner screenshot: both `https://gg-api.xn--8pv109c.top` and `https://gg-api.dijiav.top` are deployed with HTTPS, and supplied the new domain health JSON reporting `ok:true`, `runtimeProofAction:runtime-v2`, `deliveryVersion:2`. Actual signed-APK activation and remote-JS download through the new hostname remain pending.
