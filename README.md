@@ -77,6 +77,21 @@ GAMS 是 GG Android 客户端、管理端、运行时脚本、在线授权服务
 
 ### Android
 
+#### 独立 GG JS 实机测试包（Draft，不影响正式版）
+
+测试分支 `feat/gg-local-js-test-20261110` 的 Actions `GG Local JS Test APK` 将用户上传的 `noname 1.4.1 + game 1.0.41` 无损还原到 `v2/android/client/src/localTest/assets` 后运行：
+
+```bash
+cd v2/android
+gradle :client:lintLocalTest :client:assembleLocalTest -PggLocalNonameVersion=1.4.1
+```
+
+APK 包名 `com.jinli.quickweb.localtest141`，启动及首页按钮打开 `https://m.66rpg.com/`，由使用者自己选择游戏；免 GG 账号/激活码，原生 WebView document-start 注入，并在主文档 HTML 首部内联同一脚本、移除网页引擎 SRI/跳空白页守卫，官方 `game.js` 由本地引擎替代，网页仍需网络。构建时核对两个脚本的原始 SHA-256 字节，不再要求网页引擎 SRI 匹配，完成后可从 Actions artifact / 独立预发布下载。
+
+验收：① 首页显示 `m.66rpg.com`，不自动进入游戏，点选作品后仍留在 WebView 且不唤起外部浏览器或多标签；② 不跳 `about:blank`；③ 右下角可见 `G` 悬浮按钮且能展开设置；④ 选定游戏可以启动。可做静态注入/路由检查，四项最终都需要 Android 实机确认。参见 [构建和兼容差异](docs/OPERATIONS.md)。
+
+调试空白页请连接安卓设备运行 `adb logcat -s GG-Local:D`：日志包括请求 URL/mainframe/Accept、HTML HTTP 与响应长度、三类替换计数及最终 URL，能区分站点 `about:blank` 和客户端自有的兼容错误页。
+
 Android 构建主要由 GitHub Actions 和 `scripts/` 下的脚本完成。自动生成的状态 JSON 是构建事实记录，不应手工把失败状态改成成功。
 
 当前 2.0.14 自动构建链会从专用实现分支取源码并生成状态记录；如果需要发布 APK，应同时确认：
