@@ -1,3 +1,4 @@
+import { getApkUpdatePolicy } from './version-management.mjs';
 import { createCipheriv, createHash, createHmac, createPublicKey, diffieHellman,
   generateKeyPairSync, hkdfSync, randomBytes, timingSafeEqual, verify } from 'node:crypto';
 
@@ -76,9 +77,11 @@ function validateLicense(record, now) {
   if (record.expiresAt > 0 && record.expiresAt <= now) fail(403, 'license_expired', '激活码已到期');
 }
 
-function authResponse(record, token) {
+async function authResponse(record, token, store, body) {
+  const apkUpdate = await getApkUpdatePolicy(store, body);
   return { ok: true, token, licenseExpiresAt: record.expiresAt || null,
-    permanent: Boolean(record.permanent), latestAppVersion: 12, forceUpdate: false };
+    permanent: Boolean(record.permanent), latestAppVersion: 12, forceUpdate: false,
+    ...(apkUpdate ? { apkUpdate } : {}) };
 }
 
 function runtimeDeliveryKey(raw) {
@@ -169,7 +172,7 @@ export async function handle(action, body, { store, env, now = Math.floor(Date.n
         fail(409, 'device_limit', '设备绑定冲突，请重试');
       }
     }
-    return authResponse(record, issueToken(id, body.deviceId, body.devicePublicKey, env, now));
+    return authResponse(record, issueToken(id, body.deviceId, body.devicePublicKey, env, now), store, body);
   }
 
   if (!['check', 'runtime', 'unbind'].includes(action)) fail(404, 'not_found', '接口不存在');
@@ -188,7 +191,7 @@ export async function handle(action, body, { store, env, now = Math.floor(Date.n
     fail(401, 'device_unbound', '当前设备尚未绑定');
   }
   if (action === 'check') {
-    return authResponse(record, issueToken(session.id, body.deviceId, body.devicePublicKey, env, now));
+    return authResponse(record, issueToken(session.id, body.deviceId, body.devicePublicKey, env, now), store, body);
   }
   if (action === 'unbind') {
     record.deviceId = null;
@@ -199,6 +202,12 @@ export async function handle(action, body, { store, env, now = Math.floor(Date.n
 
   if (!v2Delivery && (env?.GG_REQUIRE_RUNTIME_V2 || process.env.GG_REQUIRE_RUNTIME_V2) === '1') {
     fail(426, 'upgrade_required', '请更新客户端后重试');
+  }
+  // New APKs report an install version separately from the legacy signed protocol v12.
+  // Only clients that report it are subject to the runtime minimum-version gate.
+  const apkUpdate = await getApkUpdatePolicy(store, body);
+  if (apkUpdate?.forceUpdate) {
+    fail(426, 'apk_update_required', 'GG 客户端版本过低，请安装最新版本');
   }
   await rejectRuntimeReplay(store, session, body, now);
 
