@@ -81,8 +81,9 @@ jobs:
             printf 'supported_native_runtime_family=1.4.9-*\n'
             printf 'source_commit=%s\n' "$GITHUB_SHA"
           } > dist/BUILD-METADATA.txt
-      - name: Upload developer APK only (never a formal release)
-        if: github.event_name != 'pull_request'
+      - name: Upload developer APK for device testing (never a formal release)
+        # PR verification must provide a usable disposable debug APK to test on device.
+        # This job has contents:read only and never accesses official signing secrets.
         uses: actions/upload-artifact@v4
         with:
           name: GG-development-${{ github.run_number }}
