@@ -251,8 +251,9 @@ final class V2LicenseManager {
         // C++ owns the candidate's post-authorization update gate. Do not fetch
         // or decrypt private scripts when the server requires an app upgrade.
         if (BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE &&
+                (auth.apkUpdateRequired ||
                 !NativeRuntimeBridge.shouldDownloadRuntime(auth.forceUpdate,
-                        auth.latestAppVersion, PROTOCOL_APP_VERSION)) {
+                        auth.latestAppVersion, PROTOCOL_APP_VERSION))) {
             return RuntimeResult.valid(null, auth, "启动成功");
         }
         if (!startupGate.isCurrent(ticket)) return null;
@@ -291,14 +292,27 @@ final class V2LicenseManager {
             NativeRuntimeBridge.validateAuthResponse(
                     token, licenseExpiresAt, permanent, latestAppVersion);
         }
+        JSONObject apkUpdate = BuildConfig.EDGEONE_CANDIDATE
+                ? object.optJSONObject("apkUpdate") : null;
+        int reportedLatest = apkUpdate == null ? 0 : apkUpdate.optInt("latestVersionCode", 0);
+        int reportedMinimum = apkUpdate == null ? 0 : apkUpdate.optInt("minimumVersionCode", 0);
+        boolean apkRequired = apkUpdate != null &&
+                apkUpdate.optBoolean("forceUpdate", false) &&
+                reportedMinimum > BuildConfig.VERSION_CODE;
+        boolean apkAvailable = apkUpdate != null &&
+                apkUpdate.optBoolean("updateAvailable", false) &&
+                reportedLatest > BuildConfig.VERSION_CODE;
         return new AuthResult(
                 token,
                 licenseExpiresAt,
                 permanent,
                 latestAppVersion,
                 object.optBoolean("forceUpdate", false),
-                object.optString("updateUrl", ""),
-                object.optString("updateMessage", "")
+                apkAvailable ? apkUpdate.optString("updateUrl", "") :
+                        object.optString("updateUrl", ""),
+                apkAvailable ? apkUpdate.optString("updateMessage", "") :
+                        object.optString("updateMessage", ""),
+                apkRequired
         );
     }
 
@@ -409,7 +423,8 @@ final class V2LicenseManager {
         }
 
         static RuntimeResult valid(RuntimePayload payload, AuthResult auth, String message) {
-            boolean required = auth.forceUpdate && auth.latestAppVersion > PROTOCOL_APP_VERSION;
+            boolean required = auth.apkUpdateRequired ||
+                    (auth.forceUpdate && auth.latestAppVersion > PROTOCOL_APP_VERSION);
             return new RuntimeResult(
                     !required,
                     required ? null : payload,
@@ -450,6 +465,7 @@ final class V2LicenseManager {
         final boolean permanent;
         final int latestAppVersion;
         final boolean forceUpdate;
+        final boolean apkUpdateRequired;
         final String updateUrl;
         final String updateMessage;
 
@@ -460,13 +476,15 @@ final class V2LicenseManager {
                 int latestAppVersion,
                 boolean forceUpdate,
                 String updateUrl,
-                String updateMessage
+                String updateMessage,
+                boolean apkUpdateRequired
         ) {
             this.token = token;
             this.licenseExpiresAt = licenseExpiresAt;
             this.permanent = permanent;
             this.latestAppVersion = latestAppVersion;
             this.forceUpdate = forceUpdate;
+            this.apkUpdateRequired = apkUpdateRequired;
             this.updateUrl = updateUrl == null ? "" : updateUrl;
             this.updateMessage = updateMessage == null ? "" : updateMessage;
         }
