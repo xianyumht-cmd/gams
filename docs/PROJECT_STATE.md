@@ -605,3 +605,9 @@
 - New Actions: `.github/workflows/gg-android-dev.yml` and `gg-android-production.yml`, plus strict `scripts/verify-gg-apk.py` and its negative tests. Production CI checks binary/package/ABI/R8/JS/signer identity before export; a final GitHub-signed APK is opt-in and manual-main-only. Owner can use existing offline official signer with the metadata-compatible unsigned kit.
 - Current code cannot claim **commercial packer or true anti-VM/anti-debug bypass resistance**: root/emulator/hook/debug checks are client heuristics. Integration with a named third-party commercial protector, its credentials, and device tests remains outstanding.
 - This PR staging is not a newly tested/signed production release. Read the newest Actions run results, verify final binaries and owner real-device game entry before marking as production ready. Keep PR #48 Draft and do not merge or publish automatically.
+
+### Verified GitHub Actions evidence for the new lanes
+
+- Source commit `4aa0797a11ff2537b9b28c3bc0a2f51c8805c7e6`: **development push run [43765377129](https://github.com/xianyumht-cmd/gams/actions/runs/43765377129) SUCCESS**; the `GG-development-10` Artifact contains the unprotected debuggable APK and SHA/metadata.
+- **production preflight push run [43765377042](https://github.com/xianyumht-cmd/gams/actions/runs/43765377042) SUCCESS**; R8/native production variant, lint, binary/signer/ABI/ELF/alignment gate, negative tests (including a valid APK signed by the wrong certificate) and the unsigned `GG-production-UNSIGNED-NOT-FOR-DISTRIBUTION` kit all passed.
+- The `sign-official` job was correctly **SKIPPED** on a branch push. No official private JKS was supplied or used; there is **no new officially signed, commercially packed or device-tested release** from this work. Manual `main` dispatch and final Windows/CI signing remain future deliberate operator steps; do not call the unsigned artifact production-ready.
