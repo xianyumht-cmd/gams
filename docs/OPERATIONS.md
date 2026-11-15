@@ -1,5 +1,15 @@
 # EdgeOne GG internal deployment and verification
 
+## 2026-11-16: Admin APK release management (source-only, pending CI/deployment)
+
+- Version management is **not live merely because PR #48 changed**. First verify current EdgeOne Node regression tests, Android dev/prod build, official signer, and one real device update flow. Deploy `edgeone-license/` to the existing EdgeOne Makers project explicitly; preserve all environment secrets, `gg-private` Blob, card records and remote JS manifest. Do not merge PR #48 or automatically deploy production without a separate release gate.
+- After deployment open `https://gg-api.dijiav.top/api/admin`, authenticate, select **APK 版本管理**. Use the **stable** or **development** channel. Enter the exact APK `versionCode` (NOT the protocol constant 12 or the JS version), name, minimum code, HTTPS download URL, optional final signed APK SHA-256 and release notes. Select off/optional/required. New installations default to off until an administrator explicitly publishes.
+- Before enabling required mode, record the SHA-256 and official signer of the **final post-protection signed APK**, verify the URL downloads exactly those bytes and check Android downgrade constraints. Set `minVersionCode <= versionCode`, ideally start with optional 100% and verify cold startup/download on a new candidate. Optional rollout percentage is stable per device hash; mandatory minimum is never subject to gradual rollout.
+- Publishing stores one authoritative JSON policy at `app-version/policy.json` plus a bounded 30-event before/after history. **暂停更新** changes only the form until **保存并发布策略** is clicked. Rollback restores the selected operation's *previous* policy. A revision conflict returns HTTP 409: refresh and re-enter changes. Version code downgrades require explicit history rollback.
+- Mandatory checks affect only **new EdgeOne-aware APK builds that report appVersionCode**; existing installed legacy APKs do not report this and are not retroactively blocked. The client-reported version is not hardware-attested: a modified APK can lie. Neither GitHub Actions nor APK upload is currently wired to auto-register versions in the backend. UI downloads use an external HTTPS URL rather than a silent self-installer.
+- Version management and JS runtime uploads use **different private keys and mechanisms**; uploading `noname.js` via the existing Windows uploader still operates exactly as before. To recover from a mistaken policy, use history rollback or publish mode off; if the new panel is unavailable, repair the single `app-version/policy.json` record with a preplanned authenticated administrator maintenance procedure, not by deleting license/JS Blob records.
+
+
 
 ## 2026-11-15: Enable or disable Yuyu-issued GG cards
 
