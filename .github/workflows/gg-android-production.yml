@@ -22,6 +22,7 @@ on:
   push:
     branches:
       - feat/gg-edgeone-license-remote-js-20261111
+      - release/gg-3.2.1-native149-20261116
     paths:
       - 'v2/android/**'
       - 'scripts/verify-gg-apk.py'
@@ -70,6 +71,10 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             code="$INPUT_CODE"
             version="$INPUT_NAME"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/release/gg-3.2.1-native149-20261116" ]]; then
+            # Owner-authorized one-time release build; offline signer remains mandatory.
+            code=10032
+            version="3.2.1"
           else
             # PR/push validation only; never distribute these preview versions.
             code=$((300000 + GITHUB_RUN_NUMBER))
@@ -105,6 +110,8 @@ jobs:
             --version-name "$GG_PROD_VERSION" --mapping "$map"
           mkdir -p dist
           cp "$apk" dist/GG-EdgeOne-CPP-official-unsigned.apk
+          cp scripts/Sign-GG-Official-APK.ps1 dist/Sign-GG-Official-APK.ps1
+          cp scripts/Install-GG-Android-BuildTools.ps1 dist/Install-GG-Android-BuildTools.ps1
           (cd dist && sha256sum GG-EdgeOne-CPP-official-unsigned.apk > SHA256SUMS.txt)
           {
             printf 'signing_mode=official-local-unsigned\n'
@@ -115,8 +122,12 @@ jobs:
             printf 'version_code=%s\nversion_name=%s\n' "$GG_PROD_CODE" "$GG_PROD_VERSION"
             printf 'distribution_allowed=false-until-official-sign-and-device-smoke\n'
           } > dist/BUILD-METADATA.txt
-          printf '%s\n' 'UNSIGNED ARTIFACT ONLY. Not an installable production release.' \
-            'Sign offline with scripts/Sign-GG-Official-APK.ps1 OR use the approved CI signing job.' \
+          printf '%s\n' 'GG 3.2.1 / versionCode 10032: official-local production signing kit.' \
+            'This APK is UNSIGNED and cannot be installed until officially signed.' \
+            'Unpack the entire ZIP together with the included Sign-GG-Official-APK.ps1.' \
+            'On your own Windows computer run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\Sign-GG-Official-APK.ps1' \
+            'The helper verifies the SHA256SUMS and pinned GG certificate; private JKS stays local.' \
+            'This baseline includes the 1.4.9-* native routing fix; JS itself stays on EdgeOne.' \
             'Commercial third-party packer integration is not configured; do not claim commercial shelling.' \
             > dist/READ-ME-FIRST.txt
       - name: Prove that a different valid APK certificate is rejected
