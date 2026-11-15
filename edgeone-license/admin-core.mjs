@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { adminHtml } from './admin-page.mjs';
+import { readVersionState, saveVersionPolicy, rollbackVersionPolicy } from './version-management.mjs';
 import { getMfaState, mfaEpoch, verifyManagedSecondFactor,
   beginMfaSetup, confirmMfaSetup, disableManagedMfa } from './admin-mfa.mjs';
 
@@ -354,6 +355,12 @@ export async function handleAdminRequest(request, { env, storeFactory, now = Mat
       return json({ ok: true, csrf: renewed.csrf }, 200, { 'Set-Cookie':
         COOKIE_NAME + '=' + renewed.value + '; Path=/api/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=' + SESSION_SECONDS });
     }
+    if (path === '/api/admin/version/status') return json({ ok: true,
+      ...await readVersionState(store) });
+    if (path === '/api/admin/version/publish') return json({ ok: true,
+      ...await saveVersionPolicy(store, body, now) });
+    if (path === '/api/admin/version/rollback') return json({ ok: true,
+      ...await rollbackVersionPolicy(store, body, now) });
     if (path === '/api/admin/list') return json({ ok: true, ...await listCards(store) });
     if (path === '/api/admin/issue') {
       // Preserve the legacy response for existing single-card callers.
