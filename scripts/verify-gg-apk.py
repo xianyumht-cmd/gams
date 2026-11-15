@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 import sys
 import zipfile
 
@@ -126,8 +127,27 @@ def main():
     except (OSError, zipfile.BadZipFile, RuntimeError) as error:
         fail("APK ZIP invalid: " + str(error))
 
+    if args.mode.startswith("production"):
+        readelf = required_tool("readelf")
+        with zipfile.ZipFile(args.apk) as apk, tempfile.TemporaryDirectory() as temporary:
+            for abi in ABIS:
+                library = Path(temporary) / (abi + "-libggnative.so")
+                library.write_bytes(apk.read("lib/" + abi + "/libggnative.so"))
+                segments = command([readelf, "-W", "--program-headers", str(library)]).stdout
+                dynamic = command([readelf, "-W", "--dynamic", str(library)]).stdout
+                if "GNU_RELRO" not in segments or "GNU_STACK" not in segments:
+                    fail("native ELF mitigation missing for " + abi)
+                stack = next((line for line in segments.splitlines()
+                              if "GNU_STACK" in line), "")
+                if re.search(r"\\bRWE\\b", stack) or not re.search(r"\\bRW\\b", stack):
+                    fail("executable/invalid native stack for " + abi)
+                if "BIND_NOW" not in dynamic:
+                    fail("native BIND_NOW missing for " + abi)
+
     aapt = required_tool("aapt")
     apksigner = required_tool("apksigner")
+    zipalign = required_tool("zipalign")
+    command([zipalign, "-c", "-p", "4", str(args.apk)])
     badging = command([aapt, "dump", "badging", str(args.apk)]).stdout
     match = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
     if not match or tuple(match.groups()) != (
