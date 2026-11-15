@@ -216,6 +216,10 @@ final class EdgeOneCandidateClient {
             connection.setRequestProperty("Accept", action.equals("runtime")
                     ? "application/octet-stream" : "application/json");
             connection.setRequestProperty("Cache-Control", "no-store");
+            // APK build identity is separate from the legacy signed protocol version 12.
+            // This self-report supports ordinary release policy, not hardware attestation.
+            body.put("appVersionCode", BuildConfig.VERSION_CODE);
+            body.put("appChannel", BuildConfig.DEBUG ? "development" : "stable");
             byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);
             if (data.length > 8192) throw new IOException("授权请求过大");
             connection.setFixedLengthStreamingMode(data.length);
