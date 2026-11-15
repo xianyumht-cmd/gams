@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDecipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync, sign } from 'node:crypto';
 import { handle, hash, RUNTIME_PROOF_ACTION } from '../core.mjs';
+import { readVersionState, saveVersionPolicy } from '../version-management.mjs';
 
 const env = { GG_TOKEN_SECRET: 'test-only-secret-not-for-deployment-0123456789' };
 const NOW = 1_800_000_000;
@@ -150,4 +151,44 @@ test('device-bound runtime delivery encrypts the ZIP for a single ephemeral clie
     ...proof(d, 'runtime-v2', `${auth.token}|${secondPub}`, NOW + 1),
     token: auth.token, deliveryPublicKey: secondPub,
   }, strict)).delivery.version, 2);
+});
+
+test('version-managed new APKs receive update policy; mandatory minimum blocks only version-aware runtime', async () => {
+  const s = store(), d = device();
+  s.data.set('licenses/' + hash(key) + '.json', {
+    disabled: false, permanent: true, durationSeconds: 0, expiresAt: 0,
+    deviceId: null, devicePublicKey: null,
+  });
+  const old = await readVersionState(s);
+  await saveVersionPolicy(s, { channel: 'stable', expectedRevision: old.revision,
+    config: { versionCode: 250, versionName: '3.2.0', minVersionCode: 245,
+      mode: 'required', rolloutPercent: 0,
+      downloadUrl: 'https://github.com/example/gg/releases/download/v3.2.0/GG.apk',
+      notes: 'Mandatory update', sha256: '' },
+  }, NOW);
+  const auth = await handle('activate', {
+    ...proof(d, 'activate', key), licenseKey: key,
+    appVersionCode: 240, appChannel: 'stable',
+  }, context(s));
+  assert.equal(auth.latestAppVersion, 12, 'legacy protocol number remains unchanged');
+  assert.equal(auth.forceUpdate, false, 'legacy clients must not receive an accidental upgrade gate');
+  assert.equal(auth.apkUpdate.forceUpdate, true);
+  assert.equal(auth.apkUpdate.updateAvailable, true);
+  const checked = await handle('check', {
+    ...proof(d, 'check', auth.token), token: auth.token,
+    appVersionCode: 240, appChannel: 'stable',
+  }, context(s));
+  assert.equal(checked.apkUpdate.minimumVersionCode, 245);
+  await assert.rejects(() => handle('runtime', {
+    ...proof(d, 'runtime', auth.token), token: auth.token,
+    appVersionCode: 240, appChannel: 'stable',
+  }, context(s)), { code: 'apk_update_required' });
+  const bundle = Buffer.from('still available for preexisting clients');
+  const file = 'runtime/bundles/' + hash(bundle) + '.zip';
+  s.data.set('runtime/manifest.json', { size: bundle.length, sha256: hash(bundle), file });
+  s.data.set(file, bundle);
+  const legacy = await handle('runtime', {
+    ...proof(d, 'runtime', auth.token), token: auth.token,
+  }, context(s));
+  assert.deepEqual(Buffer.from(legacy.bytes), bundle);
 });
