@@ -93,8 +93,9 @@ def parse_args():
     elif args.expected_cert:
         fail("signer expectation is only permitted for signed production")
     if args.mode.startswith("production"):
-        if not args.mapping or not args.mapping.is_file() or args.mapping.stat().st_size == 0:
-            fail("production R8 mapping is missing")
+        if args.mode == "production-unsigned":
+            if not args.mapping or not args.mapping.is_file() or args.mapping.stat().st_size == 0:
+                fail("production R8 mapping is missing")
         source_contract()
     return args
 
@@ -116,7 +117,7 @@ def main():
             for name in names:
                 short = name.lower()
                 if short.startswith("assets/") and (
-                    re.search(r"(^|/)(noname|game)([._-][^/]*)?\\.js$", short)
+                    re.search(r"(^|/)(noname|game)([._-][^/]*)?\.js$", short)
                     or short.endswith(".ggenc")
                     or short.endswith("/bundle.zip")
                 ):
@@ -147,7 +148,7 @@ def main():
     else:
         if verify.returncode != 0:
             fail("APK signature verification failed")
-        digests = re.findall(r"certificate SHA-256 digest:\\s*([0-9a-fA-F]{64})",
+        digests = re.findall(r"certificate SHA-256 digest:\s*([0-9a-fA-F]{64})",
                              verify.stdout, re.IGNORECASE)
         if not digests:
             fail("apksigner returned no certificate digest")

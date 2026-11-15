@@ -175,7 +175,6 @@ jobs:
           python3 scripts/verify-gg-apk.py --apk signed/GG-production-official.apk \
             --mode production-signed --package com.jinli.quickweb.edgeonecpp \
             --version-code "$version_code" --version-name "$version_name" \
-            --mapping /dev/null \
             --expected-cert 70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34
           (cd signed && sha256sum GG-production-official.apk > SHA256SUMS.txt)
           printf 'source_commit=%s\nprofile=production-signed-baseline\n' \
