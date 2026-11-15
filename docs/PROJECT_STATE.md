@@ -1,5 +1,15 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-16: APK version-management module — source implementation (NOT deployed)
+
+- PR #48 branch includes a separate `edgeone-license/version-management.mjs` stored under private `gg-private` Blob key `app-version/policy.json`; admin UI/API via `admin-version-panel.mjs` and `/api/admin/version/{status,publish,rollback}`. The endpoints share the existing logged-in admin session, same-origin CSRF and optional TOTP controls. Stable and development channels are separate.
+- Configurable APK `versionCode`, version name, minimum allowed code, update mode (off / optional / required), rollout percentage for optional updates, HTTPS download URL, release notes and optional SHA-256. Publish operations are revision-checked and retain the latest 30 before/after records; rollback restores a recorded previous policy. Empty first-install config defaults to `off` for both channels.
+- New EdgeOne Android builds report `BuildConfig.VERSION_CODE` and debug/stable channel independently of the signed legacy protocol number `12`. The new server includes `apkUpdate` in activate/check and rejects too-old version-aware runtime requests with HTTP 426. Android recognizes mandatory and optional updates; a mandatory update blocks private runtime fetch. Preexisting APKs without the new version fields retain their previous authorization behavior.
+- Added `test/version-management.test.mjs` and a client/runtime end-to-end compatibility test. The existing EdgeOne Android development and production Actions are triggered on branch writes; **evaluate the final head's CI before merging or deploying**.
+- This task has not uploaded JS, rotated secrets, issued licenses, deployed EdgeOne, merged PR #48 or published/signed a formal APK. Current installed GG remains unchanged until a deliberate EdgeOne deployment and a newer APK build/installation.
+- Follow-up gaps: provider-verified APK provenance and release URL; automatic CI→admin release registration; high-volume card pagination/search, immutable audit export, RBAC and operator accountability; App Integrity / server-side attestation if strict version enforcement is required.
+
+
 ## 2026-11-16: Client-only runtime compatibility for 1.4.9
 
 - The user explicitly owns and controls JS content. This task does not inspect, change, pack or upload any JavaScript and does not touch EdgeOne private Blob/manifest, license records, or production release.
