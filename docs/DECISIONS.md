@@ -1,5 +1,10 @@
 # Technical decisions
 
+## 2026-11-16: Release management separate from runtime JS and protocol version
+
+Use actual Android `versionCode` for APK policy and retain legacy signed protocol version `12` unchanged. The first version policy is disabled to avoid locking out existing GG users. Publish two isolated channels (stable/development) with required/optional/off, minimum version, deterministic optional rollout, HTTPS URL, notes and optional hash. Store a revisioned snapshot and bounded before/after audit with rollback in private Blob, protected by the existing session/CSRF/MFA controls; no EdgeOne deployment or JS upload occurs during source edits. A client-supplied version is advisory and must not be represented as server-attested app identity. Strong enforcement and trustworthy release provenance are future separate integrations.
+
+
 
 ## 2026-11-15: Separate token-authenticated GG card issuance for Yuyu
 
