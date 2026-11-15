@@ -28,13 +28,14 @@ void append(std::vector<std::uint8_t>& out, std::string_view data) {
 
 bool isEdgeOneDirectEngine(bool candidate, std::string_view runtimeVersion) {
     // The cloud manifest supplies the noname/game pair as "noname-game".
-    // The 1.4.6 control script needs the same official-engine substitution
-    // and HTML compatibility route as the known 1.4.1 direct-engine build.
+    // Explicitly supported runtime families use the same native engine routing
+    // and HTML compatibility path. The APK does not embed/control JS assets.
     // Opt in per verified compatibility family rather than treating every
     // unknown JS release as direct-engine compatible.
     if (!candidate) return false;
     return runtimeVersion.substr(0, 6) == "1.4.1-" ||
-           runtimeVersion.substr(0, 6) == "1.4.6-";
+           runtimeVersion.substr(0, 6) == "1.4.6-" ||
+           runtimeVersion.substr(0, 6) == "1.4.9-";
 }
 
 bool shouldReloadBrowser(bool browserVisible, std::int64_t backgroundAtMs,

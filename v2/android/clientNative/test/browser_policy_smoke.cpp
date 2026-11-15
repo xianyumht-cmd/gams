@@ -51,10 +51,14 @@ int main() {
     }
     if (!gg::isEdgeOneDirectEngine(true, "1.4.1-1.0.41") ||
         !gg::isEdgeOneDirectEngine(true, "1.4.6-1.0.43") ||
+        !gg::isEdgeOneDirectEngine(true, "1.4.9-1.0.43") ||
+        gg::isEdgeOneDirectEngine(true, "1.4.9") ||
+        gg::isEdgeOneDirectEngine(true, "1.4.90-1.0.43") ||
         gg::isEdgeOneDirectEngine(true, "1.4.6") ||
         gg::isEdgeOneDirectEngine(true, "1.4.60-1.0.43") ||
         gg::isEdgeOneDirectEngine(true, "1.1.4-1.0.5") ||
         gg::isEdgeOneDirectEngine(false, "1.4.6-1.0.43") ||
+        gg::isEdgeOneDirectEngine(false, "1.4.9-1.0.43") ||
         gg::isEdgeOneDirectEngine(false, "1.4.1-1.0.41")) {
         throw std::runtime_error("Native direct-engine version policy drift");
     }

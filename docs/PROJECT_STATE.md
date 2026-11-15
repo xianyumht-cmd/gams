@@ -1,5 +1,12 @@
 # Verified task state — EdgeOne candidate
 
+## 2026-11-16: Client-only runtime compatibility for 1.4.9
+
+- The user explicitly owns and controls JS content. This task does not inspect, change, pack or upload any JavaScript and does not touch EdgeOne private Blob/manifest, license records, or production release.
+- Native C++ client routing now explicitly recognizes runtime manifest family `1.4.9-*` as a direct engine + HTML compatibility build; prior `1.4.1-*` and `1.4.6-*` behavior is preserved. Unknown/malformed version families remain on the existing fallback. Smoke tests include positive 1.4.9 and negative near-miss variants.
+- The GG Android development Action produces a debug-signed, unprotected APK with a separate `.debug` package; runtime JS is fetched from the currently deployed EdgeOne service, NOT embedded in the APK. A version-compatible APK build does not prove a particular JS version has been uploaded. CI and on-device loading/JS execution must be checked independently.
+
+
 
 ## 2026-11-15: Yuyu payment-triggered GG license API (source implemented, pending deployment)
 
