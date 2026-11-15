@@ -85,6 +85,9 @@ public final class MainActivity extends Activity {
             }
             showBrowser(savedInstanceState, result.payload);
             Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
+            if (result.updateUrl != null && !result.updateUrl.isEmpty()) {
+                showUpdateDialog(result.updateMessage, result.updateUrl, false);
+            }
         }, (received, expected) -> updateInitializationProgress(initialization, received, expected));
     }
 
@@ -184,6 +187,9 @@ public final class MainActivity extends Activity {
                     return;
                 }
                 showBrowser(null, result.payload);
+                if (result.updateUrl != null && !result.updateUrl.isEmpty()) {
+                    showUpdateDialog(result.updateMessage, result.updateUrl, false);
+                }
             }, (received, expected) -> updateInitializationProgress(initialization, received, expected));
         });
 
