@@ -1,3 +1,4 @@
+import { versionPanelHtml, versionPanelCss, versionPanelScript } from './admin-version-panel.mjs';
 /** Self-contained admin UI: no external CDN, framework, or browser-side secrets. */
 export function adminHtml(nonce) {
   return `<!doctype html>
@@ -33,6 +34,7 @@ button:hover{background:#36557d}button:disabled{opacity:.48;cursor:wait}.primary
 .mfa-codes{white-space:pre-wrap;word-break:break-word;line-height:1.9;color:#89eed4;font-family:ui-monospace,Consolas,monospace}
 .mfa-form{margin-top:14px}.mfa-hidden{display:none}
 .footer{font-size:12px;color:#748aa6;margin-top:25px;line-height:1.8}
+${versionPanelCss}
 @media(max-width:690px){.shell{margin-top:20px}.grid{grid-template-columns:1fr}.panel{padding:18px}.top{align-items:flex-start}.badge{font-size:11px}.card-actions{width:100%}.card-actions button{flex:1}h1{font-size:19px}}
 </style></head><body>
 <main class="shell">
@@ -71,6 +73,7 @@ button:hover{background:#36557d}button:disabled{opacity:.48;cursor:wait}.primary
     </div>
   </div>
 </section>
+${versionPanelHtml}
 <section class="panel"><div class="top list-top"><h2 class="list-heading">卡密列表</h2><span class="muted small" id="count"></span></div>
 <div id="cards" class="card-list"><p class="empty">正在加载…</p></div><p id="more" class="hint more-hint" hidden>列表仅展示前 100 条，请清理旧数据或通过本地工具管理其余记录。</p></section></section>
 <p id="message" class="notice" role="status" hidden></p><p class="footer">GG EdgeOne 内部候选版 · 管理会话有效期 2 小时 · 所有写入操作需管理员验证</p>
@@ -152,11 +155,11 @@ async function loadCards() {
 async function initialize() {
   try { const response = await fetch('/api/admin/session', { cache: 'no-store', credentials: 'same-origin' });
     if (!response.ok) { showLogin(); return; }
-    const result = await response.json(); csrf = result.csrf; showDashboard(); await refreshMfa(); await loadCards();
+    const result = await response.json(); csrf = result.csrf; showDashboard(); await refreshMfa(); await loadCards(); await loadVersionPanel();
   } catch(e) { showLogin(); message(e.message, true); }
 }
 byId('login-form').onsubmit = async e => { e.preventDefault(); const button = e.target.querySelector('button'); button.disabled = true;
-  try { const result = await request('login', { password: byId('password').value, totp: byId('totp').value }); byId('password').value = ''; byId('totp').value = ''; csrf = result.csrf; showDashboard(); await refreshMfa(); message(result.usedRecovery ? '已使用一次性恢复码登录，请妥善保存剩余恢复码' : '登录成功'); await loadCards(); }
+  try { const result = await request('login', { password: byId('password').value, totp: byId('totp').value }); byId('password').value = ''; byId('totp').value = ''; csrf = result.csrf; showDashboard(); await refreshMfa(); message(result.usedRecovery ? '已使用一次性恢复码登录，请妥善保存剩余恢复码' : '登录成功'); await loadCards(); await loadVersionPanel(); }
   catch(e) { message(e.message, true); } finally { button.disabled = false; }
 };
 byId('mfa-start').onclick = async () => {
@@ -252,6 +255,7 @@ byId('export').onclick = () => {
   document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
   message('已导出 TXT，文件包含明文卡密，请妥善保管');
 };
+${versionPanelScript}
 byId('reload').onclick = async () => { try { await loadCards(); message('列表已刷新'); } catch(e) { message(e.message, true); } };
 byId('logout').onclick = async () => { try { await request('logout'); showLogin(); message('已退出登录'); }
   catch(e) { message(e.message, true); } };
