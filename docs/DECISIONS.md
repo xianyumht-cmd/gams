@@ -311,3 +311,11 @@ environment variables; all Blob access stays on the server. Session cookies
 are HttpOnly/Secure/SameSite=Strict with short expiry and request-CSRF checks.
 Retain the existing local-only SDK tool for **private JS uploads**, which are
 not exposed through the admin webpage. No changes to production APK or release.
+
+## 2026-11-16: One GG C++ source, separate unprotected development and guarded production profiles
+
+Build from the EdgeOne native client in PR #48, not old `main/client` or V2 Java reference. Add an explicit `production` Android build type instead of repurposing `release`: the latter remains needed for existing emulator/internal parity diagnostics. Enable `FLAG_SECURE`, anti-debug, root, emulator and hook heuristics only for `production`, without mixing signals into any license/device crypto. The debug profile is intentionally debuggable and uses only the Android debug key.
+
+Production compilation **always outputs unsigned bytes first** and fails on missing package/version/R8/ABI/runtime-asset/signature checks. The preferred signing route stays offline with the owner's existing official JKS; CI signing is a separate manual-main-only job behind `gg-production` and requires explicitly configured secrets. No source modification, CI green status, or CI-signed Artifact proves commercial shelling or device compatibility. Avoid ptrace anti-debug, mandatory live TLS pinning, or client-held secrets until separately measured.
+
+Security policy is intentionally strict: a rooted/custom-ROM/emulated legitimate device may be blocked. Validate an explicit compatibility matrix and make an operator decision before distributing to paying users; false positives are a product risk, not stronger cryptography.

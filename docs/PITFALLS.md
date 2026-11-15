@@ -243,3 +243,7 @@
   strict, explicit allowlist for the project's custom domain and assigned
   `edgeone.dev` host (plus exact-request-origin for local testing), rather than
   blindly trusting arbitrary `X-Forwarded-Host` headers or disabling CSRF.
+
+- **A release build type is not a security promise.** The historical `:clientNative:assembleRelease` is used for internal emulator APKs and can be signed with a debug key. Do not rename/upload that artifact as production. Only `:clientNative:assembleProduction` activates `GG_PRODUCTION_PROTECTION`. Never ship an unsigned artifact or a protection gate that exits zero on corrupt APK/missing expected signer.
+- **Anti-VM/root checks can block real customers.** Strict production heuristics can flag test-key custom ROMs, patched/rooted phones and some emulator-like vendor properties. Use the unprotected developer lane for QQ/Android emulators; accept and measure false positives on real devices before production rollout. These checks are bypassable by an attacker and cannot replace server-side authorization.
+- **Final bytes matter more than source build success.** Repackaging, commercial hardening or re-signing changes the APK SHA and may break JNI, device proof or WebView compatibility. Re-verify exact signer/package/ABI, clean install + upgrade, card/license, JS injection and game entry after every final change. Existing `Sign-GG-Official-APK.ps1` only signs its original pinned unsigned artifact; do not bypass checksum verification for an externally modified file.

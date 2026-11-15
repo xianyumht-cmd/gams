@@ -598,3 +598,10 @@
   and absence of bundled JS. The 14-day internal-only artifact is
   `GG-EdgeOne-internal-8` (artifact ID `13797482921`). The new initialization
   UI still needs owner on-device verification; no formal release was created.
+
+## 2026-11-16: GG development/production APK lanes staged (not a live rollout)
+
+- Under existing EdgeOne Draft PR #48 (`feat/gg-edgeone-license-remote-js-20261111`), code introduces a production-only Java `ProductionSecurityPolicy` and an explicit unsigned `clientNative:production` variant. The `debug` build is deliberately emulator/debugger-friendly. Existing production runtime, cloud API, local JKS and already-tested APK bytes are not changed.
+- New Actions: `.github/workflows/gg-android-dev.yml` and `gg-android-production.yml`, plus strict `scripts/verify-gg-apk.py` and its negative tests. Production CI checks binary/package/ABI/R8/JS/signer identity before export; a final GitHub-signed APK is opt-in and manual-main-only. Owner can use existing offline official signer with the metadata-compatible unsigned kit.
+- Current code cannot claim **commercial packer or true anti-VM/anti-debug bypass resistance**: root/emulator/hook/debug checks are client heuristics. Integration with a named third-party commercial protector, its credentials, and device tests remains outstanding.
+- This PR staging is not a newly tested/signed production release. Read the newest Actions run results, verify final binaries and owner real-device game entry before marking as production ready. Keep PR #48 Draft and do not merge or publish automatically.

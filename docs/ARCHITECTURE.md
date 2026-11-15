@@ -419,3 +419,15 @@ expiry unchanged. Revocation is reversible with an administrator action.
   is delivered to an authorized device, memory inspection is still possible.
 - CloudInject and third-party APK shelling remain **manual post-build** steps;
   this branch does not bundle those tools or final production signing keys.
+
+## Android security build lanes (2026-11-16)
+
+The currently accepted EdgeOne/C++ client uses `v2/android/clientNative` with shared Java in `v2/android/client`, NOT the legacy root `client/` project. New Actions produce different profiles from this single source:
+
+- `:clientNative:assembleDebug`: developer-only `com.jinli.quickweb.edgeonecpp.debug`; debuggable, Android debug-signed, no production runtime policy, WebView debugging permitted. Nothing here may be called an official/production release.
+- `:clientNative:assembleRelease`: retained legacy/internal candidate. Its existing debug/optional internal signer behavior remains unchanged; **it is not the secure production profile**.
+- `:clientNative:assembleProduction`: `com.jinli.quickweb.edgeonecpp`; unsigned, non-debuggable, R8 minified and resource-shrunk, native C++ linker hardening, with `BuildConfig.GG_PRODUCTION_PROTECTION=true`. Entry and foreground resume enforce screenshot protection, anti-debug, root, emulator and known hook indicators. Detection is heuristic client-side risk reduction; neither a remotely trusted attestation nor a commercially packed/virtualized shell.
+
+`scripts/verify-gg-apk.py` is the fail-closed APK artifact gate: ZIP/dex/manifest/native ABIs, excluded private JS, exact package/version, build debug state, signature state, official certificate and v2/v3 signature verification. A nonempty R8 mapping is required at the unsigned production build step. The signer job checks the exact SHA-256 of the unsigned handoff, then verifies the signed bytes. Existing EdgeOne ECDH/AES-GCM runtime delivery and licensing rules remain unchanged.
+
+The Windows offline JKS is the preferred signing boundary. If a GitHub-hosted signing option is deliberately enabled, restrict it to manual `main`, protected `gg-production` environment and least-privilege encrypted secrets. Third-party packer/protector APIs and credentials are **not** integrated; a later vendor protect/re-sign step must be a distinct, verified handoff and must re-run acceptance on the new final APK bytes.

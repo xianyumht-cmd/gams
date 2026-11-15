@@ -490,3 +490,25 @@ Android Logcat filtered by `GG-EdgeOne`. In the candidate, unexpected Java
 exceptions print a stack trace there, without printing keys/tokens. An HTTP
 200 together with a proxy body-copy timeout is an incomplete transfer, not a
 successful runtime load.
+
+## GG protected Android build/runbook (2026-11-16, PR #48)
+
+**Current status:** source/Actions are staged in the existing EdgeOne C++ Draft PR; no new production APK is auto-published. `main` and the owner-accepted signed/protected APK are unchanged until deliberate merge/distribution.
+
+| Action | Trigger | APK identity | Protection / signing |
+|---|---|---|---|
+| `GG Android - Development APK (unprotected)` | PR/push/manual | `com.jinli.quickweb.edgeonecpp.debug` | debuggable, no production policy, Android debug certificate; short-lived Artifact only |
+| `GG Android - Production Security Build` | PR/push preflight, manual dispatch after main integration | `com.jinli.quickweb.edgeonecpp` | unsigned production candidate with R8/native/runtime guard; optional main-only formal signing |
+| `GG EdgeOne C++ Internal APK` | existing PR #48 tooling | historical internal candidate | not a protected production APK |
+
+To test: open the **Development** Action's latest successful run, download `GG-development-<run>`, install the `.debug` application, and reproduce JS/WebView behavior in QQ emulator or ADB. Its signature, version and package must not be treated as official.
+
+For a production build after the source is reviewed and integrated to `main`: open **Production Security Build** → **Run workflow** on `main`; enter a versionCode larger than all distributed APKs, exact versionName, and choose `offline-kit` (preferred) or `ci-signed`. Build and lint the unsigned `:clientNative:production` variant. Verify positive and negative gate cases. The upload `GG-production-UNSIGNED-NOT-FOR-DISTRIBUTION` is a **signing kit, not a distributable APK**.
+
+**Offline signing (preferred):** download the entire kit; verify `SHA256SUMS.txt`, `BUILD-METADATA.txt`, `backend_url`, app ID and intended version. On the owner Windows PC, use the existing `scripts/Sign-GG-Official-APK.ps1` with this kit's `GG-EdgeOne-CPP-official-unsigned.apk`. The script requires the existing offline official JKS and pinned public cert; it verifies SHA and final signer. Never upload the JKS, DPAPI credentials or passwords to the repository, issue, PR or build logs.
+
+**Optional CI signing:** create protected GitHub Environment `gg-production` with approval/branch restrictions, then set the encrypted `GG_RELEASE_KEYSTORE_BASE64`, `GG_RELEASE_KEYSTORE_PASSWORD` and optionally `GG_RELEASE_KEY_PASSWORD` secrets. `ci-signed` is allowed only through a manually dispatched workflow on `main`. Missing secrets or a certificate other than `70608347EE8CC3CD72E7DC70C504013E261C9A2FEE9850539219CDA519C87F34` MUST fail and produce no signed APK. Prefer offline if secrets are not already deliberately in GitHub.
+
+**Acceptance before customer distribution:** install the exact final APK bytes; confirm package ID compatibility with previous install, monotonic versionCode, official cert, clean activation + retained activation after upgrade, EdgeOne network JS loading, game entry, correct `FLAG_SECURE` screen-capture behavior, debugger/root/emulator denial, and normal unmodified-device behavior. Record APK SHA-256, ABI list, signing fingerprint, CI run/source SHA, runtime manifest and game acceptance. Re-test after any external packer/encryption/shell/re-sign step. No Action here publishes GitHub Release, deploys EdgeOne, or changes live licensing, and the commercial hardener is not configured.
+
+**Roll back:** use the exact previously accepted APK and compatible online runtime, respecting Android versionCode downgrade restrictions; never overwrite the official certificate. Retain hashes of both versions. Do not silently fall back to a release/debug signed APK if production checks fail.
