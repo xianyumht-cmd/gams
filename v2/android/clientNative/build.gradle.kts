@@ -44,6 +44,7 @@ android {
         versionName = nativeVersionName
         buildConfigField("boolean", "EDGEONE_CANDIDATE", "true")
         buildConfigField("boolean", "GG_NATIVE_CORE", "true")
+        buildConfigField("boolean", "GG_PRODUCTION_PROTECTION", "false")
         // A debug-signed internal artifact remains usable for emulator tests.
         // Once official signing is configured, the APK enforces its pinned
         // certificate before issuing any license/runtime request.
@@ -81,6 +82,17 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
                 "../client/proguard-rules.pro", "proguard-rules.pro")
         }
+    }
+    // Dedicated fail-closed production variant. The existing release build remains
+    // an internal test APK and must never be passed off as the protected build.
+    buildTypes.create("production") {
+        initWith(buildTypes.getByName("release"))
+        signingConfig = null
+        isDebuggable = false
+        isMinifyEnabled = true
+        isShrinkResources = true
+        buildConfigField("boolean", "GG_PRODUCTION_PROTECTION", "true")
+        matchingFallbacks += listOf("release")
     }
     sourceSets.getByName("main") {
         manifest.srcFile("../client/src/main/AndroidManifest.xml")

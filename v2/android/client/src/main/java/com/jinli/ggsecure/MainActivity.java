@@ -42,13 +42,17 @@ public final class MainActivity extends Activity {
     private String wrappedControlScript;
     private volatile String edgeOneUserAgent;
     private boolean browserVisible;
+    private boolean securityBlocked;
     private long backgroundAtMs;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        WebView.setWebContentsDebuggingEnabled(false);
+        if (!ProductionSecurityPolicy.apply(this)) {
+            securityBlocked = true;
+            ProductionSecurityPolicy.showBlocked(this);
+            return;
+        }
         screens = new ClientScreens(this);
         dialogs = new ClientDialogs(this);
         licenseManager = new V2LicenseManager(this);
@@ -300,6 +304,15 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (securityBlocked) return;
+        if (!ProductionSecurityPolicy.apply(this)) {
+            securityBlocked = true;
+            browserVisible = false;
+            releaseRuntime();
+            destroyWebView();
+            ProductionSecurityPolicy.showBlocked(this);
+            return;
+        }
         if (browserVisible && backgroundAtMs > 0) {
             long nowMs = System.currentTimeMillis();
             boolean reload = BuildConfig.GG_NATIVE_CORE && BuildConfig.EDGEONE_CANDIDATE
