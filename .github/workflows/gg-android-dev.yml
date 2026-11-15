@@ -1,0 +1,78 @@
+name: GG Android - Development APK (unprotected)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feat/gg-edgeone-license-remote-js-20261111
+    paths:
+      - 'v2/android/**'
+      - 'scripts/verify-gg-apk.py'
+      - 'scripts/test-verify-gg-apk.py'
+      - '.github/workflows/gg-android-dev.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'v2/android/**'
+      - 'scripts/verify-gg-apk.py'
+      - 'scripts/test-verify-gg-apk.py'
+      - '.github/workflows/gg-android-dev.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gg-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  developer-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Negative tests for APK verification gate
+        run: python3 scripts/test-verify-gg-apk.py
+      - name: Build debuggable native developer APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$((200000 + GITHUB_RUN_NUMBER))
+          version="3.2.0-dev.${GITHUB_RUN_NUMBER}"
+          echo "GG_DEV_CODE=$code" >> "$GITHUB_ENV"
+          echo "GG_DEV_VERSION=$version" >> "$GITHUB_ENV"
+          gradle --no-daemon -p v2/android \
+            :clientNative:lintDebug :clientNative:assembleDebug \
+            -PggEdgeOneBaseUrl=https://gg-api.dijiav.top \
+            "-PggNativeVersionCode=$code" "-PggNativeVersionName=$version"
+      - name: Verify emulator-friendly debug package, signature and private runtime absence
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find v2/android/clientNative/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -type f | head -n1)"
+          test -n "$apk" && test -s "$apk"
+          python3 scripts/verify-gg-apk.py --apk "$apk" --mode debug \
+            --package com.jinli.quickweb.edgeonecpp.debug \
+            --version-code "$GG_DEV_CODE" --version-name "${GG_DEV_VERSION}-debug"
+          mkdir -p dist
+          cp "$apk" dist/GG-development-debug.apk
+          (cd dist && sha256sum *.apk > SHA256SUMS.txt)
+          printf 'profile=development-unprotected\nsource_commit=%s\n' "$GITHUB_SHA" \
+            > dist/BUILD-METADATA.txt
+      - name: Upload developer APK only (never a formal release)
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-development-${{ github.run_number }}
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
