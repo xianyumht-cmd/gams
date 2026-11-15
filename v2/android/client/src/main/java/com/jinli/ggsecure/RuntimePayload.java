@@ -1,5 +1,7 @@
 package com.jinli.ggsecure;
 
+import android.content.res.AssetManager;
+
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
@@ -17,6 +19,23 @@ final class RuntimePayload {
     private RuntimePayload(byte[] noname, byte[] game) {
         this.noname = noname;
         this.game = game;
+    }
+
+    // The separate localTest variant embeds user-selected files. Production still
+    // obtains a verified payload through fromZip(), after online authorization.
+    static RuntimePayload fromLocalAssets(AssetManager assets) throws Exception {
+        byte[] noname;
+        byte[] game;
+        try (InputStream input = assets.open("noname.js", AssetManager.ACCESS_STREAMING)) {
+            noname = readEntry(input, 2 * 1024 * 1024);
+        }
+        try (InputStream input = assets.open("game.js", AssetManager.ACCESS_STREAMING)) {
+            game = readEntry(input, 16 * 1024 * 1024);
+        }
+        if (noname.length == 0 || game.length == 0) {
+            throw new IllegalStateException("本地 JS 文件为空");
+        }
+        return new RuntimePayload(noname, game);
     }
 
     static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest) throws Exception {
