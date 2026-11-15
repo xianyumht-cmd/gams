@@ -139,7 +139,7 @@ def main():
                     fail("native ELF mitigation missing for " + abi)
                 stack = next((line for line in segments.splitlines()
                               if "GNU_STACK" in line), "")
-                if re.search(r"\\bRWE\\b", stack) or not re.search(r"\\bRW\\b", stack):
+                if re.search(r"\bRWE\b", stack) or not re.search(r"\bRW\b", stack):
                     fail("executable/invalid native stack for " + abi)
                 if "BIND_NOW" not in dynamic:
                     fail("native BIND_NOW missing for " + abi)
