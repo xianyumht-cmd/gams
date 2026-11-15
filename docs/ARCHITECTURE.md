@@ -1,5 +1,10 @@
 # GG Android / EdgeOne internal candidate
 
+## APK version policy (2026-11-16, PR #48 development)
+
+The EdgeOne licensing backend keeps a private, revisioned `app-version/policy.json` document separate from `runtime/manifest.json`, card records and JS upload flow. `version-management.mjs` validates stable/development releases, produces deterministic per-device optional rollout decisions and enforces the minimum version for version-aware runtime requests. The protected admin routes run behind existing cookie session, TOTP and CSRF checks. The UI embeds `admin-version-panel.mjs` into the existing nonce-bearing admin HTML. Android sends `BuildConfig.VERSION_CODE` and build channel as *advisory* fields and parses a separate `apkUpdate` result, keeping the legacy protocol `latestAppVersion:12` unchanged for compatibility. The current production-grade signed version identity is not remotely attested; a malicious client can spoof its self-reported code. Policy history is bounded and Blob read+write lacks atomic compare-and-swap guarantees; no automatic APK upload or distribution is part of this module.
+
+
 
 ## GG × Yuyu external card fulfillment
 
