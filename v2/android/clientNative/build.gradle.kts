@@ -92,6 +92,8 @@ android {
         isMinifyEnabled = true
         isShrinkResources = true
         buildConfigField("boolean", "GG_PRODUCTION_PROTECTION", "true")
+        // Must not depend on a caller remembering -PggLocalOfficialUnsigned.
+        buildConfigField("boolean", "GG_REQUIRE_OFFICIAL_APK_SIGNER", "true")
         matchingFallbacks += listOf("release")
     }
     sourceSets.getByName("main") {

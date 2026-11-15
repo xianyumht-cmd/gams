@@ -119,6 +119,30 @@ jobs:
             'Sign offline with scripts/Sign-GG-Official-APK.ps1 OR use the approved CI signing job.' \
             'Commercial third-party packer integration is not configured; do not claim commercial shelling.' \
             > dist/READ-ME-FIRST.txt
+      - name: Prove that a different valid APK certificate is rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          jks="$RUNNER_TEMP/gg-wrong-ci-key.jks"
+          fake="$RUNNER_TEMP/gg-incorrect-signer.apk"
+          trap 'rm -f "$jks" "$fake"' EXIT
+          keytool -genkeypair -noprompt -keyalg RSA -keysize 2048 -validity 1 \
+            -dname 'CN=Wrong-Signer-For-CI' -alias wrong \
+            -keystore "$jks" -storepass changeit -keypass changeit >/dev/null 2>&1
+          sdk_tools="$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT}}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+          "$sdk_tools/apksigner" sign --ks "$jks" --ks-key-alias wrong \
+            --ks-pass pass:changeit --key-pass pass:changeit \
+            --out "$fake" dist/GG-EdgeOne-CPP-official-unsigned.apk
+          if python3 scripts/verify-gg-apk.py --apk "$fake" \
+              --mode production-signed --package com.jinli.quickweb.edgeonecpp \
+              --version-code "$GG_PROD_CODE" --version-name "$GG_PROD_VERSION" \
+              --expected-cert 70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34 \
+              > "$RUNNER_TEMP/reject-log.txt" 2>&1; then
+            echo '::error::Wrong signer passed the production gate' >&2
+            exit 1
+          fi
+          grep -Fq 'GG-APK-GATE FAIL: unexpected or multiple APK signers' "$RUNNER_TEMP/reject-log.txt"
+          echo 'Wrong valid APK signer correctly rejected.'
       - name: Upload unsigned kit for offline official signing
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4

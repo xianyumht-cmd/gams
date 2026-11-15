@@ -54,6 +54,7 @@ def source_contract():
     checks = {
         "dedicated production build type": 'buildTypes.create("production")' in gradle,
         "production profile enabled": 'buildConfigField("boolean", "GG_PRODUCTION_PROTECTION", "true")' in gradle,
+        "official signer runtime pin": 'buildConfigField("boolean", "GG_REQUIRE_OFFICIAL_APK_SIGNER", "true")' in gradle,
         "production not Gradle-signed": "signingConfig = null" in gradle,
         "R8 enabled": "isMinifyEnabled = true" in gradle,
         "resource shrink enabled": "isShrinkResources = true" in gradle,
