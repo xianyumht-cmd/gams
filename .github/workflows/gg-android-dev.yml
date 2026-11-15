@@ -42,6 +42,15 @@ jobs:
           gradle-version: '8.11.1'
       - name: Negative tests for APK verification gate
         run: python3 scripts/test-verify-gg-apk.py
+      - name: Verify native WebView routing for the 1.4.9 runtime family
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror \
+            v2/android/clientNative/src/main/cpp/browser_policy.cpp \
+            v2/android/clientNative/test/browser_policy_smoke.cpp \
+            -o "$RUNNER_TEMP/gg-browser-route-smoke"
+          "$RUNNER_TEMP/gg-browser-route-smoke"
       - name: Build debuggable native developer APK
         shell: bash
         run: |
@@ -66,8 +75,12 @@ jobs:
           mkdir -p dist
           cp "$apk" dist/GG-development-debug.apk
           (cd dist && sha256sum *.apk > SHA256SUMS.txt)
-          printf 'profile=development-unprotected\nsource_commit=%s\n' "$GITHUB_SHA" \
-            > dist/BUILD-METADATA.txt
+          {
+            printf 'profile=development-unprotected\n'
+            printf 'runtime_source=EdgeOne-remote-not-embedded\n'
+            printf 'supported_native_runtime_family=1.4.9-*\n'
+            printf 'source_commit=%s\n' "$GITHUB_SHA"
+          } > dist/BUILD-METADATA.txt
       - name: Upload developer APK only (never a formal release)
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
