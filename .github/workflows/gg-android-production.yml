@@ -1,0 +1,212 @@
+name: GG Android - Production Security Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Monotonically increasing integer (must exceed previously distributed GG APK)'
+        required: true
+        type: string
+      version_name:
+        description: 'Production version (letters/digits/._- only)'
+        required: true
+        type: string
+      delivery:
+        description: 'Offline signing kit or GitHub Secrets signed APK'
+        required: true
+        type: choice
+        default: offline-kit
+        options:
+          - offline-kit
+          - ci-signed
+  push:
+    branches:
+      - feat/gg-edgeone-license-remote-js-20261111
+    paths:
+      - 'v2/android/**'
+      - 'scripts/verify-gg-apk.py'
+      - 'scripts/test-verify-gg-apk.py'
+      - '.github/workflows/gg-android-production.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'v2/android/**'
+      - 'scripts/verify-gg-apk.py'
+      - 'scripts/test-verify-gg-apk.py'
+      - '.github/workflows/gg-android-production.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gg-production-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Exercise fail-closed verifier negative cases
+        run: python3 scripts/test-verify-gg-apk.py
+      - name: Pin version and immutable production identity
+        shell: bash
+        env:
+          INPUT_CODE: ${{ inputs.version_code }}
+          INPUT_NAME: ${{ inputs.version_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            code="$INPUT_CODE"
+            version="$INPUT_NAME"
+          else
+            # PR/push validation only; never distribute these preview versions.
+            code=$((300000 + GITHUB_RUN_NUMBER))
+            version="3.2.0-security-preflight.${GITHUB_RUN_NUMBER}"
+          fi
+          [[ "$code" =~ ^[1-9][0-9]{1,8}$ ]] || { echo 'invalid versionCode' >&2; exit 1; }
+          [[ "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$ ]] || { echo 'invalid versionName' >&2; exit 1; }
+          echo "GG_PROD_CODE=$code" >> "$GITHUB_ENV"
+          echo "GG_PROD_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Compile R8 and native-hardened production variant, always unsigned
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Never pass signing credentials to the compiler or untrusted PR build.
+          gradle --no-daemon -p v2/android \
+            :clientNative:lintProduction :clientNative:assembleProduction \
+            -PggLocalOfficialUnsigned=true \
+            -PggEdgeOneBaseUrl=https://gg-api.dijiav.top \
+            "-PggNativeVersionCode=$GG_PROD_CODE" \
+            "-PggNativeVersionName=$GG_PROD_VERSION"
+      - name: Verify built APK and prepare owner-compatible offline kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=v2/android/clientNative/build/outputs/apk/production
+          map=v2/android/clientNative/build/outputs/mapping/production/mapping.txt
+          test -d "$output"
+          mapfile -t apks < <(find "$output" -maxdepth 1 -type f -name '*.apk')
+          test "${#apks[@]}" -eq 1
+          apk="${apks[0]}"
+          python3 scripts/verify-gg-apk.py --apk "$apk" --mode production-unsigned \
+            --package com.jinli.quickweb.edgeonecpp --version-code "$GG_PROD_CODE" \
+            --version-name "$GG_PROD_VERSION" --mapping "$map"
+          mkdir -p dist
+          cp "$apk" dist/GG-EdgeOne-CPP-official-unsigned.apk
+          (cd dist && sha256sum GG-EdgeOne-CPP-official-unsigned.apk > SHA256SUMS.txt)
+          {
+            printf 'signing_mode=official-local-unsigned\n'
+            printf 'profile=production-baseline-protected\n'
+            printf 'expected_signer_sha256=70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34\n'
+            printf 'backend_url=https://gg-api.dijiav.top\n'
+            printf 'source_commit=%s\n' "$GITHUB_SHA"
+            printf 'version_code=%s\nversion_name=%s\n' "$GG_PROD_CODE" "$GG_PROD_VERSION"
+            printf 'distribution_allowed=false-until-official-sign-and-device-smoke\n'
+          } > dist/BUILD-METADATA.txt
+          printf '%s\n' 'UNSIGNED ARTIFACT ONLY. Not an installable production release.' \
+            'Sign offline with scripts/Sign-GG-Official-APK.ps1 OR use the approved CI signing job.' \
+            'Commercial third-party packer integration is not configured; do not claim commercial shelling.' \
+            > dist/READ-ME-FIRST.txt
+      - name: Prove that a different valid APK certificate is rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          jks="$RUNNER_TEMP/gg-wrong-ci-key.jks"
+          fake="$RUNNER_TEMP/gg-incorrect-signer.apk"
+          trap 'rm -f "$jks" "$fake"' EXIT
+          keytool -genkeypair -noprompt -keyalg RSA -keysize 2048 -validity 1 \
+            -dname 'CN=Wrong-Signer-For-CI' -alias wrong \
+            -keystore "$jks" -storepass changeit -keypass changeit >/dev/null 2>&1
+          sdk_tools="$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT}}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+          "$sdk_tools/apksigner" sign --ks "$jks" --ks-key-alias wrong \
+            --ks-pass pass:changeit --key-pass pass:changeit \
+            --out "$fake" dist/GG-EdgeOne-CPP-official-unsigned.apk
+          if python3 scripts/verify-gg-apk.py --apk "$fake" \
+              --mode production-signed --package com.jinli.quickweb.edgeonecpp \
+              --version-code "$GG_PROD_CODE" --version-name "$GG_PROD_VERSION" \
+              --expected-cert 70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34 \
+              > "$RUNNER_TEMP/reject-log.txt" 2>&1; then
+            echo '::error::Wrong signer passed the production gate' >&2
+            exit 1
+          fi
+          grep -Fq 'GG-APK-GATE FAIL: unexpected or multiple APK signers' "$RUNNER_TEMP/reject-log.txt"
+          echo 'Wrong valid APK signer correctly rejected.'
+      - name: Upload unsigned kit for offline official signing
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-production-UNSIGNED-NOT-FOR-DISTRIBUTION
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+
+  sign-official:
+    # CI signing is opt-in, main-only and environment-gated; never sign PR code.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.delivery == 'ci-signed'
+    needs: build-and-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: gg-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: GG-production-UNSIGNED-NOT-FOR-DISTRIBUTION
+          path: unsigned
+      - name: Sign only with verified official release key
+        shell: bash
+        env:
+          GG_RELEASE_KEYSTORE_BASE64: ${{ secrets.GG_RELEASE_KEYSTORE_BASE64 }}
+          GG_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.GG_RELEASE_KEYSTORE_PASSWORD }}
+          GG_RELEASE_KEY_PASSWORD: ${{ secrets.GG_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${GG_RELEASE_KEYSTORE_BASE64:-}" || { echo 'missing production keystore secret' >&2; exit 1; }
+          test -n "${GG_RELEASE_KEYSTORE_PASSWORD:-}" || { echo 'missing production keystore password' >&2; exit 1; }
+          export GG_RELEASE_KEY_PASSWORD="${GG_RELEASE_KEY_PASSWORD:-$GG_RELEASE_KEYSTORE_PASSWORD}"
+          jks="$RUNNER_TEMP/gg-official.jks"
+          trap 'rm -f "$jks"' EXIT
+          umask 077
+          printf '%s' "$GG_RELEASE_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$jks"
+          test -s "$jks"
+          sdk_tools="$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT}}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+          test -x "$sdk_tools/apksigner" && test -x "$sdk_tools/aapt"
+          test -s unsigned/GG-EdgeOne-CPP-official-unsigned.apk
+          (cd unsigned && sha256sum -c SHA256SUMS.txt)
+          mkdir -p signed
+          "$sdk_tools/apksigner" sign --ks "$jks" --ks-key-alias gg-release \
+            --ks-pass env:GG_RELEASE_KEYSTORE_PASSWORD --key-pass env:GG_RELEASE_KEY_PASSWORD \
+            --v1-signing-enabled false --v2-signing-enabled true \
+            --v3-signing-enabled true --v4-signing-enabled false \
+            --out signed/GG-production-official.apk \
+            unsigned/GG-EdgeOne-CPP-official-unsigned.apk
+          version_code="$(sed -n 's/^version_code=//p' unsigned/BUILD-METADATA.txt)"
+          version_name="$(sed -n 's/^version_name=//p' unsigned/BUILD-METADATA.txt)"
+          python3 scripts/verify-gg-apk.py --apk signed/GG-production-official.apk \
+            --mode production-signed --package com.jinli.quickweb.edgeonecpp \
+            --version-code "$version_code" --version-name "$version_name" \
+            --expected-cert 70608347ee8cc3cd72e7dc70c504013e261c9a2fee9850539219cda519c87f34
+          (cd signed && sha256sum GG-production-official.apk > SHA256SUMS.txt)
+          printf 'source_commit=%s\nprofile=production-signed-baseline\n' \
+            "$GITHUB_SHA" > signed/BUILD-METADATA.txt
+      - name: Upload verified signed production APK (not a GitHub Release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-production-OFFICIAL-SIGNED
+          path: signed/
+          retention-days: 30
+          if-no-files-found: error

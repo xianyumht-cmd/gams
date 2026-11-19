@@ -5,6 +5,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.zip.ZipEntry;
@@ -13,13 +14,40 @@ import java.util.zip.ZipInputStream;
 final class RuntimePayload {
     private byte[] noname;
     private byte[] game;
+    private long nativeHandle;
+    private final String versionName;
 
-    private RuntimePayload(byte[] noname, byte[] game) {
+    private RuntimePayload(byte[] noname, byte[] game, String versionName) {
         this.noname = noname;
         this.game = game;
+        this.versionName = versionName;
+    }
+
+    private RuntimePayload(long nativeHandle, String versionName) {
+        this.nativeHandle = nativeHandle;
+        this.versionName = versionName;
     }
 
     static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest) throws Exception {
+        return fromZip(zipBytes, manifest, null, 0L);
+    }
+
+    static RuntimePayload fromZip(byte[] zipBytes, JSONObject manifest,
+                                  StartupGate startupGate, long ticket) throws Exception {
+        if (BuildConfig.GG_NATIVE_CORE) {
+            String bundleSha = manifest.getString("sha256");
+            int nonameSize = manifest.getInt("nonameSize");
+            String nonameSha = manifest.getString("nonameSha256");
+            int gameSize = manifest.getInt("gameSize");
+            String gameSha = manifest.getString("gameSha256");
+            long handle = startupGate != null && BuildConfig.EDGEONE_CANDIDATE
+                    ? startupGate.openRuntime(zipBytes, bundleSha,
+                            nonameSize, nonameSha, gameSize, gameSha, ticket)
+                    : NativeRuntimeBridge.open(zipBytes, bundleSha,
+                            nonameSize, nonameSha, gameSize, gameSha);
+            if (handle == 0) throw new SecurityException("运行数据验证失败");
+            return new RuntimePayload(handle, manifest.optString("versionName", ""));
+        }
         byte[] noname = null;
         byte[] game = null;
         try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
@@ -34,25 +62,64 @@ final class RuntimePayload {
         if (noname == null || game == null) throw new SecurityException("运行包内容不完整");
         verify(noname, manifest.getInt("nonameSize"), manifest.getString("nonameSha256"), "控制层");
         verify(game, manifest.getInt("gameSize"), manifest.getString("gameSha256"), "引擎层");
-        return new RuntimePayload(noname, game);
+        return new RuntimePayload(noname, game, manifest.optString("versionName", ""));
     }
+
+    String versionName() { return versionName; }
 
     synchronized String nonameSource() {
         ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) return NativeRuntimeBridge.nonameSource(nativeHandle);
         return new String(noname, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    synchronized byte[] rewriteHtml(String html) {
+        ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) {
+            return NativeRuntimeBridge.rewriteHtml(nativeHandle,
+                    html.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+        return EdgeOneHtmlCompatibility.rewrite(html, nonameSource())
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    synchronized String nativeWrappedControlScript() {
+        ensureAlive();
+        if (!BuildConfig.GG_NATIVE_CORE) throw new IllegalStateException("Native core disabled");
+        byte[] wrapped = NativeRuntimeBridge.wrappedControlBytes(nativeHandle);
+        try {
+            return new String(wrapped, java.nio.charset.StandardCharsets.UTF_8);
+        } finally {
+            java.util.Arrays.fill(wrapped, (byte) 0);
+        }
     }
 
     synchronized InputStream openGameStream() {
         ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) {
+            return new NativeGameInputStream(NativeRuntimeBridge.gameSize(nativeHandle),
+                    (position, output, offset, count) -> {
+                        synchronized (RuntimePayload.this) {
+                            if (nativeHandle == 0) throw new IOException("运行时已经退出");
+                            return NativeRuntimeBridge.copyGameRange(nativeHandle,
+                                    position, output, offset, count);
+                        }
+                    });
+        }
         return new ByteArrayInputStream(game);
     }
 
     synchronized int gameSize() {
         ensureAlive();
+        if (BuildConfig.GG_NATIVE_CORE) return NativeRuntimeBridge.gameSize(nativeHandle);
         return game.length;
     }
 
     synchronized void wipe() {
+        if (nativeHandle != 0) {
+            NativeRuntimeBridge.close(nativeHandle);
+            nativeHandle = 0;
+        }
         if (noname != null) Arrays.fill(noname, (byte) 0);
         if (game != null) Arrays.fill(game, (byte) 0);
         noname = null;
@@ -60,6 +127,10 @@ final class RuntimePayload {
     }
 
     private void ensureAlive() {
+        if (BuildConfig.GG_NATIVE_CORE) {
+            if (nativeHandle == 0) throw new IllegalStateException("运行数据已清除");
+            return;
+        }
         if (noname == null || game == null) throw new IllegalStateException("运行数据已清除");
     }
 
