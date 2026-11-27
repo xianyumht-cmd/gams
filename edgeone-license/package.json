@@ -1,0 +1,11 @@
+{
+  "name": "gg-edgeone-internal-license",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@edgeone/pages-blob": "0.0.19"
+  }
+}

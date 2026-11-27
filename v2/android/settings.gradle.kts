@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "GGSecureV2"
-include(":client", ":manager")
+include(":client", ":clientNative", ":manager")
